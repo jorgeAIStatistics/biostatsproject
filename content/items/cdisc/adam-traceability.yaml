@@ -1,0 +1,586 @@
+items:
+  - id: adam.trace.two-kinds
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [adam.traceability, regulatory.define]
+    lesson: adam-traceability
+    title: Metadata traceability versus data-point traceability
+    prompt: |
+      An ADaM package has a complete define.xml. Every variable has an origin; every derived variable has
+      a written derivation. The BDS datasets do not contain `SRCDOM`, `SRCVAR` or `SRCSEQ`.
+
+      A reviewer asks which `LB` record produced a particular `AVAL`. What is the situation?
+    choices:
+      - text: "The package has metadata traceability but not data-point traceability — the reviewer knows the rule but has to re-apply it to find the record."
+        correct: true
+        feedback: "Correct. define.xml describes how a variable was built; only a pointer on the record says which source row was used. Both are needed, and the second cannot be added retrospectively without re-running the selection logic."
+      - text: "It is fully traceable — define.xml is the authoritative traceability mechanism."
+        feedback: "define.xml gives the rule. A rule plus data is not the same as a pointer: on a study with ties, time components and never-dosed subjects, the same rule can select different records."
+      - text: "It is not traceable at all, and the package is non-conformant."
+        feedback: "`SRCDOM`/`SRCVAR`/`SRCSEQ` are permissible, not required, in ADaMIG v1.3. The package is weaker, not automatically non-conformant."
+      - text: "Traceability only applies to derived variables, and `AVAL` is a predecessor."
+        feedback: "A Predecessor origin is a metadata statement about the variable. It still does not say which row."
+    explanation:
+      objective: "Separate the two traceability mechanisms and say what each one can and cannot answer."
+      relevant: "That define.xml records rules at variable level and SRCSEQ records results at record level."
+      method: "Ask whether the reviewer has to re-run logic to answer the question. If yes, data-point traceability is missing."
+      assumptions: "SRCDOM/SRCVAR/SRCSEQ are permissible variables in ADaMIG v1.3 rather than required ones, so their absence is a weakness rather than a violation."
+      interpretation: "The practical cost is days of reconstruction per query, and an answer that reflects your re-implementation rather than what the program did."
+      interviewer: "That you name both mechanisms and say they are complements, not alternatives."
+
+  - id: adam.trace.srcseq-scope
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [adam.traceability, adam.bds, adam.baseline]
+    lesson: adam-traceability
+    title: What SRCSEQ actually traces
+    prompt: |
+      An ADLB record has `AVAL = 16`, `BASE = 15`, `CHG = 1`, `SRCDOM = "LB"`, `SRCVAR = "LBSTRESN"`,
+      `SRCSEQ = 4`.
+
+      A reviewer asks for the source records behind the value **1**.
+
+      How many SDTM records do you have to supply?
+    choices:
+      - text: "Two — `LBSEQ = 4` for `AVAL`, and the `LBSEQ` on this subject's `ABLFL = \"Y\"` ALT record for `BASE`."
+        correct: true
+        feedback: "Correct. `SRCSEQ` traces `AVAL` only. `BASE` is the `AVAL` of a different ADLB row, which carries its own pointer. Tracing a change is always a two-hop walk."
+      - text: "One — `LBSEQ = 4`, because `SRCSEQ` identifies the source of the record."
+        feedback: "`SRCSEQ` identifies the source of `AVAL`, not of every variable on the record. `BASE` came from a different collection event on a different day."
+      - text: "None — `CHG` is derived, so it has no source records."
+        feedback: "`CHG` has no source record of its own, but it is arithmetic on two values that each do. Answering 'it is derived' does not answer the reviewer."
+      - text: "Three — `AVAL`, `BASE` and the reference range each have a source."
+        feedback: "`ANRLO`/`ANRHI` come from the same `LB` record as `AVAL` (`LBSTNRLO`/`LBSTNRHI`), so they add no hop."
+    explanation:
+      objective: "Establish the scope of a source pointer on a BDS record."
+      given: "A record carrying an analysis value, a baseline value, a change and a single source pointer."
+      relevant: "That BASE is copied from the ABLFL record of the same subject and parameter."
+      irrelevant: "The reference-range variables, which travel with AVAL's source record."
+      calculating: "The number of distinct SDTM records the change depends on."
+      numbers: "For subject CBX417-301-1002-0001's ALT at Cycle 4 Day 1: LBSEQ 4 gives AVAL 16, LBSEQ 2 gives BASE 15, so CHG = 1."
+      interpretation: "A change-from-baseline query always needs two source records, collected weeks apart."
+      changes: "If BASE were missing, CHG would be null and the record would drop out of the summary entirely."
+      interviewer: "That you volunteer the two-hop point rather than having to be prompted for it."
+
+  - id: adam.trace.dtype
+    format: mcq
+    modes: [check, speed]
+    difficulty: intermediate
+    skills: [adam.traceability, adam.bds]
+    lesson: adam-traceability
+    title: When DTYPE must be populated
+    prompt: |
+      Which of these BDS records requires `DTYPE` to be populated?
+    choices:
+      - text: "A Week 12 record created by carrying the Week 8 value forward for a subject who discontinued."
+        correct: true
+        feedback: "Correct. The value was not observed at Week 12. `DTYPE = \"LOCF\"` is what tells a reviewer that this row is a construction rather than a measurement."
+      - text: "A record whose `AVAL` is `LBSTRESN` copied from a single `LB` record."
+        feedback: "That is an observation. `DTYPE` stays null and `SRCSEQ` points at the source."
+      - text: "A record whose `AVISIT` was assigned by the windowing rule rather than taken from `VISIT`."
+        feedback: "The *value* was still observed; only its visit label was derived. `DTYPE` describes how `AVAL` was produced."
+      - text: "A record with `ANL01FL` null because another record was selected for that visit."
+        feedback: "Not being selected does not make a record derived. It is still an observation."
+    explanation:
+      objective: "Recognise when a record stops being an observation."
+      relevant: "Whether AVAL is a copy of a single source value or was constructed."
+      irrelevant: "Whether other variables on the record were derived — DTYPE is about AVAL."
+      method: "Ask: is there one source record whose value this is? If no, DTYPE."
+      assumptions: "ADaMIG v1.3 requires DTYPE on records that are not a direct copy of a single source observation."
+      interpretation: "Without DTYPE, a count of 'subjects with a Week 12 measurement' silently includes constructed rows."
+      changes: "CBX417-301 has no DTYPE column at all, because its SAP specifies no imputation, no LOCF and no averaging — every AVAL is a copy."
+      interviewer: "That you can give a concrete example (LOCF, average of replicates, phantom record) rather than reciting the definition."
+
+  - id: adam.trace.join-key
+    format: mcq
+    modes: [check, debug, qc]
+    difficulty: intermediate
+    skills: [adam.traceability, qc.discrepancy, r.joins]
+    lesson: adam-traceability
+    title: The join that produced 40,000 rows
+    prompt: |
+      A QC programmer joins 292 filtered ADLB records to `LB` to check the pointers and gets back
+      **tens of thousands** of rows.
+
+      ```r
+      trace <- filtered_adlb |>
+        left_join(lb, by = c("SRCSEQ" = "LBSEQ"))
+      ```
+
+      What went wrong?
+    choices:
+      - text: "`--SEQ` is unique only within a subject and domain, so `LBSEQ = 4` matches one record for every subject in the study. The join needs `USUBJID` as well."
+        correct: true
+        feedback: "Correct — and the failure is loud here, which is lucky. The same mistake inside an aggregation would silently produce a plausible-looking wrong mean."
+      - text: "`left_join` should have been `inner_join`."
+        feedback: "The join type controls what happens to non-matching rows, not how many rows a match produces. Both would fan out identically."
+      - text: "`LB` contains duplicate `LBSEQ` values, which is an SDTM conformance error."
+        feedback: "`LBSEQ` is *supposed* to repeat across subjects. Uniqueness is within `USUBJID` and `DOMAIN`, which is exactly why the join key needs both."
+      - text: "`SRCSEQ` is numeric and `LBSEQ` is character, so the match is unreliable."
+        feedback: "A type mismatch would usually error or produce zero matches, not a fan-out."
+    explanation:
+      objective: "Diagnose a fan-out when resolving source pointers."
+      given: "A 292-row input producing tens of thousands of output rows from a single-column join."
+      relevant: "The uniqueness scope of --SEQ in SDTM: unique within USUBJID and DOMAIN."
+      method: "A row count that multiplies rather than staying constant is a cardinality problem, which means the key is incomplete."
+      numbers: "292 ADLB records times roughly the number of subjects sharing each LBSEQ value."
+      assumptions: "Every ADLB record here points at exactly one LB record, so a correct join returns exactly 292 rows."
+      interpretation: "Assert the output row count equals the input row count on any pointer-resolution join."
+      changes: "Inside a summarise() the same bug produces a wrong number instead of an obviously wrong table."
+      interviewer: "That you state the uniqueness scope of --SEQ precisely rather than saying 'you need the subject too'."
+
+  - id: adam.trace.walk-the-chain
+    format: order
+    modes: [guided, case]
+    difficulty: foundation
+    skills: [adam.traceability, sdtm.identifiers]
+    lesson: adam-traceability
+    title: From a table cell to a specimen
+    minutes: 6
+    prompt: |
+      A reviewer queries the mean change from baseline in ALT at Cycle 4 Day 1 in the CBX-417 column of
+      Table 14.3.4.1 (5.34 U/L, n = 147).
+
+      Put the steps of the trace in the order you would perform them.
+    steps:
+      - "Reproduce the table cell by applying the table program's selection to ADLB: `PARAMCD = 'ALT'`, `AVISIT = 'CYCLE 4 DAY 1'`, `ANL01FL = 'Y'`, `SAFFL = 'Y'`, `CHG` not missing; confirm n = 147 in the CBX-417 column."
+      - "For each selected record read `SRCDOM`, `SRCVAR` and `SRCSEQ` — here `LB`, `LBSTRESN` and the `LBSEQ` of the Cycle 4 draw."
+      - "Join to SDTM `LB` on `USUBJID` **and** `SRCSEQ = LBSEQ`, and confirm `AVAL` equals `LBSTRESN` on every record."
+      - "For the baseline half of the change, find the same subject and parameter's `ABLFL = 'Y'` record in ADLB and read its `SRCSEQ`."
+      - "Resolve that second pointer into `LB` as well, so each change is backed by two source records."
+      - "Read `LBREFID` on the source records — the specimen accession number that ties each result to the vendor transfer."
+    hints:
+      - "You cannot trace records until you know which records the number used."
+      - "The change has two halves and each one has its own pointer."
+      - "The chain for a central laboratory result ends at the vendor transfer, not at a CRF page."
+    solution: |
+      Six steps, and the order is forced: you cannot resolve pointers before you know which records to
+      resolve, and you cannot trace `BASE` from the post-baseline record's pointer.
+
+      **Step 1 is the one people skip.** Confirming n = 147 before tracing anything is what tells you
+      your filter matches the table program's. If it does not, everything after it traces the wrong rows.
+
+      **Step 3's equality check is not optional.** A pointer that resolves proves the *record exists*. It
+      does not prove the pointer is right. Comparing `AVAL` to `LBSTRESN` catches a pointer that resolves
+      to the wrong record, which a null check would pass.
+
+      **Where the chain ends depends on the domain.** For a central laboratory result there is no CRF
+      page — results arrive as a vendor transfer, `LBREFID` carries the accession number, and the
+      define.xml origin names the transfer. For an adverse event the chain really does end on a CRF page
+      and the annotated CRF names the field. Answering "trace it to the CRF" for a lab value would be
+      wrong.
+    explanation:
+      objective: "Sequence a traceability walk from a reported number to its source records."
+      relevant: "That selection precedes resolution, and that a change needs two pointers."
+      method: "Each step consumes an identifier produced by the previous one."
+      numbers: "147 CBX-417 records behind the mean change of 5.340136 U/L."
+      assumptions: "Every ADLB record in this study resolves: 25,443 records, 0 unresolved, 0 value mismatches."
+      interpretation: "The walk is a sequence of lookups, not a re-derivation — which is the property SRCSEQ buys."
+      changes: "Without SRCSEQ every step after the first becomes a re-implementation of the baseline and windowing rules."
+      interviewer: "That you confirm the reproduced n before tracing, and that you know where the chain ends for this domain."
+
+  - id: adam.trace.resolve-code
+    format: code
+    language: r
+    modes: [guided, independent, qc]
+    difficulty: intermediate
+    skills: [adam.traceability, qc.compare, r.joins]
+    lesson: adam-traceability
+    datasets: [oncology/adam/adlb]
+    title: A pointer-resolution check for a BDS dataset
+    minutes: 12
+    prompt: |
+      Write `check_pointers(bds, src, seq_var)` that verifies every record of a BDS dataset resolves to
+      its source record and that the analysis value matches.
+
+      - `bds` — the ADaM dataset, carrying `USUBJID`, `AVAL` and `SRCSEQ`
+      - `src` — the SDTM dataset
+      - `seq_var` — the name of the sequence variable in `src`, e.g. `"LBSEQ"`
+      - the source value column in `src` is named by the dataset's own `SRCVAR`
+
+      Return a one-row data frame with `records`, `unresolved` and `mismatched`. Join on **both**
+      `USUBJID` and the sequence variable, and assert that the join did not change the row count.
+    starter: |
+      library(dplyr)
+
+      check_pointers <- function(bds, src, seq_var) {
+        value_var <- unique(bds$SRCVAR)
+
+        joined <- bds |>
+          left_join(
+            src |> select(USUBJID, all_of(seq_var), all_of(value_var)),
+            by = ___
+          )
+
+        stopifnot(___)
+
+        joined |>
+          summarise(records = n(), unresolved = ___, mismatched = ___)
+      }
+    reference: |
+      library(dplyr)
+
+      check_pointers <- function(bds, src, seq_var) {
+        value_var <- unique(bds$SRCVAR)
+        stopifnot(length(value_var) == 1)
+
+        joined <- bds |>
+          left_join(
+            src |> select(USUBJID, all_of(seq_var), all_of(value_var)),
+            by = c(USUBJID = "USUBJID", SRCSEQ = seq_var)
+          )
+
+        stopifnot(nrow(joined) == nrow(bds))
+
+        joined |>
+          summarise(
+            records    = n(),
+            unresolved = sum(is.na(.data[[value_var]])),
+            mismatched = sum(AVAL != .data[[value_var]], na.rm = TRUE)
+          )
+      }
+    hints:
+      - "The join key has two columns: `USUBJID` on both sides, and `SRCSEQ` matched to the source's sequence variable."
+      - "`--SEQ` is unique within a subject and domain, so a single-column join fans out across every subject."
+      - "Assert `nrow(joined) == nrow(bds)` — a fan-out is the failure this check most needs to catch."
+      - "`unresolved` counts null source values; `mismatched` counts source values that differ from `AVAL`."
+    checks:
+      - pattern: "left_join\\s*\\("
+        message: "Uses a left join so unresolved pointers survive as nulls rather than disappearing"
+      - pattern: "USUBJID\\s*=\\s*[\"']USUBJID[\"']"
+        message: "Includes USUBJID in the join key"
+      - pattern: "SRCSEQ\\s*=\\s*seq_var"
+        message: "Matches SRCSEQ to the source sequence variable"
+      - pattern: "stopifnot\\s*\\(\\s*nrow\\s*\\(\\s*joined\\s*\\)\\s*==\\s*nrow\\s*\\(\\s*bds\\s*\\)"
+        message: "Asserts the join did not change the row count"
+      - pattern: "sum\\s*\\(\\s*is\\.na\\s*\\("
+        message: "Counts unresolved pointers"
+      - pattern: "AVAL\\s*!="
+        message: "Compares AVAL against the resolved source value"
+    expectedOutput: |
+      ```text
+      > check_pointers(adlb, lb, "LBSEQ")
+        records unresolved mismatched
+      1   25443          0          0
+      ```
+    solution: |
+      **Three failures, three checks, and they are genuinely different.**
+
+      | Check | Catches |
+      |---|---|
+      | `nrow(joined) == nrow(bds)` | A fan-out from an incomplete join key |
+      | `unresolved` | A `SRCSEQ` that points at no record |
+      | `mismatched` | A `SRCSEQ` that points at the **wrong** record |
+
+      The third is the one that a naive check misses. A pointer that resolves proves a record exists at
+      that sequence number; only comparing the values proves it is the right one. An off-by-one in a
+      derivation program produces pointers that all resolve and all point one row away.
+
+      **The value comparison is only valid when the origin is Predecessor.** Here `AVAL` is `LBSTRESN`
+      copied unchanged, so equality holds. If `AVAL` were unit-converted or rounded to a different
+      precision, the right check would be a recomputation from the source, not an equality — which you
+      can only know by reading the metadata first.
+
+      On CBX417-301's ADLB: **25,443 records, 0 unresolved, 0 mismatched.** That is what a traceable
+      dataset looks like when it is tested rather than asserted.
+    explanation:
+      objective: "Write a reusable check that a BDS dataset's source pointers are complete and correct."
+      given: "A BDS dataset with SRCVAR and SRCSEQ, and its SDTM source."
+      relevant: "The uniqueness scope of --SEQ, and the difference between a resolving pointer and a correct one."
+      method: "Left join on the full key, assert cardinality, then count nulls and value mismatches separately."
+      numbers: "25,443 ADLB records, 0 unresolved, 0 mismatched."
+      assumptions: "AVAL's origin is Predecessor, so equality with the source value is the right comparison."
+      computation: "A left join preserves unresolved rows as nulls; an inner join would hide exactly the defect being looked for."
+      interpretation: "All three counts at zero is the only acceptable result for a dataset claiming data-point traceability."
+      changes: "If AVAL were unit-converted, the equality check would have to become a recomputation."
+      interviewer: "That you check for the wrong-record case, not just the missing-record case."
+
+  - id: adam.trace.two-hop
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [adam.traceability, adam.baseline]
+    lesson: adam-traceability
+    datasets: [oncology/adam/adlb]
+    title: How many SDTM records behind one change
+    prompt: |
+      Subject `CBX417-301-1002-0001`, parameter ALT. The ADLB records:
+
+      | `AVISIT` | `ADY` | `AVAL` | `BASE` | `CHG` | `ABLFL` | `SRCSEQ` |
+      |---|---:|---:|---:|---:|---|---:|
+      | SCREENING | −12 | 18 | 15 | — | — | 1 |
+      | BASELINE | 1 | 15 | 15 | — | Y | 2 |
+      | CYCLE 2 DAY 1 | 22 | 21 | 15 | 6 | — | 3 |
+      | CYCLE 4 DAY 1 | 64 | 16 | 15 | 1 | — | 4 |
+
+      A reviewer asks for the source records behind **every** non-missing `CHG` value for this subject
+      and parameter in the four rows shown.
+
+      How many distinct `LB` records must you supply?
+    answer: 3
+    tolerance: 0
+    unit: records
+    hints:
+      - "Two rows have a non-missing `CHG`. Each needs its own value and the baseline value."
+      - "The baseline record is the same one for both changes."
+      - "`LBSEQ` 3, 4 and the one that `ABLFL = 'Y'` points to."
+    solution: |
+      **Three:** `LBSEQ` 2, 3 and 4.
+
+      - `CHG = 6` at Cycle 2 Day 1 needs `LBSEQ = 3` (`AVAL = 21`) and `LBSEQ = 2` (`BASE = 15`).
+      - `CHG = 1` at Cycle 4 Day 1 needs `LBSEQ = 4` (`AVAL = 16`) and `LBSEQ = 2` again.
+
+      The baseline record is shared, so the total is three rather than four.
+
+      **`LBSEQ = 1` is not required.** The screening record is in the dataset and carries a perfectly good
+      pointer, but it lost the baseline selection — the Day 1 pre-dose record is later and on or before
+      first dose, so it wins. Its `ABLFL` is null and it contributes to no change.
+
+      That record is worth noticing for a different reason: it shows that ADLB keeps records the analysis
+      does not use rather than deleting them. A reviewer can see the screening value of 18 and check that
+      the baseline rule picked the right one.
+    explanation:
+      objective: "Count the source records a set of change values depends on."
+      given: "Four ADLB records for one subject and parameter, with their source sequence numbers."
+      relevant: "That BASE traces to the ABLFL record and is shared across all changes for that subject and parameter."
+      irrelevant: "The screening record, which is not the baseline and feeds no change."
+      calculating: "Distinct LBSEQ values needed: two post-baseline values plus one shared baseline."
+      numbers: "LBSEQ 3 and 4 for the two AVALs, LBSEQ 2 for the shared BASE."
+      interpretation: "Baseline is carried to every record of the subject and parameter, so its source is cited once however many changes there are."
+      changes: "If the baseline rule had selected the screening record instead, BASE would be 18 and both changes would move by 3."
+      interviewer: "That you notice the baseline record is shared rather than counting two hops per change."
+
+  - id: adam.trace.derived-pointer
+    format: mcq
+    modes: [check, qc]
+    difficulty: advanced
+    skills: [adam.traceability, adam.bds, trials.oncology]
+    lesson: adam-traceability
+    title: What a pointer on a derived record should point at
+    prompt: |
+      In `ADRS`, subject `CBX417-301-1002-0001` has six `OVRLRESP` records (SD, PR, PR, PR, PR, PD at
+      `SRCSEQ` 1 through 6) and one `BOR` record with `AVALC = "PR"`, `ADT = 2022-08-11` and
+      `SRCSEQ = 2`.
+
+      What does the `BOR` record's `SRCSEQ` tell a reviewer, and what does it not?
+    choices:
+      - text: "It identifies the assessment that *determined* the best response — the Week 12 scan where PR first appeared — so `BOR.AVALC` can be checked against that record in one line. It does not explain why the other five assessments lost."
+        correct: true
+        feedback: "Correct. The pointer makes the derivation checkable without re-running it, and the why still belongs in the metadata and the ADRG."
+      - text: "It identifies the first assessment in the sequence, by convention."
+        feedback: "It points at `SRCSEQ = 2`, the Week 12 record, not `SRCSEQ = 1`. The pointer follows the derivation, not a positional rule."
+      - text: "It identifies the last assessment before progression."
+        feedback: "That would be `SRCSEQ = 5`. The pointer names the record that supplied the value, which here is the first PR."
+      - text: "Nothing useful — a derived record should leave `SRCSEQ` null and rely on `DTYPE`."
+        feedback: "`DTYPE` is for values that were *computed* rather than observed. `BOR.AVALC` is a copy of an observed response; pointing at the observation it was copied from is more informative than a null."
+    explanation:
+      objective: "Interpret a source pointer on a record whose value was selected from many candidates."
+      given: "A sequence of visit-level responses and a derived best-overall-response record pointing into it."
+      relevant: "That BOR's AVALC is a copy of one observed assessment, so a pointer is meaningful."
+      irrelevant: "Positional conventions such as first or last record."
+      method: "Check the derived value against the record its pointer names — a one-line QC across all subjects."
+      numbers: "406 of CBX417-301's 420 BOR records carry SRCDOM = 'RS'; the other 14 are subjects with AVALC = 'NE' whose derivation used no assessment."
+      assumptions: "AVAL and AVALC are paired: 1 = CR, 2 = PR, 3 = SD, 4 = PD, 5 = NE."
+      interpretation: "The pointer converts 'trust the derivation' into 'check the derivation'."
+      changes: "A null SRCDOM on an NE record is correct — there is genuinely no source assessment."
+      interviewer: "That you name the QC check the pointer enables, not just what it means."
+
+  - id: adam.trace.broken-pointer
+    format: diff
+    modes: [debug, qc, boss]
+    difficulty: advanced
+    skills: [adam.traceability, qc.discrepancy, qc.compare]
+    lesson: adam-traceability
+    title: Every pointer resolves, and the data are still wrong
+    minutes: 12
+    prompt: |
+      A QC programmer runs the pointer check on a rebuilt ADLB and reports "0 unresolved — pointers are
+      fine". The production statistician is not convinced and asks for a value comparison.
+
+      Below are the first four ALT records for one subject as the rebuilt ADLB has them, and the same
+      subject's `LB` records.
+
+      What is the root cause?
+    left:
+      title: "Rebuilt ADLB — subject CBX417-301-1002-0001, ALT"
+      columns: ["AVISIT", "ADT", "AVAL", "SRCSEQ"]
+      rows:
+        - ["SCREENING", "2022-05-11", 15, 1]
+        - ["BASELINE", "2022-05-23", 21, 2]
+        - ["CYCLE 2 DAY 1", "2022-06-13", 16, 3]
+        - ["CYCLE 4 DAY 1", "2022-07-25", 17, 4]
+      footnote: "Every SRCSEQ resolves to an existing LB record for this subject."
+    right:
+      title: "SDTM LB — subject CBX417-301-1002-0001, ALT"
+      columns: ["VISIT", "LBDTC", "LBSTRESN", "LBSEQ"]
+      rows:
+        - ["SCREENING", "2022-05-11", 18, 1]
+        - ["CYCLE 1 DAY 1", "2022-05-23", 15, 2]
+        - ["CYCLE 2 DAY 1", "2022-06-13", 21, 3]
+        - ["CYCLE 4 DAY 1", "2022-07-25", 16, 4]
+      footnote: "LBSEQ 5 exists and holds the Cycle 6 Day 1 value of 17."
+    choices:
+      - text: "`AVAL` is off by one record: each row carries the *next* record's value while keeping its own `SRCSEQ` and `ADT`. The pointers all resolve and all point one row away from the value."
+        correct: true
+        feedback: "Correct. This is exactly the failure a null check cannot see. Comparing `AVAL` with the resolved `LBSTRESN` finds it on every record; counting unresolved pointers finds it on none."
+      - text: "The `SRCSEQ` values were shifted while `AVAL` stayed correct."
+        feedback: "Check the dates. `ADT` matches `LBDTC` for the same `LBSEQ` on every row, so the sequence numbers and dates agree with each other — it is the values that moved."
+      - text: "`LB` is sorted differently from ADLB, so the visits do not correspond."
+        feedback: "The visits and dates line up row for row. Sort order would misalign the dates too."
+      - text: "The baseline record was mis-selected, shifting every downstream value."
+        feedback: "Baseline selection affects `ABLFL` and `BASE`, not `AVAL`. Every `AVAL` here is wrong, including the screening record's."
+      - text: "It is a unit conversion — ADLB is in different units from `LB`."
+        feedback: "A unit conversion would apply a consistent factor. 15/18, 21/15, 16/21 and 17/16 are not a common ratio; the values are simply displaced."
+    hints:
+      - "Compare each `AVAL` to the `LBSTRESN` of the record its `SRCSEQ` names, then to the next one."
+      - "Does `ADT` agree with the `LBDTC` of the pointed-to record?"
+      - "What would a `RETAIN` without a reset, or a `lead()` applied to the wrong column, produce?"
+    explanation:
+      objective: "Find a traceability defect that a pointer-resolution check passes."
+      given: "Two aligned record sets where every pointer resolves and every value is displaced by one row."
+      relevant: "That ADT matches its pointed-to record's LBDTC while AVAL does not match its LBSTRESN."
+      irrelevant: "The existence of LBSEQ 5, which only confirms where the last value came from."
+      method: "Check the invariant that AVAL equals the source value, not merely that a source record exists."
+      numbers: "LBSEQ 1 holds 18 and ADLB shows 15; LBSEQ 2 holds 15 and ADLB shows 21; the ADLB values are the LBSTRESN of LBSEQ 2, 3, 4 and 5."
+      assumptions: "AVAL's origin is Predecessor, so equality with LBSTRESN is the correct invariant."
+      interpretation: "A resolving pointer proves a record exists at that sequence number, not that it is the right record."
+      changes: "Every derived value downstream is wrong: BASE, CHG, ANRIND and ATOXGR all inherit the displaced AVAL."
+      interviewer: "That you distinguish 'the pointer resolves' from 'the pointer is correct' and know which check separates them."
+
+  - id: adam.trace.origin-audit
+    format: classify
+    modes: [independent, qc]
+    difficulty: advanced
+    skills: [adam.traceability, regulatory.define, adam.specs]
+    lesson: adam-traceability
+    title: How is each variable traced?
+    minutes: 8
+    prompt: |
+      For each ADLB variable, say which mechanism a reviewer uses to trace it.
+
+      - **Source pointer** — `SRCDOM`/`SRCVAR`/`SRCSEQ` on this record resolve it directly.
+      - **Another ADaM record** — it was copied from a different row of an ADaM dataset, which has its own trace.
+      - **Metadata only** — it is a derivation rule with no single source record; only define.xml and the specification explain it.
+    categories: [Source pointer, Another ADaM record, Metadata only]
+    entries:
+      - text: "`AVAL`"
+        category: Source pointer
+        note: "`SRCVAR = 'LBSTRESN'` and `SRCSEQ` resolve it to one `LB` record."
+      - text: "`ADT`"
+        category: Source pointer
+        note: "The date part of the same `LB` record's `LBDTC`."
+      - text: "`ANRLO` and `ANRHI`"
+        category: Source pointer
+        note: "`LBSTNRLO` and `LBSTNRHI` from the same `LB` record — the reference range travels with the result."
+      - text: "`BASE`"
+        category: Another ADaM record
+        note: "The `AVAL` of this subject and parameter's `ABLFL = 'Y'` row, which has its own pointer."
+      - text: "`BNRIND`"
+        category: Another ADaM record
+        note: "The `ANRIND` of the baseline row, copied forward — same second hop as `BASE`."
+      - text: "`TRTA` and `SAFFL`"
+        category: Another ADaM record
+        note: "Copied from `ADSL.TRT01A` and `ADSL.SAFFL`; the trace continues through ADSL's own metadata."
+      - text: "`CHG`"
+        category: Metadata only
+        note: "Arithmetic on `AVAL` and `BASE`. No source record of its own — the rule is the trace."
+      - text: "`AVISIT`"
+        category: Metadata only
+        note: "Assigned by the windowing rule from `ADY`. The rule lives in the SAP and define.xml."
+      - text: "`ANL01FL`"
+        category: Metadata only
+        note: "A selection decision across records. Nothing in `LB` corresponds to it."
+      - text: "`ATOXGR`"
+        category: Metadata only
+        note: "A CTCAE-style grade computed from `AVAL` and the reference range. The criteria are in the SAP."
+    hints:
+      - "Ask: is there one SDTM record whose value this is?"
+      - "Variables copied from the baseline row or from ADSL are one hop away from a pointer, not zero."
+      - "Anything produced by a rule *across* records has no single source."
+    solution: |
+      The split is roughly a third, a third, a third — and that ratio is the real lesson.
+
+      **`SRCSEQ` traces less than half the record.** Most of what makes ADLB useful — the baseline, the
+      change, the visit assignment, the selection flag, the grade — is traceable only through metadata.
+
+      **That is not a defect.** `ANL01FL` cannot have a source pointer, because it is a statement about a
+      *set* of records rather than a value copied from one. Neither can `AVISIT`. What those variables
+      need instead is a derivation written precisely enough in define.xml and the ADRG that a reviewer
+      could reimplement it and get the same flags.
+
+      **The practical consequence for QC:** the source-pointer variables are checked by a join; the
+      metadata-only variables are checked by recomputing the rule independently. Two different kinds of
+      check, and a QC plan that only does the first has verified the easy third.
+    explanation:
+      objective: "Audit which traceability mechanism applies to each variable on a BDS record."
+      relevant: "Whether a variable is a copy of one source value, a copy from another ADaM row, or the output of a rule."
+      method: "Follow the value: one SDTM record, one ADaM record, or no single record at all."
+      interpretation: "Most of a BDS record is traceable only through metadata, which is why define.xml precision matters as much as SRCSEQ coverage."
+      assumptions: "This study populates SRCDOM/SRCVAR/SRCSEQ on every BDS record; not all sponsors do."
+      changes: "If AVAL were unit-converted, it would move from source-pointer to a derivation whose check is a recomputation."
+      interviewer: "That you can say why ANL01FL cannot have a pointer rather than treating its absence as a gap."
+
+  - id: adam.trace.open-reviewer
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [adam.traceability, regulatory.define, communication.interviewing]
+    lesson: adam-traceability
+    title: The regulatory query
+    prompt: |
+      **Interviewer:** "A reviewer asks you to identify the subjects contributing to one number in a
+      safety table and to provide the source records. Walk me through it."
+    modelAnswer: |
+      I'd answer it as a lookup rather than a reconstruction, and whether that's possible depends on
+      something we decided months earlier.
+
+      **First, reproduce the cell exactly.** The table program's selection becomes a filter on the
+      analysis dataset — for a lab change table that's parameter, analysis visit, `ANL01FL = 'Y'`, the
+      population flag and a non-missing change. Before I trace anything I check the n matches the table.
+      If it doesn't, I'm about to trace the wrong rows and produce a confidently wrong answer.
+
+      **Then resolve the pointers.** Every BDS record carries `SRCDOM`, `SRCVAR` and `SRCSEQ`, so it's a
+      join into the SDTM domain on subject *and* source sequence. `--SEQ` is only unique within a subject
+      and domain, so a single-column join fans out across the whole study — and the dangerous version of
+      that mistake is inside an aggregation, where it produces a plausible number instead of an obviously
+      broken table.
+
+      **I'd check the pointers are right, not just that they resolve.** Where the origin is Predecessor,
+      `AVAL` should equal the source value. A pointer that resolves only proves a record exists at that
+      sequence number; an off-by-one in a derivation program produces pointers that all resolve and all
+      point one row away. That check is one line and it's the difference between the two failure modes.
+
+      **For a change from baseline it's a two-hop trace.** `SRCSEQ` on the record points at the source of
+      `AVAL`. `BASE` came from a different row — the `ABLFL = 'Y'` record — with its own pointer. So the
+      reviewer gets two source records per change, and I'd say so explicitly rather than sending one and
+      waiting for the follow-up.
+
+      **And I'd be accurate about where the chain ends.** For an adverse event it ends on a CRF page and
+      the annotated CRF names the field. For a central laboratory result there's no CRF page at all —
+      results arrive as a vendor transfer, and `LBREFID` carries the specimen accession number that ties
+      the value to it. Telling a reviewer to look at the CRF for a central lab value would be wrong for
+      most of the study's data volume.
+
+      The thing I'd want to have said before any of this: the reason this takes an afternoon rather than
+      three days is that the derivation programs wrote `SRCSEQ` down while they were deriving. You can't
+      back-fill it — back-filling means re-running the selection logic, and then the pointer proves
+      nothing except that you ran your own code twice.
+    rubric:
+      - Reproduces and verifies the cell before tracing
+      - Joins on subject and sequence, and explains why --SEQ alone is insufficient
+      - Distinguishes a resolving pointer from a correct one and names the value check
+      - Identifies a change from baseline as a two-hop trace
+      - Knows the chain ends at a vendor transfer for central laboratory data
+      - Notes that SRCSEQ must be written during derivation, not back-filled
+      - Mentions metadata traceability (define.xml, the ADRG) as the complement for derived variables
+    redFlags:
+      - "Starts by opening the table program and re-deriving the logic"
+      - "Says 'trace it back to the CRF' for a central laboratory value"
+      - "Provides one source record for a change from baseline"
+      - "Treats a resolving pointer as proof the value is right"
+      - "Offers to back-fill SRCSEQ if it is missing"
+    followUps:
+      - "The dataset has no SRCSEQ. What do you tell the reviewer, and what do you change for the next study?"
+      - "How would this answer differ for a record with DTYPE = 'LOCF'?"

@@ -1,0 +1,254 @@
+items:
+  - id: trials.protocol.calendar-scans
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.protocol, trials.oncology]
+    lesson: trials-reading-a-protocol
+    title: Why a calendar scan schedule?
+    prompt: |
+      The CBX417-301 protocol schedules tumor assessments every 6 weeks **from randomization, regardless of dosing delays**. What bias does this prevent?
+    choices:
+      - text: "Assessment-time bias: an arm with more dose delays would have later scans and therefore later-detected progression"
+        correct: true
+        feedback: "Progression is only observed at scans. If scan timing depended on dosing, differences in toxicity-related delays would shift detected PFS between arms."
+      - text: "Selection bias at enrollment"
+        feedback: "Selection bias concerns who enters the trial or which arm they get; allocation concealment addresses that, not the scan calendar."
+      - text: "Immortal time bias from using first dose as the start date"
+        feedback: "Related, but the scan calendar is about when progression can be detected, not about which start date is used."
+      - text: "Recall bias in patient-reported outcomes"
+        feedback: "Recall bias concerns self-reported information; imaging schedules do not affect it."
+    solution: |
+      Progression is interval-censored: it can only be detected at an assessment. Scheduling scans identically in both arms, anchored to randomization, gives both arms the same opportunity to detect progression.
+
+  - id: trials.protocol.element-implication
+    format: mapping
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.protocol]
+    lesson: trials-reading-a-protocol
+    title: Protocol sentence to data implication
+    prompt: |
+      Map each CBX417-301 protocol element to its most direct data or analysis implication.
+    sourceLabel: Protocol element
+    targetLabel: Implication
+    pairs:
+      - { source: "Stratified by ECOG PS and prior anti-PD-(L)1", target: "STRAT1R/STRAT2R in ADSL and a stratified log-rank/Cox analysis" }
+      - { source: "AEs collected until 30 days after last dose", target: "TEAE window ends at TRTEDT + 30 days" }
+      - { source: "Survival follow-up every 12 weeks", target: "Last-known-alive dates for OS censoring" }
+      - { source: "Height measured at screening only", target: "BSA and BMI use the screening height" }
+      - { source: "331 PFS events for 90% power", target: "Event-driven timing of the final analysis (data cutoff)" }
+    targets:
+      - "STRAT1R/STRAT2R in ADSL and a stratified log-rank/Cox analysis"
+      - "TEAE window ends at TRTEDT + 30 days"
+      - "Last-known-alive dates for OS censoring"
+      - "BSA and BMI use the screening height"
+      - "Event-driven timing of the final analysis (data cutoff)"
+      - "Baseline is the screening value for every assessment"
+    solution: |
+      Each protocol sentence maps to a variable, a window or an analysis choice. The distractor — "baseline is the screening value for every assessment" — is false: for labs, baseline is usually the C1D1 pre-dose sample.
+
+  - id: trials.protocol.ecg-baseline
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.protocol, adam.baseline]
+    lesson: trials-reading-a-protocol
+    title: Which ECG is baseline?
+    prompt: |
+      ECGs are recorded at Screening, **C1D1 (post-dose)**, C2D1, C4D1 and EOT. The generic SAP baseline rule is "last non-missing value on or before the first dose date". A programmer compares **dates only**. Which record will the program select as baseline, and is it correct?
+    choices:
+      - text: "The C1D1 ECG — which is wrong, because it was recorded after the first dose on the same day"
+        correct: true
+        feedback: "Comparing dates only, the C1D1 ECG date equals TRTSDT and is the last record on or before it. Because it is post-dose, it is not a valid baseline; compare times or define ECG baseline as screening."
+      - text: "The screening ECG — correct"
+        feedback: "That is the right baseline, but a date-only comparison will not select it, because the C1D1 ECG is on the first-dose date."
+      - text: "No record — the rule excludes records on the first-dose date"
+        feedback: "'On or before' includes the first-dose date."
+      - text: "The C2D1 ECG — it is the first on-treatment value"
+        feedback: "C2D1 is after first dose, so it cannot be selected by an 'on or before' rule."
+    solution: |
+      Date-only logic selects the C1D1 post-dose ECG. Fix: compare date and time (ECG time < first dose time), or state in the SAP that ECG baseline is the last pre-dose assessment (screening in this schedule).
+
+  - id: trials.protocol.clock-start
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [trials.protocol, trials.endpoints]
+    lesson: trials-reading-a-protocol
+    title: When does the PFS clock start?
+    prompt: |
+      In CBX417-301, from which date is PFS measured?
+    choices:
+      - text: "Randomization date (`RANDDT`)"
+        correct: true
+        feedback: "Time-to-event endpoints in randomized trials start at randomization so all randomized subjects are analyzed from the same comparable origin."
+      - text: "First dose date (`TRTSDT`)"
+        feedback: "First dose anchors safety windows, not efficacy time-to-event endpoints; never-treated subjects would have no start date."
+      - text: "Informed consent date (`RFICDTC`)"
+        feedback: "Consent precedes screening and randomization; time before randomization is not at risk under the randomized comparison."
+      - text: "Date of the baseline tumor scan"
+        feedback: "The baseline scan can be up to 28 days before randomization; it defines baseline tumor burden, not the start of PFS."
+    solution: |
+      Randomization. In `ADTTE`, `STARTDT = RANDDT` for PFS and OS, and `AVAL = ADT - STARTDT + 1` days.
+
+  - id: trials.protocol.bsa-dose
+    format: numeric
+    modes: [guided]
+    difficulty: foundation
+    skills: [trials.protocol]
+    lesson: trials-reading-a-protocol
+    title: Docetaxel planned dose
+    prompt: |
+      A subject is 165 cm tall and weighs 62 kg at C1D1. Using the Mosteller formula $\text{BSA} = \sqrt{\text{height} \times \text{weight} / 3600}$, what is the planned docetaxel dose in mg at 75 mg/m²? Give one decimal place.
+    answer: 126.4
+    tolerance: 0.2
+    unit: mg
+    hints:
+      - "Compute height × weight first: 165 × 62."
+      - "BSA = √(10230 / 3600) = √2.8417. Then multiply by 75."
+    solution: |
+      165 × 62 = 10230; 10230 / 3600 = 2.8417; √2.8417 = 1.6857 m². Planned dose = 75 × 1.6857 = 126.4 mg. (At the reduced 60 mg/m² level it would be 101.1 mg.) Keep full precision until the final step — rounding BSA to 1.7 first would give 127.5 mg.
+
+  - id: trials.protocol.eligibility-data
+    format: multi
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.protocol, trials.data-management]
+    lesson: trials-reading-a-protocol
+    title: What must be collected to verify eligibility?
+    prompt: |
+      Which data must be collected at screening so that CBX417-301 eligibility can be verified (and deviations detected later)? Select all that apply.
+    choices:
+      - text: "ECOG performance status"
+        correct: true
+        feedback: "ECOG 0–1 is an inclusion criterion and a stratification factor."
+      - text: "A baseline tumor assessment identifying measurable disease per RECIST 1.1"
+        correct: true
+        feedback: "Measurable disease is required; the baseline scan must be within 28 days before randomization."
+      - text: "Prior anticancer therapies, including a platinum doublet and the number of prior lines"
+        correct: true
+        feedback: "1–2 prior lines including a platinum doublet is an eligibility criterion; prior anti-PD-(L)1 is also a stratification factor."
+      - text: "EGFR/ALK alteration status"
+        correct: true
+        feedback: "No actionable EGFR/ALK alteration is required, so the status (or the documented test) must be recorded."
+      - text: "Post-baseline QTcF values"
+        feedback: "Post-baseline values are safety data collected on treatment; they play no role in eligibility."
+    hints:
+      - "Go through the population line of the synopsis criterion by criterion."
+      - "Anything that is a criterion must be observable in the data; post-baseline data cannot determine eligibility."
+    solution: |
+      ECOG, baseline measurable disease, prior therapy history and EGFR/ALK status are all needed. Age (≥18) and diagnosis are also verified from screening data. Eligibility violations discovered later are recorded as protocol deviations and may affect per-protocol membership.
+
+  - id: trials.protocol.events-variant
+    format: numeric
+    modes: [independent]
+    difficulty: intermediate
+    skills: [trials.protocol, stats.power]
+    lesson: trials-reading-a-protocol
+    title: How many events if the target HR were 0.75?
+    prompt: |
+      The protocol's sample size uses Schoenfeld's formula for a 1:1 trial:
+
+      $$d = \frac{4\,(z_{1-\alpha/2} + z_{1-\beta})^2}{(\ln \text{HR})^2}$$
+
+      With two-sided $\alpha = 0.05$ ($z = 1.96$) and 90% power ($z = 1.2816$), the protocol targets HR = 0.70 and needs 331 events. How many events (rounded **up**) would be needed to detect HR = 0.75 with the same α and power?
+    answer: 508
+    tolerance: 1
+    unit: events
+    hints:
+      - "The numerator does not change: 4 × (1.96 + 1.2816)² = 42.03."
+      - "(ln 0.75)² = (−0.2877)² = 0.08276. Divide and round up."
+    solution: |
+      Numerator: 4 × (3.2416)² = 4 × 10.508 = 42.03. Denominator: (ln 0.75)² = 0.08276. 42.03 / 0.08276 = 507.8 → **508 events**. A smaller effect (HR closer to 1) needs many more events — about 53% more than for HR 0.70 — which usually means more patients or longer follow-up.
+
+  - id: trials.protocol.synopsis-inconsistency
+    format: hotspot
+    language: text
+    modes: [debug]
+    difficulty: intermediate
+    skills: [trials.protocol, trials.design]
+    lesson: trials-reading-a-protocol
+    title: Review a draft synopsis
+    prompt: |
+      You are reviewing a **draft** of a synopsis for a CBX-417 study. Click the lines that create a data or analysis problem (inconsistency between sections, or an endpoint that cannot be analyzed as designed).
+    code: |
+      Design: randomized 1:1, double-blind, placebo-controlled
+      Stratification: ECOG PS (0 vs 1) and prior anti-PD-(L)1 therapy (Yes vs No)
+      Population: adults >=18 years, advanced/metastatic NSCLC, ECOG 0-2
+      Primary endpoint: PFS per investigator, RECIST 1.1
+      Tumor assessments: every 6 weeks from first dose of study drug
+      Key secondary endpoint: overall survival
+      Safety: AEs collected from informed consent to 30 days after last dose
+      Sample size: 331 PFS events, 90% power, HR 0.70, two-sided alpha 0.05
+    answerLines: [3, 5]
+    lineNotes:
+      - line: 3
+        note: "ECOG 0–2 is eligible, but stratification only has levels 0 and 1. Subjects with ECOG 2 would have no stratum. Either restrict eligibility to 0–1 or add a level (for example 0 vs 1–2)."
+      - line: 5
+        note: "Scans anchored to first dose let dose delays shift assessment timing differently by arm (assessment-time bias), and give never-treated subjects no schedule. Anchor the calendar to randomization."
+      - line: 8
+        note: "Consistent: Schoenfeld gives 330.4, rounded up to 331."
+    fixed: |
+      Design: randomized 1:1, double-blind, placebo-controlled
+      Stratification: ECOG PS (0 vs 1) and prior anti-PD-(L)1 therapy (Yes vs No)
+      Population: adults >=18 years, advanced/metastatic NSCLC, ECOG 0-1
+      Primary endpoint: PFS per investigator, RECIST 1.1
+      Tumor assessments: every 6 weeks (+/-7 days) from randomization, regardless of dosing delays
+      Key secondary endpoint: overall survival
+      Safety: AEs collected from informed consent to 30 days after last dose
+      Sample size: 331 PFS events, 90% power, HR 0.70, two-sided alpha 0.05
+    hints:
+      - "Compare the population line with the stratification line."
+      - "Ask what anchors the tumor-assessment calendar, and what happens if one arm has more dose delays."
+    solution: |
+      Line 3 conflicts with the stratification factor levels; line 5 anchors scans to dosing instead of randomization. Both would surface later as unanalyzable strata or biased PFS — cheap to fix in a draft, impossible after enrollment.
+    explanation:
+      objective: "Review a synopsis for internal consistency and analyzability."
+      given: "Eight synopsis lines, two of which conflict with good design or with each other."
+      relevant: "Eligibility vs stratification levels; the anchor of the assessment schedule."
+      irrelevant: "The AE collection period and the sample size line are consistent."
+      method: "Cross-check each design element against the others and against the primary endpoint's needs."
+      interpretation: "Protocol review by biometrics exists to catch exactly these problems before first patient in."
+      changes: "If stratification were 'ECOG 0 vs 1–2', line 3 would be consistent."
+      interviewer: "That you read protocols critically and think about how each sentence will be implemented in data."
+
+  - id: trials.protocol.interview-first-look
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [trials.protocol, communication.interviewing]
+    lesson: trials-reading-a-protocol
+    title: Your first read of a protocol
+    prompt: |
+      **Interviewer:** "You join a study team and receive the protocol. As a programmer (or statistician), what do you extract from it before writing any specifications?"
+    modelAnswer: |
+      I start with the synopsis: objectives and endpoints, because they define the analyses; the design — randomization ratio, stratification factors, blinding — because it drives ADSL and the models; and the population, because eligibility becomes screening data and deviation checks. Then the schedule of assessments: for each measurement I note which visit provides baseline (for example, labs at C1D1 pre-dose, but ECG only at screening because C1D1 is post-dose), and whether assessments follow a calendar from randomization or the dosing calendar.
+
+      For each endpoint I list the start of the clock, the source data and every rule that is not yet defined — censoring, windows, imputation — and send those as questions to the statistician so they are answered in the SAP. I also note dose-modification rules because they determine exposure derivations such as dose intensity.
+    rubric:
+      - Starts from objectives/endpoints and design
+      - Mentions stratification and blinding as data drivers
+      - Reads the schedule of assessments for baseline and windows
+      - Identifies clock start (randomization vs first dose)
+      - Ends with questions for the statistician rather than assumptions
+    redFlags:
+      - "Only mentions reading the SAP"
+      - "Assumes baseline is always screening"
+    followUps:
+      - "What would you do if the protocol and SAP disagreed on the PFS definition?"
+      - "Why might the ECOG in EDC differ from the IxRS stratum?"
+
+  - id: trials.protocol.speed-visitnum
+    format: numeric
+    modes: [speed]
+    difficulty: foundation
+    skills: [trials.protocol]
+    lesson: trials-reading-a-protocol
+    title: Visit numbering
+    prompt: |
+      In CBX417-301, `CYCLE n DAY 1` has `VISITNUM = n × 10`. What is the `VISITNUM` of `CYCLE 4 DAY 1`?
+    answer: 40
+    tolerance: 0
+    solution: |
+      4 × 10 = 40. (`CYCLE 1 DAY 8` is 11; an unscheduled visit after C4D1 would be 40.01 under the study's convention.)

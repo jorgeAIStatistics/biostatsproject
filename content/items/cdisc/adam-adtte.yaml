@@ -1,0 +1,769 @@
+items:
+  - id: adam.adtte.cnsr-convention
+    format: mcq
+    modes: [check, qc, debug]
+    difficulty: advanced
+    skills: [adam.adtte, stats.survival, r.survival]
+    lesson: adam-adtte
+    datasets: [oncology/adam/adtte]
+    title: Why `1 - CNSR` is not the event indicator
+    prompt: |
+      A programmer converts CBX417-301's ADTTE for `survival::coxph()` with
+
+      ```r
+      pfs$event <- 1 - pfs$CNSR
+      ```
+
+      The PFS records have `CNSR` values 0 (332 records), 1 (36), 2 (9), 3 (28) and 4 (15).
+
+      What happens?
+    choices:
+      - text: "`event` takes the values −1, −2 and −3 on the 52 records with `CNSR > 1`. `Surv()` converts them to `NA` with one warning, so those 52 subjects silently leave the analysis while all 332 events remain."
+        correct: true
+        feedback: "Correct. Only censored subjects are lost, so the event count still matches the SAP — which is the number most people check first. The denominators fall from 210/210 to 176/192 and the hazard ratio moves from 0.68 to 0.72."
+      - text: "`Surv()` raises an error, so the analysis stops and the bug is found immediately."
+        feedback: "It does not error. It issues a single warning — `Invalid status value, converted to NA` — and continues with the remaining records."
+      - text: "Nothing: `CNSR` values above 1 still mean censored, so `1 - CNSR` collapses them all to 0."
+        feedback: "Arithmetic does not collapse them. `1 - 3` is `−2`, not `0`. Only `CNSR == 0` tests the property that actually matters."
+      - text: "The 52 records become events, inflating the event count from 332 to 384."
+        feedback: "That is the mirror-image bug in SAS — `TIME AVAL * CNSR(1)` treats 2, 3 and 4 as events. In R the negative values are dropped, not promoted."
+      - text: "Only records with `CNSR = 1` are affected, because 2, 3 and 4 are not valid ADaM values."
+        feedback: "ADaMIG v1.3 explicitly permits `CNSR` values greater than 1 to record the censoring reason. Any non-zero value means censored."
+    explanation:
+      objective: "Predict the effect of the habitual event-indicator conversion on a study that codes censoring reasons."
+      given: "The PFS CNSR distribution 332 / 36 / 9 / 28 / 15."
+      relevant: "That 52 records have CNSR above 1, and that ADaM's only rule is `0 = event`."
+      irrelevant: "Which particular reasons 2, 3 and 4 encode — the arithmetic breaks whatever they mean."
+      method: "Evaluate `1 - CNSR` on each distinct CNSR value and ask what Surv() does with each result."
+      numbers: "52 records give −1, −2 or −3; 34 in the CBX-417 arm and 18 on placebo."
+      assumptions: "survival's Surv() coerces invalid status values to NA rather than erroring."
+      interpretation: "Every lost subject is a censored one, so the event count is preserved and the denominator is not."
+      changes: "`as.integer(CNSR == 0)` is correct for every study, including one that only ever uses 0 and 1."
+      interviewer: "That you say which subjects are lost, not just that some are."
+
+  - id: adam.adtte.rule-order
+    format: order
+    modes: [check, guided]
+    difficulty: advanced
+    skills: [adam.adtte, trials.endpoints, trials.oncology]
+    lesson: adam-adtte
+    title: The order of the PFS censoring rules
+    minutes: 5
+    prompt: |
+      CBX417-301's SAP Section 9.4 gives five PFS rules and says they are applied **in order**, the first
+      matching rule winning.
+
+      Put them in the order the SAP specifies.
+    steps:
+      - "No baseline or adequate post-baseline assessment, and no death within 91 days of randomization → censor at `RANDDT`, `CNSR = 2` (9 subjects)."
+      - "New anticancer therapy started before the first progression or death → censor at the last adequate assessment on or before the new therapy, `CNSR = 3` (28 subjects)."
+      - "Progression or death preceded by two or more consecutive missed scheduled assessments → censor at the last adequate assessment before the gap, `CNSR = 4` (15 subjects)."
+      - "Progression or death on or before the data cutoff → event at that date, `CNSR = 0` (332 subjects)."
+      - "Otherwise → censor at the last adequate assessment, `CNSR = 1` (36 subjects)."
+    hints:
+      - "Two of the rules describe subjects who *did* have a progression or a death, and they still fire before the event rule. Why would a SAP want that?"
+      - "The catch-all 'otherwise' is always last."
+      - "Rule 1 is about subjects we never had usable tumour data for at all."
+    solution: |
+      **2 → 3 → 4 → event → 1.**
+
+      | Order | Rule | `CNSR` | n |
+      |---:|---|---:|---:|
+      | 1 | No adequate assessment | 2 | 9 |
+      | 2 | New anticancer therapy first | 3 | 28 |
+      | 3 | Event after ≥ 2 missed assessments | 4 | 15 |
+      | 4 | Progression or death | 0 | 332 |
+      | 5 | Otherwise | 1 | 36 |
+
+      **The whole point is that rules 2 and 3 come before the event rule.** Both describe subjects who
+      have an observed progression or death, and both say: do not count it.
+
+      A subject who starts a different anticancer drug and progresses two months later has progressed —
+      but you cannot attribute that progression to the study drug or to its absence. Rule 2 fires first
+      and the derivation stops looking at the switch. Move the event rule above it and those 28 subjects
+      become events at dates that reflect somebody else's therapy.
+
+      Rule 3 is the same argument in time. If two scheduled scans were missed and progression appeared at
+      the next one, the progression may have happened during the gap. Counting it at the date it was
+      *detected* would overstate progression-free time, so the derivation censors before the gap.
+
+      **Both rules refuse to attribute to the drug an event that something else may have caused**, and
+      both cost information: the `CNSR = 4` subjects have a median `AVAL` of 47 days because everything
+      after the gap is discarded.
+
+      Reordering is not a stylistic choice. Applying the event rule first moves 43 subjects from censored
+      to event, and nothing in the output says so.
+    explanation:
+      objective: "Reconstruct the precedence of a censoring rule set from what each rule is for."
+      relevant: "That two rules deliberately outrank the event rule."
+      method: "A first-match chain: the order encodes which consideration dominates."
+      numbers: "9, 28, 15, 332, 36 — 420 PFS records in total."
+      assumptions: "'Adequate assessment' and 'consecutive missed assessment' are defined in the SAP; without those definitions two derivations disagree."
+      interpretation: "Censoring here is a statement about what the data can support, not about what happened."
+      changes: "Putting the event rule first turns 43 censored subjects into events and changes the primary result with no visible symptom."
+      interviewer: "That you can justify why an observed event is deliberately not counted."
+
+  - id: adam.adtte.evntdesc
+    format: mapping
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [adam.adtte, adam.specs, qc.discrepancy]
+    lesson: adam-adtte
+    datasets: [oncology/adam/adtte]
+    title: EVNTDESC, CNSDTDSC, or neither
+    prompt: |
+      ADTTE carries two text variables beside `CNSR`. Decide which one answers each question, for the
+      record described.
+    sourceLabel: What you want to know
+    targetLabel: Variable
+    targets: ["EVNTDESC", "CNSDTDSC", "Neither — CNSR alone answers it"]
+    pairs:
+      - source: "For a PFS record with CNSR = 0: was it a progression or a death?"
+        target: "EVNTDESC"
+        note: "301 progressions and 31 deaths share CNSR = 0 and the analysis treats them identically. Only EVNTDESC separates them."
+      - source: "For a PFS record with CNSR = 3: was the censoring date a tumour assessment or the randomization date?"
+        target: "CNSDTDSC"
+        note: "25 of the 28 had an adequate assessment before the switch; 3 had none and were censored at randomization."
+      - source: "For any record: is this subject an event or a censored observation?"
+        target: "Neither — CNSR alone answers it"
+        note: "CNSR = 0 means event; anything else means censored. That is the whole rule."
+      - source: "For a PFS record with AVAL = 1: why does this subject have a single day of follow-up?"
+        target: "CNSDTDSC"
+        note: "The CNSR = 2 subjects and 3 of the CNSR = 3 subjects both have AVAL = 1, and only CNSDTDSC distinguishes them."
+      - source: "For an OS record with CNSR = 1: what was the last thing we know about this subject?"
+        target: "EVNTDESC"
+        note: "All 64 read ALIVE AT LAST CONTACT; CNSDTDSC says where the date came from (LAST KNOWN ALIVE DATE)."
+    hints:
+      - "`EVNTDESC` is populated on every record; `CNSDTDSC` only when `CNSR > 0`."
+      - "One of them describes *what happened*, the other describes *where the date came from*."
+      - "One question needs neither."
+    solution: |
+      **`EVNTDESC` says what happened. `CNSDTDSC` says where the date came from.** They are not
+      redundant, and the `CNSR = 3` rows prove it:
+
+      ```text
+      CNSR  EVNTDESC                                   CNSDTDSC                                       n
+         3  NEW ANTICANCER THERAPY BEFORE PD OR DEATH  LAST ADEQUATE ASSESSMENT ON OR BEFORE NEW …   25
+         3  NEW ANTICANCER THERAPY BEFORE PD OR DEATH  RANDOMIZATION DATE (NO ADEQUATE ASSESSMENT …)  3
+      ```
+
+      Twenty-eight subjects, one censoring reason, two different date derivations. Those 3 subjects have
+      `AVAL = 1`, which looks exactly like the 9 `CNSR = 2` subjects until you read `CNSDTDSC`.
+
+      **And `EVNTDESC` is not redundant with `CNSR = 0` either.** The 332 events are 301 progressions and
+      31 deaths — clinically different, statistically identical, and separated only here. The CSR
+      narrative needs both counts.
+
+      **The population rule:** `EVNTDESC` on every record; `CNSDTDSC` exactly when `CNSR > 0`. Both
+      populated on an event record, or `CNSDTDSC` null on a censored one, is a QC finding.
+    explanation:
+      objective: "Distinguish what each ADTTE text variable is for."
+      relevant: "That one describes the outcome and one describes the provenance of the date."
+      irrelevant: "The CNSR value itself, for four of the five questions."
+      method: "Ask whether the question is about the subject's fate or about how ADT was chosen."
+      numbers: "332 events = 301 PD + 31 deaths; 28 CNSR = 3 records split 25 / 3 by CNSDTDSC."
+      assumptions: "EVNTDESC is populated on every record and CNSDTDSC only when censored — the convention this study follows."
+      interpretation: "The pair lets a reviewer check a subject's classification without rerunning the derivation."
+      changes: "A study that used only CNSR 0/1 would carry the reason in CNSDTDSC instead, and `1 - CNSR` would happen to work."
+
+  - id: adam.adtte.structure
+    format: numeric
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [adam.adtte, adam.bds, qc.mindset]
+    lesson: adam-adtte
+    datasets: [oncology/adam/adtte]
+    title: How many rows should ADTTE have?
+    prompt: |
+      CBX417-301 has 420 ITT subjects. Its ADTTE carries three parameters:
+
+      - `PFS` — one record for every ITT subject
+      - `OS` — one record for every ITT subject
+      - `DOR` — one record for each subject with a confirmed response (`ADRS.CBOR` of CR or PR), of which
+        there are 89
+
+      How many records does ADTTE contain?
+    answer: 929
+    tolerance: 0
+    unit: records
+    hints:
+      - "ADTTE is BDS: one record per subject **per parameter**, not one per subject."
+      - "A parameter is allowed to have fewer records than the population."
+      - "420 + 420 + 89."
+    solution: |
+      **929.** `420 + 420 + 89`.
+
+      **The point of the question is the 89.** A QC check written as `nrow(adtte) == 420` fails on a
+      correct dataset, and the usual reaction — widening the check until it passes — removes the only
+      structural test the dataset had.
+
+      The right check is one record per subject **per parameter**, plus the expected count for each:
+
+      ```r
+      stopifnot(
+        nrow(adtte) == nrow(distinct(adtte, USUBJID, PARAMCD)),
+        sum(adtte$PARAMCD == "PFS") == 420,
+        sum(adtte$PARAMCD == "OS")  == 420,
+        sum(adtte$PARAMCD == "DOR") == 89
+      )
+      ```
+
+      **Duration of response starts at a different place.** `PFS` and `OS` both have
+      `STARTDT = RANDDT` on all 420 records; `DOR` starts at the first documented response, so
+      `STARTDT` equals `RANDDT` on none of its 89. A parameter that begins at a subject-specific event
+      can only exist for subjects who had that event — which is why 89 records is a structural fact
+      rather than missing data.
+
+      The 89 is also checkable from another dataset: `ADRS` has exactly 89 subjects with
+      `PARAMCD = "CBOR"` and `AVALC` in CR or PR. Two datasets that must agree, and a cheap assertion
+      that they do.
+    explanation:
+      objective: "Predict the record count of a BDS time-to-event dataset."
+      given: "420 ITT subjects, three parameters, 89 confirmed responders."
+      relevant: "That BDS is one record per subject per parameter and DOR is defined only for responders."
+      calculating: "The sum of the per-parameter record counts."
+      numbers: "420 PFS + 420 OS + 89 DOR = 929."
+      assumptions: "Every ITT subject has a PFS and an OS record even when censored on day 1."
+      interpretation: "A parameter with fewer records than the population is normal, not missing data."
+      changes: "A check asserting 420 rows fails on this correct dataset; the useful check is per-parameter counts."
+      interviewer: "That you tie the 89 back to ADRS and treat it as a cross-dataset consistency check."
+
+  - id: adam.adtte.event-derive
+    format: code
+    language: r
+    modes: [guided, independent, qc]
+    difficulty: intermediate
+    skills: [adam.adtte, r.survival, qc.mindset]
+    lesson: adam-adtte
+    datasets: [oncology/adam/adtte]
+    title: The conversion, and the assertion that protects it
+    minutes: 10
+    prompt: |
+      Build the PFS analysis frame from `adtte` and assert that nothing was lost on the way.
+
+      1. Keep `PARAMCD == "PFS"`.
+      2. Create `event`, the 0/1 indicator `survival::Surv()` expects, from `CNSR`.
+      3. Create `months` from `AVAL`, which is in days (`AVALU = "DAYS"`), using the constant 30.4375.
+      4. Assert, with `stopifnot()`: 420 records survive; `event` is only ever 0 or 1; there are 332
+         events; and `AVAL` really is `ADT − STARTDT + 1` on every record.
+    starter: |
+      library(dplyr)
+
+      pfs <- adtte |>
+        filter(PARAMCD == "PFS") |>
+        mutate(
+          event  = ___,
+          months = ___
+        )
+
+      stopifnot(
+        ___
+      )
+    reference: |
+      library(dplyr)
+
+      pfs <- adtte |>
+        filter(PARAMCD == "PFS") |>
+        mutate(
+          event  = as.integer(CNSR == 0),
+          months = AVAL / 30.4375
+        )
+
+      stopifnot(
+        nrow(pfs) == 420,
+        all(pfs$event %in% c(0L, 1L)),
+        sum(pfs$event) == 332,
+        all(pfs$AVAL ==
+              as.integer(as.Date(pfs$ADT) - as.Date(pfs$STARTDT)) + 1L)
+      )
+    hints:
+      - "`CNSR = 0` means event. Test that property directly rather than doing arithmetic on the code."
+      - "`as.integer(TRUE)` is 1 and `as.integer(FALSE)` is 0, so a comparison is already the indicator."
+      - "30.4375 is 365.25 / 12."
+      - "There is no day zero, so the duration identity carries a `+ 1`."
+    checks:
+      - pattern: "CNSR\\s*==\\s*0"
+        message: "Derives the event indicator by testing CNSR == 0"
+      - pattern: "1\\s*-\\s*(pfs\\$|adtte\\$)?CNSR"
+        absent: true
+        message: "Does not use the `1 - CNSR` shortcut"
+      - pattern: "AVAL\\s*/\\s*30\\.4375"
+        message: "Converts days to months with the 30.4375 constant"
+      - pattern: "nrow\\s*\\(\\s*pfs\\s*\\)\\s*==\\s*420"
+        message: "Asserts that all 420 PFS records survived"
+      - pattern: "event\\s*%in%\\s*c\\s*\\(\\s*0L?\\s*,\\s*1L?\\s*\\)"
+        message: "Asserts that the event indicator is only ever 0 or 1"
+      - pattern: "\\+\\s*1L?\\s*\\)?\\s*$|\\+\\s*1L?\\b"
+        message: "Uses the no-day-zero convention in the AVAL identity"
+    expectedOutput: |
+      ```text
+      > table(pfs$CNSR, pfs$event)
+
+            0   1
+        0   0 332
+        1  36   0
+        2   9   0
+        3  28   0
+        4  15   0
+
+      > pfs |> count(TRTP, event)
+                       TRTP event   n
+      1 CBX-417 + Docetaxel     0  55
+      2 CBX-417 + Docetaxel     1 155
+      3 Placebo + Docetaxel     0  33
+      4 Placebo + Docetaxel     1 177
+      ```
+    solution: |
+      **`as.integer(CNSR == 0)`, never `1 - CNSR`.**
+
+      The cross-tabulation is the proof: every `CNSR` value above 0 maps to `event = 0`, and only
+      `CNSR = 0` maps to 1. The conversion has to be a *test*, because `CNSR` is a coded reason, not a
+      quantity. `1 - CNSR` treats it as a quantity and produces −1, −2 and −3 on the 52 records with a
+      reason code.
+
+      **Why each assertion earns its place.**
+
+      | Assertion | Catches |
+      |---|---|
+      | `nrow(pfs) == 420` | Anything that dropped subjects — a bad filter, a failed join, the conversion bug |
+      | `event %in% c(0, 1)` | The conversion bug directly, before `Surv()` gets a chance to warn |
+      | `sum(event) == 332` | A conversion that inverted the sense, which would give 88 |
+      | The `AVAL` identity | An off-by-one from forgetting there is no day zero |
+
+      **`Surv()` would only warn**, once, deep in a long log: `Invalid status value, converted to NA`.
+      `stopifnot()` stops. On this study the difference between warning and stopping is 52 subjects —
+      34 on CBX-417 and 18 on placebo — and a hazard ratio that moves from 0.681 to 0.720 while the
+      event counts stay at 155 and 177.
+
+      **The 30.4375 is a convention, not a fact.** It is 365.25 / 12. Some SAPs use 30.4167 (365 / 12)
+      and some a flat 30. The choice moves the CBX-417 median by roughly 0.02 months, which is enough to
+      fail a four-decimal comparison between two programs that both did nothing wrong — so it belongs in
+      the SAP and in the ADRG.
+    explanation:
+      objective: "Write the ADaM-to-survival conversion and the assertions that make a silent loss loud."
+      given: "An ADTTE with CNSR coded 0 through 4 and AVAL in days."
+      relevant: "That CNSR is a reason code, so only `== 0` is meaningful."
+      method: "A comparison, coerced to integer, plus one stopifnot condition per failure mode."
+      numbers: "420 records, 332 events, 52 records with CNSR above 1."
+      assumptions: "AVAL is ADT − STARTDT + 1 by the ADaM specification, so the identity is a real check rather than a tautology."
+      computation: "as.integer(CNSR == 0) gives 1 exactly on the event rows; AVAL / 30.4375 converts days to months."
+      interpretation: "The assertions convert a 12% data loss from a warning into a build failure."
+      changes: "Dropping the event-count assertion would let an inverted conversion through, since 88 events is not obviously wrong on its own."
+      interviewer: "That you assert rather than trust the package's warning."
+
+  - id: adam.adtte.censor-classify
+    format: classify
+    modes: [guided, independent]
+    difficulty: advanced
+    skills: [adam.adtte, trials.oncology, trials.endpoints]
+    lesson: adam-adtte
+    title: Which PFS rule fires?
+    minutes: 10
+    prompt: |
+      CBX417-301's data cutoff is 2025-03-31. Assessments are scheduled every 6 weeks (±7 days) to
+      week 48. The SAP applies its five rules in order: no adequate assessment (2), new anticancer
+      therapy (3), event after ≥ 2 missed assessments (4), progression or death (0), otherwise (1).
+
+      Classify each subject by the `CNSR` value they receive.
+    categories: ["CNSR = 0 (event)", "CNSR = 1 (no PD or death)", "CNSR = 2 (no adequate assessment)", "CNSR = 3 (new therapy first)", "CNSR = 4 (event after missed assessments)"]
+    entries:
+      - text: "Randomized 2023-01-10. SD at weeks 6, 12 and 18; PD documented 2023-06-27."
+        category: "CNSR = 0 (event)"
+        note: "No missed assessments and no new therapy, so the event rule applies at the date of progression."
+      - text: "Randomized 2023-02-01. SD at weeks 6 and 12 (last 2023-04-26). Died 2023-05-20 with no documented progression."
+        category: "CNSR = 0 (event)"
+        note: "Death from any cause is a PFS event. `EVNTDESC` reads DEATH rather than DISEASE PROGRESSION — 31 of the 332 events on this study."
+      - text: "Randomized 2023-03-06. Assessments through 2025-03-10 all SD or PR; alive and progression-free at the cutoff."
+        category: "CNSR = 1 (no PD or death)"
+        note: "The catch-all rule, censored at the last adequate assessment. These 36 subjects have the longest follow-up — median AVAL 530 days."
+      - text: "Randomized 2023-01-19. Started a new anticancer therapy before any adequate tumour assessment was recorded. Died 2023-09-12."
+        category: "CNSR = 3 (new therapy first)"
+        note: "Rule 3 outranks the event rule, and with no adequate assessment to censor at, ADT is RANDDT and AVAL is 1. The OS record for the same subject is an event at day 237."
+      - text: "Randomized 2023-04-03. SD at 2023-05-15; the week 12 and week 18 windows both passed with no assessment; PD documented 2023-09-18."
+        category: "CNSR = 4 (event after missed assessments)"
+        note: "Two consecutive missed scheduled assessments before the progression, so it is censored at 2023-05-15 — AVAL 43, not 169."
+      - text: "Randomized 2024-11-04. Withdrew consent before the first scheduled scan; no tumour assessment of any kind; alive at the cutoff."
+        category: "CNSR = 2 (no adequate assessment)"
+        note: "Nine subjects on this study. All have AVAL = 1 — censored at randomization, one day of follow-up each."
+      - text: "Randomized 2023-05-08. SD at 2023-06-19; started a new anticancer therapy 2023-07-20; PD documented 2023-08-28."
+        category: "CNSR = 3 (new therapy first)"
+        note: "The progression is real and is deliberately not counted, because it cannot be attributed to the study drug. Censored at 2023-06-19."
+    hints:
+      - "Work down the rules in order and stop at the first that matches."
+      - "Two of these subjects had a documented progression and are still censored."
+      - "A subject with no usable tumour data at all is a different case from a subject who switched therapy — even though both end up with AVAL = 1."
+    solution: |
+      **Read the rules in order and stop at the first match.** Three of the seven subjects had a
+      documented progression or death and two of them are censored anyway.
+
+      | Subject | Rule | `CNSR` | `ADT` |
+      |---|---|---:|---|
+      | PD at week 24 | Event | 0 | Date of PD |
+      | Died, no PD | Event | 0 | Date of death |
+      | Alive, progression-free at cutoff | Otherwise | 1 | Last adequate assessment |
+      | New therapy, no assessment, later death | New therapy | 3 | `RANDDT` |
+      | Two missed scans, then PD | ≥ 2 missed | 4 | Last assessment before the gap |
+      | No assessment at all, alive | No adequate assessment | 2 | `RANDDT` |
+      | New therapy, then PD | New therapy | 3 | Last assessment before the switch |
+
+      **The two subjects with `AVAL = 1` reached it by different routes**, and only `CNSDTDSC` records
+      the difference: `RANDOMIZATION DATE` for the `CNSR = 2` subject, and
+      `RANDOMIZATION DATE (NO ADEQUATE ASSESSMENT BEFORE NEW ANTICANCER THERAPY)` for the `CNSR = 3` one.
+      Three of the 28 new-therapy subjects on this study are in that second position.
+
+      **The subject who switched therapy and then died is the sharpest case.** Their PFS record says
+      censored on day 1; their OS record for the same follow-up says event on day 237. Neither is wrong.
+      PFS is asking what this drug did to progression, and after a therapy switch the answer is *we
+      cannot tell*. OS is asking whether the subject died, and that question survives the switch.
+
+      **Both censoring rules cost information and both are conservative in the same direction.** The
+      `CNSR = 4` subjects have a median `AVAL` of 47 days because everything after the missed
+      assessments is discarded. A sensitivity analysis that counts those events instead is pre-specified
+      in the SAP precisely because the rules throw information away.
+    explanation:
+      objective: "Apply an ordered censoring rule set to individual subject histories."
+      given: "Seven subject narratives, the cutoff date and the rule order."
+      relevant: "The order of the rules and whether an adequate assessment exists before the triggering event."
+      irrelevant: "Whether the observed progression was clinically dramatic — rules 2 and 3 do not look at it."
+      method: "First-match evaluation down the chain."
+      numbers: "9 subjects at CNSR 2, 28 at 3 (25 censored at an assessment, 3 at randomization), 15 at 4, 332 events, 36 at CNSR 1."
+      assumptions: "A 'missed' scheduled assessment means its whole ±7-day window passed with no adequate assessment."
+      interpretation: "Censoring here means the data cannot support attributing the event to the drug, not that nothing happened."
+      changes: "Applying the event rule first moves 43 of these subjects from censored to event."
+      interviewer: "That you can defend censoring a subject who demonstrably progressed."
+
+  - id: adam.adtte.aval-check
+    format: hotspot
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [adam.adtte, qc.mindset, r.dplyr]
+    lesson: adam-adtte
+    datasets: [oncology/adam/adtte]
+    title: A QC program that fails on a correct dataset
+    minutes: 8
+    prompt: |
+      A QC programmer writes this to check CBX417-301's PFS records before the primary analysis. Both
+      `stopifnot()` conditions fail, and the ADTTE dataset is correct.
+
+      Click the **two** lines that are wrong.
+    language: r
+    code: |
+      library(dplyr)
+
+      qc <- adtte |>
+        filter(PARAMCD == "PFS") |>
+        mutate(
+          dur   = as.integer(as.Date(ADT) - as.Date(STARTDT)),
+          ok    = dur == AVAL,
+          event = 1 - CNSR
+        )
+
+      stopifnot(all(qc$ok), all(qc$event %in% c(0, 1)))
+    answerLines: [6, 8]
+    lineNotes:
+      - line: 6
+        note: "`ADT − STARTDT` is a plain difference. ADaM's `AVAL` is `ADT − STARTDT + 1`, because there is no day zero: a subject censored on their randomization date has one day of follow-up, not none. The check is off by one on all 420 records. Write `as.integer(as.Date(ADT) - as.Date(STARTDT)) + 1L`."
+      - line: 8
+        note: "`1 - CNSR` gives −1, −2 and −3 on the 52 records where `CNSR` is 2, 3 or 4, so the membership test fails. `CNSR` is a reason code, not a quantity: use `as.integer(CNSR == 0)`."
+      - line: 7
+        note: "The comparison itself is right — it is the quantity on line 6 that is wrong. Fixing the arithmetic makes this line pass on all 420 records."
+      - line: 11
+        note: "Asserting rather than warning is correct, and it is what exposed both defects. A version that printed a message instead would have shipped."
+      - line: 4
+        note: "Filtering to one parameter is necessary: ADTTE is one record per subject per parameter, and the 420-record expectation only holds within PFS."
+    fixed: |
+      library(dplyr)
+
+      qc <- adtte |>
+        filter(PARAMCD == "PFS") |>
+        mutate(
+          dur   = as.integer(as.Date(ADT) - as.Date(STARTDT)) + 1L,
+          ok    = dur == AVAL,
+          event = as.integer(CNSR == 0)
+        )
+
+      stopifnot(nrow(qc) == 420, all(qc$ok), all(qc$event %in% c(0, 1)))
+    hints:
+      - "Two independent defects, one in each assertion."
+      - "How many days of follow-up does a subject censored on their randomization date have?"
+      - "`CNSR` takes the values 0, 1, 2, 3 and 4 on this study. What does the arithmetic on line 8 produce for each?"
+    solution: |
+      **Line 6 — the missing `+ 1`.** ADaM defines `AVAL = ADT − STARTDT + 1`. There is no day zero, so a
+      subject censored on their randomization date has `AVAL = 1` — twelve subjects on this study. A
+      plain date difference gives 0 for them and is one short for everyone else, so `all(qc$ok)` is
+      `FALSE` on all 420 records.
+
+      **Line 8 — `1 - CNSR`.** `CNSR` is 2, 3 or 4 on 52 PFS records, so `event` is −1, −2 or −3 there and
+      the membership test fails.
+
+      **The two failures are worth contrasting.** This QC program is *lucky*: both bugs made an assertion
+      fail loudly. The same `1 - CNSR` in an analysis program does not fail — `Surv()` converts the
+      negative values to `NA`, warns once, and drops 52 subjects while leaving all 332 events in place.
+
+      The corrected version also adds `nrow(qc) == 420`, which is the check that would have caught the
+      loss if the conversion bug had been anywhere else in the chain.
+    explanation:
+      objective: "Find why a correct dataset fails two QC assertions."
+      given: "A QC program whose assertions both fail, and a dataset known to be right."
+      relevant: "The ADaM definition of AVAL and the meaning of CNSR values above 1."
+      irrelevant: "The filter on line 4, which is necessary and correct."
+      method: "When the data are known good, the defect is in the expectation — evaluate each condition against the specification rather than the data."
+      numbers: "420 PFS records; 12 with AVAL = 1; 52 with CNSR above 1."
+      assumptions: "ADTTE has been verified independently, so the program is the thing under test."
+      interpretation: "A loud failure is the good case. The same conversion in an analysis program loses 52 subjects silently."
+      changes: "Adding a record-count assertion catches the class of failure that neither of these two conditions would."
+      interviewer: "That you name the no-day-zero rule rather than calling it an off-by-one."
+
+  - id: adam.adtte.srcdom
+    format: numeric
+    modes: [guided, qc, debug]
+    difficulty: advanced
+    skills: [adam.adtte, adam.traceability, qc.discrepancy]
+    lesson: adam-adtte
+    datasets: [oncology/adam/adtte]
+    title: A traceability join that half works
+    prompt: |
+      A reviewer asks for the source record behind every PFS analysis date. A programmer writes a join
+      from ADTTE to SDTM `RS` on `USUBJID` and `SRCSEQ = RSSEQ`, because `ADT` on a PFS record is a
+      tumour assessment date.
+
+      `SRCDOM` on the 420 PFS records is `RS` on 377 of them and `DS` on the rest.
+
+      How many PFS records does the join leave with a null source, with no error and no warning?
+    answer: 43
+    tolerance: 0
+    unit: records
+    hints:
+      - "The join only resolves records whose source really is in `RS`."
+      - "420 − 377."
+      - "A left join does not complain about the rows it cannot match."
+    solution: |
+      **43.** The 377 `SRCDOM = "RS"` records resolve; the 43 `SRCDOM = "DS"` records silently do not.
+
+      **`SRCDOM` varies because `ADT` does not always come from a scan.** A PFS record's analysis date is
+      a progression date, a death date, a last adequate assessment, or a randomization date, depending on
+      which censoring rule fired. Deaths and randomization milestones live in `DS`, not `RS`.
+
+      Across the whole dataset `SRCDOM` takes five values:
+
+      | `PARAMCD` | `SRCDOM` | Records |
+      |---|---|---:|
+      | PFS | `RS` | 377 |
+      | PFS | `DS` | 43 |
+      | OS | `DS` | 365 |
+      | OS | `SS` | 27 |
+      | OS | `EX` | 27 |
+      | OS | `TR` | 1 |
+      | DOR | `RS` | 83 |
+      | DOR | `DS` | 6 |
+
+      **OS is the clearer illustration.** For a censored subject, `ADT` is `ADSL.LSTALVDT` — the latest of
+      every visit, assessment, dose and survival contact on or before the cutoff. For 27 subjects that
+      maximum was a dosing record, for 27 a survival follow-up contact, and for exactly one subject a
+      tumour scan.
+
+      **This is what the pointer is for.** A reviewer asking "how do you know this subject was alive on
+      that date" gets a named record in a named domain rather than a derivation rule to re-run over four
+      datasets. And the rule for using it is simple: **branch on `SRCDOM` before joining on `SRCSEQ`.**
+      A `SRCSEQ` value only means something inside the domain `SRCDOM` names.
+    explanation:
+      objective: "Quantify the damage from a traceability join that assumes a single source domain."
+      given: "420 PFS records, 377 of them with SRCDOM = RS."
+      relevant: "That SRCSEQ is only interpretable within the domain SRCDOM names."
+      calculating: "The records whose source domain is not the one the join used."
+      numbers: "420 − 377 = 43, all with SRCDOM = DS."
+      assumptions: "The join is a left join, so unmatched rows are kept with null source fields rather than dropped."
+      interpretation: "A pointer with a domain qualifier is not decoration: the analysis date genuinely comes from four different domains."
+      changes: "An inner join would drop the 43 instead of nulling them — a different symptom of the same mistake, and easier to notice."
+      interviewer: "That you explain why one dataset's records point at several domains."
+
+  - id: adam.adtte.silent-loss
+    format: diff
+    modes: [debug, qc, boss]
+    difficulty: expert
+    skills: [adam.adtte, stats.survival, qc.discrepancy]
+    lesson: adam-adtte
+    datasets: [oncology/adam/adtte]
+    title: Same events, different hazard ratio
+    minutes: 15
+    prompt: |
+      Production and QC both ran the stratified primary PFS analysis in R on the same ADTTE. Both scripts
+      completed. Neither log contains an error.
+
+      The event counts are identical. Everything else moved.
+
+      What is the root cause?
+    left:
+      title: "Production — PFS, ITT population"
+      columns: ["Row", "CBX-417 + Docetaxel", "Placebo + Docetaxel"]
+      rows:
+        - ["Subjects analyzed", 210, 210]
+        - ["Events", 155, 177]
+        - ["Median PFS, months", 6.932238, 4.172485]
+        - ["Hazard ratio (95% CI)", "0.680587 (0.545588, 0.848991)", "reference"]
+      footnote: "Stratified Cox, Efron ties, strata STRAT1R and STRAT2R, placebo as reference."
+    right:
+      title: "QC — PFS, ITT population"
+      columns: ["Row", "CBX-417 + Docetaxel", "Placebo + Docetaxel"]
+      rows:
+        - ["Subjects analyzed", 176, 192]
+        - ["Events", 155, 177]
+        - ["Median PFS, months", 6.603696, 4.172485]
+        - ["Hazard ratio (95% CI)", "0.720449 (0.577459, 0.898847)", "reference"]
+      footnote: "Stratified Cox, Efron ties, strata STRAT1R and STRAT2R, placebo as reference."
+    leftCode: |
+      pfs <- adtte |>
+        filter(PARAMCD == "PFS") |>
+        mutate(event = as.integer(CNSR == 0), months = AVAL / 30.4375)
+    rightCode: |
+      pfs <- adtte |>
+        filter(PARAMCD == "PFS") |>
+        mutate(event = 1 - CNSR, months = AVAL / 30.4375)
+    codeLanguage: r
+    choices:
+      - text: "QC used `1 - CNSR`. On the 52 records with a censoring-reason code above 1 that gives a negative status, `Surv()` converts it to `NA` with one warning, and those 52 subjects — 34 CBX-417 and 18 placebo — leave the analysis. All of them are censored, so the event counts are untouched."
+        correct: true
+        feedback: "Correct. 210 − 34 = 176 and 210 − 18 = 192. Losing only censored subjects shortens follow-up in the arm that lost more, which is why the CBX-417 median falls and the hazard ratio moves toward 1."
+      - text: "QC restricted the analysis to the efficacy-evaluable population (`EFFFL = \"Y\"`) instead of ITT."
+        feedback: "That would give 411 subjects across both arms, not 368, and it would change the event counts too."
+      - text: "QC used Breslow rather than Efron for ties."
+        feedback: "The tie handling changes the hazard ratio in about the third decimal and does not touch the number of subjects analyzed or the medians."
+      - text: "QC forgot to set placebo as the reference level, so the hazard ratio is reported the other way round."
+        feedback: "That would give a hazard ratio near 1/0.68 ≈ 1.47, not 0.72, and would not change the subject counts."
+      - text: "QC converted days to months with 30 rather than 30.4375."
+        feedback: "That would shift both medians by about 1.5% and leave the subject counts and the hazard ratio essentially unchanged — the hazard ratio is invariant to a rescaling of time."
+    hints:
+      - "The event counts are identical and the denominators are not. What kind of subject can be lost without changing an event count?"
+      - "210 − 176 = 34 and 210 − 192 = 18. That is 52 subjects."
+      - "How many PFS records have `CNSR` greater than 1, and how are they split by arm?"
+    solution: |
+      **QC wrote `event <- 1 - CNSR`.**
+
+      CBX417-301 uses `CNSR` to record the censoring *reason*: 0 event (332), 1 alive and
+      progression-free (36), 2 no adequate assessment (9), 3 new anticancer therapy (28), 4 event after
+      missed assessments (15). ADaMIG v1.3 permits that; the only universal rule is that 0 means event.
+
+      `1 - CNSR` therefore produces:
+
+      ```text
+      CNSR      0    1    2    3    4
+      1 - CNSR  1    0   -1   -2   -3
+      n       332   36    9   28   15
+      ```
+
+      `Surv()` does not error on the negative values. It converts them to `NA`, warns once —
+      `Invalid status value, converted to NA` — and continues.
+
+      **The 52 lost subjects split 34 / 18 by arm**, because the censoring reasons are not balanced: 23 of
+      the 28 new-therapy censorings are on CBX-417, where subjects survived long enough to switch.
+
+      | | Production | QC | Lost |
+      |---|---:|---:|---:|
+      | CBX-417 | 210 | 176 | 34 |
+      | Placebo | 210 | 192 | 18 |
+      | Events, CBX-417 | 155 | 155 | 0 |
+      | Events, placebo | 177 | 177 | 0 |
+
+      **Why the event count is the trap.** Every event has `CNSR = 0`, so no event is ever lost. The
+      event count is the first thing most people check against the SAP, and it matches perfectly. What is
+      missing is 12% of the denominator — censored subjects, whose whole contribution is the follow-up
+      time that tells the model somebody was still at risk.
+
+      **And the direction is not neutral.** Removing censored subjects removes person-time. The CBX-417
+      arm lost twice as much of it, so its median falls from 6.932 to 6.604 months and the hazard ratio
+      moves from 0.681 to 0.720 — toward the null, understating the effect. A QC programmer who reported
+      0.72 would be *wrong in the conservative direction*, which is exactly the kind of error that gets
+      accepted rather than investigated.
+
+      **The prevention is one line.** `stopifnot(all(event %in% c(0, 1)), nrow(pfs) == 420)` before the
+      model. The second condition catches the loss even if the conversion is written some other way.
+      In SAS, the mirror-image error is `TIME AVAL * CNSR(1)` instead of `CNSR(1, 2, 3, 4)`, which turns
+      the same 52 subjects into events instead of dropping them.
+    explanation:
+      objective: "Diagnose a discrepancy in which the numerators agree and the denominators do not."
+      given: "Two analyses of the same ADTTE with identical event counts, different subject counts and different hazard ratios."
+      relevant: "That only censored subjects can vanish without changing an event count, and that 52 PFS records carry CNSR above 1."
+      irrelevant: "The tie handling and the days-to-months constant, which are identical in both programs."
+      method: "Work from the invariant. The events are preserved, so the loss is confined to CNSR > 0, which points straight at the conversion."
+      numbers: "34 CBX-417 and 18 placebo subjects lost; medians 6.932 → 6.604; HR 0.681 → 0.720."
+      assumptions: "Both programs used the same dataset, model, strata and reference level, as the footnotes state."
+      computation: "1 - CNSR is −1, −2 or −3 for CNSR of 2, 3, 4; Surv() coerces those to NA with a single warning."
+      interpretation: "The bias is toward the null, because the arm with more censoring loses more person-time."
+      changes: "Had the study coded CNSR as 0/1 only, `1 - CNSR` would have worked and the habit would have survived to the next study."
+      interviewer: "That you use the preserved event count as the diagnostic instead of guessing at the population."
+
+  - id: adam.adtte.open-derivation
+    format: open
+    modes: [interview, boss]
+    difficulty: expert
+    skills: [adam.adtte, trials.endpoints, communication.documentation]
+    lesson: adam-adtte
+    title: Two independent PFS derivations disagree on nine subjects
+    prompt: |
+      **Interviewer:** "You and the QC programmer independently derived PFS from the same SAP. Your
+      datasets agree on 411 of 420 subjects and disagree on nine. Database lock is in four days. Walk me
+      through what you do."
+    modelAnswer: |
+      First, I'd say that nine out of 420 is normal rather than alarming. Two independent derivations of
+      an oncology PFS endpoint almost always disagree on a handful of subjects, and reconciling them
+      before lock is the point of doing it twice.
+
+      **I'd characterise the nine before touching any code.** For each subject I'd put the two results
+      side by side: `CNSR`, `ADT`, `AVAL`, `EVNTDESC`, `CNSDTDSC`. That tells me immediately whether this
+      is one disagreement or several. Nine subjects all moving between `CNSR = 4` and `CNSR = 0` is a
+      single definitional gap; nine subjects scattered across four different rules is nine separate
+      problems and a much worse position four days from lock.
+
+      **Then I'd sort them into three buckets.**
+
+      A *bug* is where one of us implemented a rule the SAP states clearly and got it wrong. Those are
+      cheap: fix, rerun, done.
+
+      A *definition gap* is where the SAP does not actually determine the answer, and we each filled the
+      hole differently. On a PFS derivation these are always the same three places: what counts as an
+      "adequate" assessment; what counts as two *consecutive* missed scheduled assessments when the visit
+      schedule slipped inside its window; and whether a death with no preceding assessment falls under
+      the no-assessment rule or the missed-assessment rule. If the nine cluster there, neither of us is
+      wrong and the fix is not code.
+
+      A *data* difference is where we used different inputs — a different ADRS build, a different
+      subsequent-therapy cut from `CM`, a different data cutoff. I'd check that first, actually, because
+      it is the cheapest to rule out and it invalidates the comparison entirely.
+
+      **For the definition gaps I'd go to the statistician, not the code.** The deliverable is a sentence
+      added to the SAP or documented as a specification clarification, dated before lock, and then both
+      programs implement it. Writing that sentence is also the test of whether we understand the rule:
+      if we cannot state it unambiguously in one sentence, we will disagree again on the next study.
+
+      **On the timing.** Four days is enough for nine subjects if the disagreement is one kind, and I'd
+      escalate the same day if it is not — not because I cannot fix it, but because the statistician and
+      the medical lead need to know that the primary endpoint definition has an open question in it.
+      Silently picking whichever answer looks more reasonable and reconciling after lock is how a
+      derivation decision gets made by whoever programmed faster.
+
+      **What I would not do** is take the production version as correct because it is production. The two
+      programs have equal standing by design; that is the whole reason for independent derivation.
+
+      **And whatever the outcome, it ends up in the ADRG.** If the rule needed a clarification, the ADRG
+      says what the clarification was — because a reviewer who re-derives PFS from the SAP alone will hit
+      exactly the same ambiguity and produce exactly the same nine differences.
+    rubric:
+      - Treats nine disagreements out of 420 as expected rather than as a crisis
+      - Characterises the disagreements before debugging, using CNSR, ADT, AVAL, EVNTDESC and CNSDTDSC
+      - Checks first whether the two programs used the same inputs (ADRS build, CM cut, data cutoff)
+      - Separates implementation bugs from gaps in the SAP's definitions
+      - Names concrete ambiguity candidates — adequate assessment, consecutive missed assessments, death with no prior assessment
+      - Resolves definition gaps by amending the specification, dated before lock, rather than by choosing a program
+      - Escalates to the statistician when the endpoint definition itself is open
+      - Refuses to treat the production derivation as authoritative by default
+      - Requires the resolution to appear in the ADRG
+    redFlags:
+      - "Assumes the QC program is the one that is wrong"
+      - "Fixes the code to make the two agree without deciding which answer is right"
+      - "Does not distinguish a bug from an ambiguity in the SAP"
+      - "Treats the disagreement as purely a programming matter and never involves the statistician"
+      - "Proposes to reconcile after database lock"
+    followUps:
+      - "The statistician is on leave for three days. What do you do in the meantime?"
+      - "All nine subjects move between CNSR = 4 and CNSR = 0. How does that change your diagnosis?"
+      - "Six of the nine are in the CBX-417 arm. Does the imbalance matter to how you handle it?"

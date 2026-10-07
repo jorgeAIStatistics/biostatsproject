@@ -1,0 +1,142 @@
+lab: stats
+modules:
+  - id: stats-foundations
+    title: Statistical foundations
+    summary: Describing data, probability distributions, sampling variability, confidence intervals, hypothesis tests and power — the reasoning under every clinical table and every SAP.
+    level: 1
+    lessons:
+      - id: stats-descriptive-statistics
+        title: Descriptive statistics for clinical tables
+        summary: Means, SDs, medians and quartiles as they appear in demographics and lab tables — including why SAS and R quartiles disagree and how to summarize skewed lab data.
+        minutes: 55
+        difficulty: foundation
+        tracks: [biostatistician, programmer, analytics]
+        skills: [stats.descriptive, tlf.summary-stats]
+        keywords: [mean, median, standard deviation, quartiles, IQR, PCTLDEF, QNTLDEF, quantile type 7, geometric mean, skewness, demographics table]
+      - id: stats-probability-distributions
+        title: Probability distributions in clinical research
+        summary: Binomial, Poisson, normal, t, chi-square, F and exponential distributions — what each models, where each appears in a trial, and how to compute probabilities in SAS, R and Python.
+        minutes: 55
+        difficulty: foundation
+        tracks: [biostatistician, analytics]
+        skills: [stats.probability]
+        prerequisites: [stats-descriptive-statistics]
+        keywords: [binomial, Poisson, normal, t distribution, chi-square, F distribution, exponential, hazard, rule of three, pbinom, CDF]
+      - id: stats-sampling-distributions-se
+        title: Sampling distributions and standard errors
+        summary: Why a statistic varies from trial to trial, what the central limit theorem buys you, and the difference between SD and SE in every clinical table.
+        minutes: 45
+        difficulty: foundation
+        tracks: [biostatistician, programmer, analytics]
+        skills: [stats.sampling, stats.descriptive]
+        prerequisites: [stats-descriptive-statistics]
+        keywords: [standard error, central limit theorem, sampling distribution, SE vs SD, square root of n, bootstrap]
+      - id: stats-confidence-intervals
+        title: Confidence intervals for means, differences and proportions
+        summary: How confidence intervals are built and what 95% confidence means; t intervals for means and differences, and Wald, Wilson and Clopper-Pearson intervals for response rates.
+        minutes: 60
+        difficulty: intermediate
+        tracks: [biostatistician, programmer, analytics]
+        skills: [stats.confidence-intervals, stats.sampling]
+        prerequisites: [stats-sampling-distributions-se]
+        keywords: [confidence interval, coverage, t interval, Wald, Wilson, score interval, Clopper-Pearson, exact interval, ORR, PROC FREQ BINOMIAL]
+      - id: stats-hypothesis-testing
+        title: Hypothesis tests and p-values done right
+        summary: Null and alternative hypotheses, test statistics, p-values, one- versus two-sided tests, type I and II errors, and the interpretations of p that an interviewer will test you on.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [biostatistician, programmer, analytics]
+        skills: [stats.hypothesis-testing, communication.interpretation]
+        prerequisites: [stats-confidence-intervals]
+        keywords: [p-value, null hypothesis, alternative hypothesis, type I error, type II error, one-sided, two-sided, significance level, statistical vs clinical significance]
+      - id: stats-power-sample-size
+        title: Power and sample size
+        summary: The four quantities that trade off in every design, sample size for means and proportions, and the Schoenfeld event calculation behind the CBX-417 trial, derived step by step.
+        minutes: 60
+        difficulty: intermediate
+        tracks: [biostatistician]
+        skills: [stats.power, stats.hypothesis-testing, trials.design]
+        prerequisites: [stats-hypothesis-testing]
+        keywords: [power, sample size, effect size, Schoenfeld, number of events, PROC POWER, power.t.test, dropout inflation, hazard ratio]
+  - id: stats-comparing-groups
+    title: Comparing groups
+    summary: t tests, ANOVA, categorical tests with risk differences, relative risks and odds ratios, and correlation — the workhorse comparisons behind efficacy and safety tables.
+    level: 2
+    lessons:
+      - id: stats-t-tests-paired
+        title: "t tests: Welch, pooled and paired"
+        summary: Two-sample t tests with and without equal variances, paired designs for within-subject change, and the rank-based alternatives, computed by hand and on the VTX-221 data.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [biostatistician, programmer, analytics]
+        skills: [stats.t-tests, stats.hypothesis-testing]
+        prerequisites: [stats-hypothesis-testing]
+        keywords: [Welch, Satterthwaite, pooled variance, paired t test, Wilcoxon rank-sum, signed-rank, PROC TTEST, t.test]
+      - id: stats-anova
+        title: One-way ANOVA, contrasts and multiple comparisons
+        summary: Partitioning variability into between- and within-group parts, where each degree of freedom comes from, dose-response contrasts, and a first look at multiplicity.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [biostatistician, analytics]
+        skills: [stats.anova, stats.multiplicity]
+        prerequisites: [stats-t-tests-paired]
+        keywords: [ANOVA, F test, sum of squares, mean square, degrees of freedom, contrast, linear trend, Dunnett, Bonferroni, Holm, PROC GLM]
+      - id: stats-categorical-tests
+        title: Categorical tests, risk differences, relative risks and odds ratios
+        summary: Chi-square and Fisher exact tests, expected counts, effect measures with confidence intervals, and the Cochran-Mantel-Haenszel analysis stratified by randomization strata.
+        minutes: 70
+        difficulty: intermediate
+        tracks: [biostatistician, programmer]
+        skills: [stats.categorical, stats.confidence-intervals, tlf.safety-tables]
+        prerequisites: [stats-hypothesis-testing]
+        keywords: [chi-square, Fisher exact, expected counts, risk difference, relative risk, odds ratio, Woolf, CMH, Mantel-Haenszel, PROC FREQ, responder analysis]
+      - id: stats-correlation
+        title: "Correlation: Pearson, Spearman and what correlation is not"
+        summary: Measuring linear and monotone association, confidence intervals via Fisher's z, and why correlation is neither agreement nor causation.
+        minutes: 40
+        difficulty: foundation
+        tracks: [biostatistician, analytics]
+        skills: [stats.correlation, communication.interpretation]
+        prerequisites: [stats-descriptive-statistics]
+        keywords: [Pearson, Spearman, rank correlation, Fisher z, Bland-Altman, agreement, restriction of range, confounding, PROC CORR, cor.test]
+  - id: stats-regression
+    title: Linear regression and covariate adjustment
+    summary: Ordinary least squares from first principles, multiple regression with dummy coding and interactions, diagnostics, and baseline-adjusted ANCOVA — the analysis behind most continuous primary endpoints.
+    level: 3
+    lessons:
+      - id: stats-linear-regression
+        title: Simple linear regression by hand
+        summary: Fitting a line by least squares on a small dataset, then reading every number in the regression output — coefficients, standard errors, t statistics, confidence intervals and R-squared.
+        minutes: 60
+        difficulty: intermediate
+        tracks: [biostatistician, analytics]
+        skills: [stats.linear-regression, r.models]
+        prerequisites: [stats-correlation, stats-confidence-intervals]
+        keywords: [least squares, slope, intercept, residual, standard error, R-squared, PROC REG, lm, statsmodels OLS]
+      - id: stats-multiple-regression-interactions
+        title: Multiple regression, dummy coding and interactions
+        summary: Adjusted effects, how CLASS variables become dummy columns in SAS and R (and why the reference level differs), treatment-by-covariate interactions and centering.
+        minutes: 65
+        difficulty: intermediate
+        tracks: [biostatistician, analytics]
+        skills: [stats.linear-regression, stats.interactions, stats.subgroups]
+        prerequisites: [stats-linear-regression]
+        keywords: [multiple regression, dummy variables, reference level, CLASS statement, GLM parameterization, interaction, effect modification, centering, subgroup]
+      - id: stats-regression-diagnostics
+        title: Regression diagnostics
+        summary: Residual plots, leverage, Cook's distance, heteroscedasticity and transformations — how to check a linear model and what to do when a check fails.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [biostatistician, analytics]
+        skills: [stats.diagnostics, stats.linear-regression]
+        prerequisites: [stats-linear-regression]
+        keywords: [residuals, studentized residual, leverage, hat value, Cook's distance, Q-Q plot, heteroscedasticity, Breusch-Pagan, log transformation, geometric mean ratio]
+      - id: stats-ancova-covariate-adjustment
+        title: ANCOVA and baseline adjustment
+        summary: Analyzing change from baseline with baseline as a covariate on the VTX-221 trial — why adjustment increases precision, change-score t test versus ANCOVA, and LS means computed by hand.
+        minutes: 75
+        difficulty: advanced
+        tracks: [biostatistician, programmer]
+        skills: [stats.ancova, stats.linear-regression, trials.sap]
+        prerequisites: [stats-multiple-regression-interactions]
+        keywords: [ANCOVA, baseline covariate, LS means, least-squares means, change from baseline, PROC GLM, PROC MIXED, regression to the mean, covariate adjustment]

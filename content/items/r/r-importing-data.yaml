@@ -1,0 +1,760 @@
+items:
+  - id: r.import.identifier-type
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: foundation
+    skills: [r.import, qc.data-cleaning]
+    lesson: r-importing-data
+    title: Why identifiers must be character
+    prompt: |
+      A study has sites numbered `007`, `012` and `101`. You read the CSV with `read.csv()` and later
+      join to the randomization file, which was read by a colleague as text.
+
+      **The join matches nothing.** Why?
+    choices:
+      - text: "`SITEID` was read as an integer, so `007` became `7` — which does not equal the string `\"007\"`."
+        correct: true
+        feedback: "Correct. The leading zeros are gone. Note the two ways this surfaces: if one side is still numeric, current dplyr *errors* on the incompatible key type; if both sides are character but one was converted back after losing its zeros, the join silently matches nothing."
+      - text: "The two files were sorted differently."
+        feedback: "Join order does not matter in R or SQL — only in a SAS MERGE, which requires sorting but would error rather than silently match nothing."
+      - text: "`read.csv` dropped the `SITEID` column."
+        feedback: "The column is present; its type and values changed."
+      - text: "R cannot join on a character column."
+        feedback: "It can. The problem is that one side is no longer character."
+    solution: |
+      `read.csv()` inferred `SITEID` as an integer, so `"007"` became `7`.
+
+      **How it surfaces depends on what happens next.** If the numeric column meets a character key,
+      current dplyr refuses:
+
+      ```text
+      Error: Can't join `x$id` with `y$id` due to incompatible types.
+      ```
+
+      That is the good outcome. The dangerous one is when the damaged value is converted *back* to
+      character somewhere downstream — by a `write_csv` and re-read, or an `as.character()` — because
+      then both sides are character, the types are compatible, and `"7"` simply never matches `"007"`.
+      No error, no warning, an empty join.
+
+      Declare it:
+
+      ```r
+      readr::read_csv("adsl.csv",
+                      col_types = readr::cols(SITEID = readr::col_character(),
+                                              .default = readr::col_guess()))
+      ```
+
+      **The rule worth generalising:** if you would never do arithmetic on a column, it is a label, not a
+      number. Site IDs, subject IDs, visit numbers, kit numbers, protocol numbers — all character.
+    explanation:
+      objective: "Diagnose a silent join failure caused by type inference on an identifier."
+      given: "Identifiers with leading zeros, read by two programs with different type handling."
+      relevant: "That type guessing turns digit-only labels into numbers."
+      method: "A join that errors on key type has told you the problem. One that matches zero rows silently means the types agree and the values do not."
+      numbers: "'007' read as an integer becomes 7; '7' != '007' as strings, and 7 != '007' across types."
+      interpretation: "dplyr guards the type mismatch but cannot guard a value mismatch, because an empty join is a legitimate outcome."
+      changes: "If the sites were 101 to 112, as in this app's cardio study, nothing would visibly break — which makes the habit more important, not less."
+      interviewer: "That you give the general rule (would you do arithmetic on it?) rather than only fixing the one column."
+
+  - id: r.import.problems-row
+    format: numeric
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [r.import, qc.data-cleaning]
+    lesson: r-importing-data
+    title: Locating the offending value
+    prompt: |
+      A CSV has a header line and four data rows. The value on **data row 2** fails to parse as a double.
+
+      What row number does `readr::problems()` report?
+    answer: 3
+    tolerance: 0
+    hints:
+      - "`problems()` reports a position in the file, not a position in the data frame."
+      - "How many lines precede data row 2 in the file?"
+    solution: |
+      **3.** `problems()` reports the **line number in the file**, which counts the header. Data row 2 is
+      file line 3.
+
+      ```text
+          row   col expected actual
+        <int> <int> <chr>    <chr>
+      1     3     2 a double BAD
+      2     5     2 a double WORSE
+      ```
+
+      That is the number you want for opening the file and looking at the line — and **not** the number
+      you want for subsetting the data frame. To index the data, subtract the number of header lines.
+
+      Getting this backwards sends you to the wrong record, which is a small waste of time that recurs
+      every time you investigate a parse failure.
+    explanation:
+      objective: "Interpret the row number that readr reports for a parse failure."
+      given: "A file with one header line and a failure on the second data row."
+      relevant: "That problems() indexes the file, not the parsed data."
+      calculating: "Data row 2 plus one header line."
+      method: "Count lines from the top of the file including the header."
+      numbers: "1 header + 2 data rows = file line 3."
+      interpretation: "The reported number is for locating the value in the source file, which is what you need in order to query it."
+      changes: "To subset the data frame instead, subtract the number of header lines — one for a standard CSV."
+      interviewer: "That you have actually used problems() rather than only knowing it exists."
+
+  - id: r.import.partial-date
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [r.import, r.dates, sdtm.dates]
+    lesson: r-importing-data
+    title: Parsing an SDTM date
+    prompt: |
+      An SDTM `AESTDTC` column holds values including `2025-03-14`, `2025-03` (day unknown) and `2025`
+      (month and day unknown).
+
+      How should it be read?
+    choices:
+      - text: "As **character**. Any date parser turns the partial values into `NA`, destroying information the ISO string format exists to preserve."
+        correct: true
+        feedback: "Correct. SDTM uses character ISO 8601 precisely so partial dates can be represented; imputation happens in ADaM per the SAP, flagged with DTYPE."
+      - text: "As a `Date`, letting the partial values become `NA`."
+        feedback: "That discards real information. 'March 2025, day unknown' is not the same as 'unknown', and the difference matters for deciding whether an AE is treatment-emergent."
+      - text: "As a `Date`, with the day defaulting to the first of the month."
+        feedback: "That is an imputation, and imputations belong in ADaM with a documented rule and a DTYPE flag — not silently at import."
+      - text: "Split into three numeric columns for year, month and day."
+        feedback: "Unnecessary. The ISO string already represents the precision available, and SDTM requires it to be kept as such."
+    solution: |
+      **Character.**
+
+      SDTM `--DTC` variables are character ISO 8601 strings *because* no numeric date type can represent
+      "March 2025, day unknown". Parsing them to `Date` converts every partial value to `NA` and throws
+      away the precision information.
+
+      The correct pipeline: read `--DTC` as character, then derive numeric analysis dates in ADaM by
+      applying the SAP's imputation rule, flagging imputed records with `DTYPE` so the imputation stays
+      visible and an analysis can exclude them.
+
+      **Why this matters concretely:** whether an AE with onset `2025-03` is treatment-emergent depends
+      on when the subject was first dosed. If first dose was 2025-03-20, the answer depends on the
+      imputation rule — and the convention is usually conservative, treating it as emergent unless it
+      can be ruled out. That decision belongs in the SAP, not in a parser default.
+    explanation:
+      objective: "Choose the correct import type for an SDTM date variable."
+      given: "A --DTC column containing complete and partial ISO dates."
+      relevant: "That partial dates cannot be represented by a numeric date type."
+      method: "Preserve the source representation at import; impute later, deliberately and flagged."
+      assumptions: "SDTM requires --DTC to be character ISO 8601; this is a standard requirement, not a convention."
+      interpretation: "Precision information — whether the day is known — is itself data."
+      changes: "ADaM's --DT numeric analysis dates are derived after imputation, with DTYPE recording that it happened, so an analysis can be rerun on observed dates only."
+      interviewer: "That you connect the choice to a concrete downstream consequence such as the treatment-emergent determination."
+
+  - id: r.import.guess-limit
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [r.import, r.sas-translation]
+    lesson: r-importing-data
+    title: Where the surprising value hides
+    prompt: |
+      A lab file has 35,000 rows. Row 3,481 contains `NOT DONE` in a column that is otherwise numeric.
+
+      You read it with `readr::read_csv()` and no `col_types`. What happens?
+    choices:
+      - text: "readr guesses from the first 1000 rows, declares the column numeric, then fails to parse row 3,481 — inserting `NA` and recording it in `problems()`."
+        correct: true
+        feedback: "Correct, and this is readr's advantage: the failure is recorded rather than silent. `problems()` names the row and the value."
+      - text: "readr scans the whole file and reads the column as character."
+        feedback: "readr guesses from the first 1000 rows by default (`guess_max`), not the whole file."
+      - text: "The read fails with an error."
+        feedback: "readr warns and continues, inserting NA for the unparseable value."
+      - text: "`NOT DONE` is silently converted to 0."
+        feedback: "No reader converts text to zero."
+    solution: |
+      readr guesses from the first **1000** rows (`guess_max`), decides the column is numeric, then meets
+      `NOT DONE` at row 3,481. It inserts `NA`, warns once, and records the failure:
+
+      ```r
+      problems(d)   # row, col, expected "a double", actual "NOT DONE"
+      ```
+
+      Compare the alternatives:
+
+      - **`read.csv()`** would scan more and read the whole column as **character** — no warning, no
+        report, and every downstream `mean()` returns `NA`.
+      - **SAS `PROC IMPORT`** defaults to guessing from **20 rows**, which is worse still;
+        `guessingrows=max` scans the file.
+
+      **What to actually do here:** `NOT DONE` is meaningful clinical information, not dirt. In SDTM it
+      belongs in the character `--STRESC` while `--STRESN` is missing. So read both columns with declared
+      types and keep the text — do not "clean" it away.
+    explanation:
+      objective: "Predict the behaviour of type guessing when the surprising value is deep in the file."
+      given: "A 35,000-row file with one text value at row 3,481 in a numeric column."
+      relevant: "readr's guess_max default of 1000 rows."
+      method: "Guessing samples the head of the file; a value beyond the sample cannot influence the guess."
+      numbers: "Row 3,481 is beyond the 1000-row guessing window."
+      assumptions: "guess_max is 1000 by default and can be raised, at a cost in read time."
+      interpretation: "readr's failure is recorded; base R's is silent — which is the reason to prefer it even when both produce a usable object."
+      changes: "SAS PROC IMPORT defaults to 20 guessing rows; guessingrows=max scans everything. The same trade-off, different default."
+      interviewer: "That you treat the non-numeric value as clinical information belonging in --STRESC rather than as data to be cleaned away."
+
+  - id: r.import.declare-types
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: foundation
+    skills: [r.import]
+    lesson: r-importing-data
+    title: Read ADSL with declared types
+    minutes: 10
+    prompt: |
+      Write `read_adsl(path)` that reads the ADSL CSV with:
+
+      - `USUBJID`, `SUBJID` and `SITEID` as **character** (they are identifiers)
+      - `AGE` as **integer**
+      - everything else guessed
+      - `show_col_types = FALSE` so the console is not flooded
+
+      Then verify the read: no parse problems, 270 rows, and `USUBJID` unique. Fail loudly if any check
+      does not hold.
+    starter: |
+      library(readr)
+
+      read_adsl <- function(path) {
+        d <- read_csv(
+          path,
+          col_types = cols(
+            ___
+          ),
+          show_col_types = FALSE
+        )
+
+        stopifnot(___)
+
+        d
+      }
+    reference: |
+      library(readr)
+
+      read_adsl <- function(path) {
+        d <- read_csv(
+          path,
+          col_types = cols(
+            USUBJID = col_character(),
+            SUBJID  = col_character(),
+            SITEID  = col_character(),
+            AGE     = col_integer(),
+            .default = col_guess()
+          ),
+          show_col_types = FALSE
+        )
+
+        stopifnot(
+          nrow(problems(d)) == 0,
+          nrow(d) == 270,
+          !any(duplicated(d$USUBJID))
+        )
+
+        d
+      }
+    hints:
+      - "`cols(...)` takes one named argument per column you want to pin down."
+      - "`.default = col_guess()` infers every column you did not name, so you do not have to list all 39."
+      - "`stopifnot()` takes several conditions and reports which one failed."
+    checks:
+      - pattern: "SITEID\\s*=\\s*col_character\\s*\\(\\s*\\)"
+        message: "Reads SITEID as character rather than letting it become a number"
+      - pattern: "\\.default\\s*=\\s*col_guess\\s*\\(\\s*\\)"
+        message: "Guesses the remaining columns instead of enumerating all of them"
+      - pattern: "problems\\s*\\(\\s*d\\s*\\)"
+        message: "Checks that nothing failed to parse"
+      - pattern: "duplicated\\s*\\(\\s*d\\$USUBJID\\s*\\)"
+        message: "Asserts the key is unique"
+      - pattern: "stopifnot\\s*\\("
+        message: "Fails loudly rather than returning a silently wrong object"
+    expectedOutput: |
+      ```text
+      > adsl <- read_adsl("data/cardio/adsl.csv")
+      > class(adsl$SITEID); adsl$SITEID[1]
+      [1] "character"
+      [1] "101"
+      > nrow(adsl)
+      [1] 270
+      ```
+    solution: |
+      The three assertions are the part worth arguing for.
+
+      **`problems()` empty** — a parse failure inserts `NA` and warns once. A warning in a long script is
+      easy to miss; an assertion is not.
+
+      **Row count against a literal** — turns a truncated or re-filtered extract into an immediate,
+      located failure rather than a set of internally consistent wrong numbers. The literal must come
+      from an independent source (the disposition table, the transfer note), not from the file itself.
+
+      **Key uniqueness** — ADSL is one row per subject by definition. If it is not, every merge against
+      it duplicates records and every count downstream is inflated.
+
+      A production version would take the expected row count as an argument rather than hard-coding 270,
+      so the function works across studies.
+    explanation:
+      objective: "Read a clinical CSV with declared types and verify the result."
+      given: "A path to ADSL and a set of type requirements."
+      relevant: "Which columns are identifiers, and what an ADSL read should satisfy."
+      method: "Name the columns that matter in cols(), let .default handle the rest, then assert the properties you rely on."
+      numbers: "270 rows for this study's ITT population; USUBJID unique by definition of ADSL."
+      assumptions: "The expected row count comes from an authoritative source outside the file."
+      interpretation: "The function either returns a dataset meeting its contract or fails — it never returns a quietly wrong one."
+      changes: "Taking the expected n as a parameter makes the function reusable; hard-coding it makes it study-specific."
+      interviewer: "That you assert rather than assume, and that you can say where the expected count should come from."
+
+  - id: r.import.find-problems
+    format: code
+    language: r
+    modes: [guided, independent, qc]
+    difficulty: intermediate
+    skills: [r.import, qc.data-cleaning]
+    lesson: r-importing-data
+    title: Report what failed to parse
+    minutes: 12
+    prompt: |
+      Write `parse_report(path, types)` that reads a CSV with the supplied `col_types` and returns a
+      **data frame of the values that failed to parse**, with columns:
+
+      - `file_line` — the line number in the file, as `problems()` gives it
+      - `data_row` — the corresponding row of the data frame (one header line)
+      - `column` — the **name** of the column, not its index
+      - `expected`, `actual`
+
+      Return a zero-row data frame if nothing failed.
+
+      The column-name lookup is the useful part: `problems()` gives a column *index*, which is not what
+      you want to put in a query to a data manager.
+    starter: |
+      library(readr)
+
+      parse_report <- function(path, types) {
+        d <- read_csv(path, col_types = types)
+        p <- problems(d)
+
+        if (nrow(p) == 0) return(p[0, ])
+
+        data.frame(
+          file_line = ___,
+          data_row  = ___,
+          column    = ___,
+          expected  = p$expected,
+          actual    = p$actual
+        )
+      }
+    reference: |
+      library(readr)
+
+      parse_report <- function(path, types) {
+        d <- read_csv(path, col_types = types)
+        p <- problems(d)
+
+        if (nrow(p) == 0) {
+          return(data.frame(file_line = integer(), data_row = integer(),
+                            column = character(), expected = character(),
+                            actual = character()))
+        }
+
+        data.frame(
+          file_line = p$row,
+          data_row  = p$row - 1L,
+          column    = names(d)[p$col],
+          expected  = p$expected,
+          actual    = p$actual
+        )
+      }
+    hints:
+      - "`problems(d)$row` is the file line; subtract 1 for the data row, because there is one header line."
+      - "`problems(d)$col` is a column *index*. `names(d)[index]` turns it into a name."
+      - "Return an empty data frame with the right columns when there is nothing to report, so callers can rbind without special-casing."
+    checks:
+      - pattern: "problems\\s*\\(\\s*d\\s*\\)"
+        message: "Retrieves the parse failures"
+      - pattern: "p\\$row\\s*-\\s*1"
+        message: "Converts the file line to a data row by subtracting the header"
+      - pattern: "names\\s*\\(\\s*d\\s*\\)\\s*\\[\\s*p\\$col\\s*\\]"
+        message: "Looks up the column name from its index"
+      - pattern: "nrow\\s*\\(\\s*p\\s*\\)\\s*==\\s*0"
+        message: "Handles the no-problems case"
+    expectedOutput: |
+      ```text
+        file_line data_row column expected   actual
+      1         3        2    VAL a double      BAD
+      2         5        4    VAL a double    WORSE
+      ```
+    solution: |
+      ```r
+      parse_report <- function(path, types) {
+        d <- read_csv(path, col_types = types)
+        p <- problems(d)
+        if (nrow(p) == 0) {
+          return(data.frame(file_line = integer(), data_row = integer(),
+                            column = character(), expected = character(),
+                            actual = character()))
+        }
+        data.frame(file_line = p$row,
+                   data_row  = p$row - 1L,
+                   column    = names(d)[p$col],
+                   expected  = p$expected,
+                   actual    = p$actual)
+      }
+      ```
+
+      **Both row numbers earn their place.** `file_line` is what you give someone who is going to open
+      the file; `data_row` is what you use to subset the data frame and look at the surrounding record.
+      Reporting only one guarantees that half the time you compute the other by hand.
+
+      **The column name matters more than it looks.** A query to a data manager saying "column 7 failed"
+      is useless; "LBSTRESN contains 'NOT DONE' on line 3,481" can be actioned immediately.
+
+      The empty-but-typed return lets a caller `rbind` reports across many files without special-casing
+      the clean ones — a small thing that makes the function composable.
+    explanation:
+      objective: "Turn a parse-failure report into something a data manager can act on."
+      given: "A file path and a column specification."
+      relevant: "That problems() returns a file line and a column index rather than a data row and a name."
+      method: "Subtract the header line for the data row; index names(d) for the column name."
+      numbers: "With one header line, file line 3 is data row 2."
+      assumptions: "Exactly one header line, which is standard for the CSVs in a clinical transfer but not universal."
+      interpretation: "A report naming a column and a line is a query; a report naming an index is homework for the reader."
+      changes: "A multi-line header would change the offset, so a production version would take the number of header lines as an argument."
+      interviewer: "That you think about who reads the output, not only about producing it."
+
+  - id: r.import.verify
+    format: numeric
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [r.import, qc.compare]
+    lesson: r-importing-data
+    title: How many subjects should ADSL have?
+    prompt: |
+      You are writing the assertion `stopifnot(nrow(adsl) == N)` for the VTX221-201 ADSL.
+
+      The study randomized **270** subjects, of whom **268** received at least one dose and **235**
+      completed Week 12.
+
+      What value of `N` should the assertion use?
+    answer: 270
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "ADSL has one row per *randomized* subject."
+      - "Dosing and completion are flags on ADSL, not filters applied to it."
+    solution: |
+      **270** — every randomized subject.
+
+      ADSL is one row per randomized subject. Whether a subject was dosed (`SAFFL`) or completed
+      (`COMPLFL`) is recorded as a **flag on the row**, not by the row's absence.
+
+      This is the property that makes ADSL the denominator source for every other dataset. If ADSL held
+      only the 268 dosed subjects, you could not produce a disposition table showing that 2 were
+      randomized and never treated — the information would be gone.
+
+      **The general principle:** subsetting happens at analysis time using flags, never by removing rows
+      from ADSL. A subject disappearing from ADSL between data extracts is always worth a question.
+    explanation:
+      objective: "Identify the correct row count for an ADSL assertion."
+      given: "Randomized, treated and completed counts for the study."
+      relevant: "That ADSL's grain is one row per randomized subject."
+      irrelevant: "The treated and completed counts, which are flag values rather than row filters."
+      method: "ADSL records population membership as flags so that every denominator remains derivable."
+      numbers: "270 randomized; 268 with SAFFL = Y; 235 with COMPLFL = Y."
+      assumptions: "Screen failures are not randomized and so do not appear in ADSL, though they do appear in SDTM DM."
+      interpretation: "Keeping all randomized subjects is what allows the disposition table to account for everyone."
+      changes: "In SDTM, DM contains screen failures too (ARMCD = SCRNFAIL), so DM and ADSL legitimately have different row counts."
+      interviewer: "That you know flags rather than filters define populations, and can say why that design choice matters."
+
+  - id: r.import.read-code
+    format: code
+    language: r
+    modes: [independent]
+    difficulty: intermediate
+    skills: [r.import, r.joins, qc.compare]
+    lesson: r-importing-data
+    title: Read two files and reconcile them
+    minutes: 14
+    prompt: |
+      Write `load_study(adsl_path, advs_path)` that reads both files with declared identifier types and
+      returns a list with `adsl`, `advs`, and a `reconciliation` data frame reporting:
+
+      - `n_adsl` — subjects in ADSL
+      - `n_advs_subjects` — distinct subjects appearing in ADVS
+      - `in_adsl_not_advs` — count of subjects in ADSL with no ADVS record
+      - `in_advs_not_adsl` — count of subjects in ADVS not present in ADSL
+
+      The last one should be **zero** in a well-formed study. If it is not, that is a finding.
+    starter: |
+      library(readr); library(dplyr)
+
+      load_study <- function(adsl_path, advs_path) {
+        id_types <- cols(USUBJID = col_character(), SUBJID = col_character(),
+                         SITEID = col_character(), .default = col_guess())
+
+        adsl <- read_csv(adsl_path, col_types = id_types, show_col_types = FALSE)
+        advs <- read_csv(advs_path, col_types = id_types, show_col_types = FALSE)
+
+        # reconciliation
+
+        list(adsl = adsl, advs = advs, reconciliation = ___)
+      }
+    reference: |
+      library(readr); library(dplyr)
+
+      load_study <- function(adsl_path, advs_path) {
+        id_types <- cols(USUBJID = col_character(), SUBJID = col_character(),
+                         SITEID = col_character(), .default = col_guess())
+
+        adsl <- read_csv(adsl_path, col_types = id_types, show_col_types = FALSE)
+        advs <- read_csv(advs_path, col_types = id_types, show_col_types = FALSE)
+
+        adsl_ids <- unique(adsl$USUBJID)
+        advs_ids <- unique(advs$USUBJID)
+
+        recon <- data.frame(
+          n_adsl           = length(adsl_ids),
+          n_advs_subjects  = length(advs_ids),
+          in_adsl_not_advs = length(setdiff(adsl_ids, advs_ids)),
+          in_advs_not_adsl = length(setdiff(advs_ids, adsl_ids))
+        )
+
+        list(adsl = adsl, advs = advs, reconciliation = recon)
+      }
+    hints:
+      - "`setdiff(a, b)` gives the values in `a` that are not in `b` — direction matters."
+      - "Use `unique()` on both id vectors first, since ADVS has many rows per subject."
+      - "`in_advs_not_adsl` should be 0; a non-zero value means an orphan record."
+    checks:
+      - pattern: "col_character\\s*\\(\\s*\\)"
+        message: "Declares identifier columns as character"
+      - pattern: "setdiff\\s*\\("
+        message: "Uses setdiff to find subjects present in one file and not the other"
+      - pattern: "unique\\s*\\(\\s*advs\\$USUBJID\\s*\\)|n_distinct"
+        message: "Counts distinct subjects in ADVS rather than rows"
+      - pattern: "list\\s*\\("
+        message: "Returns the two datasets alongside the reconciliation"
+    expectedOutput: |
+      ```text
+        n_adsl n_advs_subjects in_adsl_not_advs in_advs_not_adsl
+      1    270             270                0                0
+      ```
+    solution: |
+      On the VTX221-201 data every count lines up: **270 in ADSL, 270 appearing in ADVS, 0 in either
+      direction**. That is what a clean transfer looks like, and it is worth seeing once so that an
+      unclean one is recognisable.
+
+      **The two directions mean different things, and only one is allowed to be non-zero.**
+
+      `in_adsl_not_advs` may legitimately be positive. A randomized subject who withdrew before any
+      assessment has no vital-signs record, and that is a fact about the study rather than a defect.
+      It is worth reporting — it feeds the disposition discussion — but it is not a query.
+
+      `in_advs_not_adsl` must be **zero**. A vital-signs record for a subject who is not in ADSL is an
+      orphan: either the identifier is wrong, or a subject was removed from ADSL who should not have
+      been. Either way it is a data-integrity finding and goes back to the vendor.
+
+      Note that all 270 subjects appear in ADVS because every randomized subject has at least a baseline
+      measurement. Restricting to a *later* visit tells a different story: only 238 have a Week 12
+      systolic record. Reconciling on "appears anywhere" and reconciling on "has the analysis visit" are
+      different checks, and confusing them is how an analysis denominator goes wrong.
+
+      Running this on every transfer, before any analysis, catches a whole class of problems while they
+      are still cheap to fix.
+    explanation:
+      objective: "Reconcile two study datasets on the subject key at load time."
+      given: "Paths to ADSL and ADVS."
+      relevant: "The distinct subject identifiers in each, and the direction of each difference."
+      method: "setdiff in both directions; count rather than list, so the output is a one-row summary."
+      numbers: "270 in ADSL, 270 distinct subjects in ADVS, 0 in either direction. Restricted to Week 12 systolic records, only 238 subjects appear."
+      assumptions: "USUBJID is the shared key and is formatted identically in both files — which is exactly what declaring it character protects."
+      interpretation: "A subject absent from ADVS can be legitimate; a record whose subject is absent from ADSL cannot."
+      changes: "A non-zero in_advs_not_adsl is a finding requiring a query, not a number to note and move past."
+      interviewer: "That you check both directions and can say which one is allowed to be non-zero."
+
+  - id: r.import.join-failure
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [r.import, r.joins, qc.discrepancy]
+    lesson: r-importing-data
+    title: The join that matched nothing
+    minutes: 10
+    prompt: |
+      Sites in this study are numbered `007`, `012` and `101`.
+
+      This code runs **without error or warning** and produces a result where every `SITE_NAME` is `NA`.
+
+      Click the line that causes it.
+    code: |
+      library(readr); library(dplyr)
+
+      adsl <- read_csv("adsl.csv", show_col_types = FALSE)
+
+      adsl <- adsl |>
+        mutate(SITEID = as.character(SITEID))
+
+      sites <- read_csv("sites.csv",
+                        col_types = cols(SITEID = col_character(),
+                                         .default = col_guess()),
+                        show_col_types = FALSE)
+
+      combined <- adsl |>
+        left_join(sites, by = "SITEID")
+    answerLines: [3]
+    lineNotes:
+      - line: 3
+        note: "ADSL is read with no `col_types`, so `SITEID` is guessed numeric and `007` becomes `7`. The leading zeros are destroyed here — everything after this line is working with damaged values."
+      - line: 6
+        note: "This is what makes the failure *silent*. Converting the damaged numeric back to character gives `\"7\"`, so both sides of the join are now character and the types are compatible. Without this line dplyr would have errored on the incompatible key type, which would have been the better outcome."
+      - line: 8
+        note: "This read is correct — it declares SITEID as character, preserving `007`. The problem is the other side."
+      - line: 14
+        note: "A left join filling NA when nothing matches is exactly what a left join does. It is behaving correctly on inputs that do not correspond."
+    fixed: |
+      library(readr); library(dplyr)
+
+      id_types <- cols(SITEID = col_character(), USUBJID = col_character(),
+                       .default = col_guess())
+
+      adsl  <- read_csv("adsl.csv",  col_types = id_types, show_col_types = FALSE)
+      sites <- read_csv("sites.csv", col_types = id_types, show_col_types = FALSE)
+
+      combined <- adsl |>
+        left_join(sites, by = "SITEID", relationship = "many-to-one")
+
+      stopifnot(!all(is.na(combined$SITE_NAME)))
+    hints:
+      - "Every joined value is NA, not just some. What does that say about how many rows matched?"
+      - "Both keys are character by the time the join runs — so the types agree. What about the values?"
+      - "Which line first changed what `SITEID` contains?"
+    solution: |
+      **Line 3.** ADSL is read without `col_types`, so `SITEID` is guessed numeric and `007` becomes `7`.
+
+      **Line 6 is what makes it silent**, and that is the part worth understanding. Current dplyr
+      *errors* on a join between a numeric key and a character key:
+
+      ```text
+      Error: Can't join `x$id` with `y$id` due to incompatible types.
+      ```
+
+      Converting the damaged column back to character removes that protection. Now both sides are
+      character, the types are compatible, and `"7"` simply never equals `"007"` — an empty join with no
+      error, because an empty join is a legitimate result.
+
+      **The signature is diagnostic:** *every* joined value being `NA` means zero rows matched. Partial
+      failures give some NAs. A wholly-NA joined column always means the keys are not comparable —
+      either in type, which dplyr now catches, or in value, which it cannot.
+
+      Two defences, and you want both: **declare the key type once and reuse that spec for every file** so
+      the two sides cannot diverge, and **assert after the join** that something matched.
+    explanation:
+      objective: "Diagnose a join that matches no rows despite compatible key types."
+      given: "A left join producing NA for every joined column, from files covering the same sites."
+      relevant: "That one file's key was guessed numeric, then cast back to character."
+      irrelevant: "The left_join itself, which behaves correctly given its inputs."
+      method: "A wholly-NA joined column means zero matches. Check the key type first; if the types agree, compare the actual values."
+      numbers: "'007' read as numeric becomes 7; as.character(7) is '7', which never equals '007'."
+      assumptions: "dplyr 1.1+ errors on incompatible key types, so a silent failure requires the types to have been made compatible."
+      interpretation: "Casting a damaged value back to the right type removes the language's protection without repairing the damage."
+      changes: "Without line 6 this would have errored — the fix that feels helpful is the one that hides the bug."
+      interviewer: "That you distinguish a type mismatch, which the tool catches, from a value mismatch, which it cannot."
+
+  - id: r.import.sas-compare
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: intermediate
+    skills: [r.import, r.sas-translation, qc.compare]
+    lesson: r-importing-data
+    title: The SAS equivalent of the same mistake
+    prompt: |
+      Which SAS practice corresponds most closely to reading a CSV in R without declaring `col_types`?
+    choices:
+      - text: "`PROC IMPORT` with the default `GUESSINGROWS=20`."
+        correct: true
+        feedback: "Both infer types from a sample of the file. SAS's default sample is even smaller than readr's 1000 rows, so it fails more often — most notoriously by truncating character variables whose early values are short."
+      - text: "A DATA step with `INFILE` and an explicit `INPUT` statement."
+        feedback: "That is the *declared* equivalent — the SAS analogue of supplying `col_types`."
+      - text: "`PROC CONTENTS`."
+        feedback: "That reports an existing dataset's structure; it does not read raw data."
+      - text: "`LIBNAME` pointing at a folder of SAS datasets."
+        feedback: "SAS datasets carry their own type metadata, so nothing is being guessed."
+    solution: |
+      **`PROC IMPORT` with default `GUESSINGROWS`.** Both read a sample and infer.
+
+      | | Sample size | Failure mode |
+      |---|---|---|
+      | `PROC IMPORT` (default) | 20 rows | **Truncates** character variables silently |
+      | `PROC IMPORT GUESSINGROWS=MAX` | whole file | Slow, but correct |
+      | `read_csv()` (default) | 1000 rows | Inserts `NA`, records in `problems()` |
+      | `read_csv(col_types = ...)` | — | Declared |
+      | DATA step `INFILE`/`INPUT` | — | Declared |
+
+      **The SAS truncation is the nastier of the two failures.** If the first 20 values of a free-text
+      field are short, SAS sets the length accordingly and every longer value is cut off — with no
+      warning and no record of what was lost. readr at least tells you.
+
+      The shared lesson: **in both languages, the convenient reader guesses and the verbose one declares**,
+      and clinical data is exactly the kind that punishes guessing.
+    explanation:
+      objective: "Map an R practice onto its SAS equivalent to transfer an existing instinct."
+      given: "Four SAS practices, one of which infers types from a sample."
+      relevant: "Which practices infer and which declare."
+      method: "Compare on the axis of whether types are inferred from data or stated by the programmer."
+      numbers: "PROC IMPORT samples 20 rows by default; readr samples 1000."
+      interpretation: "A SAS programmer already distrusts PROC IMPORT; the same distrust transfers directly to an undeclared read_csv."
+      changes: "GUESSINGROWS=MAX and col_types= are the respective fixes, and both cost something — time in one case, typing in the other."
+      interviewer: "That you can translate a habit rather than only a syntax, which is what makes cross-language QC work possible."
+
+  - id: r.import.open
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [r.import, qc.data-cleaning, communication.interviewing]
+    lesson: r-importing-data
+    title: The first program against a new transfer
+    prompt: |
+      **Interviewer:** "A vendor has sent the first data transfer for a study you're joining. What does your first program do?"
+    modelAnswer: |
+      "Nothing statistical. The first program reads the data and proves it is what the transfer note says
+      it is.
+
+      Concretely: read every file with declared types — identifiers as character so nothing loses a
+      leading zero, `--DTC` dates left as character so partial dates survive, and numeric result columns
+      declared so that a stray `NOT DONE` shows up in `problems()` rather than silently turning the whole
+      column to text.
+
+      Then verify. Row counts and distinct subject counts per dataset against the transfer note. The
+      grain of each one — ADSL must be one row per subject, and I assert that rather than assume it.
+      Cross-file reconciliation on `USUBJID` in both directions: subjects in ADSL with no records
+      elsewhere are expected and worth noting; records for subjects who are *not* in ADSL are orphans and
+      are a finding.
+
+      Then a profile of every numeric column — min, max, missing count — because that is where unit
+      problems announce themselves. A weight column whose minimum is 3 and maximum is 310 is telling you
+      it contains both kilograms and pounds before I have run a single check.
+
+      I'd record the extract date and version in the header, because 'which data did this come from' gets
+      asked months later.
+
+      And I'd expect to send the vendor a short list of questions from that first pass. Doing it on
+      arrival costs an hour; discovering the same things during table production costs a week."
+
+      If the interviewer asks what you would do differently on a *subsequent* transfer, the answer is
+      comparison: which subjects are new, which have disappeared, and whether any key variable changed
+      for an existing subject — because a value changing when the CRF did not is a question for the
+      vendor.
+    rubric:
+      - Says the first program is verification, not analysis
+      - Names declared types for identifiers, dates and numeric results, with a reason for each
+      - Asserts row counts and dataset grain rather than assuming them
+      - Reconciles across files in both directions and distinguishes expected from unacceptable gaps
+      - Profiles numeric columns to surface unit and range problems
+      - Records the extract version for later traceability
+      - Frames it in terms of cost — cheap now, expensive later
+    redFlags:
+      - "Starts by running an analysis or producing a table"
+      - "Reads everything with defaults and cleans up later"
+      - "Does not check the grain of any dataset"
+      - "Treats orphan records and missing records as the same kind of issue"

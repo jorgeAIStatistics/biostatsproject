@@ -1,0 +1,29 @@
+domain: communication
+title: Communication
+description: Explaining data and statistics clearly to different audiences.
+skills:
+  - id: communication.interpretation
+    name: Interpreting results in plain language
+    description: Stating estimates, uncertainty and limitations without overclaiming.
+    weight: 3
+    tracks: [biostatistician, analytics, programmer]
+  - id: communication.audiences
+    name: Tailoring to audiences
+    description: Adapting explanations for clinicians, scientists, managers and statisticians.
+    weight: 2
+    tracks: [biostatistician, analytics]
+  - id: communication.documentation
+    name: Technical documentation
+    description: Writing specifications, derivation notes, READMEs and QC findings others can act on.
+    weight: 2
+    tracks: [programmer, computing, analytics]
+  - id: communication.interviewing
+    name: Interview communication
+    description: Structuring answers, reasoning aloud, and discussing projects credibly.
+    weight: 2
+    tracks: [programmer, biostatistician, analytics, computing]
+  - id: communication.visualization
+    name: Honest data visualization
+    description: Labeling, scales, uncertainty display, avoiding misleading graphics.
+    weight: 2
+    tracks: [biostatistician, analytics, programmer]

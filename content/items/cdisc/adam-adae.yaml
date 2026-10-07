@@ -1,0 +1,682 @@
+items:
+  - id: adam.adae.subjects-not-events
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [adam.occds, tlf.denominators, tlf.safety-tables]
+    lesson: adam-adae
+    datasets: [oncology/adam/adae]
+    title: 136 events, how many subjects?
+    prompt: |
+      In the CBX-417 arm of CBX417-301 there are **136** treatment-emergent diarrhoea records, belonging
+      to **102** subjects. The safety denominator for that column is **209**.
+
+      Table 14.3.1.2 counts subjects. What percentage does the diarrhoea cell show, to one decimal place?
+    answer: 48.8
+    tolerance: 0.1
+    unit: "%"
+    hints:
+      - "An incidence table counts subjects, not events."
+      - "102 over 209."
+      - "The 136 is a distractor."
+    solution: |
+      **48.8%** — `102 / 209 = 0.4880`.
+
+      **The 136 is the trap and it is the number that comes out of a naive `count()`.** Using it gives
+      `136 / 209 = 65.1%`, a "percentage of subjects" that describes nothing and is not bounded by 100:
+      a term that every subject experienced three times would read 300%.
+
+      One subject in this arm had **four** separate diarrhoea events. They are one patient with diarrhoea,
+      not four.
+
+      **`AOCCPFL = "Y"` is how the dataset makes this a filter.** It marks the chronologically first
+      treatment-emergent record per subject per preferred term, so counting flagged records gives the
+      subject count directly. Across both arms there are 148 flagged diarrhoea records, matching
+      `102 + 46` exactly.
+
+      Counting distinct `USUBJID` gives the same answer, and the ADaM specification names it as the
+      recommended QC method — the flags exist for the table program's convenience, not because a
+      `DISTINCT` would be wrong.
+    explanation:
+      objective: "Apply the subjects-not-events rule to an incidence cell."
+      given: "An event count, a subject count and the safety denominator."
+      relevant: "The subject count and the denominator."
+      irrelevant: "The 136 events, which is what a naive count returns."
+      calculating: "Subjects with at least one treatment-emergent event of that term, over the safety population in that column."
+      numbers: "102 / 209 = 48.8%. Counting events gives 136 / 209 = 65.1%."
+      assumptions: "The denominator is the safety population by actual treatment, taken from ADSL."
+      interpretation: "A percentage above 100 is the visible symptom; below 100 it is invisible."
+      changes: "AOCCPFL = 'Y' on 148 diarrhoea records across both arms turns the count into a filter."
+      interviewer: "That you name the flag and the DISTINCT as equivalent, rather than only one."
+
+  - id: adam.adae.denominator-source
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: intermediate
+    skills: [adam.occds, tlf.denominators, adam.adsl]
+    lesson: adam-adae
+    title: Where the 209 comes from
+    prompt: |
+      A programmer computes AE percentages entirely within ADAE:
+
+      ```r
+      adae |>
+        filter(TRTEMFL == "Y", AOCCPFL == "Y") |>
+        group_by(TRTA, AEDECOD) |>
+        summarise(n = n()) |>
+        mutate(pct = 100 * n / n_distinct(adae$USUBJID))
+      ```
+
+      What is wrong?
+    choices:
+      - text: "The denominator must come from ADSL. ADAE contains only subjects with at least one adverse event — 414 of the 416 treated subjects — and it is not split by arm here either."
+        correct: true
+        feedback: "Correct on both counts. Two treated subjects have no ADAE record at all and still belong in the denominator, and the denominator has to be the per-arm safety count, 209 and 207."
+      - text: "`AOCCPFL` should be `AOCCFL` for a preferred-term table."
+        feedback: "`AOCCFL` is once per subject overall, for the 'any TEAE' row. `AOCCPFL` is correct at preferred-term level."
+      - text: "`TRTEMFL == \"Y\"` is redundant once `AOCCPFL == \"Y\"` is applied."
+        feedback: "It is redundant here because the occurrence flags are derived after restricting to treatment-emergent records — but stating it documents the dependency and protects against a study that derives them differently."
+      - text: "Nothing — `n_distinct(adae$USUBJID)` is the number of subjects with any adverse event, which is the right denominator."
+        feedback: "The denominator of an incidence table is the population, not the subjects who had events. Using the latter makes 'subjects with any TEAE' come out at exactly 100% by construction."
+    explanation:
+      objective: "Identify why an AE denominator cannot come from the AE dataset."
+      given: "A percentage computed from the ADAE subject count."
+      relevant: "That subjects with no event of a term are absent from ADAE entirely."
+      method: "Ask whether a subject who had no adverse events would appear in the dataset. They do not."
+      numbers: "ADAE holds 414 subjects; the safety population is 416, split 209 and 207 by actual treatment."
+      assumptions: "The safety population is defined in ADSL by SAFFL and TRT01A."
+      interpretation: "Using the event-having subjects as denominator forces the 'any TEAE' row to 100% whatever the data say."
+      changes: "The fix is a join: counts from ADAE, denominators from ADSL, joined on the treatment column."
+      interviewer: "That you mention the two treated subjects with no AE record as the concrete proof."
+
+  - id: adam.adae.occ-vs-grade
+    format: mcq
+    modes: [check, debug, qc]
+    difficulty: advanced
+    skills: [adam.occds, tlf.safety-tables, qc.discrepancy]
+    lesson: adam-adae
+    title: The grade table that filtered on AOCCPFL
+    prompt: |
+      A subject has three treatment-emergent diarrhoea events:
+
+      | Day | `ATOXGRN` | `AOCCPFL` |
+      |---:|---:|---|
+      | 14 | 1 | **Y** |
+      | 40 | 3 | — |
+      | 70 | 2 | — |
+
+      A table of maximum CTCAE grade by preferred term filters on `AOCCPFL = "Y"`. What goes wrong, and
+      why is it hard to spot?
+    choices:
+      - text: "The subject is counted at grade 1 instead of grade 3. Every subject is still counted exactly once and the row totals are still right — only the distribution across grade columns is wrong."
+        correct: true
+        feedback: "Correct. The failure preserves every check most people run: no double counting, totals match the incidence row, no percentage above 100. Only the grade columns are wrong, and only downward."
+      - text: "The subject is counted three times, once per event."
+        feedback: "`AOCCPFL` selects exactly one record per subject per term, so there is no double counting. That is what makes the error invisible."
+      - text: "The subject is excluded entirely, because no flagged record has grade 3."
+        feedback: "The flagged record exists and is counted — at the wrong grade."
+      - text: "Nothing — `AOCCPFL` is the correct flag for any per-subject-per-term summary."
+        feedback: "It selects the *first* occurrence. A maximum-grade table needs the subject's *worst* occurrence, which is a different record."
+    explanation:
+      objective: "Recognise that an occurrence flag answers 'first', not 'worst'."
+      given: "Three events of one term with the occurrence flag on the earliest."
+      relevant: "That AOCCPFL is derived by chronological order, not by severity."
+      irrelevant: "The event count, which the flag correctly reduces to one."
+      method: "Check which record the flag actually marks against which record the table needs."
+      interpretation: "Grade-based tables select each subject's maximum ATOXGRN within the summarized grouping — the ADaM specification says so explicitly."
+      assumptions: "Occurrence flags are derived after restricting to TRTEMFL = 'Y' and sorting by USUBJID, ASTDT, AESEQ."
+      changes: "The bias is always toward lower grades, because the first event is not systematically the worst."
+      interviewer: "That you explain why the usual checks pass, not just that the answer is wrong."
+
+  - id: adam.adae.imputation-effect
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [adam.occds, sdtm.dates, trials.safety]
+    lesson: adam-adae
+    title: The imputation that makes an event treatment-emergent
+    prompt: |
+      ```text
+      USUBJID CBX417-301-1026-0001, "tiredness" / Fatigue
+      AESTDTC  2022-04        TRTSDT  2022-04-11
+      ASTDT    2022-04-11     ASTDTF  D        ASTDY  1      TRTEMFL  Y
+      ```
+
+      The SAP's rule: a missing day becomes the first of the month, **unless** the month and year are
+      those of `TRTSDT`, in which case the imputed date is `TRTSDT` itself.
+
+      What would happen to this record under a plain "first of the month" rule?
+    choices:
+      - text: "`ASTDT` would be 2022-04-01, `ASTDY` = −10, and `TRTEMFL` would be null — the event would be classified as pre-treatment and would disappear from every safety table."
+        correct: true
+        feedback: "Correct. The exception pushes an ambiguous event *into* the treatment-emergent window, which is the conservative direction for a safety analysis: it counts a possibly drug-related event rather than discarding it."
+      - text: "Nothing would change — `ASTDTF` would still be `D` and the event still emergent."
+        feedback: "`ASTDTF` records that the day was imputed either way. The *date* changes, and 2022-04-01 falls before the first dose on 2022-04-11."
+      - text: "The record would be excluded from ADAE entirely, since its date could not be resolved."
+        feedback: "The date resolves under either rule. What changes is which side of the first dose it lands on."
+      - text: "`TRTEMFL` would still be `\"Y\"`, because a completely missing day is treated as emergent by default."
+        feedback: "The default-to-emergent rule applies only to a *completely* missing start date. Here the month and year are known."
+    explanation:
+      objective: "Trace an imputation rule through to a classification flag."
+      given: "A month-only start date in the first-dose month, and the rule's exception."
+      relevant: "The distance between the first of the month and the first-dose date."
+      calculating: "2022-04-01 relative to a first dose on 2022-04-11, with no day zero."
+      numbers: "ASTDY would be -10 rather than 1; 12 of 2,466 records carry an ASTDTF."
+      assumptions: "The exception exists precisely for events recorded in the month treatment started."
+      interpretation: "The rules choose the conservative direction for safety: an ambiguous event is counted."
+      changes: "The opposite rule — the end-date cap — pushes subject 1029-0005's nausea out of the window, and both are correct."
+      interviewer: "That you name the direction the rule chooses and why that direction is deliberate."
+
+  - id: adam.adae.pt-row-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [adam.occds, tlf.safety-tables, r.dplyr]
+    lesson: adam-adae
+    datasets: [oncology/adam/adae, oncology/adam/adsl]
+    title: One preferred-term row of the AE table
+    minutes: 12
+    prompt: |
+      Write `pt_row(adae, adsl, decod)` producing one preferred-term row of Table 14.3.1.2: for each
+      actual treatment arm, the number of subjects with at least one treatment-emergent event of that
+      term, the safety denominator, and the percentage.
+
+      - Counts come from ADAE, restricted to treatment-emergent records and to one record per subject per
+        preferred term.
+      - **Denominators come from ADSL**, counting `SAFFL = "Y"` by `TRT01A`.
+      - Join so that **every arm appears**, even one with no events of that term, with a count of 0.
+    starter: |
+      library(dplyr)
+
+      pt_row <- function(adae, adsl, decod) {
+        denom <- adsl |>
+          filter(___) |>
+          count(TRTA = ___, name = "N")
+
+        adae |>
+          filter(___) |>
+          count(TRTA, name = "n") |>
+          ___(denom, by = "TRTA") |>
+          mutate(n = coalesce(n, 0L), pct = ___)
+      }
+    reference: |
+      library(dplyr)
+
+      pt_row <- function(adae, adsl, decod) {
+        denom <- adsl |>
+          filter(SAFFL == "Y") |>
+          count(TRTA = TRT01A, name = "N")
+
+        adae |>
+          filter(TRTEMFL == "Y", AOCCPFL == "Y", AEDECOD == decod) |>
+          count(TRTA, name = "n") |>
+          right_join(denom, by = "TRTA") |>
+          mutate(n = coalesce(n, 0L), pct = 100 * n / N)
+      }
+    hints:
+      - "The denominator frame has one row per arm. Join so that frame's rows are all kept."
+      - "`right_join(denom, ...)` keeps every arm; `left_join` from the counts would drop an arm with no events."
+      - "`AOCCPFL == \"Y\"` gives one record per subject per preferred term — the subject count as a filter."
+      - "`coalesce(n, 0L)` turns the unmatched arm's `NA` into a real zero."
+    checks:
+      - pattern: "SAFFL\\s*==\\s*[\"']Y[\"']"
+        message: "Takes the denominator from the safety population"
+      - pattern: "TRTA\\s*=\\s*TRT01A"
+        message: "Builds the denominator by actual treatment, not planned"
+      - pattern: "AOCCPFL\\s*==\\s*[\"']Y[\"']"
+        message: "Counts subjects rather than events"
+      - pattern: "TRTEMFL\\s*==\\s*[\"']Y[\"']"
+        message: "Restricts to treatment-emergent events"
+      - pattern: "right_join\\s*\\("
+        message: "Keeps every treatment arm, including one with no events of the term"
+      - pattern: "coalesce\\s*\\(\\s*n\\s*,\\s*0"
+        message: "Turns a missing count into a real zero"
+      - pattern: "100\\s*\\*\\s*n\\s*/\\s*N"
+        message: "Divides by the ADSL denominator"
+    expectedOutput: |
+      ```text
+      > pt_row(adae, adsl, "Diarrhea")
+        TRTA                    n   N   pct
+      1 CBX-417 + Docetaxel   102 209 48.80
+      2 Placebo + Docetaxel    46 207 22.22
+      ```
+    solution: |
+      **The join direction is the whole exercise.**
+
+      ADAE contains only subjects who had events. A term reported on one arm only produces a one-row
+      count frame, and a `left_join` from that frame yields a table with one arm missing entirely — not
+      a zero, an absent row. A reader cannot distinguish "no subjects had this" from "this arm was not
+      summarised".
+
+      `right_join(denom, ...)` keeps the denominator frame's rows, so every arm always appears, and
+      `coalesce(n, 0L)` turns the unmatched arm's `NA` into a real zero.
+
+      **`AOCCPFL = "Y"` is what makes the count subjects rather than events.** Diarrhoea in the CBX arm
+      is 136 records over 102 subjects; without the flag the cell reads 65.1%.
+
+      **`TRT01A`, not `TRT01P`.** Safety tables are by treatment received. On this study three subjects
+      differ, so the denominators are 209 and 207 rather than 210 and 210.
+
+      **What this function still does not handle** is a full table, which needs every term crossed with
+      every arm — a `complete()` or a Cartesian join — so that a term reported only on placebo shows an
+      explicit zero in the CBX column. The same argument, one level up.
+    explanation:
+      objective: "Build an incidence row with the numerator and denominator from different datasets."
+      given: "ADAE with occurrence and emergence flags, and ADSL with the population flag and actual treatment."
+      relevant: "That ADAE cannot supply the denominator, and that the join must preserve every arm."
+      method: "Count flagged records by arm, right-join onto the denominator frame, coalesce the missing count."
+      numbers: "Diarrhoea: 102/209 = 48.8% and 46/207 = 22.2%."
+      assumptions: "Occurrence flags were derived after restricting to TRTEMFL = 'Y'."
+      computation: "right_join keeps the denominator frame's rows; coalesce converts the resulting NA to 0."
+      interpretation: "Every AE percentage is a numerator from ADAE over a denominator from ADSL."
+      changes: "A left_join from the counts drops an arm with no events of the term, producing a missing row rather than a zero."
+      interviewer: "That you raise the zero-cell problem before being asked."
+
+  - id: adam.adae.trtemfl-cases
+    format: classify
+    modes: [guided, independent, qc]
+    difficulty: advanced
+    skills: [adam.occds, trials.safety, sdtm.dates]
+    lesson: adam-adae
+    title: Is this event treatment-emergent?
+    minutes: 8
+    prompt: |
+      CBX417-301's rule: `TRTEMFL = "Y"` when the subject is in the safety population and
+      `TRTSDT ≤ ASTDT ≤ TRTEDT + 30`.
+
+      The imputation rules: a missing day becomes the first of the month unless the month and year match
+      `TRTSDT`, in which case `TRTSDT`; a missing month and day become 1 January unless the year matches
+      `TRTSDT`; an imputed start later than a **complete** end date is set to the end date.
+
+      Classify each record.
+    categories: ["TRTEMFL = Y", "TRTEMFL = null"]
+    entries:
+      - text: "`AESTDTC` 2022-04, `TRTSDT` 2022-04-11, `AEENDTC` 2022-05-06"
+        category: "TRTEMFL = Y"
+        note: "Month matches the first-dose month, so `ASTDT` = `TRTSDT` = 2022-04-11. `ASTDY` = 1."
+      - text: "`AESTDTC` 2023-03, `TRTSDT` 2023-03-21, `AEENDTC` 2023-03-20"
+        category: "TRTEMFL = null"
+        note: "The exception would give 2023-03-21, but a complete end date of 2023-03-20 caps it. `ASTDY` = −1."
+      - text: "`AESTDTC` 2024, `TRTSDT` 2023-09-22, `AEENDTC` 2024-12-09"
+        category: "TRTEMFL = Y"
+        note: "Year 2024 does not match 2023, so `ASTDT` = 2024-01-01, `ASTDY` = 102 — inside the window if the subject was still within `TRTEDT + 30`."
+      - text: "`AESTDTC` 2023-06-15, `TRTSDT` 2023-03-01, `TRTEDT` 2023-05-10"
+        category: "TRTEMFL = null"
+        note: "Complete date, no imputation. 15 June is 36 days after the last dose — outside the 30-day window."
+      - text: "`AESTDTC` 2023-06-05, `TRTSDT` 2023-03-01, `TRTEDT` 2023-05-10"
+        category: "TRTEMFL = Y"
+        note: "26 days after the last dose, inside the window."
+      - text: "`AESTDTC` 2022-11-04, `TRTSDT` 2022-11-15"
+        category: "TRTEMFL = null"
+        note: "Complete date, 11 days before the first dose. Pre-treatment."
+      - text: "`AESTDTC` blank, `AEENDTC` 2023-02-10, `TRTSDT` 2023-01-05"
+        category: "TRTEMFL = Y"
+        note: "A completely missing start date is not imputed; the SAP treats it as emergent unless the end date precedes `TRTSDT`, and 10 February does not."
+    hints:
+      - "Impute first, then apply the window. The order matters."
+      - "The end-date cap only applies when the end date is complete."
+      - "A completely missing start date has its own rule, and it is not the same as a missing day."
+    solution: |
+      **Four emergent, three not**, and three of the seven turn on an imputation rule rather than on a
+      collected date.
+
+      | Record | `ASTDT` | `ASTDY` | Decided by |
+      |---|---|---:|---|
+      | 2022-04 / dose 2022-04-11 | 2022-04-11 | 1 | Month-matches exception |
+      | 2023-03 / dose 2023-03-21 / end 2023-03-20 | 2023-03-20 | −1 | End-date cap |
+      | 2024 / dose 2023-09-22 | 2024-01-01 | 102 | Year does not match |
+      | 2023-06-15 / last dose 2023-05-10 | 2023-06-15 | — | The 30-day window |
+      | 2023-06-05 / last dose 2023-05-10 | 2023-06-05 | — | The 30-day window |
+      | 2022-11-04 / dose 2022-11-15 | 2022-11-04 | −11 | Collected date |
+      | blank / end 2023-02-10 | not imputed | — | Missing-start default |
+
+      **Two lessons from the ordering.** Imputation happens first and the window is applied to the
+      result, so a rule change can move an event across the boundary without any data changing. And the
+      end-date cap runs *after* the imputation exceptions, which is why record 2 comes out pre-treatment
+      despite matching the month.
+
+      **Note the direction each rule chooses.** The month-matching exception pulls an ambiguous event
+      *into* the window; the end-date cap pushes one out when the data make emergence impossible. The
+      first is conservative for safety, the second is simply logic — a start date cannot follow an end
+      date.
+    explanation:
+      objective: "Apply the imputation and window rules in the right order to classify events."
+      given: "Seven records with varying date completeness and treatment dates."
+      relevant: "Whether the partial date's month or year matches the first dose, and whether the end date is complete."
+      method: "Impute, cap, compute ASTDY with no day zero, then apply the window."
+      numbers: "On CBX417-301, 12 records have an imputed start date: 11 emergent, 1 not. 56 records are not emergent: 40 pre-treatment, 16 after the window."
+      assumptions: "The 30-day window is this study's SAP decision, not a standard."
+      interpretation: "Three of these seven are decided by a rule rather than by a collected date."
+      changes: "A plain 'first of the month' rule would flip the first record to pre-treatment."
+      interviewer: "That you apply the cap after the exceptions rather than before."
+
+  - id: adam.adae.occurrence-order
+    format: hotspot
+    language: sas
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [adam.occds, tlf.denominators, qc.discrepancy]
+    lesson: adam-adae
+    title: Subjects missing from the "any TEAE" row
+    minutes: 10
+    prompt: |
+      The "Subjects with any TEAE" row reports 203 in the CBX-417 column. The by-preferred-term rows
+      below it include terms whose counts imply more than 203 subjects had events, and the safety
+      denominator is 209.
+
+      Click the line that loses subjects.
+    code: |
+      proc sort data=adae;
+        by usubjid astdt aeseq;
+      run;
+
+      data adae_occ;
+        set adae;
+        by usubjid;
+        length aoccfl $1;
+        if first.usubjid then aoccfl = 'Y';
+        else aoccfl = '';
+      run;
+
+      proc sql;
+        select count(*) as n
+        from   adae_occ
+        where  aoccfl = 'Y' and trtemfl = 'Y' and trta = 'CBX-417 + Docetaxel';
+      quit;
+    answerLines: [10]
+    lineNotes:
+      - line: 10
+        note: "`first.usubjid` flags the subject's chronologically first adverse event **of any kind**, including events that are not treatment-emergent. The query then requires `trtemfl = 'Y'` as well, so any subject whose earliest event was pre-treatment has the flag on a record the filter removes — and they vanish from the row while remaining in the denominator. Occurrence flags must be derived *after* restricting to `trtemfl = 'Y'`."
+      - line: 2
+        note: "The sort key is right: subject, analysis start date, then `aeseq` as a deterministic tie-breaker."
+      - line: 17
+        note: "Requiring `trtemfl = 'Y'` here is not the defect — it is correct, and it is what exposes the defect on line 10. Removing it would count subjects whose only events were pre-treatment."
+      - line: 11
+        note: "`else aoccfl = ''` correctly uses the Y/null convention; setting it to `'N'` would be the other common error."
+    fixed: |
+      proc sort data=adae out=adae_te;
+        where trtemfl = 'Y';
+        by usubjid astdt aeseq;
+      run;
+
+      data adae_occ_key(keep=usubjid aeseq);
+        set adae_te;
+        by usubjid;
+        if first.usubjid;
+      run;
+
+      proc sql;
+        create table adae_occ as
+        select a.*,
+               case when k.aeseq = a.aeseq then 'Y' else '' end as aoccfl length=1
+        from   adae as a
+               left join adae_occ_key as k
+               on a.usubjid = k.usubjid;
+      quit;
+    hints:
+      - "The row is 6 subjects short of what the term rows imply. What kind of subject would be dropped?"
+      - "What does the DATA step flag, and what does the query then require as well?"
+      - "In what order must the restriction and the flagging happen?"
+    solution: |
+      **Line 10.** `first.usubjid` marks each subject's earliest adverse event, whether or not it is
+      treatment-emergent. The query then adds `trtemfl = 'Y'`, so a subject whose earliest event was
+      **pre-treatment** has `aoccfl = 'Y'` on a record the filter excludes — and they contribute nothing
+      to the numerator while staying in the 209.
+
+      On CBX417-301 there are 40 AE records that started before the first dose. Every subject whose
+      earliest event is one of them is lost from the "any TEAE" row.
+
+      **Why the symptom is diagnostic.** The "any TEAE" row must be greater than or equal to every
+      preferred-term row in the same column, because a subject counted for a term is a subject with an
+      event. A row below the terms beneath it is structurally impossible and is worth asserting in the
+      QC program.
+
+      **The rule, from the ADaM specification:** occurrence flags are derived *after* restricting to
+      `TRTEMFL = "Y"` and sorting by `USUBJID`, `ASTDT`, `AESEQ`. The restriction comes first; the flag
+      records which record survived it.
+
+      **And the cheapest check of all:** `count(distinct usubjid) where trtemfl = 'Y'` should equal the
+      count of `aoccfl = 'Y'` records. Here it gives 209 against 203.
+    explanation:
+      objective: "Locate the ordering error that makes an occurrence flag under-count."
+      given: "An 'any TEAE' row smaller than the term rows beneath it, with a correct denominator."
+      relevant: "That the flag is derived over all records and then filtered by a second condition."
+      irrelevant: "The sort key and the Y/null convention, both of which are correct."
+      method: "The 'any' row must be at least as large as every term row; a violation means the numerator lost subjects."
+      numbers: "40 AE records on this study started before the first dose; the correct count is 209, not 203."
+      assumptions: "Occurrence flags are derived after restricting to TRTEMFL = 'Y', per the ADaM specification."
+      interpretation: "Subjects are lost from the numerator while remaining in the denominator, so the percentage is understated."
+      changes: "Dropping the trtemfl condition from the query would instead over-count, by including subjects whose only events were pre-treatment."
+      interviewer: "That you state the structural invariant — the 'any' row dominates every term row — as the check."
+
+  - id: adam.adae.astdtf
+    format: numeric
+    modes: [check, guided, qc]
+    difficulty: intermediate
+    skills: [adam.occds, adam.traceability, sdtm.dates]
+    lesson: adam-adae
+    datasets: [oncology/adam/adae]
+    title: How many analysis start dates were placed rather than observed?
+    prompt: |
+      A reviewer asks how many adverse events in CBX417-301 have an analysis start date that was
+      imputed rather than collected, and how many of those are treatment-emergent.
+
+      ```text
+      > adae |> count(imputed = !is.na(ASTDTF), emergent = !is.na(TRTEMFL))
+        imputed emergent     n
+      1 FALSE   FALSE       55
+      2 FALSE   TRUE      2399
+      3 TRUE    FALSE        1
+      4 TRUE    TRUE        11
+      ```
+
+      How many records have an imputed analysis start date?
+    answer: 12
+    tolerance: 0
+    unit: records
+    hints:
+      - "Add the two rows where `imputed` is TRUE."
+      - "11 + 1."
+    solution: |
+      **12** of 2,466 records — ten with `ASTDTF = "D"` (day imputed) and two with `ASTDTF = "M"` (month
+      and day imputed).
+
+      **Eleven are treatment-emergent and one is not.** The one that is not is subject
+      `CBX417-301-1029-0005`, whose imputed start would have been the first-dose date except that the
+      event's complete end date preceded it, so the cap applied and the event is correctly pre-treatment.
+
+      **This cross-tabulation is the entire reason `ASTDTF` exists.** Without it, imputed dates are
+      indistinguishable from collected ones and a reviewer has to take the derivation on trust. With it,
+      the answer to "which events had a date placed rather than observed" is one line, and a sensitivity
+      analysis excluding them is one filter.
+
+      **It is also the argument against excluding partial-date events instead of imputing them.**
+      Dropping all twelve removes eleven treatment-emergent events from the numerators while the subjects
+      stay in the denominators — and partial dates are not randomly distributed. They cluster at sites
+      with weaker data entry and in retrospectively reported events. Imputing, flagging and reporting the
+      count is the defensible route.
+    explanation:
+      objective: "Read an imputation count off a cross-tabulation and say what it is for."
+      given: "A two-way count of imputation against treatment emergence."
+      relevant: "The two rows where imputed is TRUE."
+      calculating: "11 + 1."
+      numbers: "12 of 2,466 records: 10 with ASTDTF = 'D', 2 with 'M'; 11 emergent, 1 not."
+      assumptions: "ADaM requires imputation to be flagged; it does not prescribe the rules."
+      interpretation: "A reviewer can find and check every imputed record in one query."
+      changes: "Excluding partial-date events instead would remove 11 events from the numerators while keeping their subjects in the denominators."
+      interviewer: "That you connect the flag to the sensitivity analysis it makes possible."
+
+  - id: adam.adae.wrong-flag
+    format: diff
+    modes: [debug, qc, boss]
+    difficulty: expert
+    skills: [adam.occds, tlf.safety-tables, qc.discrepancy]
+    lesson: adam-adae
+    title: Two grade tables, same subjects, different severities
+    minutes: 15
+    prompt: |
+      Production and QC produce the table of maximum CTCAE grade for diarrhoea, CBX-417 arm. Both count
+      102 subjects — matching the incidence row exactly. The grade distributions differ.
+
+      Neither program errors. What is the root cause?
+    left:
+      title: "Production — Diarrhea, maximum grade, CBX-417 (N = 209)"
+      columns: ["Maximum grade", "n", "%"]
+      rows:
+        - ["Grade 1", 46, 22.0]
+        - ["Grade 2", 31, 14.8]
+        - ["Grade 3", 24, 11.5]
+        - ["Grade 4", 1, 0.5]
+        - ["Any grade", 102, 48.8]
+      footnote: "Each subject's maximum ATOXGRN among their treatment-emergent diarrhoea records."
+    right:
+      title: "QC — Diarrhea, maximum grade, CBX-417 (N = 209)"
+      columns: ["Maximum grade", "n", "%"]
+      rows:
+        - ["Grade 1", 47, 22.5]
+        - ["Grade 2", 31, 14.8]
+        - ["Grade 3", 24, 11.5]
+        - ["Grade 4", 0, null]
+        - ["Any grade", 102, 48.8]
+      footnote: "ATOXGRN read from the record where AOCCPFL = 'Y'. Percentages are not shown when the count is zero."
+    choices:
+      - text: "QC filtered on `AOCCPFL = \"Y\"`, which marks each subject's **first** diarrhoea event rather than their worst. Subjects whose severity increased over time are counted at their earliest, lower grade."
+        correct: true
+        feedback: "Correct — and note the shape of the error: it moves subjects down the grade scale only, because a later event can be worse but the first event cannot be later than itself."
+      - text: "QC used a different treatment-emergent window."
+        feedback: "That would change the 'Any grade' row and the subject count. Both report 102."
+      - text: "Production double-counted subjects with several events at different grades."
+        feedback: "Production's grade rows sum to 102, matching the 'Any grade' row. No subject is counted twice."
+      - text: "The two programs used different denominators."
+        feedback: "Both use 209, and both percentages are consistent with their own n values."
+      - text: "QC included non-treatment-emergent diarrhoea records."
+        feedback: "That would raise the 'Any grade' count above 102."
+    hints:
+      - "The 'Any grade' row is identical. What kinds of error preserve the subject count exactly?"
+      - "Compare the two distributions: which direction did subjects move?"
+      - "Read the two footnotes."
+    solution: |
+      **`AOCCPFL` marks the first occurrence, not the worst.**
+
+      Both programs count each subject exactly once — which is why the "Any grade" row matches and why
+      every check most people run passes. What differs is *which* of the subject's diarrhoea records
+      supplied the grade.
+
+      **The error has a direction, and on this study it moves exactly one subject.**
+
+      | Grade | Production | QC | Movement |
+      |---|---:|---:|---|
+      | 1 | 46 | 47 | +1 |
+      | 2 | 31 | 31 | — |
+      | 3 | 24 | 24 | — |
+      | 4 | **1** | **0** | −1 |
+
+      One subject's diarrhoea started at grade 1 and later reached grade 4. Production reports them at
+      grade 4; QC reports them at grade 1, and the grade 4 row disappears entirely.
+
+      **One subject, and it is the worst case in the arm.** That is the shape of this error in general: a
+      subject's first event can be their worst, but it cannot be *worse* than their worst, so the
+      occurrence-flagged grade is always less than or equal to the maximum. **The table can only
+      understate severity**, never overstate it — and the subjects most likely to be misplaced are the
+      ones whose events escalated, which is exactly the population a safety reviewer is looking for.
+
+      On a study with more repeated events per term the movement would be much larger. Here it is one
+      row appearing and disappearing, which a value-level comparison of the two tables would flag but a
+      check of subject totals would not.
+
+      **The rule, from the ADaM specification:** grade-based tables select each subject's maximum
+      `ATOXGRN` within the summarized grouping, not the occurrence-flagged record. The occurrence flags
+      answer "which record represents this subject in the incidence count"; they say nothing about
+      severity.
+
+      **What makes this hard to catch.** No subject is double counted. The totals match the incidence
+      row. No percentage exceeds 100. The only signal is the grade distribution itself, and you have to
+      know what to compare it with.
+
+      **The check worth having:** for any grade table, confirm that the grade rows sum to the "Any grade"
+      row *and* that the grade came from an aggregation rather than a flag. The second half is a code
+      review, not a data check — which is why the specification has to say it.
+    explanation:
+      objective: "Diagnose a severity discrepancy that preserves every count."
+      given: "Two grade distributions with identical subject totals and different shapes."
+      relevant: "The two footnotes, and the direction subjects moved between grades."
+      irrelevant: "The denominator and the emergence window, both identical."
+      method: "An identical 'Any grade' row rules out population, window and double-counting differences, leaving the choice of record within subject."
+      numbers: "One subject moves: production reports them at grade 4, QC at grade 1, and the grade 4 row goes from 1 to 0."
+      assumptions: "AOCCPFL is derived by chronological order after restricting to TRTEMFL = 'Y'."
+      interpretation: "The occurrence-flagged grade can never exceed the maximum, so the error is always toward lower severity."
+      changes: "For a subject with one diarrhoea event the two approaches agree, which is why most subjects are unaffected."
+      interviewer: "That you identify the direction of the bias and say why it matters in a safety table specifically."
+
+  - id: adam.adae.open-safety-review
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [adam.occds, tlf.denominators, communication.interviewing]
+    lesson: adam-adae
+    title: QC-ing an adverse event table
+    prompt: |
+      **Interviewer:** "You're the QC programmer on the adverse event summary tables. What do you check,
+      and in what order?"
+    modelAnswer: |
+      Almost no arithmetic happens in an AE table, so almost all the risk is in the denominators, which
+      records are in the numerator, and whether a subject is counted once. I'd check them in that order.
+
+      **First the denominators, because everything divides by them.** They come from ADSL — `SAFFL = 'Y'`
+      counted by `TRT01A` — not from ADAE. On the study I worked with that's 209 and 207, and the
+      demographics table two pages earlier says 210 and 210 because it's on ITT by planned treatment.
+      Those are both right, and a reviewer needs the ADRG to say so.
+
+      The reason the denominator can't come from ADAE is that subjects with no events aren't in it. Two
+      treated subjects on that study have no ADAE record at all — one of them with 417 days of exposure,
+      which is a data-management question in its own right — and they belong in the 207.
+
+      **Then whether the numerators count subjects.** Diarrhoea in the CBX arm is 136 events over 102
+      subjects; one subject had four. `AOCCPFL = 'Y'` gives one record per subject per preferred term, or
+      you count distinct `USUBJID` — the specification names the `DISTINCT` as the recommended QC method,
+      so I'd do it that way precisely because it's independent of the flags I'm checking.
+
+      **Then the occurrence flags themselves, in two ways.** They must be derived *after* restricting to
+      `TRTEMFL = 'Y'` — derive them first and a subject whose earliest event was pre-treatment has the
+      flag on a record the table then excludes, so they vanish from the numerator and stay in the
+      denominator. And they mark the *first* occurrence, so they're the wrong record for a maximum-grade
+      table. That second error is the nastiest one in the whole family: every subject is still counted
+      once, the totals still match the incidence row, no percentage exceeds 100, and the grade
+      distribution is systematically shifted downward, because a subject's first event can never be worse
+      than their worst.
+
+      **Then `TRTEMFL` and the dates behind it.** The window is a SAP decision — 30 days after last dose
+      here — and `TRTEDT` for the subjects still on treatment at the cutoff is their last dose before the
+      cutoff, not a discontinuation date. I'd check the imputed dates: 12 records with `ASTDTF`
+      populated, 11 of them emergent. For at least one, the imputation is what makes it emergent — a
+      fatigue event recorded as `2022-04` in the month the subject started — so I'd confirm the rule was
+      implemented with its exceptions and its end-date cap, in that order.
+
+      **And the structural invariants**, which are cheap and catch a lot: no numerator above its
+      denominator; the 'any TEAE' row at least as large as every preferred-term row in its column; the
+      grade rows summing to the any-grade row; every SOC row at least as large as its largest preferred
+      term. Those are four queries and they find the ordering errors without knowing what the right
+      answer is.
+
+      Most of what I'd actually find is specification gaps rather than bugs — the SAP not saying whether
+      a term with zero subjects prints a blank or a zero, that kind of thing. Those go to the study
+      statistician, not to the programmer.
+    rubric:
+      - Starts with denominators and sources them from ADSL rather than ADAE
+      - Explains why ADAE cannot supply a denominator, with the no-event subjects as evidence
+      - Counts subjects rather than events and names both mechanisms
+      - Knows occurrence flags must be derived after restricting to treatment-emergent
+      - Identifies the first-versus-worst error and its direction
+      - Checks the emergence window and the imputed dates via ASTDTF
+      - Lists structural invariants that work without knowing the right answer
+      - Routes specification gaps to the statistician
+    redFlags:
+      - "Computes percentages within ADAE"
+      - "Uses AOCCPFL for a maximum-grade table"
+      - "Does not distinguish the ITT and safety denominators"
+      - "Treats TRTEMFL null as N"
+      - "Checks only that the numbers match production"
+    followUps:
+      - "The 'any TEAE' row is smaller than one of the preferred-term rows. What happened?"
+      - "How would your checks change for a concomitant medications table?"

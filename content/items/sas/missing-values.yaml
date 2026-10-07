@@ -1,0 +1,439 @@
+items:
+  - id: sas.missing-values.lt-18-mcq
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.missing-values]
+    lesson: sas-missing-values
+    title: Who is "under 18"?
+    prompt: |
+      `WORK.DM` has 10 subjects. Their ages are 64, 71, ., 58, 66, 49, ., 77, 55 and 69.
+
+      ```sas
+      data underage;
+        set dm;
+        if AGE < 18;
+      run;
+      ```
+
+      How many observations does `WORK.UNDERAGE` contain?
+    choices:
+      - text: "2 — the two subjects with a missing age"
+        correct: true
+        feedback: "A missing numeric value is smaller than every number, so `. < 18` is true."
+      - text: "0 — nobody is younger than 18"
+        feedback: "That is the intended answer, but SAS compares missing as smaller than any number. You need `not missing(AGE) and AGE < 18`."
+      - text: "8 — the subjects with a known age"
+        feedback: "None of the known ages is below 18."
+      - text: "The step stops with an error because AGE has missing values"
+        feedback: "Comparisons with missing values are valid in SAS; they never produce an error — which is why the bug is silent."
+    solution: |
+      2. Guard the comparison: `if not missing(AGE) and AGE < 18;` (or `if .z < AGE < 18;`). The same trap applies to `AVAL < ANRLO` (missing lab flagged low) and `ASTDT < TRTSDT` (missing onset treated as pre-treatment).
+
+  - id: sas.missing-values.sort-order
+    format: order
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.missing-values, sas.sort]
+    lesson: sas-missing-values
+    title: Sort order of numeric values
+    prompt: |
+      Put these numeric values in the order `PROC SORT` places them (ascending).
+    steps:
+      - "`._` (underscore missing)"
+      - "`.` (ordinary missing)"
+      - "`.A`"
+      - "`.Z`"
+      - "`-5`"
+      - "`0`"
+      - "`3.2`"
+    hints:
+      - "All missing values come before all numbers."
+      - "Among the missing values, the underscore is lowest, then the ordinary period, then the letters A to Z."
+    solution: |
+      `._` < `.` < `.A` < … < `.Z` < negative numbers < 0 < positive numbers. Comparisons follow the same order, which is why `x > .z` is a test for "non-missing".
+
+  - id: sas.missing-values.sum-vs-plus-mcq
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.missing-values, sas.numeric-functions]
+    lesson: sas-missing-values
+    title: Plus operator versus SUM()
+    prompt: |
+      Target lesion diameters at Week 6: `LES1 = 30`, `LES2 = .`, `LES3 = 14`.
+
+      What are `LES1 + LES2 + LES3` and `sum(of LES1-LES3)`?
+    choices:
+      - text: "`.` and `44`"
+        correct: true
+        feedback: "Operators propagate missing values; SUM() adds the non-missing arguments."
+      - text: "`44` and `44`"
+        feedback: "The + operator returns missing as soon as one operand is missing (and writes a NOTE to the log)."
+      - text: "`.` and `.`"
+        feedback: "SUM() returns missing only when all of its arguments are missing."
+      - text: "`44` and `.`"
+        feedback: "It is the other way round."
+    solution: |
+      `.` and 44. Neither is "correct" in general. For a RECIST sum of diameters, 44 is misleading: it compares a two-lesion sum with a three-lesion baseline. `if nmiss(of LES1-LES3) = 0 then SUMDIAM = sum(of LES1-LES3);` makes the rule explicit.
+
+  - id: sas.missing-values.special-missing-mcq
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.missing-values]
+    lesson: sas-missing-values
+    title: Special missing values in a test
+    prompt: |
+      `SYSBP` holds 128 on the first record, `.N` (not done) on the second and `.` on the third.
+
+      ```sas
+      if SYSBP = . then NOVALFL = 'Y';
+      ```
+
+      Which records get `NOVALFL = 'Y'`?
+    choices:
+      - text: "Only the third record"
+        correct: true
+        feedback: "`.N` and `.` are different values, so `.N = .` is false. `missing(SYSBP)` would catch both."
+      - text: "The second and third records"
+        feedback: "That is what `missing(SYSBP)` does. The equality test only matches the ordinary missing value."
+      - text: "None — SYSBP = . is never true"
+        feedback: "It is true for the ordinary missing value on the third record."
+      - text: "All three, because `.N` makes the variable character"
+        feedback: "Special missing values are numeric; the variable stays numeric."
+    solution: |
+      Only the third. Use `missing(SYSBP)` to test for any missing value. PROC MEANS would still count both as missing (N = 1, NMISS = 2).
+
+  - id: sas.missing-values.means-numeric
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [sas.missing-values, sas.means]
+    lesson: sas-missing-values
+    title: Mean with missing values
+    prompt: |
+      Ages of 10 subjects: 64, 71, ., 58, 66, 49, ., 77, 55, 69.
+
+      `proc means data=dm mean; var AGE; run;` — what mean does PROC MEANS report? (Give it to 3 decimals.)
+    answer: 63.625
+    tolerance: 0.001
+    hints:
+      - "How many values enter the calculation?"
+      - "Sum the 8 non-missing ages and divide by 8, not 10."
+    solution: |
+      509 / 8 = 63.625. Missing values are excluded from both the numerator and the denominator; PROC MEANS would report N = 8 and (if requested) NMISS = 2. Dividing by 10 (50.9) would be treating missing as zero.
+
+  - id: sas.missing-values.agegr-code
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sas.missing-values, sas.data-step, sas.attributes]
+    lesson: sas-missing-values
+    title: Three age groups, missing handled first
+    minutes: 10
+    prompt: |
+      The SAP defines a second age grouping for subgroup analyses:
+
+      | AGEGR2 | AGEGR2N |
+      |---|---:|
+      | `<65` | 1 |
+      | `65-74` | 2 |
+      | `>=75` | 3 |
+
+      Subjects with a missing `AGE` must have both variables missing. Write a DATA step that reads `WORK.ADSL` and creates `WORK.ADSL2` with `AGEGR2` and `AGEGR2N`.
+    starter: |
+      data adsl2;
+        set adsl;
+        /* declare, then classify */
+      run;
+    hints:
+      - "Declare the length first: the longest value, '65-74', has 5 characters."
+      - "Test `missing(AGE)` first, then build a single `if … else if … else` chain."
+      - "Use DO-END blocks to assign both variables in each branch."
+    checks:
+      - pattern: 'length\s+agegr2\s+\$\s*5\b'
+        message: "Declares AGEGR2 with length 5"
+      - pattern: 'missing\s*\(\s*age\s*\)[\s\S]*\bage\s*(<|>=|lt|ge)'
+        message: "Handles missing AGE before any numeric comparison"
+      - pattern: '[''"]65-74[''"]'
+        message: "Assigns the '65-74' category"
+      - pattern: '[''"]>=75[''"]'
+        message: "Assigns the '>=75' category"
+      - pattern: 'agegr2n\s*=\s*3'
+        message: "Assigns AGEGR2N = 3 for the oldest group"
+    reference: |
+      data adsl2;
+        set adsl;
+        length AGEGR2 $5;
+        if missing(AGE) then do;
+          AGEGR2  = ' ';
+          AGEGR2N = .;
+        end;
+        else if AGE < 65 then do;
+          AGEGR2  = '<65';
+          AGEGR2N = 1;
+        end;
+        else if AGE < 75 then do;
+          AGEGR2  = '65-74';
+          AGEGR2N = 2;
+        end;
+        else do;
+          AGEGR2  = '>=75';
+          AGEGR2N = 3;
+        end;
+      run;
+    solution: |
+      Missing first, then one chain in which each condition only needs an upper bound (earlier branches already excluded lower values). Check with `proc freq; tables AGEGR2*AGEGR2N / list missing; run;` — every category must pair with exactly one code, and the missing row must equal the number of subjects without an age.
+
+  - id: sas.missing-values.completeness-code
+    format: code
+    language: sas
+    modes: [independent]
+    difficulty: intermediate
+    skills: [sas.missing-values, sas.numeric-functions, qc.data-cleaning]
+    lesson: sas-missing-values
+    title: Baseline completeness check
+    minutes: 8
+    prompt: |
+      Before the demographics table is run, the lead wants a list of subjects with any missing baseline characteristic among `AGE`, `SEX`, `RACE`, `HEIGHTBL` and `WEIGHTBL` (a mix of numeric and character variables).
+
+      From `WORK.ADSL`, create `WORK.INCOMPLETE` containing `USUBJID`, the five variables, and `NMISSBL` = the number of those five that are missing — only for subjects where `NMISSBL` is at least 1.
+    starter: |
+      data incomplete;
+        set adsl;
+        /* count missing values across numeric and character variables */
+      run;
+    hints:
+      - "One function counts missing arguments of any type."
+      - "NMISS accepts only numeric arguments; CMISS accepts both."
+    checks:
+      - pattern: 'cmiss\s*\((?=[^)]*\bage\b)(?=[^)]*\bsex\b)(?=[^)]*\brace\b)(?=[^)]*\bheightbl\b)(?=[^)]*\bweightbl\b)[^)]*\)'
+        message: "Counts missing values with CMISS over all five variables"
+      - pattern: '\bnmiss\s*\('
+        absent: true
+        message: "Does not use NMISS (numeric arguments only) for a mix of types"
+      - pattern: 'nmissbl\s*(>|>=|gt|ge)\s*[01]\b'
+        message: "Keeps only subjects with at least one missing value"
+      - pattern: 'keep\b[^;]*\busubjid\b'
+        message: "Keeps USUBJID (and the checked variables)"
+    reference: |
+      data incomplete;
+        set adsl;
+        NMISSBL = cmiss(AGE, SEX, RACE, HEIGHTBL, WEIGHTBL);
+        if NMISSBL > 0;
+        keep USUBJID AGE SEX RACE HEIGHTBL WEIGHTBL NMISSBL;
+      run;
+    solution: |
+      `CMISS` counts missing arguments of any type; `NMISS` would reject the character variables. The subsetting IF keeps only incomplete subjects. Send the listing to data management *before* the table is produced — each missing value is either a query to resolve or a documented "not collected".
+
+  - id: sas.missing-values.sld-hotspot
+    format: hotspot
+    language: sas
+    modes: [debug]
+    difficulty: advanced
+    skills: [sas.missing-values, sas.numeric-functions, trials.oncology]
+    lesson: sas-missing-values
+    title: Responses that are not there
+    minutes: 8
+    prompt: |
+      Every subject in `WORK.TR_WIDE` has exactly three target lesions (`LES1`–`LES3`, in mm), one row per scan, and `BASESUM` is the baseline sum. The step below is a simplified target-lesion response derivation. The response reviewer finds "partial responses" at scans where a lesion was not measured, and at scans where **no** lesion was measured at all.
+
+      There are **two** defective lines. Click both.
+    code: |
+      data tr_resp;
+        set tr_wide;
+        SUMDIAM = sum(of LES1-LES3);
+        PCHG = (SUMDIAM - BASESUM) / BASESUM * 100;
+        if PCHG <= -30 then TRGRESP = 'PR';
+      run;
+    answerLines: [3, 5]
+    lineNotes:
+      - line: 3
+        note: "SUM() adds only the measured lesions, so a scan with a missing lesion gets a smaller sum and an artificial decrease. The sum is only defined when all target lesions are measured."
+      - line: 4
+        note: "Correct arithmetic. When SUMDIAM is missing, PCHG is missing (with a log NOTE) — which is the honest result."
+      - line: 5
+        note: "A missing PCHG is smaller than −30, so every scan with no measurements (SUMDIAM missing from SUM() over all-missing lesions → PCHG missing) is labelled 'PR'. Guard with `not missing(PCHG)`."
+    fixed: |
+      data tr_resp;
+        set tr_wide;
+        if nmiss(of LES1-LES3) = 0 then SUMDIAM = sum(of LES1-LES3);
+        if not missing(SUMDIAM) then PCHG = (SUMDIAM - BASESUM) / BASESUM * 100;
+        if not missing(PCHG) and PCHG <= -30 then TRGRESP = 'PR';
+      run;
+    hints:
+      - "Trace a scan where LES2 is missing: what does SUM() return?"
+      - "Now trace a scan where all three lesions are missing: what is PCHG, and how does SAS compare it with −30?"
+    solution: |
+      Line 3 manufactures decreases by summing only the measured lesions; line 5 turns missing percentage changes into 'PR' because missing is smaller than −30. Fix both: compute the sum only when all target lesions are measured, and guard the comparison. Scans left without a response here are then assigned per the RECIST 1.1 rules for incomplete assessments (typically not evaluable), as the SAP specifies.
+    explanation:
+      objective: "Find why partial responses appear at scans with incomplete or absent measurements."
+      given: "A simplified target-response derivation and two symptoms reported by the reviewer."
+      relevant: "How SUM() treats missing arguments and how SAS compares missing values with numbers."
+      irrelevant: "The percentage-change formula itself is correct."
+      numbers: "Example: baseline 32 + 21 + 15 = 68; Week 6 with LES2 missing: sum(30, ., 14) = 44 → (44 − 68)/68 × 100 = −35.3%, below −30. With all lesions missing, SUM() gives missing, PCHG is missing, and `. <= -30` is true."
+      assumptions: "Every subject has exactly three target lesions; real derivations must also handle lesions that split, merge or become too small to measure, per RECIST 1.1 and the SAP."
+      computation: "Require nmiss(of LES1-LES3) = 0 before summing; require a non-missing PCHG before classifying."
+      interpretation: "Both defects turn 'unknown' into 'responded' — a direct bias in favour of the treatment."
+      changes: "Using `+` instead of SUM() fixes the first defect but not the second."
+      interviewer: "That you know the difference between SUM() and +, that missing compares as the smallest value, and why that matters for efficacy endpoints."
+
+  - id: sas.missing-values.agegr-diff
+    format: diff
+    modes: [qc]
+    difficulty: intermediate
+    skills: [sas.missing-values, qc.compare, tlf.demographics]
+    lesson: sas-missing-values
+    title: Demographics age groups disagree
+    minutes: 6
+    prompt: |
+      Production and QC summarise age group for the same 10 subjects. Two subjects have a missing `AGE`. Why do the outputs disagree?
+    left:
+      title: Production
+      columns: [Age group, n, "%"]
+      rows:
+        - ["<65", 6, "60.0"]
+        - [">=65", 4, "40.0"]
+      footnote: "Denominator: 10 subjects."
+    right:
+      title: QC
+      columns: [Age group, n, "%"]
+      rows:
+        - ["<65", 4, "40.0"]
+        - [">=65", 4, "40.0"]
+        - ["Missing", 2, "20.0"]
+      footnote: "Denominator: 10 subjects."
+    leftCode: |
+      data adsl;
+        set adsl_in;
+        length AGEGR1 $4;
+        if AGE >= 65 then AGEGR1 = '>=65';
+        else AGEGR1 = '<65';
+      run;
+
+      proc freq data=adsl;
+        tables AGEGR1;
+      run;
+    rightCode: |
+      data adsl_qc;
+        set adsl_in;
+        length AGEGR1 $4;
+        if missing(AGE) then AGEGR1 = ' ';
+        else if AGE >= 65 then AGEGR1 = '>=65';
+        else AGEGR1 = '<65';
+      run;
+
+      proc freq data=adsl_qc;
+        tables AGEGR1 / missing;
+      run;
+    codeLanguage: sas
+    choices:
+      - text: "Production's final ELSE assigns '<65' to the two subjects whose age is missing"
+        correct: true
+        feedback: "`AGE >= 65` is false for a missing age, so both subjects fall into the ELSE. Production's '<65' count (6) is 4 real subjects plus 2 unknowns."
+      - text: "The two programs use different denominators"
+        feedback: "Both percentages are based on 10 subjects; the difference is in the categories, not the denominator."
+      - text: "Production's PROC FREQ dropped the missing values"
+        feedback: "In production nothing is missing any more — the ELSE already turned missing ages into '<65', so there is nothing for PROC FREQ to drop."
+      - text: "QC's MISSING option invented two extra subjects"
+        feedback: "The MISSING option only displays the blank level; both outputs total 10."
+    hints:
+      - "Add up the `n` column in each table. Both total 10, so nobody was dropped — two subjects were put somewhere different."
+      - "Trace a subject with a missing `AGE` through the production IF/ELSE. Which branch catches it?"
+      - "Missing is lower than every number in SAS, so `AGE >= 65` is false for a missing age and the bare `ELSE` silently assigns `'<65'`. A third branch (or `if not missing(AGE)`) is what separates 'young' from 'unknown'."
+    solution: |
+      Production misclassifies missing ages as '<65'. QC handles missing first and shows it as its own row. The fix is in the derivation, not the table: `if missing(AGE) then AGEGR1 = ' '; else if …`. Whether the table shows a Missing row or excludes those subjects from the denominator is decided by the table shell — but a subject with unknown age must never be counted as '<65'.
+    explanation:
+      objective: "Find the root cause of a discrepancy between production and QC age-group counts."
+      given: "Both outputs and both programs; 2 of 10 subjects have missing AGE."
+      relevant: "The IF-THEN/ELSE chain in production and how a missing value compares with 65."
+      irrelevant: "The PROC FREQ options are a presentation difference once the derivation is fixed."
+      numbers: "Production '<65' = 6 = 4 (ages 64, 58, 49, 55) + 2 (missing). QC: 4 + 4 + 2 = 10."
+      interpretation: "Counts add up to 10 in both outputs, so a 'totals match' check would not detect the problem."
+      interviewer: "That you look for silent misclassification of missing values and check that each category contains only what it should."
+
+  - id: sas.missing-values.crosswalk-mcq
+    format: mcq
+    modes: [independent]
+    difficulty: intermediate
+    skills: [sas.missing-values, r.sas-translation, sql.select]
+    lesson: sas-missing-values
+    title: Same condition, different languages
+    prompt: |
+      Two subjects have a missing `AGE`. The condition "AGE < 18" is applied in four places:
+
+      - a SAS DATA step: `where AGE < 18;`
+      - PROC SQL: `select * from dm where AGE < 18;`
+      - R dplyr: `filter(dm, AGE < 18)`
+      - SQLite (the app's SQL lab): `SELECT * FROM dm WHERE AGE < 18;`
+
+      Which statement is true?
+    choices:
+      - text: "The SAS DATA step and PROC SQL select the two subjects; dplyr and SQLite do not"
+        correct: true
+        feedback: "PROC SQL follows SAS missing-value rules (missing is smaller than any number). In R, `NA < 18` is NA and filter() drops it; in standard SQL, NULL < 18 is unknown and the row is excluded."
+      - text: "All four select the two subjects"
+        feedback: "Only the SAS implementations treat missing as smaller than any number."
+      - text: "None of them selects the two subjects"
+        feedback: "Both SAS implementations do."
+      - text: "Only PROC SQL excludes them, because SQL follows ANSI NULL rules"
+        feedback: "PROC SQL is SAS's SQL and uses SAS missing-value semantics."
+    solution: |
+      SAS (DATA step and PROC SQL): missing < 18 is true. R: comparison gives NA, and `filter()` keeps only TRUE rows. SQLite/ANSI SQL: NULL comparisons are unknown and excluded (pandas behaves similarly: NaN < 18 is False). When translating code or QC-ing a SAS program in another language, write the missing-value handling explicitly so all versions agree.
+    explanation:
+      objective: "Predict how the same filter treats missing values in different languages."
+      relevant: "SAS ordering of missing values versus three-valued logic (NA/NULL) in R and SQL."
+      interpretation: "Independent QC in another language can disagree with production for reasons that have nothing to do with either program being 'wrong' — until missing handling is made explicit."
+      interviewer: "That you can QC across languages and know where their semantics differ."
+
+  - id: sas.missing-values.interview-missing
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [sas.missing-values, communication.interviewing]
+    lesson: sas-missing-values
+    title: Missing values in SAS
+    prompt: |
+      **Interviewer:** "How does SAS treat missing values? Give me an example where that behaviour can cause a wrong result in a clinical table."
+    modelAnswer: |
+      Numeric missing is a period, character missing is blank, and there are special missing values .A–.Z and ._. For comparisons and sorting, numeric missing is smaller than any number, so missing values sort first and `x < 18` is true when x is missing. Arithmetic operators propagate missing and write a "missing values were generated" note; functions like SUM, MEAN, MIN and N ignore missing arguments. Procedures exclude missing values: PROC MEANS reports N and NMISS, PROC FREQ drops them unless you use the MISSING option.
+
+      Examples: an age-group derivation ending in `else AGEGR1 = '<65'` puts subjects with unknown age into '<65'; a low-lab flag `if AVAL < ANRLO` flags missing results as low; an AE with a missing onset date compares as before first dose and loses its treatment-emergent flag; and summing target lesions with SUM() when one lesion is not measured creates a fake decrease in tumor size. I handle missing values first in every derivation, use `missing()` instead of `= .`, and ask for the SAP's rule when it isn't stated.
+    rubric:
+      - Describes numeric, character and special missing values
+      - States that missing compares and sorts lower than any number
+      - Distinguishes operators (propagate) from functions (skip)
+      - Describes procedure behaviour (N/NMISS, FREQ MISSING option)
+      - Gives at least one concrete clinical consequence
+      - Describes a defensive habit (missing first, missing() function, ask for the rule)
+    redFlags:
+      - "Says missing values are treated as zero"
+      - "Recommends replacing + with SUM() everywhere to clean the log"
+      - "Cannot give a clinical example"
+    followUps:
+      - "How would you flag a lab value as low only when it is actually measured?"
+      - "What does PROC FREQ do with missing values by default, and how does that change percentages?"
+
+  - id: sas.missing-values.cmiss-speed
+    format: mcq
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.missing-values, sas.numeric-functions]
+    lesson: sas-missing-values
+    title: Counting missing arguments
+    prompt: |
+      Which function counts the missing values among arguments that can be **both** character and numeric?
+    choices:
+      - text: "`CMISS`"
+        correct: true
+        feedback: "CMISS accepts arguments of any type."
+      - text: "`NMISS`"
+        feedback: "NMISS counts missing values among numeric arguments only."
+      - text: "`N`"
+        feedback: "N counts non-missing numeric arguments."
+      - text: "`MISSING`"
+        feedback: "MISSING tests a single argument and returns 1 or 0."
+    solution: |
+      `CMISS`. Its numeric-only counterparts are `NMISS` (missing) and `N` (non-missing).

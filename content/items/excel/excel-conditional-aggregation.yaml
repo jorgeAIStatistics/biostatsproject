@@ -1,0 +1,628 @@
+items:
+  - id: excel.agg.events-vs-subjects
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [excel.conditional-aggregation, tlf.denominators]
+    lesson: excel-conditional-aggregation
+    title: 202 or 170
+    prompt: |
+      A safety physician asks how many subjects had fatigue. You write:
+
+      ```excel
+      =COUNTIF(AEDECOD,"Fatigue")     → 202
+      ```
+
+      The draft safety table says **170**.
+
+      What is going on?
+    choices:
+      - text: "`COUNTIF` counted adverse-event records; the safety table counts subjects with at least one. Both are correct and they are different quantities."
+        correct: true
+        feedback: "Correct — 202 events in 170 subjects. An AE table reports subjects, because the denominator is a subject population."
+      - text: "The safety table excludes events that are not treatment-emergent, which accounts for the 32."
+        feedback: "That is a real distinction and a different one. The gap here is entirely events-versus-subjects: 202 records occurred in 170 subjects."
+      - text: "`COUNTIF` is case-insensitive and picked up records coded to a different preferred term."
+        feedback: "`AEDECOD` is the coded term and has one spelling. Case-insensitivity matters on the verbatim column, not here."
+      - text: "The safety table used the ITT population and `COUNTIF` used everyone."
+        feedback: "Populations change the denominator, not the numerator. 202 and 170 are both numerators."
+    solution: |
+      **`COUNTIFS` counts rows. A safety table counts subjects.**
+
+      | | Events | Subjects |
+      |---|---:|---:|
+      | Fatigue | 202 | 170 |
+      | Nausea | 162 | 130 |
+      | Grade ≥ 3 | 502 | 298 |
+      | Serious | 150 | 137 |
+
+      An adverse-event overview reports the number of subjects with at least one event, as a percentage of
+      the safety population — 416 subjects on this study. So grade 3 or above is 298/416 = **71.6%**.
+
+      **`COUNTIFS` cannot produce the subject count directly.** There is no distinct-count criterion. The
+      spreadsheet answer is a helper column marking each subject's first qualifying row, and summing it.
+
+      The reason this matters more than it sounds: an event count put into a subject table does not
+      necessarily exceed its denominator, so it does not necessarily look wrong.
+    explanation:
+      objective: "Distinguish an event count from a subject count."
+      given: "A COUNTIF of 202 against a table value of 170."
+      relevant: "That COUNTIF counts rows and AE has many rows per subject."
+      irrelevant: "Population and treatment-emergence, which affect other numbers in the table."
+      numbers: "202 fatigue records in 170 subjects; 502 grade 3+ records in 298 subjects."
+      interpretation: "Two correct numbers answering two different questions."
+      changes: "A distinct-subject helper column gives 170; COUNTIFS alone never will."
+      interviewer: "That you check which quantity a number is before it acquires a percentage."
+
+  - id: excel.agg.criteria-coercion
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [excel.conditional-aggregation, excel.logic]
+    lesson: excel-conditional-aggregation
+    title: Two rules that disagree
+    prompt: |
+      Cell `C2` holds the **number** 1001, imported from a site column.
+
+      ```excel
+      =C2="1001"                → ?
+      =COUNTIF(C2:C7,"1001")    → ?
+      ```
+
+      What do the two return?
+    choices:
+      - text: "`FALSE` and `1`. Comparison operators are type-aware and never coerce; criteria arguments do coerce."
+        correct: true
+        feedback: "Correct. Both behaviours are documented and neither follows from the other — they have to be learned separately."
+      - text: "`FALSE` and `0`. If the comparison fails, the criterion must fail for the same reason."
+        feedback: "That would be consistent, and Excel is not. `COUNTIF` converts its criterion, so it finds the numeric 1001."
+      - text: "`TRUE` and `1`. Excel converts text to numbers wherever it can."
+        feedback: "Not for comparison operators. `=\"16\"=16` is FALSE, and the ordering places every number before every piece of text."
+      - text: "`#VALUE!` and `1`. Comparing a number with text is an error."
+        feedback: "Comparing across types is legal and well defined: number, then text, then boolean. It simply never returns equal."
+    solution: |
+      **`FALSE` and `1`.**
+
+      Excel's comparison operators are **type-aware**. `="16"=16` is `FALSE`, and the ordering is number
+      < text < boolean. A number is never equal to a text string however identical they look, and no
+      number format changes it.
+
+      Criteria arguments are **not** type-aware. `COUNTIF(range,"16")` matches the number 16.
+
+      This one asymmetry explains a surprising number of confusing afternoons:
+
+      - A lookup for `1011` against a column of `"Site 1011"` fails, and formatting does not fix it.
+      - A `COUNTIF` for `"1001"` against numeric site ids succeeds, which makes the failure above look
+        inconsistent.
+
+      They are two different rules, both correct. Knowing which one applies is the difference between
+      diagnosing a failed lookup in a minute and re-typing the column.
+    explanation:
+      objective: "State the difference between operator comparison and criteria matching."
+      given: "A numeric cell compared with a text string two ways."
+      relevant: "That comparison operators do not coerce and criteria do."
+      method: "Evaluate each under its own rule rather than looking for a single consistent one."
+      interpretation: "Apparent inconsistency that is actually two documented behaviours."
+      changes: "A lookup with a mismatched key type fails where the equivalent COUNTIF criterion succeeds."
+      interviewer: "That you state both rules without trying to reconcile them into one."
+
+  - id: excel.agg.empty-set
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [excel.conditional-aggregation, qc.mindset]
+    lesson: excel-conditional-aggregation
+    title: When the criterion matches nothing
+    prompt: |
+      An analyst types the country code as `US` instead of `USA` in an enrolment summary.
+
+      ```excel
+      =MAXIFS(D2:D19,B2:B19,"US")
+      =AVERAGEIFS(D2:D19,B2:B19,"US")
+      ```
+
+      What does each return, and which is more useful?
+    choices:
+      - text: "`MAXIFS` returns `0` and `AVERAGEIFS` returns `#DIV/0!`. The error is more useful, because 0 is a plausible enrolment figure and an error is not."
+        correct: true
+        feedback: "Correct. When you are unsure whether a criterion matches anything, AVERAGEIFS is the honest one."
+      - text: "Both return `#N/A`, because the criterion was not found."
+        feedback: "Neither function returns `#N/A`. `MAXIFS` returns 0 and `AVERAGEIFS` cannot average an empty set, so it divides by zero."
+      - text: "Both return `0`, and neither indicates a problem."
+        feedback: "`AVERAGEIFS` does indicate a problem — it errors, because there is nothing to average."
+      - text: "`MAXIFS` returns `#VALUE!` because the criteria range contains no match."
+        feedback: "A criterion matching nothing is not an error condition for MAXIFS. It is documented to return 0."
+    solution: |
+      | Function | No matching rows |
+      |---|---|
+      | `COUNTIF`, `COUNTIFS` | `0` — correct and unambiguous |
+      | `SUMIF`, `SUMIFS` | `0` — correct |
+      | `MAXIFS`, `MINIFS` | **`0`** — and 0 may be a plausible value |
+      | `AVERAGEIF`, `AVERAGEIFS` | `#DIV/0!` |
+
+      `MAXIFS` returning 0 is the trap. In an enrolment column, "the largest site in the USA enrolled 0
+      subjects" is a sentence that describes a real situation, so it does not stand out.
+
+      `AVERAGEIFS` cannot average nothing, so it errors — and the error is information: the criterion
+      matched no rows. **When you are unsure whether a criterion matches anything, test it with
+      `AVERAGEIFS` or guard it with a `COUNTIFS` on the same criteria.**
+
+      A `COUNTIFS` of 0 beside every `MAXIFS` costs one column and removes the whole failure mode.
+    explanation:
+      objective: "Know each conditional function's empty-set return and use it diagnostically."
+      given: "A misspelled criterion against an enrolment column."
+      relevant: "That MAXIFS returns 0 and AVERAGEIFS errors when nothing matches."
+      method: "Prefer the function whose empty-set result cannot be mistaken for data."
+      interpretation: "0 is a plausible enrolment value; #DIV/0! is not a plausible anything."
+      changes: "A COUNTIFS guard on the same criteria makes the empty set visible regardless of which function is used."
+      interviewer: "That you can name the empty-set behaviour rather than assuming they all return zero."
+
+  - id: excel.agg.sumifs-order
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [excel.conditional-aggregation]
+    lesson: excel-conditional-aggregation
+    title: SUMIF and SUMIFS are not the same shape
+    prompt: |
+      Which of these sums the randomized column for the USA, given sites in `B2:B19` and randomized counts
+      in `D2:D19`?
+    choices:
+      - text: "`=SUMIFS(D2:D19,B2:B19,\"USA\")` — sum range first, then criteria pairs."
+        correct: true
+        feedback: "Correct. SUMIFS must put the sum range first because it accepts any number of criteria pairs after it."
+      - text: "`=SUMIFS(B2:B19,\"USA\",D2:D19)` — criteria range, criteria, sum range."
+        feedback: "That is SUMIF's order, not SUMIFS's. Written as SUMIFS it will not give the intended result."
+      - text: "`=SUMIF(D2:D19,B2:B19,\"USA\")` — sum range first, as in SUMIFS."
+        feedback: "SUMIF takes the criteria range first. The two functions genuinely have reversed signatures."
+      - text: "`=SUM(D2:D19,B2:B19=\"USA\")` — sum with an inline condition."
+        feedback: "`SUM` takes ranges and values, not conditions. There is no inline-condition form of SUM."
+    solution: |
+      ```excel
+      =SUMIF(B2:B19,"USA",D2:D19)      criteria range, criteria, sum range
+      =SUMIFS(D2:D19,B2:B19,"USA")     sum range FIRST, then criteria pairs
+      ```
+
+      The reversal is not arbitrary. `SUMIFS` accepts an unlimited number of criteria pairs, so the sum
+      range cannot go last — there would be no way to tell where the pairs stop.
+
+      **Getting it backwards is not always loud.** If the two ranges are the same height and both contain
+      numbers, `SUMIFS` with the arguments swapped can return a plausible total from the wrong column.
+
+      **Use `SUMIFS` everywhere, even for a single condition.** The same applies to `COUNTIFS` over
+      `COUNTIF` and `AVERAGEIFS` over `AVERAGEIF`: one consistent argument order, and adding a second
+      condition later does not mean rewriting the formula.
+    explanation:
+      objective: "Recall the argument order of the two forms."
+      given: "Four candidate formulas for one conditional sum."
+      relevant: "That SUMIFS puts the sum range first and SUMIF puts it last."
+      method: "SUMIFS takes variable numbers of criteria pairs, so the sum range has to come first."
+      changes: "Using SUMIFS everywhere removes the question and makes adding a second criterion trivial."
+
+  - id: excel.agg.totals-check
+    format: numeric
+    modes: [qc, independent]
+    difficulty: intermediate
+    skills: [excel.conditional-aggregation, qc.discrepancy]
+    lesson: excel-conditional-aggregation
+    title: The records in neither column
+    prompt: |
+      A data manager checks causality on the CBX417-301 adverse-event listing, which has **2,466** rows.
+
+      ```excel
+      =COUNTIF(AEREL,"RELATED")        → 1051
+      =COUNTIF(AEREL,"NOT RELATED")    → 1412
+      ```
+
+      How many records are in neither category?
+    answer: 3
+    tolerance: 0
+    unit: records
+    hints:
+      - "Add the two counts and compare against the row count."
+      - "1051 + 1412."
+      - "2466 − 2463."
+    solution: |
+      $$2466 - (1051 + 1412) = 3$$
+
+      **Those three records are the most useful thing this check produced.**
+
+      They are adverse events whose causality query was still unresolved when the database was cut, so
+      `AEREL` is null in SDTM. The SAP's rule for that case is to impute `RELATED` in ADaM — the
+      conservative direction — so `ADAE.AREL` reads:
+
+      | | `AEREL` (SDTM) | `AREL` (ADaM) |
+      |---|---:|---:|
+      | RELATED | 1051 | **1054** |
+      | NOT RELATED | 1412 | 1412 |
+      | (null) | 3 | 0 |
+
+      A QC programmer comparing the two datasets will find a difference of exactly three related events. It
+      is correct, it is deliberate, and nothing in either dataset explains it — the SAP does.
+
+      **`COUNTIFS` only counts the groups you name.** A set of them covers what you thought of, not what
+      the data contains. Adding the parts and comparing against the whole costs one `SUM` and is the only
+      way a spreadsheet finds the category nobody mentioned.
+    explanation:
+      objective: "Use a totals reconciliation to find an unanticipated category."
+      given: "Two COUNTIF results and a known row count."
+      relevant: "That the two named categories are assumed to partition the field."
+      calculating: "The row count minus the sum of the named categories."
+      numbers: "2466 - (1051 + 1412) = 3."
+      assumptions: "That every row should have a causality value, which is what makes the gap a finding."
+      interpretation: "Three unresolved causality queries at data cutoff, not a formula error."
+      changes: "In ADaM the SAP imputes RELATED, so AREL gives 1054 and the two datasets differ by three on purpose."
+      interviewer: "That you run the totals check routinely rather than only when something looks odd."
+
+  - id: excel.agg.rate-of-rates
+    format: numeric
+    modes: [guided, check]
+    difficulty: intermediate
+    skills: [excel.conditional-aggregation, tlf.denominators, stats.descriptive]
+    lesson: excel-conditional-aggregation
+    title: The screen-failure rate across eighteen sites
+    prompt: |
+      Across the first 18 sites of CBX417-301, **203** subjects were screened and **177** were randomized.
+      A screen failure is a subject who was screened and not randomized.
+
+      What is the screen-failure rate, as a percentage to two decimal places?
+    answer: 12.81
+    tolerance: 0.01
+    unit: "%"
+    hints:
+      - "Failures are screened minus randomized."
+      - "Work from the totals, not from per-site rates."
+      - "26 / 203."
+    solution: |
+      $$\frac{203 - 177}{203} = \frac{26}{203} = 12.81\%$$
+
+      ```excel
+      =ROUND(100*(SUM(C2:C19)-SUM(D2:D19))/SUM(C2:C19),2)     → 12.81
+      ```
+
+      **The tempting alternative gives a different answer.** Compute a rate per site, then average the 18
+      rates, and you get **14.77%** — almost two percentage points higher.
+
+      Neither is wrong. They are different quantities. The unweighted mean gives site 1004, which screened
+      three subjects and randomized one, the same weight as site 1011, which screened twenty and randomized
+      all twenty. A 66.7% failure rate at a three-subject site pulls the mean up hard.
+
+      $$\text{a mean of ratios} \neq \text{the ratio of the means}$$
+
+      If you want the chance that a screened subject fails screening, use 12.81%. If you genuinely want to
+      describe the typical site's performance, the unweighted mean is defensible — and it has to be
+      labelled as such, because nobody reading "screen failure rate 14.8%" will know a three-subject site
+      counted as much as a twenty-subject one.
+
+      The same trap appears wherever a rate is computed per site, per visit or per batch and then averaged.
+    explanation:
+      objective: "Compute a pooled rate rather than an average of group rates."
+      given: "203 screened and 177 randomized across 18 sites."
+      relevant: "The totals, not the per-site figures."
+      calculating: "Failures over screened."
+      numbers: "26 / 203 = 12.81%. The unweighted mean of the 18 site rates is 14.77%."
+      assumptions: "A screen failure is a screened subject with no arm assigned."
+      interpretation: "12.81% is the chance a screened subject fails; 14.77% describes the average site."
+      changes: "The two converge when sites are equally sized and diverge as site sizes become unequal."
+      interviewer: "That you can say what the unweighted mean would be measuring instead of just calling it wrong."
+
+  - id: excel.agg.verbatim-coded
+    format: mapping
+    modes: [guided, check]
+    difficulty: intermediate
+    skills: [excel.conditional-aggregation, sdtm.events]
+    lesson: excel-conditional-aggregation
+    title: Six spellings, one term
+    prompt: |
+      Sites on CBX417-301 typed fatigue six ways: `fatigue` (30), `Fatigue` (39), `FATIGUE` (31),
+      `Feeling tired` (35), `tiredness` (29) and `Tiredness` (38). All 202 records code to the preferred
+      term `Fatigue`.
+
+      Match each formula to what it returns.
+    sourceLabel: Formula
+    targetLabel: Returns
+    pairs:
+      - source: "=COUNTIF(AETERM,\"fatigue\")"
+        target: "100"
+        note: "COUNTIF matches text case-insensitively, so all three spellings of the word fall out for free."
+      - source: "=COUNTIF(AETERM,\"FATIGUE\")"
+        target: "100"
+        note: "Identical result. The case you type has no effect at all."
+      - source: "=COUNTIF(AETERM,\"*tired*\")"
+        target: "102"
+        note: "The wildcard catches Feeling tired, tiredness and Tiredness — 35 + 29 + 38."
+      - source: "=COUNTIF(AETERM,\"*fatigue*\")"
+        target: "100"
+        note: "The wildcards add nothing here: no verbatim term contains fatigue as part of a longer phrase."
+      - source: "=COUNTIF(AEDECOD,\"Fatigue\")"
+        target: "202"
+        note: "One criterion, all six spellings. This is what coding is for."
+      - source: "=COUNTIF(AEDECOD,\"tiredness\")"
+        target: "0"
+        note: "The coded column contains preferred terms only. Tiredness is not one."
+    targets: ["0", "100", "102", "202"]
+    solution: |
+      $$100 + 102 = 202$$
+
+      The two verbatim criteria happen to partition exactly the set the coded term identifies — **and that
+      is luck, verified after the fact, not a method.** Nothing told you in advance that `*tired*` was the
+      missing half, and nothing will tell you when a seventh spelling appears.
+
+      Two behaviours worth separating:
+
+      **`COUNTIF` matches text case-insensitively.** `fatigue`, `Fatigue` and `FATIGUE` all match one
+      criterion. That is genuinely helpful and it is also why the verbatim approach looks like it works.
+
+      **Wildcards match substrings.** `*tired*` finds the word anywhere in the cell, which is the only way
+      to reach `Feeling tired` from a criterion.
+
+      What neither can do is know that `Tiredness` and `Fatigue` are the same clinical event. **Medical
+      coding is the answer to that**, and a safety table built on `AETERM` is a table built on how 42 sites
+      happened to type.
+
+      If the listing you were sent has no coded column, that is the finding — ask for it rather than
+      building criteria around the spellings you can see.
+    explanation:
+      objective: "Predict COUNTIF results under case-insensitivity and wildcards."
+      given: "Six verbatim spellings with counts and one coded term."
+      relevant: "That COUNTIF ignores case and that * matches any run of characters."
+      numbers: "30 + 39 + 31 = 100; 35 + 29 + 38 = 102; total 202."
+      interpretation: "Verbatim criteria can be made to reach the right total only by knowing the answer first."
+      changes: "A seventh spelling would break the verbatim approach and leave the coded count unaffected."
+
+  - id: excel.agg.helper-column
+    format: order
+    modes: [guided, independent]
+    difficulty: advanced
+    skills: [excel.conditional-aggregation, tlf.safety-tables, tlf.denominators]
+    lesson: excel-conditional-aggregation
+    title: Subjects with at least one grade 3 or above event
+    prompt: |
+      You have the AE listing in a sheet: `A` is the subject, `D` is `AETOXGR`. You need the row a safety
+      table wants — **subjects** with at least one grade 3 or above event, and that as a percentage.
+
+      There are 502 such records. Put the steps in order.
+    steps:
+      - "Add a per-row flag for the clinical criterion: `E2: =IF(D2>=3,1,0)`, filled down."
+      - "Check it: `=SUM(E2:E2467)` must give 502, the number of qualifying records."
+      - "Add a second helper marking each subject's first qualifying row: `F2: =IF(AND(E2=1,COUNTIFS($A$2:A2,A2,$E$2:E2,1)=1),1,0)`."
+      - "Total the second helper: `=SUM(F2:F2467)` gives 298 subjects."
+      - "Sanity-check that subjects are fewer than events and no greater than the safety population."
+      - "Take the denominator from ADSL — the 416 subjects with `SAFFL = 'Y'` — not from the AE listing."
+      - "Report 298/416 = 71.6%, labelled as subjects with at least one event."
+    solution: |
+      **Two helper columns, because two different things are being tested.**
+
+      Column `E` tests the *record*: is this event grade 3 or above? Summing it gives **502**, and that
+      check comes before anything else — if the flag is wrong, everything downstream is wrong and nothing
+      will say so.
+
+      Column `F` tests the *row's position*: is this the first qualifying row for this subject?
+      `COUNTIFS($A$2:A2,A2,$E$2:E2,1)` counts, in everything above and including this row, the rows with
+      the same subject that are flagged. On a subject's first qualifying row that count is 1 — because the
+      row counts itself. Summing gives **298** subjects.
+
+      **The denominator is the step most likely to be got wrong.** It does not come from the AE listing. It
+      comes from ADSL: the 416 subjects with `SAFFL = "Y"`. Using the number of subjects appearing in AE —
+      414 — would silently exclude the two treated subjects who had no adverse events at all, and those
+      subjects belong in the denominator precisely because they were at risk and did not have one.
+
+      $$\frac{298}{416} = 71.6\%$$
+
+      The sanity check earns its place: subjects must be fewer than events and no more than the population.
+      A subject count above the event count means the second helper is flagging rows it should not.
+    explanation:
+      objective: "Build a subject-level safety-table row from an event-level listing."
+      given: "An AE listing with subject and grade columns and 502 qualifying records."
+      relevant: "That the criterion is per record and the count is per subject."
+      method: "Flag qualifying records, then flag each subject's first qualifying record, then total."
+      numbers: "502 records, 298 subjects, 416 in the safety population, 71.6%."
+      assumptions: "The safety population is the denominator because a subject never dosed could not have a treatment-emergent event."
+      computation: "COUNTIFS over a range anchored at the top and open at the bottom counts occurrences up to and including the current row."
+      interpretation: "One row of an adverse-event overview table."
+      changes: "Taking the denominator from the AE listing gives 414 and quietly drops the two treated subjects with no events."
+      interviewer: "That you name where the denominator comes from without being asked."
+
+  - id: excel.agg.missing-category
+    format: diff
+    modes: [qc, debug]
+    difficulty: advanced
+    skills: [excel.conditional-aggregation, qc.compare, qc.discrepancy]
+    lesson: excel-conditional-aggregation
+    title: Three related events that appeared between datasets
+    prompt: |
+      A QC programmer counts causality in SDTM `AE` and in ADaM `ADAE`. Both datasets have 2,466 records.
+
+      The counts do not agree. What is the explanation?
+    left:
+      title: SDTM AE — AEREL
+      columns: [Value, Records]
+      rows:
+        - [RELATED, 1051]
+        - ['NOT RELATED', 1412]
+        - ['(null)', 3]
+        - [Total, 2466]
+    right:
+      title: ADaM ADAE — AREL
+      columns: [Value, Records]
+      rows:
+        - [RELATED, 1054]
+        - ['NOT RELATED', 1412]
+        - ['(null)', 0]
+        - [Total, 2466]
+    choices:
+      - text: "Three records had an unresolved causality query at data cutoff, so `AEREL` is null in SDTM; the SAP imputes them as `RELATED` in ADaM, which is the conservative direction."
+        correct: true
+        feedback: "Correct. The difference is deliberate and specified, and nothing in either dataset states it — the SAP does."
+      - text: "Three records were added to ADAE during derivation."
+        feedback: "Both datasets have 2,466 records. Nothing was added; three records changed category."
+      - text: "ADAE recoded three not-related events as related based on the preferred term."
+        feedback: "NOT RELATED is 1412 in both. The three came from the null group, not from the not-related group."
+      - text: "The QC programmer's ADAE count is wrong — `COUNTIF` matched a trailing space in three values."
+        feedback: "A whitespace variant would reduce a count, not move three records from null to related while keeping the total intact."
+    solution: |
+      **The three nulls did not disappear; they were imputed.**
+
+      Three adverse events had a causality query still open when the database was cut. SDTM records what
+      was collected, so `AEREL` stays null. ADaM records what the analysis uses, and this study's SAP
+      specifies that an unresolved causality is analysed as **related** — the conservative choice, because
+      it cannot understate drug-attributable events.
+
+      $$1051 + 3 = 1054$$
+
+      **Three things follow, and they are the reason this is worth studying rather than just knowing.**
+
+      The discrepancy is *correct*. A QC programmer who reconciles SDTM against ADaM and reports a
+      three-record difference as a finding has found the imputation, not a bug — and the right output is a
+      note that the rule was applied as specified.
+
+      It is *invisible from either dataset alone*. Nothing in `AE` or `ADAE` says why. The only statement
+      of the rule is in the SAP, which is why a QC programmer has to have read it.
+
+      And it is *only findable by a totals check*. `COUNTIF(AEREL,"RELATED")` alone tells you nothing.
+      1051 + 1412 against 2,466 tells you there is a third category, and everything else follows from
+      asking what it is.
+    explanation:
+      objective: "Explain a deliberate, specified difference between SDTM and ADaM counts."
+      given: "Causality counts in both datasets, with the same total."
+      relevant: "The three null AEREL records and the SAP's imputation rule."
+      irrelevant: "Record counts, which are identical, and the not-related group, which is unchanged."
+      method: "Match the size of the difference against the size of the unexplained category."
+      numbers: "1051 + 3 = 1054; both datasets hold 2,466 records."
+      assumptions: "The SAP specifies imputing unresolved causality as RELATED; this is a sponsor decision, not a CDISC rule."
+      interpretation: "A correct discrepancy that has to be documented rather than fixed."
+      changes: "Without the totals check neither count on its own reveals that a third category exists."
+      interviewer: "That you distinguish a specified difference from a defect, and know where the specification lives."
+
+  - id: excel.agg.hotspot
+    format: hotspot
+    language: text
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [excel.conditional-aggregation, tlf.denominators, qc.mindset]
+    lesson: excel-conditional-aggregation
+    title: The AE summary that went to the safety meeting
+    minutes: 8
+    prompt: |
+      An AE overview built in Excel from the CBX417-301 listing. The verified figures are 502 grade 3 or
+      above records in **298** subjects, out of a safety population of **416**.
+
+      Click the line that makes the reported percentage wrong.
+    code: |
+      B1:  Grade 3 or above, n (%)
+      B2:  =COUNTIFS(AETOXGR,">=3")                         → 502
+      B3:  =COUNTIF(USUBJID_column,"<>")                    → 2466
+      B4:  =ROUND(100*B2/B3,1)                              → 20.4
+      B5:  Denominator: all AE records in the listing
+      B6:  =MAXIFS(AETOXGR,AESER,"Y")                       → 5
+    answerLines: [3]
+    lineNotes:
+      - line: 2
+        note: "502 is a correct event count. It is the wrong numerator for a subject table, but it is not wrong in itself — the subject count is 298."
+      - line: 3
+        note: "The denominator is the number of AE records, 2,466. A safety table's denominator is the safety population: 416 subjects with SAFFL = 'Y' in ADSL. This is the line that makes the percentage meaningless."
+      - line: 4
+        note: "The arithmetic is right. 502/2466 really is 20.4%. It is a percentage of the wrong thing, computed correctly."
+      - line: 5
+        note: "At least it is labelled, which is more than most versions of this mistake manage. A label does not make a record-based denominator acceptable in a subject table."
+      - line: 6
+        note: "This returns the worst grade among serious events and is fine here — 5 is a real value. Worth remembering that MAXIFS returns 0 when nothing matches, so a misspelled criterion would give a confident zero."
+    fixed: |
+      B1:  Grade 3 or above, n (%)
+      B2:  =SUM(first_qualifying_row_helper)                → 298   subjects
+      B3:  =COUNTIFS(ADSL_SAFFL,"Y")                        → 416   safety population
+      B4:  =ROUND(100*B2/B3,1)                              → 71.6
+      B5:  Denominator: safety population (SAFFL = 'Y')
+      B6:  =COUNTIFS(AETOXGR,">=3")                         → 502   events, reported separately
+    hints:
+      - "The verified answer is 71.6%. The sheet says 20.4%."
+      - "Both the top and the bottom of the fraction are about records, not subjects."
+      - "Where should the denominator of a safety table come from?"
+    solution: |
+      **Line 3.** The denominator is the number of adverse-event records, and a safety table's denominator
+      is the **safety population** — 416 subjects with `SAFFL = "Y"` in ADSL.
+
+      $$\frac{502 \text{ records}}{2466 \text{ records}} = 20.4\% \qquad\text{against}\qquad \frac{298 \text{ subjects}}{416 \text{ subjects}} = 71.6\%$$
+
+      Both the numerator and the denominator are wrong, and the denominator is the worse of the two. An
+      event count with a subject denominator would have given 502/416 = 121%, which somebody would have
+      queried. Records over records gives **20.4%** — a small, calm, entirely plausible number that reads
+      as "one in five", and the true figure is nearly three-quarters.
+
+      **The class of error is the interesting part.** The formula is right, the arithmetic is right, and
+      the label in `B5` even says what was done. Every individual step is defensible. The number is out by
+      a factor of three and a half because nobody asked what the percentage was a percentage *of*.
+
+      Two details in the fix. The denominator comes from ADSL, not from the AE listing — counting distinct
+      subjects in AE gives 414 and quietly drops the two treated subjects who had no adverse events, who
+      belong in the denominator precisely because they were at risk and did not have one. And the event
+      count stays in the table, on its own line, because it is genuinely useful; it just is not the thing
+      with a percentage attached.
+    explanation:
+      objective: "Find the line that makes a correctly computed percentage meaningless."
+      given: "An AE summary reporting 20.4% against a verified 71.6%."
+      relevant: "That the denominator counts AE records rather than the safety population."
+      irrelevant: "The MAXIFS line, which is correct, and the arithmetic, which is also correct."
+      method: "Ask what the percentage is a percentage of, independently of whether the formula evaluates correctly."
+      numbers: "502/2466 = 20.4%; 298/416 = 71.6%."
+      assumptions: "The safety population is the denominator for a treatment-emergent AE summary."
+      interpretation: "A plausible number, correctly computed, off by a factor of three and a half."
+      changes: "An event numerator with a subject denominator would have exceeded 100% and been queried."
+      interviewer: "That you check the denominator first in any table of percentages."
+
+  - id: excel.agg.open-denominator
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [excel.conditional-aggregation, tlf.denominators, communication.interviewing]
+    lesson: excel-conditional-aggregation
+    title: Defending a number in a safety summary
+    prompt: |
+      **Interviewer:** "You've produced an AE summary in Excel for a safety review meeting. The medical
+      monitor asks where one of the percentages comes from. Walk me through what you'd say."
+    modelAnswer: |
+      I'd answer in three parts, because a percentage in a safety table has three decisions in it and only
+      one of them is arithmetic.
+
+      **What the numerator counts.** For an AE table it is subjects with at least one qualifying event, not
+      events. Those differ a lot — on the study I've been working with, 502 records of grade 3 or above
+      occurred in 298 subjects, and 202 fatigue records in 170 subjects. `COUNTIFS` counts rows, so it
+      gives me events; the subject count needs a helper column marking each subject's first qualifying row.
+      If I'd handed over an event count under a heading that says `n (%)`, the percentage would be
+      measuring something nobody intended, and it would not necessarily exceed 100% and give itself away.
+
+      **What the denominator is.** The safety population — subjects with `SAFFL = "Y"` in ADSL, 416 here —
+      not the ITT 420 and not the number of subjects appearing in the AE dataset. ITT is wrong because four
+      randomized subjects were never dosed and could not have had a treatment-emergent event. Counting
+      distinct subjects in AE is wrong in the other direction: it gives 414 and drops the two treated
+      subjects who had no adverse events at all, and those two belong in the denominator precisely because
+      they were at risk and did not have one. So 298/416 is 71.6%.
+
+      **What the criterion was.** Whether it was the coded preferred term or the verbatim term, because
+      sites typed fatigue six different ways on this study and counting on the verbatim column would have
+      given me 100 instead of 202. And whether treatment-emergence was applied, because that is a separate
+      flag from the grade.
+
+      Then I'd say how I know the summary is internally consistent, since that is what the monitor is
+      really asking. My category counts add up to the total — and on this study that check is what found
+      three records with no causality recorded, which are unresolved queries at data cutoff and are imputed
+      as related in ADaM per the SAP. Subjects are fewer than events everywhere. The denominator comes from
+      ADSL rather than from the listing.
+
+      And I'd be clear about what this summary is for. It is a review aid, not a CSR table. If any of these
+      numbers is going into a document, it should come from the programmed, independently QC'd output, and
+      my job here is to make sure the meeting is looking at the same thing that output will say.
+    rubric:
+      - Distinguishes subject counts from event counts and gives real figures
+      - Names the safety population as the denominator and says why
+      - Rejects both ITT and the AE-listing subject count, with a reason for each
+      - States whether the criterion used the coded or the verbatim term
+      - Mentions treatment-emergence as a separate flag
+      - Describes the totals reconciliation as an internal consistency check
+      - Notes the three missing causality values and the SAP imputation
+      - Positions the spreadsheet as a review aid rather than a reporting output
+    redFlags:
+      - "Explains the formula without explaining what it counts"
+      - "Cannot say where the denominator came from"
+      - "Presents an event count as a subject percentage"
+      - "Offers the spreadsheet as the source for a CSR number"

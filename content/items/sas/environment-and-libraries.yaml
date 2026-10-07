@@ -1,0 +1,395 @@
+items:
+  - id: sas.environment-and-libraries.one-level-mcq
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.environment]
+    lesson: sas-environment-and-libraries
+    title: Which dataset does a one-level name read?
+    prompt: |
+      Your program starts like this:
+
+      ```sas
+      libname adam "/studies/cbx417-301/adam" access=readonly;
+
+      data adsl_saf;
+        set adsl;
+        if SAFFL = 'Y';
+      run;
+      ```
+
+      Which dataset does the `SET` statement read?
+    choices:
+      - text: "`WORK.ADSL`"
+        correct: true
+        feedback: "A one-level name refers to the WORK library (unless a USER library is assigned). Assigning the ADAM libref does not change that — you must write `adam.adsl`."
+      - text: "`ADAM.ADSL`, because ADAM is the most recently assigned library"
+        feedback: "SAS never searches libraries for a matching member name, and the most recent LIBNAME has no effect on one-level names."
+      - text: "Whichever of `WORK.ADSL` and `ADAM.ADSL` was modified most recently"
+        feedback: "There is no such search. The name `adsl` resolves to exactly one place: `WORK.ADSL`."
+      - text: "`SASHELP.ADSL`"
+        feedback: "SASHELP holds SAS-supplied sample data and metadata views; it is never the default for one-level names."
+    solution: |
+      `set adsl;` reads `WORK.ADSL`. If no WORK copy exists, the step fails with `ERROR: File WORK.ADSL.DATA does not exist.` If an old WORK copy exists from earlier in the session, the step silently runs on stale data — the more dangerous outcome. Write `set adam.adsl;`.
+
+  - id: sas.environment-and-libraries.libref-rules-multi
+    format: multi
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.environment]
+    lesson: sas-environment-and-libraries
+    title: Valid librefs
+    prompt: |
+      Which of these are valid librefs in a `LIBNAME` statement? Select all that apply.
+    choices:
+      - text: "`sdtm`"
+        correct: true
+        feedback: "4 characters, starts with a letter."
+      - text: "`_qc01`"
+        correct: true
+        feedback: "A libref may start with an underscore and contain digits."
+      - text: "`cbx417sd`"
+        correct: true
+        feedback: "Exactly 8 characters — the maximum — and it starts with a letter."
+      - text: "`cbx417sdtm`"
+        feedback: "10 characters. Librefs are limited to 8."
+      - text: "`2025out`"
+        feedback: "A libref must start with a letter or an underscore, not a digit."
+      - text: "`qc-out`"
+        feedback: "Hyphens are not allowed; use letters, digits and underscores only (e.g., `qc_out`)."
+    hints:
+      - "A libref follows the SAS name rules, with one extra restriction that ordinary variable names do not have."
+      - "Check three things for each candidate: the first character, the characters after it, and the total length."
+      - "First character: a letter or an underscore. Remaining characters: letters, digits or underscores. Total length: at most 8 — that is the restriction variable names (32 characters) do not share."
+    solution: |
+      Valid: `sdtm`, `_qc01`, `cbx417sd`. A libref is 1–8 characters, starts with a letter or underscore, and contains only letters, digits and underscores.
+
+  - id: sas.environment-and-libraries.work-lifetime-mcq
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.environment]
+    lesson: sas-environment-and-libraries
+    title: What happens to WORK overnight?
+    prompt: |
+      In SAS OnDemand for Academics you run a program that creates `WORK.ADSL` and `MYLIB.ADSL` (where `MYLIB` points to `/home/u12345678/cbx417`). Your session times out overnight. The next morning, before running anything, what exists?
+    choices:
+      - text: "Only `MYLIB.ADSL`; `WORK.ADSL` was deleted when the session ended"
+        correct: true
+        feedback: "WORK is created at session start and deleted at session end. `MYLIB.ADSL` is a file in your home folder and persists — although the libref MYLIB itself must be assigned again in the new session."
+      - text: "Both, because SAS saves WORK automatically when a session times out"
+        feedback: "SAS does not preserve WORK between sessions. That is the whole point of WORK: scratch space."
+      - text: "Neither — permanent datasets are also deleted when the libref is cleared"
+        feedback: "Clearing or losing a libref removes the label, not the files in the folder."
+      - text: "Only `WORK.ADSL`, because MYLIB was never saved"
+        feedback: "A two-level name pointing at a real folder writes a `.sas7bdat` file there as soon as the step finishes."
+    solution: |
+      `WORK.ADSL` is gone; the file `adsl.sas7bdat` in `/home/u12345678/cbx417` remains. In the new session you reassign `libname mylib "/home/u12345678/cbx417";` to reach it again.
+
+  - id: sas.environment-and-libraries.contents-numeric
+    format: numeric
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.environment, sas.attributes]
+    lesson: sas-environment-and-libraries
+    title: Read a PROC CONTENTS listing
+    prompt: |
+      `proc contents data=adam.adsl varnum; run;` prints (abridged):
+
+      ```output
+      #    Variable    Type    Len    Format    Label
+      1    STUDYID     Char     10              Study Identifier
+      2    USUBJID     Char     20              Unique Subject Identifier
+      3    AGE         Num       8              Age
+      4    SEX         Char      1              Sex
+      5    TRT01P      Char     19              Planned Treatment for Period 01
+      6    TRT01PN     Num       8              Planned Treatment for Period 01 (N)
+      7    TRTSDT      Num       8    DATE9.    Date of First Exposure to Treatment
+      8    SAFFL       Char      1              Safety Population Flag
+      ```
+
+      How many **numeric** variables does the dataset contain?
+    answer: 3
+    tolerance: 0
+    hints:
+      - "Read the Type column, not the values you imagine in each variable."
+      - "A date that displays as `11APR2022` is still stored as a number — the format only controls how it prints."
+    solution: |
+      Three: `AGE`, `TRT01PN` and `TRTSDT`. `TRTSDT` is numeric (a count of days since 1 January 1960) with a `DATE9.` format that makes it print as a date. Recognising dates as numeric variables is essential: you subtract them to get durations (`TRTEDT - TRTSDT + 1`) and compare them with `<`/`>`.
+
+  - id: sas.environment-and-libraries.first-program-code
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: foundation
+    skills: [sas.environment]
+    lesson: sas-environment-and-libraries
+    title: Point SAS at SDTM and inspect AE
+    minutes: 8
+    prompt: |
+      Write a program that:
+
+      1. assigns the libref `SDTM` to `/studies/cbx417-301/sdtm` so that SAS **cannot write** to it;
+      2. lists the variables of `SDTM.AE` in the order they are stored;
+      3. prints the first 10 AE records showing only `USUBJID AESEQ AETERM AEDECOD AESTDTC`, without the Obs column.
+    starter: |
+      libname /* complete */;
+
+      proc contents /* complete */;
+      run;
+
+      proc print /* complete */;
+      run;
+    hints:
+      - "The LIBNAME option that blocks writing is `ACCESS=READONLY`."
+      - "PROC CONTENTS lists variables alphabetically unless you add the `VARNUM` option."
+      - "Limit rows with the data set option `(obs=10)` right after the dataset name; choose columns with a `VAR` statement; `NOOBS` removes the Obs column."
+    checks:
+      - pattern: 'libname\s+sdtm\s+["''][^"'']+["'']'
+        message: "Assigns the libref SDTM to a quoted path"
+      - pattern: 'access\s*=\s*readonly'
+        message: "Makes the library read-only with ACCESS=READONLY"
+      - pattern: 'proc\s+contents\s+data\s*=\s*sdtm\.ae\b'
+        message: "Runs PROC CONTENTS on SDTM.AE (two-level name)"
+      - pattern: '\bvarnum\b'
+        message: "Uses VARNUM to list variables in creation order"
+      - pattern: 'proc\s+print\s+data\s*=\s*sdtm\.ae\s*\(\s*obs\s*=\s*10\s*\)'
+        message: "Prints SDTM.AE with the OBS=10 data set option"
+      - pattern: '\bnoobs\b'
+        message: "Suppresses the Obs column with NOOBS"
+      - pattern: 'var\s+usubjid\s+aeseq\s+aeterm\s+aedecod\s+aestdtc'
+        message: "Selects the five requested variables with a VAR statement"
+    reference: |
+      libname sdtm "/studies/cbx417-301/sdtm" access=readonly;
+
+      proc contents data=sdtm.ae varnum;
+      run;
+
+      proc print data=sdtm.ae(obs=10) noobs;
+        var USUBJID AESEQ AETERM AEDECOD AESTDTC;
+      run;
+    solution: |
+      `ACCESS=READONLY` protects the source data; `VARNUM` shows storage order (useful because SDTM datasets are delivered in the variable order of the specification); `(obs=10)` limits the rows read; `VAR` picks the columns; `NOOBS` removes the row numbers.
+
+      Then read the log: the LIBNAME note must show the physical path you intended, and PROC PRINT should report `NOTE: There were 10 observations read from the data set SDTM.AE.`
+
+  - id: sas.environment-and-libraries.log-lines-classify
+    format: classify
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [sas.log]
+    lesson: sas-environment-and-libraries
+    title: Triage log messages
+    prompt: |
+      Sort each log message by what you should do about it before you hand over an output.
+    categories:
+      - Stop and fix
+      - Investigate and explain
+      - Informational (still check the counts)
+    entries:
+      - text: "`ERROR: File WORK.ADSL.DATA does not exist.`"
+        category: Stop and fix
+        note: "The step did not run as intended; nothing downstream can be trusted."
+      - text: "`WARNING: The data set WORK.SAF may be incomplete.  When this step was stopped there were 0 observations and 5 variables.`"
+        category: Stop and fix
+        note: "A partial dataset exists and later steps may silently use it."
+      - text: "`NOTE: Variable WIEGHTBL is uninitialized.`"
+        category: Investigate and explain
+        note: "Almost always a typo or a variable that was dropped earlier; the variable is entirely missing."
+      - text: "`NOTE: Missing values were generated as a result of performing an operation on missing values.`"
+        category: Investigate and explain
+        note: "Could be expected (e.g., CHG for subjects without a baseline) or a bug — you must know which."
+      - text: "`NOTE: MERGE statement has more than one data set with repeats of BY values.`"
+        category: Investigate and explain
+        note: "A many-to-many merge; in clinical data it is nearly always a key problem."
+      - text: "`NOTE: Character values have been converted to numeric values at the places given by: (Line):(Column).`"
+        category: Investigate and explain
+        note: "Implicit type conversion; make it explicit with INPUT() or PUT()."
+      - text: "`NOTE: The data set WORK.DM has 6 observations and 6 variables.`"
+        category: Informational (still check the counts)
+        note: "Routine — but compare 6 with the number you expect."
+      - text: "`NOTE: Libref SDTM was successfully assigned as follows:`"
+        category: Informational (still check the counts)
+        note: "Routine; glance at the Physical Name line to confirm the path."
+    hints:
+      - "ERROR and WARNING lines are never acceptable in a final log."
+      - "Some NOTEs describe silent data changes — conversions, missing values, uninitialized variables, many-to-many merges."
+    solution: |
+      ERROR and WARNING lines block delivery. The notes about uninitialized variables, generated missing values, many-to-many merges and implicit conversions must each be fixed or explained. Dataset-created and libref notes are informational, but the counts in them are your first QC check.
+
+  - id: sas.environment-and-libraries.import-truncation-mcq
+    format: mcq
+    modes: [check, independent]
+    difficulty: intermediate
+    skills: [sas.environment, sas.attributes]
+    lesson: sas-environment-and-libraries
+    title: Truncated verbatim terms after PROC IMPORT
+    prompt: |
+      You read the raw adverse-event export with
+
+      ```sas
+      proc import datafile="/studies/cbx417-301/raw/ae.csv" out=raw_ae dbms=csv replace;
+      run;
+      ```
+
+      Listing the data, you notice that some `AE_TERM` values are cut off (for example *"Loose stools, intermittent, worse af"*), while the CSV file contains the full text. What is the most likely cause?
+    choices:
+      - text: "PROC IMPORT set the column length from the rows it scanned (by default only the first 20), so longer values later in the file were truncated"
+        correct: true
+        feedback: "Correct. Add `guessingrows=max;` or read the file with a DATA step and an explicit `LENGTH` taken from the specification, then confirm with PROC CONTENTS."
+      - text: "SAS character variables cannot hold more than 32 characters"
+        feedback: "SAS character variables can hold up to 32,767 bytes. The limit here came from PROC IMPORT's guess."
+      - text: "The EDC system truncated the verbatim term during export"
+        feedback: "The CSV contains the full text, so the export is not the problem."
+      - text: "The `REPLACE` option truncates text columns when the dataset already exists"
+        feedback: "`REPLACE` only allows the output dataset to be overwritten; it does not change lengths."
+    solution: |
+      PROC IMPORT decides types and lengths by scanning rows (20 by default). If the longest `AE_TERM` appears later, the variable is too short and values are truncated without an ERROR. Fix with `guessingrows=max;` or, for production, a DATA step with `INFILE`, `LENGTH` and `INFORMAT` statements that follow the raw data specification. Always check lengths with `PROC CONTENTS` after importing.
+
+  - id: sas.environment-and-libraries.lost-dataset-hotspot
+    format: hotspot
+    language: sas
+    modes: [debug]
+    difficulty: foundation
+    skills: [sas.environment, sas.debugging]
+    lesson: sas-environment-and-libraries
+    title: Yesterday's ADSL has disappeared
+    minutes: 4
+    prompt: |
+      Yesterday you ran this program in SAS OnDemand for Academics and it finished with a clean log. Today, after assigning `libname adam "/home/u12345678/cbx417/adam";` again, `proc contents data=adam.adsl; run;` fails because the dataset does not exist.
+
+      Click the line that explains why.
+    code: |
+      libname adam "/home/u12345678/cbx417/adam";
+
+      data adsl;
+        set work.dm_clean;
+        length AGEGR1 $4;
+        if AGE >= 65 then AGEGR1 = '>=65';
+        else if not missing(AGE) then AGEGR1 = '<65';
+      run;
+    answerLines: [3]
+    lineNotes:
+      - line: 3
+        note: "`data adsl;` is a one-level name, so the dataset was written to `WORK.ADSL` and deleted when the session ended. Nothing was ever written to the ADAM folder."
+      - line: 4
+        note: "Not the cause, but note that `WORK.DM_CLEAN` is also gone today: the program can only be rerun if the step that creates it is rerun first."
+    fixed: |
+      libname adam "/home/u12345678/cbx417/adam";
+
+      data adam.adsl;
+        set work.dm_clean;
+        length AGEGR1 $4;
+        if AGE >= 65 then AGEGR1 = '>=65';
+        else if not missing(AGE) then AGEGR1 = '<65';
+      run;
+    hints:
+      - "Translate every dataset name into library.member."
+      - "Which library does a name without a dot belong to, and how long does that library live?"
+    solution: |
+      Line 3 writes to WORK. Use `data adam.adsl;` — and keep the whole chain rerunnable, because the input `WORK.DM_CLEAN` also disappears with the session.
+    explanation:
+      objective: "Explain why a dataset that was created successfully no longer exists."
+      given: "A clean log yesterday, a new session today, and a missing `ADAM.ADSL`."
+      relevant: "The dataset name on the DATA statement and the lifetime of the WORK library."
+      irrelevant: "The AGEGR1 derivation logic (lines 5–7) is fine."
+      method: "Resolve each dataset name to library.member and ask how long that library lives."
+      interpretation: "The program never wrote to the ADAM folder; the LIBNAME statement alone does not make datasets permanent."
+      changes: "With `data adam.adsl;` the dataset would persist as `adsl.sas7bdat` in the ADAM folder."
+      interviewer: "That you understand WORK versus permanent libraries and design programs that can be rerun from their inputs."
+
+  - id: sas.environment-and-libraries.missing-file-log
+    format: log
+    modes: [debug]
+    difficulty: foundation
+    skills: [sas.log, sas.environment]
+    lesson: sas-environment-and-libraries
+    title: Read the log from the top
+    minutes: 4
+    prompt: |
+      A colleague asks why their frequency table is empty. Here is their log (representative log — exact wording of the second error can vary by release). Click the line that is the **root cause**.
+    program: |
+      libname adam "/studies/cbx417-301/adam" access=readonly;
+
+      proc freq data=adsl;
+        tables TRT01P;
+      run;
+    log: |
+      1    libname adam "/studies/cbx417-301/adam" access=readonly;
+      NOTE: Libref ADAM was successfully assigned as follows:
+            Engine:        V9
+            Physical Name: /studies/cbx417-301/adam
+      2
+      3    proc freq data=adsl;
+      ERROR: File WORK.ADSL.DATA does not exist.
+      4      tables TRT01P;
+      ERROR: Variable TRT01P not found.
+      5    run;
+
+      NOTE: The SAS System stopped processing this step because of errors.
+      NOTE: PROCEDURE FREQ used (Total process time):
+            real time           0.00 seconds
+            cpu time            0.00 seconds
+    issues: [7]
+    lineNotes:
+      - line: 2
+        note: "The libref was assigned correctly — the ADAM folder exists. The problem is that the program never uses it."
+      - line: 7
+        note: "Root cause: `data=adsl` is a one-level name, so SAS looked for WORK.ADSL. The fix is `data=adam.adsl`."
+      - line: 9
+        note: "A consequence of the first error: with no input dataset, SAS cannot find TRT01P. Fix the first error and this one disappears."
+      - line: 12
+        note: "The procedure stopped; no table was produced."
+    hints:
+      - "Read top-down and fix the first ERROR first."
+      - "Translate `data=adsl` into library.member."
+    solution: |
+      The first ERROR (line 7) is the root cause: `data=adsl` means `WORK.ADSL`. Use `proc freq data=adam.adsl;`. The second ERROR is a consequence and disappears once the input exists.
+    explanation:
+      objective: "Separate the root cause from its consequences in a log."
+      given: "A program, its log, and a successful LIBNAME note."
+      relevant: "The first ERROR and the dataset name it mentions (WORK.ADSL)."
+      irrelevant: "Timing lines and the LIBNAME note (which shows the library is fine)."
+      interpretation: "Errors cascade: later messages are often side effects of the first one."
+      interviewer: "That you read logs from the top, recognise library resolution problems immediately, and do not chase secondary errors."
+
+  - id: sas.environment-and-libraries.interview-log-review
+    format: open
+    modes: [interview]
+    difficulty: foundation
+    skills: [sas.log, communication.interviewing]
+    lesson: sas-environment-and-libraries
+    title: What do you check in a log?
+    prompt: |
+      **Interviewer:** "Your program ran without errors. What else do you check in the log before you hand the output to the statistician?"
+    modelAnswer: |
+      A run without errors is only the first check. I search the whole log from the top for `WARNING` and for the notes that indicate silent data problems: uninitialized variables, missing values generated, character/numeric conversions, invalid data, and "MERGE statement has more than one data set with repeats of BY values". Each of those is either fixed or documented with a reason.
+
+      Then I check counts: the observations read and written at each step should match what I expect — for example, one row per subject in a subject-level dataset, and the same number of subjects before and after a merge. I also confirm that WHERE clauses echoed in the log are the ones I intended, and that inputs were read through the study libraries rather than stale WORK copies. Finally, I keep the final log with the output, because it is part of the evidence that the program was validated.
+    rubric:
+      - Looks beyond ERROR to WARNINGs and specific risky NOTEs
+      - Names at least three risky notes (uninitialized, missing values generated, conversion, repeats of BY values, invalid data)
+      - Checks observation counts against expectations
+      - Mentions documenting or explaining any remaining messages
+      - Treats the log as part of the validation evidence
+    redFlags:
+      - "Says a log without ERRORs is clean"
+      - "Only looks at the end of the log"
+      - "Would suppress notes with options instead of fixing the cause"
+    followUps:
+      - "What would you do if a WARNING cannot be removed?"
+      - "How would you scan 200 logs from a batch run efficiently?"
+
+  - id: sas.environment-and-libraries.speed-work
+    format: text
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.environment]
+    lesson: sas-environment-and-libraries
+    title: Default library
+    prompt: |
+      A program says `data adsl_saf;` with no libref. In which library is the dataset created? (One word.)
+    accept: ["WORK"]
+    monospace: true
+    solution: |
+      `WORK` — the session's temporary library, deleted when the session ends.

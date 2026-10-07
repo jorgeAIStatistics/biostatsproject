@@ -1,0 +1,567 @@
+items:
+  - id: adam.bds.param-unique
+    format: mcq
+    modes: [check, qc, debug]
+    difficulty: intermediate
+    skills: [adam.bds, adam.specs, qc.discrepancy]
+    lesson: adam-bds-structure
+    title: The same PARAMCD with two PARAM strings
+    prompt: |
+      A QC check on ADLB returns:
+
+      ```text
+      PARAMCD  PARAM                           n
+      GLUC     Glucose (mg/dL)              1204
+      GLUC     Glucose (mmol/L)             3011
+      ```
+
+      The central laboratory changed units at Month 9. What is wrong, and what is the consequence?
+    choices:
+      - text: "It violates ADaMIG v1.3's one-to-one relationship between `PARAMCD` and `PARAM`, and the by-visit mean now averages two different scales into one number."
+        correct: true
+        feedback: "Correct on both counts. The conformance finding is the smaller problem — a mean of mg/dL and mmol/L values is not a quantity at all."
+      - text: "Nothing is wrong — `PARAM` is a label, so two labels for one code is a cosmetic issue."
+        feedback: "`PARAM` is what prints in the table, and it carries the unit. Two units under one code means the values are not comparable."
+      - text: "It is a conformance finding only; the numbers are still correct because `AVAL` holds the standardized value."
+        feedback: "`AVAL` holds `LBSTRESN`, which changed scale when the laboratory changed units. Nothing standardized it back."
+      - text: "`PARAMCD` should have been made longer so both units fit."
+        feedback: "`PARAMCD` is capped at 8 characters precisely because it must be usable as a variable name. Length is not the issue."
+    explanation:
+      objective: "Recognise a PARAMCD/PARAM violation and state its numerical consequence."
+      given: "One parameter code with two parameter descriptions differing in unit."
+      relevant: "That PARAM carries the unit, so a change of unit is a change of parameter."
+      method: "ADaMIG v1.3 requires a one-to-one relationship between PARAMCD and PARAM within a dataset."
+      numbers: "1,204 records on one scale and 3,011 on another, averaged together."
+      interpretation: "The mean is not a wrong glucose value; it is not a glucose value."
+      changes: "Two valid fixes: convert everything to one unit at derivation, or split into two PARAMCDs. Converting is usually right; leaving the mixture never is."
+      interviewer: "That you lead with the numerical damage rather than with the conformance rule."
+
+  - id: adam.bds.avisit-vs-visit
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [adam.bds, adam.windows, adam.traceability]
+    lesson: adam-bds-structure
+    title: Why keep VISIT when you have AVISIT?
+    prompt: |
+      In VTX221-201's ADVS, 60 of 3,082 records have a `VISIT` that differs from their `AVISIT` —
+      early-termination and unscheduled visits that the windowing rule placed into Week 2, 4, 8 or 12.
+
+      A programmer proposes simplifying the dataset by overwriting `VISIT` with `AVISIT`. What is lost?
+    choices:
+      - text: "The ability to see that six of the Week 12 records are early-termination visits — the windowing rule stops being verifiable from the data, and `count(VISIT, AVISIT)` no longer audits it."
+        correct: true
+        feedback: "Correct. The two variables answer different questions: what happened, and what the analysis calls it. Collapsing them destroys the audit and gains nothing but a column."
+      - text: "Nothing meaningful — `VISIT` is a collection artefact and `AVISIT` supersedes it."
+        feedback: "`VISIT` is what the site recorded and is a fact about the study conduct. `AVISIT` is an analysis decision. A reviewer needs both to check the decision."
+      - text: "The link to SDTM `VS`, which joins on `VISIT`."
+        feedback: "The link to SDTM is `SRCDOM`/`SRCSEQ`, not the visit name."
+      - text: "`AVISITN`, which is derived from `VISIT`."
+        feedback: "`AVISITN` is the numeric order of `AVISIT`, not of `VISIT`."
+    explanation:
+      objective: "Say what a reviewer loses when collected and analysis timing are merged."
+      given: "60 records whose collected visit differs from their analysis visit."
+      relevant: "That windowing is an analysis decision and decisions must stay inspectable."
+      numbers: "Early termination into Week 2/4/8/12: 12, 18, 10 and 6 records; unscheduled into Week 2/4/8: 8, 4 and 2."
+      interpretation: "The Week 12 column legitimately contains six early-termination visits, which affects how a completer analysis should be read."
+      changes: "Dropping those 60 records instead of windowing them would bias the completer analysis further, since early termination is not random."
+      interviewer: "That you name the one-line audit the pair of variables enables."
+
+  - id: adam.bds.avalc-order
+    format: mcq
+    modes: [check, debug]
+    difficulty: advanced
+    skills: [adam.bds, trials.oncology]
+    lesson: adam-bds-structure
+    title: A legal coding that breaks every derivation
+    prompt: |
+      An ADRS specification codes RECIST responses as:
+
+      | `AVALC` | `AVAL` |
+      |---|---:|
+      | `CR` | 1 |
+      | `PD` | 2 |
+      | `PR` | 3 |
+      | `SD` | 4 |
+      | `NE` | 5 |
+
+      Does this violate ADaMIG v1.3, and what happens downstream?
+    choices:
+      - text: "It does not violate the standard — the `AVAL`/`AVALC` mapping is still one-to-one — but the numeric order no longer matches the clinical order, so every comparison that treats smaller as better is silently wrong."
+        correct: true
+        feedback: "Correct, and this is why it is dangerous: conformance checks pass, the dataset looks fine, and `AVAL < 3` now means 'complete response or progression'."
+      - text: "It violates the one-to-one rule between AVAL and AVALC."
+        feedback: "Each code maps to exactly one value and back. The rule is satisfied — which is precisely the problem."
+      - text: "It violates ADaMIG because the standard fixes the numeric codes for RECIST responses."
+        feedback: "ADaMIG does not prescribe response codes. The sponsor chooses them, which is why the specification has to choose sensibly."
+      - text: "It is fine — derivations should use `AVALC` and ignore `AVAL`."
+        feedback: "If nothing uses `AVAL` there is no reason to populate it. The point of the pairing is that the numeric value carries the ordering."
+    explanation:
+      objective: "Separate conformance from correctness in an AVAL/AVALC coding."
+      given: "A one-to-one but clinically disordered coding."
+      relevant: "That ADaMIG constrains the mapping, not the ordering."
+      irrelevant: "Whether a conformance tool flags it — it will not."
+      method: "Check whether the numeric order reproduces the clinical order CR, PR, SD, PD."
+      interpretation: "`AVAL < 3` becomes 'CR or PD', which is a category error rather than a rounding error."
+      assumptions: "The study's derivations express 'better' as a numeric comparison, which is the usual reason to populate AVAL at all."
+      changes: "NE is placed last in the correct coding so that a comparison-based derivation returns NE only when nothing else exists."
+      interviewer: "That you point out conformance tools cannot catch this, so it has to be caught in specification review."
+
+  - id: adam.bds.paramn
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [adam.bds, tlf.anatomy]
+    lesson: adam-bds-structure
+    title: What PARAMN and AVISITN are for
+    prompt: |
+      VTX221-201's ADVS has `PARAMCD` values `SYSBP` (`PARAMN = 1`) and `DIABP` (`PARAMN = 2`). The
+      shells print systolic above diastolic.
+
+      Why does the dataset need `PARAMN` at all?
+    choices:
+      - text: "Because sorting on `PARAMCD` or `PARAM` is alphabetical, which puts `DIABP` first. `PARAMN` stores the display order the shells specify."
+        correct: true
+        feedback: "Correct — and `AVISITN` does the same job for visits, where alphabetical order would put `CYCLE 10 DAY 1` before `CYCLE 2 DAY 1` and `BASELINE` in the middle of the table."
+      - text: "Because ADaMIG v1.3 requires `PARAMN` in every BDS dataset."
+        feedback: "`PARAMN` is permissible, not required. It exists because shells specify an order that data does not naturally have."
+      - text: "Because `PARAMCD` cannot be used in a `BY` statement."
+        feedback: "It can. The issue is the resulting order, not whether grouping works."
+      - text: "Because numeric sorting is faster than character sorting on large datasets."
+        feedback: "Performance is not the reason; a table with two parameters would not notice."
+    explanation:
+      objective: "Explain why display order is stored as data."
+      relevant: "That the shells specify an order which alphabetical sorting does not produce."
+      numbers: "DIABP sorts before SYSBP; CYCLE 10 DAY 1 sorts before CYCLE 2 DAY 1."
+      interpretation: "AVISITN on CBX417-301 uses large gaps — 800 for End of Treatment, 810 for Safety Follow-up — so end-of-study visits stay at the bottom whatever number of cycles a subject completed."
+      changes: "Sorting on the character variable produces a table that is not wrong, only unreadable and not what the shell specified."
+
+  - id: adam.bds.by-visit-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [adam.bds, tlf.summary-stats, r.dplyr]
+    lesson: adam-bds-structure
+    datasets: [oncology/adam/adlb]
+    title: One program for every parameter and visit
+    minutes: 12
+    prompt: |
+      Write `lab_summary(adlb)` producing the by-visit summary the SAP asks for: for every parameter
+      category, parameter, analysis visit and actual treatment, the n, mean and SD of `AVAL` and of `CHG`.
+
+      Restrict to the safety population, to the record selected for each visit, and to records that were
+      assigned to an analysis visit at all. Sort so the table prints in the specified order.
+    starter: |
+      library(dplyr)
+
+      lab_summary <- function(adlb) {
+        adlb |>
+          filter(___) |>
+          group_by(___) |>
+          summarise(
+            n         = sum(!is.na(AVAL)),
+            mean_aval = ___,
+            sd_aval   = ___,
+            n_chg     = sum(!is.na(CHG)),
+            mean_chg  = ___,
+            sd_chg    = ___,
+            .groups   = "drop"
+          ) |>
+          arrange(___)
+      }
+    reference: |
+      library(dplyr)
+
+      lab_summary <- function(adlb) {
+        adlb |>
+          filter(SAFFL == "Y", ANL01FL == "Y", !is.na(AVISIT)) |>
+          group_by(PARCAT1, PARAMCD, PARAM, AVISITN, AVISIT, TRTA) |>
+          summarise(
+            n         = sum(!is.na(AVAL)),
+            mean_aval = mean(AVAL, na.rm = TRUE),
+            sd_aval   = sd(AVAL,   na.rm = TRUE),
+            n_chg     = sum(!is.na(CHG)),
+            mean_chg  = mean(CHG,  na.rm = TRUE),
+            sd_chg    = sd(CHG,    na.rm = TRUE),
+            .groups   = "drop"
+          ) |>
+          arrange(PARCAT1, PARAMCD, AVISITN)
+      }
+    hints:
+      - "Three filters: the population flag, the record-selection flag, and records that have an analysis visit."
+      - "Group on `PARAMCD` and `PARAM` together — the one-to-one rule makes that safe and it keeps the printable description with the code."
+      - "Sort on `AVISITN`, never on `AVISIT`: alphabetical order puts `CYCLE 10 DAY 1` before `CYCLE 2 DAY 1`."
+      - "`n` and `n_chg` differ, because `CHG` is null on the baseline record and wherever `BASE` is missing."
+    checks:
+      - pattern: "ANL01FL\\s*==\\s*[\"']Y[\"']"
+        message: "Selects one record per subject, parameter and analysis visit"
+      - pattern: "is\\.na\\s*\\(\\s*AVISIT\\s*\\)"
+        message: "Excludes records that fall outside every analysis window"
+      - pattern: "group_by\\s*\\([^)]*PARAMCD[^)]*PARAM\\b"
+        message: "Groups on both the code and the printable description"
+      - pattern: "arrange\\s*\\([^)]*AVISITN"
+        message: "Sorts on AVISITN rather than on the character visit name"
+      - pattern: "sum\\s*\\(\\s*!\\s*is\\.na\\s*\\(\\s*CHG\\s*\\)\\s*\\)"
+        message: "Counts the change records separately from the value records"
+    expectedOutput: |
+      ```text
+      > lab_summary(adlb) |> filter(PARAMCD == "ALT", AVISIT == "CYCLE 4 DAY 1")
+      # A tibble: 2 x 12
+        PARCAT1   PARAMCD PARAM                          AVISITN AVISIT        TRTA
+        CHEMISTRY ALT     Alanine Aminotransferase (U/L)      40 CYCLE 4 DAY 1 CBX-417 + Docetaxel
+        CHEMISTRY ALT     Alanine Aminotransferase (U/L)      40 CYCLE 4 DAY 1 Placebo + Docetaxel
+            n mean_aval sd_aval n_chg mean_chg sd_chg
+          147     28.56   18.64   147    5.340  16.97
+          146     25.86   22.36   145    3.021  21.60
+      ```
+
+      Note the placebo row: 146 values but only 145 changes. One subject has a Cycle 4 ALT and no
+      baseline ALT, so `CHG` is null for them.
+    solution: |
+      **Seven parameters, 41 analysis visits, two arms — one call.** Add an eighth laboratory test to the
+      study and this function does not change; the parameter appears as new rows and new groups.
+
+      **`!is.na(AVISIT)` is the filter people forget.** Records collected outside every analysis window
+      keep `AVISIT` null by design. They are not errors and they are not deleted — they still feed the
+      worst-post-baseline summaries through `ONTRTFL`. But they have no column to sit in on a by-visit
+      table, and without the filter they collect into a null-visit group.
+
+      **Grouping on `PARAMCD` and `PARAM` together is safe because of the one-to-one rule**, and it saves
+      a lookup when printing. It is also a quiet check: if the rule were violated — the same code with
+      two descriptions, usually from a mid-study unit change — this grouping would split one parameter
+      into two rows and you would see it.
+
+      **`n` and `n_chg` are separate counts.** `CHG` is null on the baseline record and wherever `BASE`
+      is missing. At Cycle 4 Day 1 the placebo arm has 146 values and 145 changes — one subject has a
+      Cycle 4 ALT and no baseline ALT. Reporting a single n for both is a common shell error, and it
+      makes the change column's denominator wrong by exactly the number of subjects with no baseline.
+    explanation:
+      objective: "Produce every by-visit summary the SAP needs from one grouped call."
+      given: "A BDS laboratory dataset with population, selection and visit variables."
+      relevant: "SAFFL, ANL01FL, a non-null AVISIT, and the PARAMN/AVISITN sort variables."
+      method: "Filter with existing flags, group on the parameter and visit identifiers, summarise value and change separately."
+      numbers: "ALT at Cycle 4 Day 1: 147 records mean 5.340 (CBX-417), 145 records mean 3.021 (placebo)."
+      assumptions: "CHG is null on baseline records, so the value and change counts are derived independently."
+      computation: "Grouping on PARAMCD and PARAM together is equivalent to grouping on either, given the one-to-one rule."
+      interpretation: "The program is invariant to the number of parameters, which is the whole argument for the long shape."
+      changes: "Sorting on AVISIT instead of AVISITN produces a correct table in an unreadable order."
+      interviewer: "That you count value and change separately and can say why they differ."
+
+  - id: adam.bds.param-check
+    format: code
+    language: sas
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [adam.bds, qc.mindset, sas.sql]
+    lesson: adam-bds-structure
+    title: Check the PARAMCD/PARAM invariants
+    minutes: 10
+    prompt: |
+      Write a `PROC SQL` step that reports any violation of the BDS parameter invariants in a dataset
+      `adam.adlb`:
+
+      1. A `PARAMCD` with more than one distinct `PARAM`.
+      2. A `PARAM` with more than one distinct `PARAMCD`.
+      3. A `PARAMCD` longer than 8 characters or starting with a digit.
+
+      Put the results in a dataset `param_issues` with columns `issue`, `paramcd` and `param`.
+    starter: |
+      proc sql;
+        create table param_issues as
+        select 'PARAMCD maps to >1 PARAM' as issue length=40,
+               paramcd, ' ' as param length=200
+        from   adam.adlb
+        group by paramcd
+        having ___
+        union all
+        ___;
+      quit;
+    reference: |
+      proc sql;
+        create table param_issues as
+        select 'PARAMCD maps to >1 PARAM' as issue length=40,
+               paramcd, ' ' as param length=200
+        from   adam.adlb
+        group by paramcd
+        having count(distinct param) > 1
+
+        union all
+        select 'PARAM maps to >1 PARAMCD', ' ', param
+        from   adam.adlb
+        group by param
+        having count(distinct paramcd) > 1
+
+        union all
+        select distinct 'PARAMCD invalid as a variable name', paramcd, ' '
+        from   adam.adlb
+        where  length(paramcd) > 8
+           or  anydigit(paramcd) = 1;
+      quit;
+
+      proc print data=param_issues noobs; run;
+    hints:
+      - "`count(distinct param) > 1` in a `HAVING` clause after `group by paramcd`."
+      - "The reverse direction needs its own `group by` — the relationship has to be one-to-one in both directions."
+      - "`anydigit(paramcd) = 1` is true when the first character is a digit."
+      - "`UNION ALL` keeps duplicates; `UNION` would silently collapse two genuine findings that happened to match."
+    checks:
+      - pattern: "count\\s*\\(\\s*distinct\\s+param\\s*\\)\\s*>\\s*1"
+        message: "Checks that each PARAMCD has one PARAM"
+      - pattern: "count\\s*\\(\\s*distinct\\s+paramcd\\s*\\)\\s*>\\s*1"
+        message: "Checks the reverse direction too"
+      - pattern: "length\\s*\\(\\s*paramcd\\s*\\)\\s*>\\s*8"
+        message: "Checks the 8-character limit on PARAMCD"
+      - pattern: "anydigit\\s*\\(\\s*paramcd\\s*\\)\\s*=\\s*1"
+        message: "Checks that PARAMCD does not begin with a digit"
+      - pattern: "union\\s+all"
+        message: "Combines the checks without collapsing distinct findings"
+    expectedOutput: |
+      What SAS would print for a conformant ADLB — an empty report:
+
+      ```text
+      NOTE: Table WORK.PARAM_ISSUES created, with 0 rows and 3 columns.
+      ```
+    solution: |
+      **Both directions matter.** One-to-one means neither a code with two descriptions nor a description
+      with two codes. The first usually comes from a mid-study unit change; the second from two
+      laboratory test codes mapped to the same wording, which makes the table print two rows the reader
+      cannot tell apart.
+
+      **The 8-character and leading-digit rules are not arbitrary.** `PARAMCD` has to be usable as a
+      variable name after a transpose, which is how a BDS dataset feeds a correlation matrix or an MMRM
+      with an unstructured covariance. `"GLUCOSE_FASTING"` and `"24HRUOUT"` both break that.
+
+      **`UNION ALL`, not `UNION`.** `UNION` removes duplicate rows, and two genuinely separate findings
+      that produce identical text would collapse into one. In a QC report that is a silently lost
+      finding.
+
+      On CBX417-301's ADLB all three checks return nothing: 7 codes, 7 descriptions, all 3 to 5
+      characters, none starting with a digit.
+    explanation:
+      objective: "Turn the BDS parameter rules into an executable check."
+      given: "Three invariants from ADaMIG v1.3."
+      relevant: "That the code-to-description relationship must hold in both directions."
+      method: "Group and test with HAVING in each direction, plus a character-level check on the code itself."
+      assumptions: "PARAMCD must be usable as a variable name, which is why the length and leading-character rules exist."
+      computation: "anydigit() returns the position of the first digit, so = 1 means the code starts with one."
+      interpretation: "An empty result set is the passing condition; a QC check that cannot return nothing is not a check."
+      changes: "UNION instead of UNION ALL would collapse two identical findings into one row."
+      interviewer: "That you check both directions and can say why PARAMCD is length-limited."
+
+  - id: adam.bds.derived-param
+    format: numeric
+    modes: [check, guided, case]
+    difficulty: intermediate
+    skills: [adam.bds, trials.oncology, adam.traceability]
+    lesson: adam-bds-structure
+    datasets: [oncology/adam/adtr]
+    title: Reading a derived parameter
+    prompt: |
+      One subject's ADTR records, `PARAMCD = "SUMDIAM"` (sum of target lesion diameters, mm):
+
+      | `AVISIT` | `ADY` | `AVAL` | `BASE` | `CHG` | `PCHG` | `SRCSEQ` |
+      |---|---:|---:|---:|---:|---:|---:|
+      | BASELINE | −4 | 27 | 27 | — | — | 1 |
+      | WEEK 6 | 43 | 23 | 27 | −4 | −14.81 | 2 |
+      | WEEK 12 | 88 | 22 | 27 | −5 | −18.52 | 3 |
+      | WEEK 18 | 122 | 21 | 27 | −6 | −22.22 | 4 |
+      | WEEK 30 | 211 | 19 | 27 | −8 | −29.63 | 6 |
+      | WEEK 36 | 253 | 20 | 27 | −7 | −25.93 | 7 |
+
+      The subject also has one `PARAMCD = "BPCHG"` record — best percent change from baseline in sum of
+      diameters, the number behind one bar of a waterfall plot.
+
+      What is that record's `SRCSEQ`?
+    answer: 6
+    tolerance: 0
+    hints:
+      - "Best percent change is a selection, not a computation — so the record can point at the scan it came from."
+      - "Which row has the most negative `PCHG`?"
+      - "Read the `SRCSEQ` off that row."
+    solution: |
+      **6** — the Week 30 assessment, where `PCHG = −29.63` is the most negative the subject reached.
+      The `BPCHG` record carries `AVAL = −29.63`, `ADY = 211` and `SRCSEQ = 6`.
+
+      **Why a parameter rather than a variable.** As a `BESTPCHG` column it would repeat one value on
+      every `SUMDIAM` record, could not carry its own analysis day, and could not point at the scan it
+      came from. As a parameter it is one record, and the waterfall plot is the same kind of program as
+      every other BDS analysis.
+
+      **What the record does not have.** `AVISIT` is null — the best percent change belongs to the
+      subject, not to an analysis visit. `CHG` and `PCHG` are null, because `AVAL` already *is* a percent
+      change. A derived parameter inherits the BDS column set and leaves the columns that do not apply
+      empty.
+
+      **And the pointer makes it checkable in one line** across all 404 subjects with a `BPCHG` record:
+      `BPCHG.AVAL` must equal the `PCHG` of the `SUMDIAM` record its `SRCSEQ` names.
+    explanation:
+      objective: "Read a derived parameter's value and pointer off its source records."
+      given: "A subject's SUMDIAM series with percent changes and source sequence numbers."
+      relevant: "The most negative PCHG and the SRCSEQ on that row."
+      irrelevant: "The absolute AVAL values — best response in tumor size is defined on the percent change."
+      calculating: "The minimum PCHG and the source record it came from."
+      numbers: "PCHG values -14.81, -18.52, -22.22, -29.63, -25.93; the minimum is -29.63 at SRCSEQ 6, ADY 211."
+      assumptions: "Best percent change is a selection from observed assessments, so a pointer exists; a computed value would need DTYPE instead."
+      interpretation: "The subject's tumor shrank most at Week 30 and had begun to grow again by Week 36."
+      changes: "If the derivation excluded post-progression scans the winning record could be earlier, which is exactly why the pointer is worth storing."
+      interviewer: "That you explain why this is a parameter rather than a column."
+
+  - id: adam.bds.wide-to-long
+    format: order
+    modes: [guided, speed]
+    difficulty: foundation
+    skills: [adam.bds, adam.purpose]
+    lesson: adam-bds-structure
+    title: What a wide dataset costs
+    minutes: 5
+    prompt: |
+      A study currently stores laboratory data wide — one column per test — and wants to move to BDS.
+      Order the consequences from the one that bites first to the one that bites last.
+    steps:
+      - "The by-visit table program needs a macro loop over test names, so adding a test means editing a program."
+      - "Baseline, change and percent change each need a column per test, so seven tests become twenty-eight columns."
+      - "Reference limits and range indicators add four more columns per test."
+      - "The unit lives only in the column name, so a table footnote can silently disagree with the values."
+      - "A derived quantity such as best percent change has no natural home — as a column it repeats on every row and cannot carry its own analysis day or source pointer."
+    hints:
+      - "Start with what a programmer hits on day one."
+      - "The unit problem only becomes visible when somebody changes units."
+      - "The derived-quantity problem appears last, when the analysis gets more ambitious."
+    solution: |
+      The order is roughly the order of a study's life: the program structure bites immediately, the
+      column explosion during specification, the unit problem at a mid-study laboratory change, and the
+      derived-quantity problem when somebody asks for a waterfall plot.
+
+      **The deep reason all five have the same cause.** In the wide shape, the set of things being
+      measured is part of the *schema*. Every consequence above is a schema change leaking into a program.
+
+      In BDS the parameter is *data*, so the same five situations become: no program change, no column
+      change, a parameter-list change, and a new parameter with its own records. The only genuine cost is
+      that analyses wanting the wide shape — correlation matrices, MMRM with unstructured covariance —
+      have to transpose, which is why `PARAMCD` is capped at 8 characters and cannot start with a digit.
+    explanation:
+      objective: "Trace the consequences of storing the parameter as schema rather than data."
+      relevant: "That each consequence is a schema change forcing a program change."
+      method: "Order by when in a study's life each one is first felt."
+      interpretation: "The cost of BDS is one transpose; the cost of wide is a program edit per parameter."
+      changes: "A study with two parameters and no derived quantities barely feels any of this, which is why wide datasets survive in small studies."
+
+  - id: adam.bds.unit-change
+    format: open
+    modes: [independent, qc, boss]
+    difficulty: advanced
+    skills: [adam.bds, adam.specs, qc.discrepancy]
+    lesson: adam-bds-structure
+    title: The laboratory changed units at Month 9
+    prompt: |
+      **Interviewer:** "Nine months into your study the central laboratory switched creatinine reporting
+      from mg/dL to µmol/L. SDTM `LB` has both. What do you do to ADLB, and what do you tell the team?"
+    modelAnswer: |
+      The thing I would not do is leave it as one `PARAMCD` with two `PARAM` strings. That violates
+      ADaMIG's one-to-one rule, and far worse, the by-visit mean would average two scales into a number
+      that is not a creatinine concentration at all.
+
+      **First I'd check what SDTM actually has.** `LBORRES`/`LBORRESU` hold whatever the vendor sent, so
+      both units will be there — that is correct and it stays. The question is `LBSTRESN`/`LBSTRESU`: SDTM
+      standardization is supposed to convert results to a single standard unit per test, so if the SDTM
+      mapping did its job, `LBSTRESN` is already on one scale and ADaM has no problem. If it did not, the
+      finding belongs upstream, in SDTM, not patched in ADaM.
+
+      **Assuming it has to be handled in ADaM**, the right answer is to convert to one unit at
+      derivation, keep one `PARAMCD`, and make `PARAM` name that unit. Creatinine has a fixed conversion
+      factor, so nothing is lost. The alternative — two parameters, `CREATMG` and `CREATUM` — is legal
+      and is what you would do if no exact conversion existed, but here it would split every subject's
+      series in half at Month 9 and make change from baseline undefined for anyone who spans the switch.
+      That is a much bigger problem than the conversion.
+
+      **Then the baselines.** Every subject randomized before the switch has a baseline on the old scale
+      and post-baseline values on the new one. If I convert, `BASE` and `CHG` are fine. If anyone had
+      already run analyses, those changes are wrong and have to be regenerated — so this is a rebuild of
+      ADLB and everything downstream, not a patch.
+
+      **What I'd tell the team.** Three things. That the conversion is a derivation decision that needs
+      to be in the specification and in the ADRG, because a reviewer comparing `LBORRES` to `AVAL` will
+      see them disagree for the first nine months and needs to know why. That reference ranges changed
+      too — `ANRLO`/`ANRHI` and therefore `ANRIND` — and the grading criteria are unit-dependent, so the
+      toxicity grades have to be re-derived, not just the values. And that any analysis run before the
+      switch was noticed is invalid, so we need to know what has already gone out.
+
+      **The check I'd add permanently** is the one-to-one test in both directions: no `PARAMCD` with more
+      than one `PARAM`, no `PARAM` with more than one `PARAMCD`. It is two `HAVING` clauses and it would
+      have caught this the first week the new data arrived, rather than at the by-visit table.
+    rubric:
+      - Rejects leaving one PARAMCD with two PARAM values, and says why numerically
+      - Checks whether SDTM standardization should have handled it first
+      - Prefers conversion to one unit over splitting into two parameters, with a reason
+      - Notes the effect on baselines and changes for subjects spanning the switch
+      - Identifies that reference ranges and toxicity grades are unit-dependent and must be re-derived
+      - Treats it as a rebuild of ADLB and everything downstream, not a patch
+      - Requires the conversion to be documented in the specification and the ADRG
+      - Proposes the one-to-one QC check as a permanent guard
+    redFlags:
+      - "Leaves both units in one parameter because conformance tools did not complain"
+      - "Changes ADaM without asking whether SDTM standardization is the right place"
+      - "Converts the values but forgets the reference ranges and grades"
+      - "Treats it as a display issue in PARAM"
+    followUps:
+      - "The test has no exact conversion — say it is an assay change, not a unit change. Now what?"
+      - "How would you word the ADRG sentence?"
+
+  - id: adam.bds.open-structure
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [adam.bds, adam.purpose, communication.interviewing]
+    lesson: adam-bds-structure
+    title: Why is ADaM long?
+    prompt: |
+      **Interviewer:** "Explain to a data scientist who has never worked in clinical trials why ADaM
+      analysis datasets are in long format."
+    modelAnswer: |
+      Because in a clinical study the set of things being measured is data, not schema — and once you
+      accept that, everything else follows.
+
+      Concretely: a wide laboratory dataset needs a column per test, and then a column per test for
+      baseline, change, percent change, both reference limits and the toxicity grade. Seven tests is
+      seventy columns. Adding an eighth test changes the *shape* of the dataset, which means changing
+      every program that reads it. In the long shape the eighth test is more rows and nothing changes.
+
+      The clearest payoff is the table program. By-visit summaries for seven parameters across
+      forty-one visits and two arms is one `group_by` and one `summarise`, because the parameter is a
+      grouping variable rather than a column name.
+
+      Two second-order benefits people miss. **The unit lives inside `PARAM`** and travels with the
+      value, so a table footnote cannot silently disagree with the data. That creates a real operational
+      rule: if the unit changes, the parameter changes, because averaging mg/dL with mmol/L is
+      meaningless. **And derived quantities become parameters.** In the oncology study I've worked with,
+      best percent change in tumor size is a parameter with one record per subject, sitting in the same
+      dataset as the per-scan sums of diameters. It carries its own analysis day and a pointer to the
+      scan it came from, so the waterfall plot and the spaghetti plot come from the same dataset and the
+      same kind of program. As a column it would repeat one value on sixteen rows and could carry
+      neither.
+
+      The honest cost is that some analyses want wide — a correlation matrix, an MMRM with an
+      unstructured covariance, a scatter plot of two parameters. So you transpose. That is why `PARAMCD`
+      is capped at eight characters and cannot start with a digit: it has to be able to become a variable
+      name.
+
+      A data scientist will recognise all of this as tidy data, and that is fair. The difference is that
+      ADaM also standardises the *names* — `PARAMCD`, `AVAL`, `AVISIT`, `BASE`, `CHG` mean the same thing
+      in every study at every sponsor, which is what lets a reviewer open a dataset they have never seen
+      and know what they are looking at.
+    rubric:
+      - Frames the parameter as data rather than schema
+      - Quantifies the column explosion in the wide shape
+      - Names the one-program property for by-visit tables
+      - Explains that the unit lives in PARAM and what rule that creates
+      - Gives a derived-parameter example and says what a column could not carry
+      - Acknowledges the transpose cost and links it to the PARAMCD length limit
+      - Connects to tidy data while noting that ADaM also standardises names
+    redFlags:
+      - "Says 'because the standard requires it' without a reason"
+      - "Cannot name a concrete cost of the wide shape"
+      - "Claims long format is always better for analysis"
+    followUps:
+      - "Which analyses would make you transpose back to wide?"
+      - "ADSL is wide. Why is that the right choice there?"

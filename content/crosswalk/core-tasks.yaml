@@ -1,0 +1,702 @@
+tasks:
+  # ------------------------------------------------------------------
+  - id: xw-missing-comparison
+    title: Comparing a value that might be missing
+    category: derivation
+    summary: |
+      The single most consequential semantic difference between SAS and R. The same conditional
+      produces different subjects in the output, and neither language warns you.
+    skills: [sas.missing-values, r.basics, qc.mindset]
+    sas:
+      code: |
+        /* SAS: missing numeric is smaller than every number */
+        data flagged;
+          set labs;
+          if aval > 3 then high = 'Y';
+          else high = 'N';          /* missing AVAL lands HERE */
+        run;
+
+        /* What you almost always mean */
+        data flagged;
+          set labs;
+          if missing(aval)  then high = '';
+          else if aval > 3  then high = 'Y';
+          else                   high = 'N';
+        run;
+      notes: |
+        A missing numeric in SAS is represented as a value **below every real number** (`.` < −∞ in
+        comparisons). So `if aval > 3` is *false* for a missing value and the record silently falls
+        into the `else` branch — counted as "not high" rather than "unknown".
+
+        The `.A` through `.Z` and `._` special missing values sort above plain `.` but still below
+        all real numbers.
+    r:
+      code: |
+        # R: NA propagates — the comparison is neither TRUE nor FALSE
+        labs$high <- ifelse(labs$AVAL > 3, "Y", "N")   # NA stays NA
+
+        # dplyr, being explicit about the three cases
+        labs <- labs |>
+          mutate(high = case_when(
+            is.na(AVAL) ~ NA_character_,
+            AVAL > 3    ~ "Y",
+            .default    = "N"
+          ))
+      notes: |
+        `NA > 3` evaluates to `NA`, not `FALSE`. That is arguably the safer default — it refuses to
+        guess — but it means `NA` leaks into the result and any downstream `sum()` or `filter()` has
+        to handle it.
+
+        `filter(AVAL > 3)` **drops** NA rows silently, which is a different behaviour again from
+        `ifelse`.
+    python:
+      code: |
+        import numpy as np
+        # pandas: NaN comparisons are False, not NaN
+        labs["high"] = np.where(labs.AVAL > 3, "Y", "N")     # NaN -> "N"
+
+        # Explicit three-way
+        labs["high"] = np.where(labs.AVAL.isna(), None,
+                        np.where(labs.AVAL > 3, "Y", "N"))
+      notes: |
+        pandas sits between the two: `NaN > 3` is `False` (like SAS's outcome, though for a different
+        reason), so a missing value again falls into the `else` branch.
+
+        `pd.NA` with nullable dtypes propagates like R's `NA` — so the behaviour depends on the dtype,
+        which is its own trap.
+    semantics: |
+      **Three languages, three answers to "is a missing value greater than 3?"**
+
+      | | `missing > 3` | Where the record ends up |
+      |---|---|---|
+      | SAS | `false` (missing sorts low) | the `else` branch — counted as "not high" |
+      | R | `NA` | `NA` in the result; dropped by `filter()` |
+      | pandas (float) | `False` | the `else` branch |
+
+      In a clinical context this decides **how many subjects appear in a table cell**. A responder
+      analysis where "missing" silently becomes "non-responder" is a real analysis decision — often a
+      defensible one — but it must be a *decision in the SAP*, not an artefact of which language the
+      programmer used.
+
+      This is also why a SAS-versus-R QC comparison so often differs by exactly the number of subjects
+      with missing data, and why that is the first thing to check when counts disagree by a small amount.
+    pitfalls:
+      - "Writing `if x > 3 then … else …` in SAS without a `missing()` branch — the commonest way a missing value becomes a definite answer."
+      - "Assuming `filter(AVAL > 3)` in dplyr keeps NA rows. It drops them, while `ifelse` keeps them as NA."
+      - "Relying on pandas NaN comparison semantics after switching a column to a nullable dtype, where the behaviour changes to NA-propagating."
+
+  # ------------------------------------------------------------------
+  - id: xw-merge-join
+    title: Merging two datasets on a key
+    category: data
+    summary: |
+      SAS's MERGE and SQL's JOIN differ in what happens when keys repeat or fail to match — and SAS's
+      default silence about both is the source of a large share of clinical data bugs.
+    skills: [sas.merge, r.joins, sql.joins, qc.compare]
+    sas:
+      code: |
+        proc sort data=adsl; by usubjid; run;
+        proc sort data=advs; by usubjid; run;
+
+        data combined;
+          merge advs (in=a) adsl (in=b);
+          by usubjid;
+          if a;                 /* left join: keep all ADVS records */
+        run;
+
+        /* Reconcile: who is in one and not the other? */
+        data only_vs only_sl;
+          merge advs (in=a) adsl (in=b);
+          by usubjid;
+          if a and not b then output only_vs;
+          if b and not a then output only_sl;
+        run;
+      notes: |
+        **Both datasets must be sorted by the BY variables** or the step errors. That error is a
+        feature — it is the one unsafe merge SAS does catch.
+
+        `IN=` variables are how you control the join type: `if a` is a left join, `if a and b` an inner
+        join, no condition a full join.
+
+        **The dangerous case is many-to-many.** SAS does not error; it produces a result that is
+        neither a Cartesian product nor a sensible join — it matches observation-by-observation within
+        the BY group and carries the last value forward. The output looks plausible and is almost
+        never what anyone wanted.
+    r:
+      code: |
+        library(dplyr)
+
+        combined <- advs |>
+          left_join(adsl, by = "USUBJID", relationship = "many-to-one")
+
+        # Reconciliation is a first-class verb
+        anti_join(advs, adsl, by = "USUBJID")   # in ADVS, not in ADSL
+        anti_join(adsl, advs, by = "USUBJID")   # in ADSL, not in ADVS
+      notes: |
+        No sorting required — joins are by key, not by position.
+
+        **`relationship = "many-to-one"` makes the expectation explicit and errors if it is violated.**
+        Since dplyr 1.1 an unexpected many-to-many join warns by default; declaring the relationship
+        turns that warning into an error, which is what you want in production code.
+
+        `anti_join()` has no SAS equivalent as a single verb, and it is the fastest reconciliation tool
+        in any of these languages.
+    sql:
+      code: |
+        SELECT v.*, s.TRT01P, s.ITTFL
+        FROM   advs v
+        LEFT JOIN adsl s ON v.USUBJID = s.USUBJID;
+
+        -- Reconciliation
+        SELECT v.USUBJID FROM advs v
+        LEFT JOIN adsl s ON v.USUBJID = s.USUBJID
+        WHERE s.USUBJID IS NULL;
+      notes: |
+        SQL's join type is explicit in the syntax, which is its main advantage over SAS's `IN=` idiom —
+        you cannot accidentally write a full join when you meant a left join.
+
+        A many-to-many join in SQL produces a genuine **Cartesian product within the key**, which is
+        mathematically defined and usually obviously wrong (the row count explodes). SAS's version is
+        subtler and therefore more dangerous.
+    semantics: |
+      **The three differ on what they do when the data violates your assumption.**
+
+      | Situation | SAS `MERGE` | dplyr join | SQL join |
+      |---|---|---|---|
+      | Unsorted input | **Errors** | Fine | Fine |
+      | Key missing on one side | Silent, controlled by `IN=` | Controlled by join type | Controlled by join type |
+      | Duplicate keys on one side | **Silent, non-standard result** | Warns (dplyr ≥ 1.1) | Cartesian within key |
+      | Duplicate keys on both sides | **Silent, wrong** | Warns / errors with `relationship` | Cartesian — row count explodes |
+
+      **The practical rule for clinical work:** assert the grain before every merge. Whatever the
+      language, check that the "one" side really has one row per key:
+
+      ```r
+      stopifnot(!any(duplicated(adsl$USUBJID)))
+      ```
+
+      A merge that silently duplicates records inflates every count downstream, and because the
+      duplicated records are internally consistent, nothing looks wrong until someone reconciles a
+      subject count against the disposition table.
+    pitfalls:
+      - "SAS MERGE with duplicate keys on both sides: no error, no warning, and a result that matches record-by-record within the BY group rather than producing a Cartesian product."
+      - "Forgetting `if a;` in a SAS merge, which silently turns an intended left join into a full join and adds subjects with no vital-signs records."
+      - "Joining on a key that lost its leading zeros. Current dplyr errors when the key types differ (numeric vs character), but once the damaged value is cast back to character the types agree, `'1'` never matches `'001'`, and the join silently returns all-missing."
+
+  # ------------------------------------------------------------------
+  - id: xw-first-last
+    title: Selecting the first or last record per subject
+    category: derivation
+    summary: |
+      The baseline-selection pattern, written four ways. The differences are in tie handling and in how
+      visible the sort dependency is.
+    skills: [sas.by-group, r.dplyr, sql.window, adam.baseline]
+    dataset: cardio/adam/advs
+    sas:
+      code: |
+        proc sort data=labs out=pre;
+          where adt <= trtsdt and not missing(aval);
+          by usubjid paramcd adt lbseq;      /* LBSEQ breaks date ties */
+        run;
+
+        data baseline;
+          set pre;
+          by usubjid paramcd;
+          if last.paramcd then ablfl = 'Y';
+        run;
+      notes: |
+        `FIRST.` and `LAST.` are automatic variables created by the `BY` statement. They are temporary —
+        they do not appear in the output dataset.
+
+        **The sort determines the answer**, and the tie-breaker (`LBSEQ`) is what makes the result
+        deterministic when two assessments share a date. Without it, the "last" record depends on the
+        input order, and a rerun on re-extracted data can pick a different one.
+
+        Restrict with `WHERE` in the PROC SORT rather than a subsetting `IF` in the DATA step: a
+        subsetting `IF` runs *after* `FIRST.`/`LAST.` are computed, so it silently corrupts them.
+    r:
+      code: |
+        library(dplyr)
+
+        baseline <- labs |>
+          filter(ADT <= TRTSDT, !is.na(AVAL)) |>
+          arrange(USUBJID, PARAMCD, ADT, LBSEQ) |>
+          slice_tail(n = 1, by = c(USUBJID, PARAMCD)) |>
+          mutate(ABLFL = "Y")
+
+        # Equivalent, and clearer about ties:
+        baseline <- labs |>
+          filter(ADT <= TRTSDT, !is.na(AVAL)) |>
+          slice_max(order_by = tibble(ADT, LBSEQ), n = 1, by = c(USUBJID, PARAMCD))
+      notes: |
+        `slice_tail(n = 1, by = ...)` takes the last row per group **after** the arrange, so the sort is
+        still what decides — but the filter is visibly applied first, which is the part SAS makes easy
+        to get wrong.
+
+        `slice_max()` with `with_ties = TRUE` (the default) returns **all** tied rows, which is a
+        genuinely useful default: if your tie-breaker is inadequate you get two baseline rows and a
+        downstream check catches it, instead of one arbitrary row and silence.
+    sql:
+      code: |
+        SELECT * FROM (
+          SELECT l.*,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY USUBJID, PARAMCD
+                   ORDER BY ADT DESC, LBSEQ DESC
+                 ) AS rn
+          FROM   labs l
+          WHERE  ADT <= TRTSDT AND AVAL IS NOT NULL
+        ) t
+        WHERE rn = 1;
+      notes: |
+        `ROW_NUMBER()` always returns exactly one row per partition, breaking ties arbitrarily if the
+        `ORDER BY` does not fully determine the order.
+
+        `RANK()` returns all tied rows (like `slice_max(with_ties = TRUE)`); `DENSE_RANK()` differs again
+        in how it numbers after a tie. Choosing between them *is* the tie-handling decision, made
+        explicit — which is the main reason SQL's version of this pattern is the easiest to review.
+    python:
+      code: |
+        baseline = (
+            labs.query("ADT <= TRTSDT and AVAL.notna()")
+                .sort_values(["USUBJID", "PARAMCD", "ADT", "LBSEQ"])
+                .groupby(["USUBJID", "PARAMCD"], as_index=False)
+                .tail(1)
+                .assign(ABLFL="Y")
+        )
+      notes: |
+        `groupby().tail(1)` relies on the preceding `sort_values`. pandas' sort is **stable** by
+        default (mergesort for `kind="stable"`, quicksort otherwise — and `sort_values` defaults to
+        quicksort, which is *not* stable), so for reproducible tie handling pass
+        `kind="stable"` or include enough sort keys to make ties impossible.
+    semantics: |
+      All four do the same thing and differ in **what happens when the sort does not fully determine
+      the order**:
+
+      | | Tied records |
+      |---|---|
+      | SAS `LAST.` | Returns one — whichever the sort happened to put last. Silent. |
+      | dplyr `slice_tail` | Returns one. Silent. |
+      | dplyr `slice_max` | Returns **all** tied rows by default — the tie becomes visible |
+      | SQL `ROW_NUMBER()` | Returns one, arbitrarily. Silent. |
+      | SQL `RANK()` | Returns all tied rows |
+      | pandas `.tail(1)` | Returns one; depends on sort stability |
+
+      **For baseline selection specifically**, ADaM requires at most one `ABLFL = 'Y'` per subject and
+      parameter — so a method that returns all ties will fail a conformance check loudly, and a method
+      that silently picks one will pass while being non-reproducible.
+
+      The professional answer is to **make ties impossible**: sort by enough keys (date, then time, then
+      sequence number) that the order is fully determined, and then assert one row per group afterwards.
+    pitfalls:
+      - "Using a subsetting IF after the BY statement in SAS, which computes FIRST./LAST. on records the IF later discards — the classic by-group bug."
+      - "Omitting a tie-breaker, producing a result that changes between runs when the source data is re-extracted in a different order."
+      - "Assuming pandas `sort_values` is stable — it defaults to quicksort, which is not."
+
+  # ------------------------------------------------------------------
+  - id: xw-transpose
+    title: Reshaping between long and wide
+    category: reshape
+    summary: |
+      BDS data is long; many tables and listings need it wide. The languages differ sharply in how much
+      they tell you when the reshape is ambiguous.
+    skills: [sas.transpose, r.tidyr, sql.aggregate]
+    sas:
+      code: |
+        proc sort data=advs; by usubjid avisitn; run;
+
+        proc transpose data=advs out=wide (drop=_name_) prefix=V;
+          by usubjid avisitn;
+          id paramcd;              /* becomes the new column names */
+          var aval;
+        run;
+      notes: |
+        `ID` supplies the new column names, `VAR` the values, `BY` the rows that stay.
+
+        **The requirement people miss: the `ID` value must be unique within each `BY` group.**
+        If a subject has two `SYSBP` records at the same visit, PROC TRANSPOSE writes
+        `ERROR: The ID value "SYSBP" occurs twice in the same BY group` — which is at least loud.
+
+        `_NAME_` holds the name of the transposed variable and is almost always dropped.
+    r:
+      code: |
+        library(tidyr)
+
+        wide <- advs |>
+          select(USUBJID, AVISITN, PARAMCD, AVAL) |>
+          pivot_wider(names_from = PARAMCD, values_from = AVAL)
+
+        # Back to long
+        long <- wide |>
+          pivot_longer(cols = -c(USUBJID, AVISITN),
+                       names_to = "PARAMCD", values_to = "AVAL")
+      notes: |
+        `pivot_wider()` **does not error on duplicates** — it silently produces **list-columns**
+        containing vectors, and everything downstream breaks in a confusing way.
+
+        Pass `values_fn = length` first to *count* duplicates as a diagnostic, or
+        `unused_fn`/`values_fn = mean` to collapse them deliberately. Checking for duplicates before
+        pivoting is the habit worth building:
+
+        ```r
+        advs |> count(USUBJID, AVISITN, PARAMCD) |> filter(n > 1)
+        ```
+    python:
+      code: |
+        wide = advs.pivot_table(
+            index=["USUBJID", "AVISITN"],
+            columns="PARAMCD",
+            values="AVAL",
+            aggfunc="first",       # explicit about duplicate handling
+        ).reset_index()
+
+        long = wide.melt(id_vars=["USUBJID", "AVISITN"],
+                         var_name="PARAMCD", value_name="AVAL")
+      notes: |
+        **`pivot_table` silently aggregates** — its default `aggfunc` is `"mean"`, so duplicate records
+        are averaged without comment. That is the most dangerous default in this whole crosswalk:
+        two blood-pressure readings become their average and nothing indicates it happened.
+
+        `df.pivot()` (no `_table`) raises on duplicates instead, which is the safer choice when you
+        expect none.
+    sql:
+      code: |
+        SELECT USUBJID, AVISITN,
+               MAX(CASE WHEN PARAMCD = 'SYSBP' THEN AVAL END) AS SYSBP,
+               MAX(CASE WHEN PARAMCD = 'DIABP' THEN AVAL END) AS DIABP
+        FROM   advs
+        GROUP  BY USUBJID, AVISITN;
+      notes: |
+        Standard SQL has no general pivot, so the conditional-aggregate idiom above is the portable
+        form. It requires naming every output column, which is tedious — and is also why it cannot
+        surprise you.
+
+        The `MAX()` is doing the duplicate handling: with one record per cell it simply returns that
+        record, and with two it silently returns the larger. Same trap, made visible by the fact that
+        you had to type an aggregate function.
+    semantics: |
+      **The whole difference is duplicate handling**, and the defaults run from loud to silent:
+
+      | | Duplicate `ID` within a group |
+      |---|---|
+      | SAS `PROC TRANSPOSE` | **Errors** — loud and unmissable |
+      | R `pivot_wider()` | Silently creates list-columns; breaks later |
+      | pandas `pivot_table()` | **Silently averages** (`aggfunc="mean"` default) |
+      | pandas `pivot()` | Raises |
+      | SQL conditional aggregate | Silently applies whatever aggregate you wrote |
+
+      In clinical data, duplicates at this stage mean something real: an unscheduled visit windowed
+      into a scheduled one, a repeated measurement, a merge that went wrong upstream. **The right
+      response is never to let the reshape resolve it** — it is to find out why the duplicate exists
+      and handle it deliberately, usually with an `ANL01FL`-style flag that records which record the
+      analysis uses.
+    pitfalls:
+      - "pandas `pivot_table` averaging duplicate records with no warning because `aggfunc` defaults to `mean`."
+      - "tidyr `pivot_wider` producing list-columns that only fail several steps later, far from the cause."
+      - "Reshaping before checking the grain, so a duplicate created by an earlier bad merge is quietly absorbed."
+
+  # ------------------------------------------------------------------
+  - id: xw-quantiles
+    title: Computing quartiles
+    category: summary
+    summary: |
+      SAS and R disagree on Q1 and Q3 by default. The medians always agree, which is why the
+      discrepancy is discovered late and always in a QC comparison.
+    skills: [stats.descriptive, r.sas-translation, qc.compare]
+    sas:
+      code: |
+        proc means data=adsl n mean std median q1 q3 maxdec=4;
+          var age;
+        run;
+        /* QNTLDEF=5 is the default; PROC UNIVARIATE calls it PCTLDEF=5 */
+      notes: |
+        SAS's default (`QNTLDEF=5` / `PCTLDEF=5`) is the *empirical distribution function with
+        averaging*: write $np = j + g$; if $g = 0$ average $x_{(j)}$ and $x_{(j+1)}$, otherwise take
+        $x_{(j+1)}$.
+
+        SAS offers definitions 1–5 and the option name differs by procedure, which is its own small trap.
+    r:
+      code: |
+        quantile(adsl$AGE, c(0.25, 0.75))            # type 7 — R's default
+        quantile(adsl$AGE, c(0.25, 0.75), type = 2)  # matches SAS's default
+      notes: |
+        R's default is **type 7**: linear interpolation between order statistics,
+        $h = (n-1)p + 1$.
+
+        R implements nine definitions. **Type 2 is the one that matches SAS's default** — worth
+        committing to memory, because it is the single most common cause of a QC mismatch in a
+        demographics table.
+    python:
+      code: |
+        adsl.AGE.quantile([0.25, 0.75])                              # linear = type 7
+        np.quantile(adsl.AGE, [0.25, 0.75],
+                    method="averaged_inverted_cdf")                  # matches SAS
+      notes: |
+        pandas and NumPy default to `"linear"`, which is type 7 — same as R.
+
+        NumPy ≥ 1.22 exposes all nine definitions through `method=`;
+        `"averaged_inverted_cdf"` is the SAS-default equivalent.
+    semantics: |
+      **A worked case.** For `2, 4, 4, 5, 7, 9, 11, 12, 15, 18` ($n = 10$):
+
+      | | Q1 |
+      |---|---:|
+      | SAS default (`QNTLDEF=5`) / R `type = 2` | **4.00** |
+      | R / pandas / NumPy default (type 7) | **4.25** |
+
+      The **median is identical** under every definition — with even $n$ every rule averages the two
+      middle values, and with odd $n$ every rule returns the middle one. That is exactly why this
+      discrepancy hides: a QC comparison shows N, mean, SD, median, min and max all matching, and
+      only Q1 and Q3 differing, in only some cells.
+
+      **The resolution is a SAP or shell decision, not a preference.** If the production table is SAS
+      and QC is in R, QC must pass `type = 2`. Discovering this in the last week before a delivery is
+      a rite of passage that is better skipped.
+    pitfalls:
+      - "Concluding one program has a bug when the quartile definition is the whole difference — check the median first, because if the medians agree and only quartiles differ, this is almost certainly the cause."
+      - "Using `summary()` in R for a QC check: it reports type 7 quartiles and cannot be changed."
+      - "Assuming Excel agrees with either — `QUARTILE.INC` is type 7 and `QUARTILE.EXC` is type 6, so a third answer is available."
+
+  # ------------------------------------------------------------------
+  - id: xw-rounding
+    title: Rounding a value for display
+    category: summary
+    summary: |
+      SAS rounds half away from zero; R rounds half to even. On a table of hundreds of cells, a handful
+      will differ by one in the last digit — and every one of them is a QC finding to explain.
+    skills: [stats.descriptive, qc.compare, tlf.summary-stats]
+    sas:
+      code: |
+        data _null_;
+          x = round(0.5);   put x=;   /* 1 */
+          y = round(1.5);   put y=;   /* 2 */
+          z = round(2.5);   put z=;   /* 3 */
+        run;
+      notes: |
+        SAS's `ROUND()` rounds **half away from zero** — the arithmetic most people were taught.
+        `ROUND(2.5) = 3`.
+
+        Formats (`5.1`) also round half away from zero, so SAS is at least internally consistent.
+    r:
+      code: |
+        round(0.5)    # 0
+        round(1.5)    # 2
+        round(2.5)    # 2   <- banker's rounding
+        round(-0.5)   # 0
+
+        # Half-away-from-zero, to match SAS
+        round_half_up <- function(x, digits = 0) {
+          z <- abs(x) * 10^digits
+          sign(x) * trunc(z + 0.5) / 10^digits
+        }
+      notes: |
+        R implements **IEC 60559 / IEEE 754 round-half-to-even** ("banker's rounding"), which is
+        unbiased over many values but disagrees with SAS on exact halves.
+
+        R's own documentation notes that the result for exact halves can still be affected by floating-point
+        representation — `round(0.15, 1)` is not reliably `0.2` in any of these languages, because 0.15
+        is not exactly representable in binary.
+    python:
+      code: |
+        round(0.5)     # 0
+        round(1.5)     # 2
+        round(2.5)     # 2   <- same as R
+
+        from decimal import Decimal, ROUND_HALF_UP
+        float(Decimal("2.5").quantize(Decimal("1"), rounding=ROUND_HALF_UP))   # 3.0
+      notes: |
+        Python's built-in `round()` and NumPy both use round-half-to-even, like R.
+
+        The `decimal` module gives exact decimal arithmetic with a selectable rounding mode, which is
+        the right tool when the rounding rule genuinely matters.
+    semantics: |
+      | Value | SAS | R / Python / NumPy |
+      |---:|---:|---:|
+      | 0.5 | **1** | **0** |
+      | 1.5 | 2 | 2 |
+      | 2.5 | **3** | **2** |
+      | −0.5 | **−1** | **0** |
+
+      Half-to-even is *statistically* better — it does not bias a long column of rounded values upward.
+      Half-away-from-zero is what the reader expects and what SAS does, so it is what most clinical
+      tables contain.
+
+      **Two rules that matter more than the choice itself:**
+
+      **Round once, at the end.** Rounding intermediate values and then rounding again compounds the
+      error. Compute at full precision; round only for display.
+
+      **Exact halves are rarer than they look.** Most values you round are not exactly x.5 in binary, so
+      the two conventions agree. The discrepancies appear on values that *are* exactly representable —
+      typically values that came from a count, a simple average of integers, or a difference of two
+      one-decimal numbers. That is why a QC mismatch of this kind clusters in particular columns rather
+      than scattering randomly.
+    pitfalls:
+      - "Rounding intermediate results, then rounding again for display — the errors compound and the final value can be off by more than one in the last digit."
+      - "Assuming a QC difference of 0.1 in a few cells is a real discrepancy. Check whether the unrounded values are exact halves first."
+      - "Expecting `round(0.15, 1)` to be 0.2 in any language — 0.15 has no exact binary representation, so the answer depends on the stored value, not on the rounding rule."
+
+  # ------------------------------------------------------------------
+  - id: xw-ifelse-types
+    title: Conditional assignment and type coercion
+    category: derivation
+    summary: |
+      R's base `ifelse()` strips attributes, which turns Dates into numbers. Every clinical dataset is
+      full of dates, so this one bites early and hard.
+    skills: [r.basics, sas.data-step, qc.code-review]
+    sas:
+      code: |
+        data flagged;
+          set ae;
+          if aestdt >= trtsdt then teae_dt = aestdt;
+          else                     teae_dt = .;
+          format teae_dt yymmdd10.;
+        run;
+      notes: |
+        SAS dates are plain numbers with a format attached, so there is no type to lose. The risk is
+        the opposite one: **forgetting the `FORMAT` statement**, which leaves the variable displaying as
+        23481 instead of 2024-04-15. The value is right; only the display is wrong.
+    r:
+      code: |
+        # base ifelse() DROPS the Date class
+        class(ifelse(TRUE, as.Date("2025-01-01"), as.Date("2025-01-02")))
+        #> "numeric"     <- 20089, not a date
+
+        # dplyr::if_else() preserves it, and type-checks both branches
+        class(dplyr::if_else(TRUE, as.Date("2025-01-01"), as.Date("2025-01-02")))
+        #> "Date"
+      notes: |
+        `ifelse()` builds its result from the *first* element's type and strips attributes, so a `Date`
+        (a numeric with a class attribute) comes back as a bare number.
+
+        **`dplyr::if_else()` is strict**: both branches must have the same type, and the result keeps
+        the class. The strictness is the feature — it turns a silent corruption into an error at the
+        point of the mistake.
+
+        `case_when()` behaves the same way and requires an explicitly typed default
+        (`NA_character_`, `NA_Date_`) rather than a bare `NA`.
+    python:
+      code: |
+        import numpy as np, pandas as pd
+        # np.where also loses datetime dtype in some combinations
+        s = pd.Series(pd.to_datetime(["2025-01-01", "2025-01-02"]))
+        np.where(s > pd.Timestamp("2025-01-01"), s, pd.NaT).dtype   # object
+
+        # Prefer pandas' own masking, which preserves dtype
+        s.where(s > pd.Timestamp("2025-01-01")).dtype               # datetime64[ns]
+      notes: |
+        `np.where` drops down to NumPy, which has no notion of pandas' extension dtypes, so the result
+        can come back as `object`. `Series.where()` and `Series.mask()` stay inside pandas and preserve
+        the dtype.
+    semantics: |
+      | | Preserves `Date`? | Type-checks branches? |
+      |---|---|---|
+      | SAS `if/else` | N/A — dates are numbers | No |
+      | R `ifelse()` | **No** | No |
+      | `dplyr::if_else()` | **Yes** | **Yes** |
+      | `dplyr::case_when()` | Yes | Yes |
+      | `np.where` | Sometimes | No |
+      | `Series.where()` | Yes | Yes |
+
+      **Why this matters in clinical work specifically:** a silently de-classed date does not error.
+      It becomes a number, propagates through the pipeline, and surfaces as `20089` in a listing or as
+      a nonsensical study day. Nothing warns you, and the cause is several steps upstream of the symptom.
+
+      The general principle is worth stating: **prefer the strict function.** `if_else` refusing to
+      combine a `Date` with a number is not an inconvenience — it is the function telling you that the
+      two branches of your derivation disagree about what kind of thing they produce.
+    pitfalls:
+      - "`ifelse(cond, some_date, NA)` returning a number: the bare `NA` is logical, and the result de-classes to numeric."
+      - "Using `case_when(... , TRUE ~ NA)` instead of `NA_character_` / `NA_Date_`, which errors in recent dplyr and silently coerced in older versions."
+      - "Forgetting a FORMAT statement in SAS, so a correct date value displays as a five-digit integer in a listing."
+
+  # ------------------------------------------------------------------
+  - id: xw-counts-percent
+    title: Counting subjects with percentages
+    category: summary
+    summary: |
+      Producing "n (%)" looks trivial and is where denominators go wrong. The languages differ in how
+      easy it is to accidentally count records instead of subjects.
+    skills: [tlf.denominators, sas.freq, r.dplyr, qc.discrepancy]
+    dataset: cardio/adam/adsl
+    sas:
+      code: |
+        /* Denominator from ADSL — the population, not the AE dataset */
+        proc sql noprint;
+          select count(*) into :n_saf
+          from adsl where saffl = 'Y' and trt01a = 'VTX-221 20 mg';
+        quit;
+
+        proc sql;
+          create table ae_pt as
+          select aedecod,
+                 count(distinct usubjid) as n_subj,
+                 count(distinct usubjid) / &n_saf * 100 as pct
+          from   adae
+          where  trtemfl = 'Y' and trt01a = 'VTX-221 20 mg'
+          group  by aedecod;
+        quit;
+      notes: |
+        `COUNT(DISTINCT USUBJID)` is the whole point — a subject with three episodes of nausea
+        contributes **one** to the nausea row.
+
+        **The denominator must come from ADSL**, not from the AE dataset. Subjects with no adverse
+        events do not appear in ADAE at all, so a denominator computed from ADAE silently excludes
+        them and every percentage comes out too high.
+    r:
+      code: |
+        n_saf <- adsl |>
+          filter(SAFFL == "Y", TRT01A == "VTX-221 20 mg") |>
+          nrow()
+
+        ae_pt <- adae |>
+          filter(TRTEMFL == "Y", TRT01A == "VTX-221 20 mg") |>
+          summarise(n_subj = n_distinct(USUBJID), .by = AEDECOD) |>
+          mutate(pct = n_subj / n_saf * 100) |>
+          arrange(desc(n_subj))
+      notes: |
+        `n_distinct(USUBJID)` rather than `n()` — `n()` counts **records**, which for adverse events is
+        the wrong unit and produces percentages that can exceed 100%.
+
+        A percentage above 100% in an AE table is the unmistakable symptom, and a welcome one, because
+        the subtler version is a percentage that is merely too high.
+    sql:
+      code: |
+        WITH denom AS (
+          SELECT COUNT(*) AS n_saf
+          FROM   adsl
+          WHERE  SAFFL = 'Y' AND TRT01A = 'VTX-221 20 mg'
+        )
+        SELECT a.AEDECOD,
+               COUNT(DISTINCT a.USUBJID) AS n_subj,
+               100.0 * COUNT(DISTINCT a.USUBJID) / d.n_saf AS pct
+        FROM   adae a CROSS JOIN denom d
+        WHERE  a.TRTEMFL = 'Y' AND a.TRT01A = 'VTX-221 20 mg'
+        GROUP  BY a.AEDECOD, d.n_saf
+        ORDER  BY n_subj DESC;
+      notes: |
+        The `100.0 *` matters: in SQL dialects with integer division, `COUNT(...) / n_saf` truncates to
+        0 for every row. Multiplying by a float first forces floating-point arithmetic.
+
+        The CROSS JOIN against a one-row denominator table is the idiomatic way to make the denominator
+        explicit rather than hard-coded.
+    semantics: |
+      **Three separate decisions hide in "n (%)", and all three belong in the shell:**
+
+      **1. What is being counted?** Subjects or events. AE tables count subjects, with event counts
+      usually shown on a separate row. `COUNT(DISTINCT USUBJID)` versus `COUNT(*)`.
+
+      **2. What is the denominator?** The analysis population from ADSL — not the number of subjects
+      appearing in the AE dataset. Subjects with no events must still be in the denominator.
+
+      **3. Which population?** Safety (treated, as-treated) for AE tables; ITT (randomized, as-randomized)
+      for efficacy. A subject can be in different arms in the two.
+
+      **The reliable QC check** is that the denominators in an AE table match the "N=" in the column
+      headers, which match the disposition table, which match ADSL. If any link in that chain differs,
+      one of the three decisions above was made differently somewhere.
+    pitfalls:
+      - "Computing the denominator from the AE dataset, which excludes subjects who had no adverse events and inflates every percentage."
+      - "Using `n()` or `COUNT(*)` instead of a distinct subject count, producing percentages above 100% for common events."
+      - "Using the ITT population for a safety table, or the safety population for an efficacy table — the arms differ for any subject who received the wrong treatment."
+      - "Integer division in SQL silently returning 0 for every percentage."

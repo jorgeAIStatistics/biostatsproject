@@ -1,0 +1,769 @@
+items:
+  - id: r.dplyr.grouping-leak
+    format: mcq
+    modes: [check, debug, interview]
+    difficulty: advanced
+    skills: [r.dplyr, qc.mindset]
+    lesson: r-dplyr-verbs
+    title: The summary that returned too many rows
+    prompt: |
+      ```r
+      advs |>
+        group_by(USUBJID, AVISITN) |>
+        summarise(n = n()) |>
+        summarise(mean_n = mean(n))
+      ```
+
+      You expected one row. You got one row **per subject**. Why?
+    choices:
+      - text: "`summarise()` drops only the **last** grouping variable, so the result was still grouped by USUBJID and the second summarise operated within each subject."
+        correct: true
+        feedback: "Correct. With two grouping variables the result keeps the first. dplyr warns, but the warning is easy to miss in a long script."
+      - text: "`summarise()` never removes grouping; you must always call `ungroup()`."
+        feedback: "It removes the last grouping variable. With a single grouping variable the result is fully ungrouped."
+      - text: "`n()` returned a vector rather than a single value."
+        feedback: "`n()` always returns one value per group. The issue is which groups existed."
+      - text: "The pipe re-applied the grouping to the second summarise."
+        feedback: "The pipe passes the object along unchanged. The grouping was carried on the object itself as an attribute."
+    solution: |
+      `summarise()` **peels off one grouping level**. Grouping by `USUBJID` and `AVISITN` leaves the
+      result grouped by `USUBJID`, so the second `summarise()` runs within each subject.
+
+      Three fixes:
+
+      ```r
+      # 1. Drop grouping explicitly
+      group_by(USUBJID, AVISITN) |> summarise(n = n(), .groups = "drop")
+
+      # 2. Ungroup as its own step
+      group_by(USUBJID, AVISITN) |> summarise(n = n()) |> ungroup()
+
+      # 3. Use .by, which never leaves a grouped result
+      summarise(n = n(), .by = c(USUBJID, AVISITN))
+      ```
+
+      **`.by` is the better default** precisely because grouping cannot leak out of it into a later verb.
+    explanation:
+      objective: "Explain a result with unexpected row count caused by residual grouping."
+      given: "A two-stage summary over two grouping variables."
+      relevant: "That summarise() removes only the last grouping level."
+      method: "Track the grouping state after each verb rather than assuming it resets."
+      assumptions: "dplyr emits a message about the retained grouping, which is easy to lose among other output."
+      interpretation: "The second summarise ran inside each subject, so it produced one row per subject rather than one row overall."
+      changes: "With a single grouping variable the result is ungrouped and the same pipeline would have worked, which is why the bug appears only on multi-level grouping."
+      interviewer: "That you name .by as the structural fix rather than only reaching for ungroup()."
+
+  - id: r.dplyr.filter-na
+    format: numeric
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [r.dplyr, r.basics]
+    lesson: r-dplyr-verbs
+    title: How many rows survive the filter
+    prompt: |
+      ```r
+      d <- data.frame(x = c(1, NA, 5, NA, 8))
+      nrow(filter(d, x > 3))
+      ```
+
+      How many rows does this return?
+    answer: 2
+    tolerance: 0
+    hints:
+      - "`filter()` keeps rows where the condition is TRUE."
+      - "What does `NA > 3` evaluate to — TRUE, FALSE, or NA?"
+      - "Is NA the same as TRUE?"
+    solution: |
+      **2** — the rows holding 5 and 8.
+
+      `filter()` keeps only rows where the condition is `TRUE`. For the two `NA` rows the condition is
+      `NA`, which is not `TRUE`, so they are dropped.
+
+      To keep them:
+
+      ```r
+      filter(d, x > 3 | is.na(x))   # 4 rows
+      ```
+
+      **This is the most common cause of a silently shrinking denominator.** A filter intended to select
+      a subgroup also removes every subject whose value is unknown, changing the population without
+      saying so. If the SAP intends those subjects to be excluded, that is fine — but it should be a
+      stated decision, not a side effect.
+    explanation:
+      objective: "Predict how filter() treats missing values."
+      given: "A five-element vector with two NAs and a greater-than condition."
+      relevant: "That filter keeps only TRUE, and NA is not TRUE."
+      calculating: "The count of elements strictly greater than 3 and not missing."
+      numbers: "Values 5 and 8 satisfy the condition; 1 does not; the two NAs evaluate to NA and are dropped."
+      assumptions: "Excluding unknown values may or may not be the intended analysis decision — the code does not say."
+      interpretation: "The denominator changed without any indication in the output."
+      changes: "filter(x > 3 | is.na(x)) keeps them; SAS's WHERE would also drop them, but SAS's if/else would have assigned a definite value instead."
+      interviewer: "That you connect it to denominators rather than treating it as a syntax quirk."
+
+  - id: r.dplyr.mutate-vs-summarise
+    format: mcq
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [r.dplyr]
+    lesson: r-dplyr-verbs
+    title: Which verb keeps every row
+    prompt: |
+      `advs` has **3,082** rows from **270** subjects.
+
+      ```r
+      a <- advs |> mutate(subj_mean = mean(AVAL, na.rm = TRUE), .by = USUBJID)
+      b <- advs |> summarise(subj_mean = mean(AVAL, na.rm = TRUE), .by = USUBJID)
+      ```
+
+      How many rows do `a` and `b` have?
+    choices:
+      - text: "`a` has 3,082 and `b` has 270."
+        correct: true
+        feedback: "Correct. `mutate()` preserves the row count and recycles the group value across every row; `summarise()` collapses each group to a single row."
+      - text: "Both have 270."
+        feedback: "`mutate()` never changes the row count — that is its defining property."
+      - text: "Both have 3,082."
+        feedback: "`summarise()` collapses to one row per group, so it cannot return the original row count unless every group has one row."
+      - text: "`a` has 270 and `b` has 3,082."
+        feedback: "That reverses the two verbs."
+    solution: |
+      **`a` = 3,082 rows; `b` = 270 rows.**
+
+      `mutate()` adds a column and keeps every row — the single group mean is **recycled** across all of
+      that subject's rows. `summarise()` collapses each group to one row.
+
+      **When to use which:**
+
+      Use `mutate()` when you need the group value alongside each record — computing a deviation from the
+      subject's own mean, flagging records above it, or attaching a denominator to every row.
+
+      Use `summarise()` when one row per group *is* the result — a table row, a subject-level dataset.
+
+      The SAS analogue of `mutate()` with a group statistic is a two-pass pattern: `PROC MEANS` to a
+      summary dataset, then a `MERGE` back onto the detail records. dplyr does it in one line.
+    explanation:
+      objective: "Distinguish the two aggregating verbs by their effect on row count."
+      given: "The same group statistic computed with mutate and with summarise."
+      relevant: "That mutate preserves rows and summarise collapses them."
+      calculating: "The resulting row counts."
+      numbers: "3,082 input rows from 270 subjects; mutate returns 3,082, summarise returns 270."
+      method: "mutate recycles a length-1 group value across the group; summarise reduces the group to one row."
+      interpretation: "The choice is determined by what one row of the output should represent."
+      changes: "In SAS the mutate behaviour requires PROC MEANS followed by a MERGE back onto the detail data."
+      interviewer: "That you can state the SAS two-pass equivalent, which shows you understand what the verb replaces."
+
+  - id: r.dplyr.case-when-order
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [r.dplyr]
+    lesson: r-dplyr-verbs
+    title: The category that never appears
+    prompt: |
+      ```r
+      v <- c(5, 15, 25)
+      case_when(
+        v < 20 ~ "low",
+        v < 10 ~ "verylow",
+        .default = "high"
+      )
+      ```
+
+      What does this return?
+    choices:
+      - text: "`\"low\" \"low\" \"high\"` — the `verylow` branch is unreachable."
+        correct: true
+        feedback: "Correct. `case_when` is first-match. 5 satisfies `v < 20`, so it never reaches `v < 10`. The category silently never appears."
+      - text: "`\"verylow\" \"low\" \"high\"` — the most specific condition wins."
+        feedback: "`case_when` does not look for the most specific match. It evaluates top to bottom and stops at the first TRUE."
+      - text: "An error, because the conditions overlap."
+        feedback: "Overlapping conditions are normal and expected; resolving them by order is the design."
+      - text: "`\"low\" \"low\" \"low\"` — the first condition applies to everything."
+        feedback: "25 does not satisfy `v < 20`, so it falls through to the default."
+    solution: |
+      **`"low" "low" "high"`.** The `verylow` branch is never reached, because 5 already matched
+      `v < 20` on the line above.
+
+      No error and no warning — just a category that silently never appears in your data. A QC programmer
+      comparing against a SAS program with the branches in the right order would find a discrepancy and
+      have to work back to this line.
+
+      **Write the most specific condition first:**
+
+      ```r
+      case_when(
+        v < 10   ~ "verylow",
+        v < 20   ~ "low",
+        .default = "high"
+      )
+      ```
+
+      SAS's `else if` chain has identical behaviour, so the habit transfers directly — which also means a
+      SAS programmer who has been bitten by this once already knows to check the ordering.
+    explanation:
+      objective: "Predict the result of overlapping case_when conditions."
+      given: "Three values and three branches where a broad condition precedes a narrower one."
+      relevant: "That case_when evaluates top to bottom and the first TRUE wins."
+      calculating: "The branch each value reaches."
+      numbers: "5 matches v < 20 and stops; 15 matches v < 20; 25 matches neither and falls to the default."
+      interpretation: "A silently unreachable branch produces a category that never appears, which looks like a data fact rather than a code defect."
+      changes: "Reordering so the narrowest condition comes first makes all three branches reachable."
+      interviewer: "That you notice it produces no error, since that is what makes it dangerous rather than merely wrong."
+
+  - id: r.dplyr.count-subjects
+    format: numeric
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [r.dplyr, tlf.denominators]
+    lesson: r-dplyr-verbs
+    title: Records or subjects?
+    prompt: |
+      `advs` holds **3,082** vital-sign records from **270** subjects.
+
+      ```r
+      advs |> summarise(n = n())
+      ```
+
+      What does `n` equal?
+    answer: 3082
+    tolerance: 0
+    hints:
+      - "`n()` counts rows in the current group."
+      - "With no grouping, the whole data frame is one group."
+      - "Is one row one subject, or one measurement?"
+    solution: |
+      **3,082** — `n()` counts **rows**, and one row is one measurement, not one subject.
+
+      For subjects:
+
+      ```r
+      advs |> summarise(n = n_distinct(USUBJID))   # 270
+      ```
+
+      **In a clinical table this distinction is the difference between an event count and a subject
+      count.** An adverse-event table counts subjects — a subject with three episodes of nausea
+      contributes one to the nausea row — and using `n()` produces percentages that can exceed 100%.
+
+      The reliable habit: before any count, state what one row of the input represents. If you cannot,
+      find out before summarising.
+    explanation:
+      objective: "Distinguish a row count from a subject count."
+      given: "A BDS dataset with multiple records per subject."
+      relevant: "The grain of the dataset — one row per subject per parameter per visit."
+      calculating: "The number of rows, which is what n() returns."
+      numbers: "3,082 records from 270 subjects, so roughly 11 records per subject."
+      interpretation: "A denominator of 3,082 where 270 was intended makes every percentage about eleven times too small — or, in the numerator, too large."
+      changes: "n_distinct(USUBJID) gives the subject count; in SQL it is COUNT(DISTINCT USUBJID)."
+      interviewer: "That your first question about any dataset is what one row represents."
+
+  - id: r.dplyr.derive-flag
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [r.dplyr, adam.bds]
+    lesson: r-dplyr-verbs
+    title: A three-branch derived flag
+    minutes: 10
+    prompt: |
+      Add a `RESP` column to a BDS dataset marking controlled blood pressure:
+
+      - `NA` where `AVAL` is missing — say so explicitly rather than letting it fall through
+      - `"Y"` where `AVAL < 140`
+      - `"N"` otherwise
+
+      Use `case_when()`. The missing branch must come **first**, and the default must be correctly typed.
+    starter: |
+      library(dplyr)
+
+      add_resp <- function(data) {
+        data |>
+          mutate(RESP = case_when(
+            ___
+          ))
+      }
+    reference: |
+      library(dplyr)
+
+      add_resp <- function(data) {
+        data |>
+          mutate(RESP = case_when(
+            is.na(AVAL) ~ NA_character_,
+            AVAL < 140  ~ "Y",
+            .default    = "N"
+          ))
+      }
+    hints:
+      - "`is.na(AVAL) ~ NA_character_` states the missing case rather than relying on how NA behaves in a comparison."
+      - "A bare `NA` is logical and will not combine with character branches — use `NA_character_`."
+      - "`.default` replaced the older `TRUE ~` idiom in dplyr 1.1."
+    checks:
+      - pattern: "is\\.na\\s*\\(\\s*AVAL\\s*\\)"
+        message: "Handles the missing case explicitly"
+      - pattern: "NA_character_"
+        message: "Uses a correctly typed NA rather than a bare logical NA"
+      - pattern: "AVAL\\s*<\\s*140"
+        message: "Applies the controlled-BP threshold"
+      - pattern: "\\.default|TRUE\\s*~"
+        message: "Provides a fallback branch"
+      - pattern: "case_when\\s*\\("
+        message: "Uses case_when rather than nested ifelse"
+    expectedOutput: |
+      ```text
+      > add_resp(w12) |> count(RESP)
+        RESP   n
+      1    N 138
+      2    Y 100
+      ```
+    solution: |
+      ```r
+      add_resp <- function(data) {
+        data |>
+          mutate(RESP = case_when(
+            is.na(AVAL) ~ NA_character_,
+            AVAL < 140  ~ "Y",
+            .default    = "N"
+          ))
+      }
+      ```
+
+      **Why the `is.na()` branch first, when `NA < 140` already returns `NA`?**
+
+      Because relying on that is fragile. It happens to work for `<`, and it would also work for `>` —
+      but a reader has to reason about `NA` semantics to know that, and a later edit that reorders or
+      changes the comparison can break it silently. **Stating the missing case makes the SAP's rule
+      visible in the code**, which is what a QC reviewer needs.
+
+      It also documents a decision. If the SAP says missing should count as a non-responder, this is
+      where that appears — as `is.na(AVAL) ~ "N"` — rather than as an accident of operator semantics.
+
+      Note the contrast with SAS: there, `if aval < 140` is **true** for a missing value, because missing
+      sorts below every number. Without an explicit missing branch, SAS would mark missing values as
+      responders — the opposite of R's behaviour, and a genuine QC discrepancy waiting to happen.
+    explanation:
+      objective: "Write a three-branch derivation that states its missing-value rule."
+      given: "A BDS dataset and a threshold rule with a missing case."
+      relevant: "That the missing branch is a decision, not a side effect."
+      method: "case_when evaluates in order; putting is.na first makes the rule explicit regardless of comparison semantics."
+      numbers: "On the Week 12 systolic records: 100 subjects controlled, 138 not, 0 missing."
+      assumptions: "That missing should be NA rather than counted as a non-responder — a SAP decision the code now makes visible."
+      computation: "NA_character_ is required because a bare NA is logical and case_when type-checks the branches."
+      interpretation: "A reviewer can read the missing-data rule off the code without reasoning about NA propagation."
+      changes: "In SAS the same code without an explicit missing branch marks missing as controlled, because missing sorts below 140 — the opposite result."
+      interviewer: "That you can explain why the explicit branch matters even when the implicit behaviour happens to be correct."
+
+  - id: r.dplyr.assert-grain
+    format: code
+    language: r
+    modes: [guided, independent, qc]
+    difficulty: intermediate
+    skills: [r.dplyr, qc.mindset]
+    lesson: r-dplyr-verbs
+    title: Prove the grain before you summarise
+    minutes: 10
+    prompt: |
+      Write `assert_one_per_subject(data, id = "USUBJID")` that:
+
+      - Returns the data unchanged if there is exactly one row per subject.
+      - **Stops with an informative error** otherwise, naming how many subjects are duplicated and
+        listing up to five of them.
+
+      Designed to be dropped into the middle of a pipeline, so it must return the data on success.
+    starter: |
+      assert_one_per_subject <- function(data, id = "USUBJID") {
+        dups <- ___
+
+        if (___) {
+          stop(___)
+        }
+
+        data
+      }
+    reference: |
+      assert_one_per_subject <- function(data, id = "USUBJID") {
+        ids  <- data[[id]]
+        dups <- unique(ids[duplicated(ids)])
+
+        if (length(dups) > 0) {
+          stop("Expected one row per subject; ", length(dups),
+               " subject(s) duplicated: ",
+               paste(utils::head(dups, 5), collapse = ", "),
+               if (length(dups) > 5) ", ..." else "")
+        }
+
+        data
+      }
+    hints:
+      - "`duplicated(ids)` flags the second and later occurrences; wrap in `unique()` to get each offending id once."
+      - "`length(dups) > 0` is the failure condition."
+      - "Include the count and some example ids — an error saying only 'duplicates found' makes the reader do the work again."
+    checks:
+      - pattern: "duplicated\\s*\\("
+        message: "Detects duplicate identifiers"
+      - pattern: "stop\\s*\\("
+        message: "Fails loudly rather than returning a bad dataset"
+      - pattern: "paste\\s*\\("
+        message: "Names the offending subjects in the message"
+      - pattern: "head\\s*\\("
+        message: "Limits the listed subjects so the message stays readable"
+      - pattern: "\\n\\s*data\\n\\}|return\\s*\\(\\s*data\\s*\\)"
+        message: "Returns the data so it can sit inside a pipeline"
+    expectedOutput: |
+      ```text
+      > w12 |> assert_one_per_subject() |> nrow()
+      [1] 238
+
+      > advs |> assert_one_per_subject()
+      Error: Expected one row per subject; 270 subject(s) duplicated:
+        VTX221-201-101-001, VTX221-201-101-002, ...
+      ```
+    solution: |
+      **Returning the data is what makes it usable.** A check that returns `TRUE` has to be called on a
+      separate line, which means it drifts away from the operation it protects and eventually gets
+      deleted. A check that passes the data through sits in the pipeline permanently:
+
+      ```r
+      w12 <- advs |>
+        filter(PARAMCD == "SYSBP", AVISITN == 12) |>
+        assert_one_per_subject() |>
+        mutate(RESP = ...)
+      ```
+
+      **Naming the offending subjects is what makes the error actionable.** "Duplicates found" sends the
+      reader back to the data to work out which; "270 subject(s) duplicated: VTX221-201-101-001, ..."
+      can be investigated immediately.
+
+      This is the R hand-rolled version of what `assertr` or `pointblank` provide as packages. For a
+      handful of checks the hand-rolled version is clearer and adds no dependency.
+    explanation:
+      objective: "Write a pipeline-friendly assertion about dataset grain."
+      given: "A data frame and an identifier column name."
+      relevant: "Whether any identifier appears more than once."
+      method: "duplicated() marks repeats; unique() collapses them to the distinct offending ids."
+      assumptions: "One row per subject is the expected grain after filtering to a single parameter and visit."
+      computation: "Returning the data unchanged on success is what allows the check to sit mid-pipeline."
+      interpretation: "A duplicate at this point inflates every downstream count while every individual number stays internally consistent."
+      changes: "Parameterising the id column lets the same function guard ADSL, a merged dataset, or any other one-row-per-subject structure."
+      interviewer: "That you design the check to live inside the pipeline, because a check that is easy to skip will be skipped."
+
+  - id: r.dplyr.pipeline-code
+    format: code
+    language: r
+    modes: [independent]
+    difficulty: advanced
+    skills: [r.dplyr, tlf.efficacy-tables]
+    lesson: r-dplyr-verbs
+    title: The full Week 12 summary
+    minutes: 15
+    prompt: |
+      Write `week12_summary(advs)` returning one row per arm with `n`, `mean_chg`, `sd_chg`, `n_resp`
+      and `pct_resp`, where a responder has `AVAL < 140`.
+
+      Requirements:
+
+      - Filter to `PARAMCD == "SYSBP"`, `ANL01FL == "Y"`, `AVISITN == 12`.
+      - Assert one row per subject after filtering.
+      - Handle missing `AVAL` explicitly in the responder derivation.
+      - Return the rows sorted by `TRTP`.
+    starter: |
+      library(dplyr)
+
+      week12_summary <- function(advs) {
+        w12 <- advs |>
+          filter(___)
+
+        stopifnot(___)
+
+        w12 |>
+          mutate(RESP = ___) |>
+          summarise(___, .by = TRTP) |>
+          arrange(TRTP)
+      }
+    reference: |
+      library(dplyr)
+
+      week12_summary <- function(advs) {
+        w12 <- advs |>
+          filter(PARAMCD == "SYSBP", ANL01FL == "Y", AVISITN == 12)
+
+        stopifnot(nrow(w12) == n_distinct(w12$USUBJID))
+
+        w12 |>
+          mutate(RESP = case_when(
+            is.na(AVAL) ~ NA_character_,
+            AVAL < 140  ~ "Y",
+            .default    = "N"
+          )) |>
+          summarise(
+            n        = n(),
+            mean_chg = mean(CHG, na.rm = TRUE),
+            sd_chg   = sd(CHG, na.rm = TRUE),
+            n_resp   = sum(RESP == "Y", na.rm = TRUE),
+            pct_resp = 100 * sum(RESP == "Y", na.rm = TRUE) / n(),
+            .by      = TRTP
+          ) |>
+          arrange(TRTP)
+      }
+    hints:
+      - "Three filter conditions as separate arguments — they combine with AND and each stays individually readable."
+      - "`n()` is safe only after the grain assertion; otherwise use `n_distinct(USUBJID)`."
+      - "`.by` does not sort, so the `arrange()` is what fixes the row order."
+    checks:
+      - pattern: "PARAMCD\\s*==\\s*[\"']SYSBP[\"']"
+        message: "Filters to the systolic parameter"
+      - pattern: "ANL01FL\\s*==\\s*[\"']Y[\"']"
+        message: "Uses only analysis-flagged records"
+      - pattern: "stopifnot\\s*\\("
+        message: "Asserts the grain before summarising"
+      - pattern: "is\\.na\\s*\\(\\s*AVAL\\s*\\)"
+        message: "Handles missing values explicitly in the derivation"
+      - pattern: "na\\.rm\\s*=\\s*TRUE"
+        message: "Handles missing values in the summaries"
+      - pattern: "arrange\\s*\\(\\s*TRTP\\s*\\)"
+        message: "Sorts the output"
+    expectedOutput: |
+      ```text
+                 TRTP  n   mean_chg   sd_chg n_resp pct_resp
+      1       Placebo 77  -3.300000 11.60998     20 25.97403
+      2 VTX-221 10 mg 81  -8.828395 11.48418     37 45.67901
+      3 VTX-221 20 mg 80 -12.276250 11.49666     43 53.75000
+      ```
+    solution: |
+      The results match the study's R-computed facts: 77 / 81 / 80 subjects, mean changes
+      −3.30 / −8.83 / −12.28 mmHg, and controlled-BP rates of 26.0% / 45.7% / 53.8%.
+
+      **Four decisions this encodes that a shorter version would hide:**
+
+      The **three filter conditions** are the population definition. Written separately, a reviewer can
+      check each against the SAP and remove one to test a sensitivity analysis.
+
+      The **assertion** is what licenses `n()` on the next line. Without it, an unscheduled Week 12
+      assessment would inflate every count silently.
+
+      The **explicit missing branch** states the SAP's rule rather than relying on `NA < 140` returning
+      `NA` — and note that the same code in SAS, without the branch, would classify missing as
+      *controlled*, because missing sorts below 140.
+
+      The **`arrange()`** is not cosmetic. `.by` returns groups in order of first appearance, so without
+      it the table rows come out in whatever order subject 1's arm happened to be.
+
+      **The denominator worth noticing:** 77 + 81 + 80 = 238, not the 270 randomized. Those 32 subjects
+      have no Week 12 record. Whether the table should use 238 or 270 is a missing-data decision for the
+      SAP — and this function quietly chooses 238 by filtering. A production version would make that
+      choice visible in its name or its arguments.
+    explanation:
+      objective: "Assemble a complete, reviewable summary pipeline."
+      given: "A BDS vital-signs dataset and a table specification."
+      relevant: "The population filter, the grain, the missing-value rule and the row order."
+      method: "Filter, assert, derive, summarise, sort — each step doing one thing a reviewer can check."
+      numbers: "77/81/80 subjects; mean changes -3.300, -8.828, -12.276; 20/37/43 responders; 26.0%/45.7%/53.8%."
+      assumptions: "Observed-case analysis at Week 12, which excludes 32 randomized subjects — a SAP decision the filter makes silently."
+      computation: "n() is valid only because the grain was asserted; otherwise n_distinct(USUBJID) is required."
+      interpretation: "Responder rates and mean changes both rise with dose, which is the reassuring pattern."
+      changes: "Using the ITT denominator of 270 with non-responder imputation would lower every percentage and is the more common pre-specification for a binary endpoint."
+      interviewer: "That you notice the denominator is 238 rather than 270 and name it as a SAP decision rather than a detail."
+
+  - id: r.dplyr.silent-regroup
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [r.dplyr, qc.discrepancy]
+    lesson: r-dplyr-verbs
+    title: The percentage that exceeds 100
+    minutes: 8
+    prompt: |
+      This is meant to give the percentage of subjects in each arm with at least one treatment-emergent
+      adverse event. Several arms show percentages **above 100%**.
+
+      `adae` has one row per adverse event; a subject can have many.
+
+      Click the line that causes it.
+    code: |
+      library(dplyr)
+
+      ae_summary <- adae |>
+        filter(TRTEMFL == "Y") |>
+        summarise(n_ae = n(), .by = TRT01A) |>
+        left_join(denoms, by = "TRT01A") |>
+        mutate(pct = 100 * n_ae / n_saf)
+
+      ae_summary
+    answerLines: [5]
+    lineNotes:
+      - line: 5
+        note: "`n()` counts **rows**, and one row is one adverse event, not one subject. A subject with three events contributes three. Dividing an event count by a subject denominator produces percentages above 100%. It should be `n_distinct(USUBJID)`."
+      - line: 4
+        note: "Restricting to treatment-emergent events is correct and intended."
+      - line: 7
+        note: "The arithmetic is right; the numerator it is given is the wrong quantity."
+    fixed: |
+      library(dplyr)
+
+      ae_summary <- adae |>
+        filter(TRTEMFL == "Y") |>
+        summarise(n_subj = n_distinct(USUBJID),
+                  n_events = n(),
+                  .by = TRT01A) |>
+        left_join(denoms, by = "TRT01A") |>
+        mutate(pct = 100 * n_subj / n_saf)
+
+      stopifnot(all(ae_summary$n_subj <= ae_summary$n_saf))
+    hints:
+      - "A percentage above 100% means the numerator exceeds the denominator. What is each counting?"
+      - "How many rows does one subject contribute to an adverse-event dataset?"
+      - "What is the difference between `n()` and `n_distinct(USUBJID)`?"
+    solution: |
+      **Line 5.** `n()` counts adverse-event **records**; the denominator counts **subjects**. A subject
+      with three events contributes three to the numerator and one to the denominator.
+
+      ```r
+      summarise(n_subj = n_distinct(USUBJID), .by = TRT01A)
+      ```
+
+      **The percentage above 100% is the lucky version of this bug.** It is unmissable. The dangerous
+      version is a preferred-term row where most subjects have exactly one event, so the count is only
+      slightly inflated and the percentage merely looks a little high.
+
+      **The general defence** is the assertion in the fixed code: a subject count can never exceed the
+      population denominator. One line, and it catches every instance of this error including the subtle
+      ones.
+
+      Reporting both `n_subj` and `n_events` is also standard in an AE overview table — the subject count
+      for the percentage rows, the event count on its own row — so computing both is not extra work.
+    explanation:
+      objective: "Diagnose an impossible percentage in an adverse-event summary."
+      given: "An AE dataset with multiple rows per subject and a subject-level denominator."
+      relevant: "That n() counts rows while the denominator counts subjects."
+      irrelevant: "The TRTEMFL filter and the join, both of which are correct."
+      method: "A percentage above 100% means numerator and denominator are counting different units."
+      numbers: "A subject with three events contributes 3 to the numerator and 1 to the denominator."
+      interpretation: "The visible failure is the fortunate case; a mildly inflated percentage on a rare preferred term would pass review."
+      changes: "Asserting n_subj <= n_saf catches every instance, including the ones too small to notice."
+      interviewer: "That you name the assertion as the general fix rather than only correcting this one line."
+
+  - id: r.dplyr.sas-where-if
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: advanced
+    skills: [r.dplyr, r.sas-translation, sas.by-group]
+    lesson: r-dplyr-verbs
+    title: Translating WHERE and subsetting IF
+    prompt: |
+      A SAS DATA step uses a subsetting `IF` **after** a `BY` statement:
+
+      ```text
+      data subj;
+        set ae;
+        by USUBJID;
+        if TRTEMFL = 'Y';
+        if first.USUBJID then n = 0;
+        n + 1;
+        if last.USUBJID then output;
+      run;
+      ```
+
+      What is the dplyr equivalent, and what is wrong with the SAS code?
+    choices:
+      - text: "`filter(TRTEMFL == \"Y\") |> summarise(n = n(), .by = USUBJID)` — and the SAS code is buggy, because the subsetting IF runs after FIRST./LAST. are computed."
+        correct: true
+        feedback: "Correct. FIRST./LAST. are set from every observation read, so a subject whose first record is not treatment-emergent never resets the counter, and one whose last record is not treatment-emergent is never output."
+      - text: "The dplyr equivalent is the same, and the SAS code is correct."
+        feedback: "The SAS code has a real defect. Placing the restriction in a WHERE (or a prior PROC SORT) would fix it."
+      - text: "There is no dplyr equivalent because dplyr has no FIRST./LAST."
+        feedback: "A grouped summarise expresses the intent directly; dplyr does not need per-row flags for this."
+      - text: "`mutate(n = n(), .by = USUBJID) |> filter(TRTEMFL == \"Y\")` — filter last."
+        feedback: "That counts all records including non-emergent ones, then filters — a different and also wrong answer."
+    solution: |
+      **The dplyr version is straightforward:**
+
+      ```r
+      ae |> filter(TRTEMFL == "Y") |> summarise(n = n(), .by = USUBJID)
+      ```
+
+      **The SAS code is buggy**, and the bug is subtle. `FIRST.` and `LAST.` are computed from **every
+      observation read**, before the subsetting `IF` discards any. So:
+
+      - A subject whose first record is not treatment-emergent: the step stops before the reset line, so
+        the counter **carries over from the previous subject**.
+      - A subject whose last record is not treatment-emergent: the `output` line never runs, so the
+        subject is **missing from the output entirely**.
+
+      The fix is to restrict before the `BY`-group processing:
+
+      ```text
+      proc sort data=ae out=teae;
+        where TRTEMFL = 'Y';
+        by USUBJID;
+      run;
+      ```
+
+      **This is why dplyr's version is easier to review** — `filter()` genuinely removes the rows before
+      `summarise()` sees them, so there is no ordering subtlety. SAS's `WHERE` behaves that way too; it is
+      specifically the subsetting `IF` after a `BY` that creates the trap.
+    explanation:
+      objective: "Translate a BY-group pattern and identify a defect in the original."
+      given: "A DATA step with a subsetting IF placed after the BY statement."
+      relevant: "That FIRST. and LAST. are computed before the subsetting IF executes."
+      method: "Trace what happens for a subject whose first or last record fails the condition."
+      assumptions: "WHERE is applied as observations are read, so it does not have this problem; the subsetting IF does."
+      interpretation: "The output is wrong in two directions at once — inflated counts for some subjects, missing rows for others."
+      changes: "Moving the restriction into a WHERE on a prior PROC SORT fixes it, which is also what makes the dplyr translation a faithful one."
+      interviewer: "That you spot the defect rather than translating it faithfully, which is what a QC programmer is for."
+
+  - id: r.dplyr.open
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [r.dplyr, qc.code-review, communication.interviewing]
+    lesson: r-dplyr-verbs
+    title: Reviewing someone else's pipeline
+    prompt: |
+      **Interviewer:** "A colleague sends you a 40-line dplyr pipeline that produces a table. What do you look for in review?"
+    modelAnswer: |
+      I read it for the things that fail silently, because anything that errors will already have been
+      found.
+
+      **Grain, first.** What does one row represent at the start, and after each verb that could change
+      it? Any `summarise()`, any join, any `distinct()`. If the pipeline counts with `n()`, I want to
+      know that the grain was one row per subject at that point — and ideally I want to see an assertion
+      saying so rather than having to reason it out.
+
+      **Grouping state.** If it uses `group_by()`, does it ever `ungroup()`? `summarise()` drops only the
+      last grouping variable, so a two-level grouping leaves the result grouped and the next verb behaves
+      differently. `.by` avoids the whole question, and I'd suggest it if the pipeline is using
+      `group_by()` for a single operation.
+
+      **Missing values.** Every `filter()` silently drops NA rows, so I check whether that is intended or
+      incidental — it is one of the most common causes of a denominator quietly shrinking. Every
+      `case_when()` should state its `is.na()` branch rather than relying on how `NA` behaves in the
+      comparison, because the SAP has a rule and the code should show it.
+
+      **Denominators.** Where does the "N=" come from? It should come from ADSL, not from the dataset
+      being summarised — subjects with no records do not appear in an AE dataset and must still be in the
+      denominator.
+
+      **Then the specification.** Does each `filter()` condition correspond to something in the SAP? A
+      condition I cannot trace to a document is either an undocumented decision or a mistake, and either
+      way it is a question.
+
+      What I would *not* comment on is style — base versus tidyverse, pipe placement, whether the
+      variable names are to my taste. That is noise in a review, and it crowds out the comments that
+      matter.
+
+      If it is a table going into a CSR, I'd also just run it and check the output reconciles: do the
+      column headers match the disposition table, does the difference row equal the difference of the
+      two means shown. A five-second subtraction catches a class of error that reading cannot.
+    rubric:
+      - Leads with grain and names the verbs that change it
+      - Raises grouping persistence and the summarise() peeling behaviour
+      - Checks missing-value handling in both filter() and case_when()
+      - Asks where the denominator comes from
+      - Traces filter conditions back to the SAP
+      - Explicitly declines to review style
+      - Mentions running it and reconciling the output, not only reading it
+    redFlags:
+      - "Focuses on style or naming conventions"
+      - "Does not mention the grain of the data"
+      - "Does not ask about missing-value handling"
+      - "Reviews only by reading, never by running and reconciling"

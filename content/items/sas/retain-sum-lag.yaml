@@ -1,0 +1,521 @@
+items:
+  - id: sas.retain-sum-lag.sum-statement-mcq
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.retain, sas.missing-values]
+    lesson: sas-retain-sum-lag
+    title: A missing dose in a running total
+    prompt: |
+      ```sas
+      data ex_cum;
+        set ex;
+        by USUBJID;
+        if first.USUBJID then CUMDOSE = 0;
+        CUMDOSE + EXDOSE;
+      run;
+      ```
+
+      A subject's cumulative dose is 258.0 mg after cycle 2. The cycle 3 infusion record has a **missing** `EXDOSE`. What is `CUMDOSE` on the cycle 3 record?
+    choices:
+      - text: "258.0 — the sum statement ignores the missing value"
+        correct: true
+        feedback: "The sum statement adds nothing when the expression is missing, so the accumulator is unchanged (and no missing-values note appears)."
+      - text: "Missing"
+        feedback: "That is what `CUMDOSE = CUMDOSE + EXDOSE;` would give — an ordinary assignment propagates missing values."
+      - text: "0 — the accumulator restarts"
+        feedback: "It only restarts at FIRST.USUBJID."
+      - text: "The step stops with an error"
+        feedback: "Missing values never stop a step."
+    solution: |
+      258.0. Convenient, but treat it as a finding: a missing dose on an infusion record usually means an unresolved data question. Count records with missing `EXDOSE` separately rather than letting the total absorb them silently.
+
+  - id: sas.retain-sum-lag.retain-reset-numeric
+    format: numeric
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [sas.retain, sas.by-group]
+    lesson: sas-retain-sum-lag
+    title: What happens without the reset?
+    prompt: |
+      `WORK.EX` sorted by `USUBJID CYCLE`:
+
+      | USUBJID | CYCLE | EXDOSE |
+      |---|---:|---:|
+      | 1012-0001 | 1 | 142.5 |
+      | 1012-0001 | 2 | 142.5 |
+      | 1012-0001 | 3 | 114.0 |
+      | 1012-0002 | 1 | 129.0 |
+
+      ```sas
+      data ex_cum;
+        set ex;
+        by USUBJID;
+        CUMDOSE + EXDOSE;          /* the reset line was deleted by mistake */
+      run;
+      ```
+
+      What value of `CUMDOSE` appears on subject 1012-0002's cycle 1 record?
+    answer: 528
+    tolerance: 0.01
+    hints:
+      - "The sum statement implies RETAIN — values carry across every row, not just within a subject."
+      - "Add the three doses of the first subject and then the fourth dose."
+    solution: |
+      142.5 + 142.5 + 114.0 + 129.0 = 528.0 mg. The second subject inherits the first subject's total. With `if first.USUBJID then CUMDOSE = 0;` the value would be 129.0. Every retained or accumulated variable needs a reset at the right `FIRST.` boundary.
+
+  - id: sas.retain-sum-lag.conditional-lag-mcq
+    format: mcq
+    modes: [check]
+    difficulty: advanced
+    skills: [sas.lag, sas.pdv]
+    lesson: sas-retain-sum-lag
+    title: LAG inside an IF
+    prompt: |
+      Weights sorted by subject and cycle:
+
+      | Row | USUBJID | CYCLE | WEIGHT |
+      |---:|---|---:|---:|
+      | 1 | 1012-0001 | 1 | 70.2 |
+      | 2 | 1012-0001 | 2 | 69.5 |
+      | 3 | 1012-0001 | 3 | 69.0 |
+      | 4 | 1012-0002 | 1 | 82.0 |
+      | 5 | 1012-0002 | 2 | 81.2 |
+
+      ```sas
+      data vs_prev;
+        set vs;
+        by USUBJID;
+        if not first.USUBJID then PREVWT = lag(WEIGHT);
+      run;
+      ```
+
+      What is `PREVWT` on **row 5**?
+    choices:
+      - text: "69.0 — subject 1012-0001's cycle 3 weight"
+        correct: true
+        feedback: "The LAG call executes only on rows 2, 3 and 5. Its last execution before row 5 was row 3, where it stored 69.0."
+      - text: "82.0 — the previous row's weight"
+        feedback: "That would be true if LAG were called on every row. Row 4 is a first record, so the call was skipped and 82.0 never entered the queue."
+      - text: "Missing"
+        feedback: "The queue is not empty: it holds the value stored on row 3."
+      - text: "81.2 — the current row's weight"
+        feedback: "LAG returns the previously stored value, then stores the current one."
+    solution: |
+      69.0 — a value from a different subject. Call LAG unconditionally and reset the result: `PREVWT = lag(WEIGHT); if first.USUBJID then PREVWT = .;`
+    explanation:
+      objective: "Predict the value a conditional LAG returns."
+      given: "Five rows in two subjects and a LAG call inside an IF."
+      relevant: "That each LAG call has its own queue, updated only when the call executes."
+      computation: "Row 2: first execution → returns missing, stores 69.5. Row 3: returns 69.5, stores 69.0. Row 5: returns 69.0, stores 81.2."
+      interpretation: "Two of the values are wrong and nothing in the log indicates it."
+      interviewer: "That you can explain LAG as a queue rather than as 'the previous record'."
+
+  - id: sas.retain-sum-lag.retain-classify
+    format: classify
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.retain, sas.pdv]
+    lesson: sas-retain-sum-lag
+    title: Carried or reset?
+    prompt: |
+      At the start of the next iteration, does each variable keep its value or is it reset to missing?
+    categories: [Keeps its value, Reset to missing]
+    entries:
+      - text: "`N` after the sum statement `N + 1;`"
+        category: Keeps its value
+        note: "The sum statement implies RETAIN with an initial value of 0."
+      - text: "`N` after `N = N + 1;` with no RETAIN statement"
+        category: Reset to missing
+        note: "An ordinary assignment: N is reset, and missing + 1 is missing, so N is missing on every row."
+      - text: "A variable listed in a `RETAIN` statement"
+        category: Keeps its value
+      - text: "An element of a `_TEMPORARY_` array"
+        category: Keeps its value
+      - text: "`PREV` in `PREV = lag(AVAL);`"
+        category: Reset to missing
+        note: "The variable is reset and then reassigned each row; it is the LAG queue — not PREV — that remembers."
+      - text: "`AVAL`, read from the input dataset by `SET`"
+        category: Keeps its value
+        note: "Variables from SET are retained, but the next SET overwrites them, so in practice they hold the current row's value."
+    hints:
+      - "The default is reset. Ask of each entry: what makes this one an exception?"
+      - "Three things are retained without you asking: variables read by SET or MERGE, variables named in a RETAIN statement, and the accumulator of a sum statement (`N + 1;`, which is not an assignment at all)."
+      - "Do not confuse the variable with the machinery behind it. `PREV = lag(AVAL);` is an ordinary assignment to `PREV` — the memory lives in the LAG queue, not in `PREV`."
+    solution: |
+      Sum statements, RETAIN and `_TEMPORARY_` array elements carry values forward. Ordinary assignments are reset. Variables read with SET are technically retained but overwritten on each read — which is why carrying a value forward requires copying it into a separate retained variable.
+
+  - id: sas.retain-sum-lag.cumdose-code
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sas.retain, sas.by-group, sas.data-step]
+    lesson: sas-retain-sum-lag
+    title: Cumulative docetaxel dose
+    minutes: 10
+    prompt: |
+      `WORK.EX` has one record per study-drug administration with `USUBJID`, `EXTRT` (`'DOCETAXEL'` or `'CBX-417'`), `EXSTDT` (numeric date) and `EXDOSE` (mg).
+
+      Create `WORK.EX_CUM` containing the **docetaxel** records only, in date order within subject, with:
+
+      - `INFNUM` — the infusion number for that subject (1, 2, 3, …);
+      - `CUMDOSE` — the cumulative dose received up to and including this infusion.
+    starter: |
+      proc sort data=ex out=ex_s;
+        /* restrict and order */
+      run;
+
+      data ex_cum;
+        /* accumulate within subject */
+      run;
+    hints:
+      - "Filter with WHERE in the sort, and order by subject then date."
+      - "In the DATA step, `by USUBJID;` gives you `FIRST.USUBJID` for the reset."
+      - "Sum statements (`CUMDOSE + EXDOSE;`, `INFNUM + 1;`) imply RETAIN and start at 0."
+    checks:
+      - pattern: 'where\s+extrt\s*=\s*[''"]docetaxel[''"]'
+        message: "Restricts to docetaxel administrations"
+      - pattern: 'by\s+usubjid\s+exstdt'
+        message: "Sorts by subject and administration date"
+      - pattern: '^\s*by\s+usubjid\s*;'
+        flags: im
+        message: "Uses BY USUBJID in the DATA step"
+      - pattern: 'first\.usubjid'
+        message: "Resets the accumulators at the first record of each subject"
+      - pattern: 'cumdose\s*\+\s*exdose\s*;|cumdose\s*=\s*sum\s*\(\s*cumdose'
+        message: "Accumulates the dose (sum statement or retained SUM)"
+      - pattern: 'infnum\s*\+\s*1\s*;|infnum\s*=\s*sum\s*\(\s*infnum'
+        message: "Counts the infusions"
+    reference: |
+      proc sort data=ex out=ex_s;
+        where EXTRT = 'DOCETAXEL';
+        by USUBJID EXSTDT;
+      run;
+
+      data ex_cum;
+        set ex_s;
+        by USUBJID;
+        if first.USUBJID then do;
+          CUMDOSE = 0;
+          INFNUM  = 0;
+        end;
+        CUMDOSE + EXDOSE;
+        INFNUM  + 1;
+      run;
+    expectedOutput: |
+      NOTE: There were <docetaxel records> observations read from the data set WORK.EX_S.
+      NOTE: The data set WORK.EX_CUM has <same number> observations and <n> variables.
+    solution: |
+      Filter and sort first (WHERE in PROC SORT keeps the DATA step simple), then reset at `FIRST.USUBJID` and accumulate with sum statements. Checks: `INFNUM` must start at 1 for every subject and increase by 1; the maximum `CUMDOSE` per subject must equal `sum(EXDOSE)` for that subject — easy to verify with `proc means sum; by USUBJID;` as an independent method.
+
+  - id: sas.retain-sum-lag.prev-visit-code
+    format: code
+    language: sas
+    modes: [independent]
+    difficulty: advanced
+    skills: [sas.lag, sas.by-group, adam.bds]
+    lesson: sas-retain-sum-lag
+    title: Change from the previous visit
+    minutes: 12
+    prompt: |
+      `WORK.ADVS` is a BDS dataset with one record per subject, parameter and visit (`USUBJID`, `PARAMCD`, `AVISITN`, `AVAL`).
+
+      Create `WORK.ADVS_PREV` with `PREVAVAL` (the value at the previous visit **for the same subject and parameter**) and `CHGPREV = AVAL - PREVAVAL`. Values must never be taken from another subject or another parameter, and `CHGPREV` must be missing when there is no previous value.
+    starter: |
+      proc sort data=advs out=advs_s;
+        /* order defines "previous" */
+      run;
+
+      data advs_prev;
+        /* previous value within subject and parameter */
+      run;
+    hints:
+      - "Sort by `USUBJID PARAMCD AVISITN` and use `by USUBJID PARAMCD;`."
+      - "Call LAG on every row — never inside an IF — and blank the result at the start of each series."
+      - "`FIRST.PARAMCD` is 1 whenever a new subject starts as well, so it is the only reset you need."
+    checks:
+      - pattern: 'by\s+usubjid\s+paramcd\s+avisitn'
+        message: "Sorts by subject, parameter and visit"
+      - pattern: '^\s*by\s+usubjid\s+paramcd\s*;'
+        flags: im
+        message: "Uses BY USUBJID PARAMCD in the DATA step"
+      - pattern: '=\s*lag\s*\(\s*aval\s*\)'
+        message: "Uses LAG(AVAL)"
+      - pattern: 'first\.paramcd'
+        message: "Resets at the first record of each subject/parameter series"
+      - pattern: 'then\s+\w+\s*=\s*lag\s*\('
+        absent: true
+        message: "Does not call LAG conditionally (the queue would skip rows)"
+      - pattern: 'chgprev\s*=\s*aval\s*-\s*prevaval|chgprev\s*=\s*aval\s*-\s*\w+'
+        message: "Derives CHGPREV from AVAL and the previous value"
+    reference: |
+      proc sort data=advs out=advs_s;
+        by USUBJID PARAMCD AVISITN;
+      run;
+
+      data advs_prev;
+        set advs_s;
+        by USUBJID PARAMCD;
+        PREVAVAL = lag(AVAL);
+        if first.PARAMCD then PREVAVAL = .;
+        if not missing(PREVAVAL) then CHGPREV = AVAL - PREVAVAL;
+      run;
+    solution: |
+      The LAG call runs on every row, so its queue always holds the previous row's value; the result is then blanked at the start of each subject/parameter series. Guarding `CHGPREV` with `not missing(PREVAVAL)` keeps the log free of expected missing-value notes.
+
+      QC check: for each `USUBJID PARAMCD`, exactly one record (the first) must have a missing `PREVAVAL`, and the number of such records must equal the number of distinct subject/parameter combinations.
+    explanation:
+      objective: "Derive a previous-visit value that cannot leak across subjects or parameters."
+      given: "A BDS dataset with one record per subject, parameter and visit."
+      relevant: "Sort order, the BY level that defines a series, and LAG's queue semantics."
+      irrelevant: "Whether visits are scheduled or unscheduled — unless the specification says to use scheduled visits only."
+      method: "Unconditional LAG plus a reset at FIRST.PARAMCD; the hierarchy rule makes that reset cover new subjects too."
+      assumptions: "AVISITN order is the intended definition of 'previous'; if the SAP says 'previous assessment by date', sort by ADT instead."
+      interpretation: "A missing PREVAVAL on the first record of each series is correct, not a defect."
+      changes: "Resetting only at FIRST.USUBJID would carry the last value of one parameter into the next parameter."
+      interviewer: "That you know why LAG must be unconditional and which BY level defines the series."
+
+  - id: sas.retain-sum-lag.lag2-numeric
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.lag]
+    lesson: sas-retain-sum-lag
+    title: LAG2
+    prompt: |
+      A DATA step reads four records in which `AVAL` is 10, 20, 30, 40 and executes `X = lag2(AVAL);` on every row.
+
+      What is `X` on the fourth record?
+    answer: 20
+    tolerance: 0
+    hints:
+      - "LAG2 returns the value from two executions ago."
+      - "Write out all four calls in order and what each one returns. On the first two rows there is nothing two executions back, so those return missing."
+      - "The number of *executions* is what matters, not the row number — which is why calling LAG inside an IF gives a queue you did not expect."
+    solution: |
+      20. The values returned are missing, missing, 10, 20. `LAGn` keeps a queue of n values; `DIF2(AVAL)` on row 4 would be 40 − 20 = 20.
+
+  - id: sas.retain-sum-lag.conditional-lag-hotspot
+    format: hotspot
+    language: sas
+    modes: [debug]
+    difficulty: advanced
+    skills: [sas.lag, sas.debugging]
+    lesson: sas-retain-sum-lag
+    title: Weight change from the previous visit is wrong
+    minutes: 7
+    prompt: |
+      This step should give the change in weight since the subject's previous visit. QC reports that the first cycle of the **second** subject shows a change of +13.0 kg, and that some second-cycle records have a missing change.
+
+      Click the defective line.
+    code: |
+      proc sort data=vs out=vs_s;
+        by USUBJID CYCLE;
+      run;
+
+      data vs_prev;
+        set vs_s;
+        by USUBJID;
+        if not first.USUBJID then PREVWT = lag(WEIGHT);
+        CHGPREV = WEIGHT - PREVWT;
+      run;
+    answerLines: [8]
+    lineNotes:
+      - line: 8
+        note: "The LAG call is inside an IF, so its queue is only updated on non-first records. It returns values from the last row where the condition was true — including rows belonging to the previous subject."
+      - line: 9
+        note: "Correct as written: the problem is the value PREVWT holds, not the subtraction."
+    fixed: |
+      proc sort data=vs out=vs_s;
+        by USUBJID CYCLE;
+      run;
+
+      data vs_prev;
+        set vs_s;
+        by USUBJID;
+        PREVWT = lag(WEIGHT);
+        if first.USUBJID then PREVWT = .;
+        CHGPREV = WEIGHT - PREVWT;
+      run;
+    hints:
+      - "On which rows does the LAG call actually execute?"
+      - "What does a LAG call return the very first time it runs?"
+    solution: |
+      Line 8. Call LAG on every row and blank the result at `FIRST.USUBJID`. The +13.0 came from comparing the second subject's first weight with the first subject's last weight; the missing changes came from the LAG call's first execution returning missing.
+    explanation:
+      objective: "Explain two symptoms produced by one defect."
+      given: "The program and QC's two findings."
+      relevant: "LAG's queue semantics and where the call sits."
+      irrelevant: "The sort is correct."
+      computation: "With weights 70.2, 69.5, 69.0 (subject 1) and 82.0, 81.2 (subject 2): the conditional LAG returns missing on row 2, 69.5 on row 3, 69.0 on row 5 → 82.0 − 69.0 = 13.0."
+      interpretation: "Both symptoms — a leak across subjects and an unexpected missing value — come from the queue being updated only on some rows."
+      changes: "Moving the LAG call out of the IF fixes both."
+      interviewer: "That you can describe LAG as a queue tied to a line of code, and know the safe pattern."
+
+  - id: sas.retain-sum-lag.locf-reset-hotspot
+    format: hotspot
+    language: sas
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [sas.retain, sas.by-group, stats.missing-data]
+    lesson: sas-retain-sum-lag
+    title: LOCF across parameters
+    minutes: 7
+    prompt: |
+      `WORK.ADVS_S` is sorted by `USUBJID PARAMCD AVISITN` and contains several parameters per subject (`SYSBP`, `DIABP`, `PULSE`, `WEIGHT`). This step implements the SAP's LOCF sensitivity analysis.
+
+      QC reports that for some subjects the first `DIABP` record with a missing value carries a **systolic** blood pressure value. Click the defective line.
+    code: |
+      data advs_locf;
+        set advs_s;
+        by USUBJID PARAMCD;
+        retain AVAL_LOCF;
+        if first.USUBJID then AVAL_LOCF = .;
+        if not missing(AVAL) then AVAL_LOCF = AVAL;
+        if missing(AVAL) then DTYPE = 'LOCF';
+      run;
+    answerLines: [5]
+    lineNotes:
+      - line: 5
+        note: "The reset happens only when a new subject starts, so the last value of one parameter is carried into the next parameter of the same subject. The series here is subject × parameter, so the reset belongs at FIRST.PARAMCD."
+      - line: 4
+        note: "RETAIN is needed; it is the reset level that is wrong."
+      - line: 7
+        note: "Flagging imputed records is right in principle; in ADaM the imputed value normally sits on a derived record identified by DTYPE, as the specification defines."
+    fixed: |
+      data advs_locf;
+        set advs_s;
+        by USUBJID PARAMCD;
+        retain AVAL_LOCF;
+        if first.PARAMCD then AVAL_LOCF = .;
+        if not missing(AVAL) then AVAL_LOCF = AVAL;
+        if missing(AVAL) then DTYPE = 'LOCF';
+      run;
+    hints:
+      - "What defines one series of values here — a subject, or a subject and a parameter?"
+      - "With `by USUBJID PARAMCD;`, which FIRST. flag is 1 at the start of every series?"
+    solution: |
+      Line 5: reset at `FIRST.PARAMCD`, which is 1 both when a new parameter starts and when a new subject starts. Carrying a systolic value into a diastolic series is the kind of error that survives review because the numbers look plausible.
+    explanation:
+      objective: "Find why an imputed value comes from the wrong parameter."
+      given: "A LOCF step over a BDS dataset with several parameters per subject."
+      relevant: "The BY statement, the reset level and the sort order."
+      irrelevant: "The DTYPE flag logic."
+      method: "Identify the series the carry-forward applies to, then reset at the innermost BY variable of that series."
+      interpretation: "Values around 120 appearing in a diastolic series are a symptom of a reset at the wrong level."
+      changes: "If the data contained one parameter only, the defect would be invisible."
+      interviewer: "That you reset retained values at the level that defines the series, and that you know LOCF imputations must be flagged."
+
+  - id: sas.retain-sum-lag.lag-reset-diff
+    format: diff
+    modes: [qc]
+    difficulty: intermediate
+    skills: [sas.lag, qc.compare]
+    lesson: sas-retain-sum-lag
+    title: Change from previous visit disagrees
+    minutes: 6
+    prompt: |
+      Production and QC both derive the change in weight from the previous visit. They agree everywhere except on the first record of each subject. Which explanation fits?
+    left:
+      title: Production
+      columns: [USUBJID, CYCLE, WEIGHT, CHGPREV]
+      rows:
+        - ["CBX417-301-1012-0001", 3, 69.0, -0.5]
+        - ["CBX417-301-1012-0002", 1, 82.0, 13.0]
+        - ["CBX417-301-1012-0002", 2, 81.2, -0.8]
+    right:
+      title: QC
+      columns: [USUBJID, CYCLE, WEIGHT, CHGPREV]
+      rows:
+        - ["CBX417-301-1012-0001", 3, 69.0, -0.5]
+        - ["CBX417-301-1012-0002", 1, 82.0, null]
+        - ["CBX417-301-1012-0002", 2, 81.2, -0.8]
+    leftCode: |
+      data vs_prev;
+        set vs_s;
+        PREVWT  = lag(WEIGHT);
+        CHGPREV = WEIGHT - PREVWT;
+      run;
+    rightCode: |
+      data vs_prev_qc;
+        set vs_s;
+        by USUBJID;
+        PREVWT = lag(WEIGHT);
+        if first.USUBJID then PREVWT = .;
+        CHGPREV = WEIGHT - PREVWT;
+      run;
+    codeLanguage: sas
+    choices:
+      - text: "Production never resets PREVWT at the start of a subject, so the first record is compared with the previous subject's last record"
+        correct: true
+        feedback: "LAG knows nothing about BY groups: 82.0 − 69.0 = 13.0 compares two different people."
+      - text: "QC used LAG inside an IF and lost the first value"
+        feedback: "QC calls LAG unconditionally and only resets the result — the safe pattern."
+      - text: "The two programs sorted the data differently"
+        feedback: "Both read the same sorted dataset; the rows and weights agree."
+      - text: "Production used DIF instead of LAG"
+        feedback: "DIF(WEIGHT) would give exactly the same leak; the missing reset is the issue."
+    hints:
+      - "Find the single row where the two tables disagree and say out loud what that row is: the first record of a subject."
+      - "LAG has no notion of a BY group. Its queue is filled in the order rows are read, so on a subject's first row it hands back the last row of the previous subject — 82.0 − 69.0 = 13.0 across two different people."
+      - "The safe pattern is to call LAG unconditionally on every row and blank the *result* where it does not apply, which is what `if first.USUBJID then PREVWT = .;` does."
+    solution: |
+      A missing reset. QC's blank value is correct: there is no previous visit for the subject's first record. A 13 kg jump between consecutive rows of a weight listing is the kind of value a reviewer notices — but smaller leaks (a 1–2 kg difference between two subjects) pass unnoticed, which is why the reset is written even when the data look fine.
+    explanation:
+      objective: "Attribute a discrepancy on first records to its cause."
+      given: "Two listings and both programs."
+      relevant: "The presence or absence of the BY statement and the reset."
+      numbers: "13.0 = 82.0 (subject 2, cycle 1) − 69.0 (subject 1, cycle 3)."
+      interpretation: "Only the first record of each subject differs — the signature of a missing group reset."
+      interviewer: "That you can recognise cross-group leakage from the pattern of a discrepancy."
+
+  - id: sas.retain-sum-lag.locf-interview
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [sas.retain, stats.missing-data, communication.interviewing]
+    lesson: sas-retain-sum-lag
+    title: LOCF, implemented and questioned
+    prompt: |
+      **Interviewer:** "Implement last observation carried forward for a longitudinal endpoint — and tell me why LOCF is controversial."
+    modelAnswer: |
+      Implementation: sort by subject, parameter and visit (or date, whichever the SAP defines as the order), then in a DATA step with `by USUBJID PARAMCD;` retain a carrier variable, reset it at `FIRST.PARAMCD` — which is also 1 at every new subject — update it whenever the current value is non-missing, and use it where the value is missing. The imputed values must be identifiable: in ADaM that usually means derived records with `DTYPE = 'LOCF'`, so observed and imputed values are never confused. I'd check that no carried value crosses a subject or parameter boundary and that the number of imputed records matches the number of missing values the SAP says to fill.
+
+      Why it is controversial: LOCF assumes the outcome would have stayed exactly at the last observed value, which is rarely plausible — in oncology patients typically deteriorate after dropout, so carrying a pre-dropout value forward can flatter whichever arm has more dropout. It also treats imputed values as if they were observed, so it understates uncertainty. The National Research Council's 2010 report on missing data advised against single imputation like LOCF as a default, and ICH E9(R1) asks that missing-data handling follow from the estimand with sensitivity analyses of the assumptions. So today LOCF usually appears as a sensitivity analysis, with mixed models for repeated measures or multiple imputation as the primary approach — and in any case it is the SAP's decision, not the programmer's.
+    rubric:
+      - Describes the sort order and the BY level that defines the series
+      - Resets the carried value at the start of each series
+      - Distinguishes imputed from observed values (DTYPE or a flag)
+      - Explains the assumption LOCF makes and why it is often implausible
+      - Mentions that it understates uncertainty / can bias in either direction
+      - Notes that the choice belongs to the SAP/estimand, not the programmer
+    redFlags:
+      - "Implements LOCF without any reset at subject or parameter level"
+      - "Says LOCF is always conservative"
+      - "Cannot say how imputed records are identified in the data"
+    followUps:
+      - "How would you handle a subject whose first post-baseline value is missing?"
+      - "What would you use instead of LOCF for a primary analysis?"
+
+  - id: sas.retain-sum-lag.dif-speed
+    format: mcq
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.lag]
+    lesson: sas-retain-sum-lag
+    title: What does DIF do?
+    prompt: |
+      What does `DIF(AVAL)` return?
+    choices:
+      - text: "`AVAL - lag(AVAL)`"
+        correct: true
+        feedback: "DIF is defined as the current value minus the lagged value, with the same queue behaviour as LAG."
+      - text: "`lag(AVAL) - AVAL`"
+        feedback: "The sign is the other way round."
+      - text: "The difference between the current value and the first value of the BY group"
+        feedback: "DIF knows nothing about BY groups — that is why you still reset at FIRST."
+      - text: "The absolute difference between consecutive values"
+        feedback: "DIF is signed."
+    solution: |
+      `DIF(x)` is `x - LAG(x)` (and `DIFn(x)` is `x - LAGn(x)`). Like LAG, it must be called unconditionally and reset at group boundaries.

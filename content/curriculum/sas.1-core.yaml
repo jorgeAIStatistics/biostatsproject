@@ -1,0 +1,119 @@
+lab: sas
+modules:
+  - id: sas-foundations
+    title: SAS foundations
+    summary: The SAS session and libraries, the DATA step and its Program Data Vector, subsetting, variable attributes, missing values, and the three procedures every clinical programmer uses daily (SORT, FREQ, MEANS).
+    level: 1
+    lessons:
+      - id: sas-environment-and-libraries
+        title: Your first SAS session - libraries, datasets and the log
+        summary: How SAS finds data (LIBNAME, WORK vs permanent libraries, two-level names), how to inspect a dataset with PROC CONTENTS and PROC PRINT, where to run SAS for free, and how to read the log from your very first program.
+        minutes: 45
+        difficulty: foundation
+        tracks: [programmer, biostatistician]
+        skills: [sas.environment, sas.log]
+        keywords: [LIBNAME, libref, WORK library, two-level name, PROC CONTENTS, PROC PRINT, PROC IMPORT, SAS OnDemand for Academics, SAS Studio, SAS log]
+      - id: sas-data-step-and-pdv
+        title: The DATA step and the Program Data Vector
+        summary: What SAS does when it compiles and executes a DATA step — the PDV, _N_, _ERROR_, automatic resetting and implicit OUTPUT — the mental model that explains most surprising results.
+        minutes: 60
+        difficulty: foundation
+        tracks: [programmer, biostatistician]
+        skills: [sas.data-step, sas.pdv, sas.log]
+        prerequisites: [sas-environment-and-libraries]
+        keywords: [PDV, program data vector, compile phase, execution phase, _N_, _ERROR_, implicit OUTPUT, SET, uninitialized, PUTLOG]
+      - id: sas-subsetting-where-if
+        title: Subsetting with WHERE, IF and data set options
+        summary: WHERE versus subsetting IF versus IF-THEN/ELSE, input and output data set options (KEEP=, DROP=, RENAME=, WHERE=), writing several datasets in one step — and the classic interview question.
+        minutes: 50
+        difficulty: foundation
+        tracks: [programmer, biostatistician]
+        skills: [sas.where-if, sas.data-step, trials.populations]
+        prerequisites: [sas-data-step-and-pdv]
+        keywords: [WHERE, subsetting IF, IF-THEN/ELSE, DELETE, KEEP=, DROP=, RENAME=, WHERE=, OUTPUT, SAFFL, population flag, WHERE ALSO]
+      - id: sas-variable-attributes
+        title: Variable attributes - LENGTH, LABEL, FORMAT and INFORMAT
+        summary: How SAS decides a variable's type and length, why character values get truncated, the difference between formats and informats, and the attribute rules that matter for SDTM and ADaM submission datasets.
+        minutes: 50
+        difficulty: foundation
+        tracks: [programmer]
+        skills: [sas.attributes, sas.numeric-functions, regulatory.submission]
+        prerequisites: [sas-data-step-and-pdv]
+        keywords: [LENGTH, truncation, LABEL, FORMAT, INFORMAT, ATTRIB, PUT function, INPUT function, SAS date, PROC CONTENTS, XPT, 40-character label, define.xml]
+      - id: sas-missing-values
+        title: Missing values - representation, comparison and propagation
+        summary: Numeric and character missing values, special missing values, why missing is smaller than every number, operators versus functions, and how procedures count missing data.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [sas.missing-values, sas.numeric-functions, stats.missing-data]
+        prerequisites: [sas-subsetting-where-if]
+        keywords: [missing value, special missing value, .A-.Z, MISSING function, NMISS, CMISS, SUM function, Missing values were generated, sort order, RECIST sum of diameters]
+      - id: sas-sort-freq-means
+        title: PROC SORT, PROC FREQ and PROC MEANS
+        summary: Sorting and de-duplicating (NODUPKEY vs NODUPRECS, DUPOUT=), counting with PROC FREQ, and summarising with PROC MEANS/SUMMARY (CLASS vs BY, OUTPUT OUT=, _TYPE_, _FREQ_, NWAY) — the numbers behind every demographics table.
+        minutes: 70
+        difficulty: foundation
+        tracks: [programmer, biostatistician]
+        skills: [sas.sort, sas.freq, sas.means, tlf.summary-stats]
+        prerequisites: [sas-missing-values]
+        keywords: [PROC SORT, NODUPKEY, NODUPRECS, DUPOUT=, DESCENDING, PROC FREQ, crosstab, column percent, MISSING option, OUT=, PROC MEANS, PROC SUMMARY, CLASS, BY, NWAY, _TYPE_, _FREQ_, demographics table]
+
+  - id: sas-combining-data
+    title: Combining and reshaping data
+    summary: MERGE, BY-group processing, PROC SQL joins, RETAIN, arrays and PROC TRANSPOSE — the everyday machinery of clinical derivations.
+    level: 2
+    lessons:
+      - id: sas-merge
+        title: Combining datasets with MERGE
+        summary: Match-merging with BY — one-to-one, one-to-many and many-to-many behaviour, IN= flags for inner, left and anti joins, overwritten variables, and bringing ADSL variables onto SDTM and analysis records.
+        minutes: 70
+        difficulty: intermediate
+        tracks: [programmer]
+        skills: [sas.merge, sas.sort, sas.log, adam.bds]
+        prerequisites: [sas-sort-freq-means]
+        keywords: [MERGE, BY, IN=, match-merge, one-to-many, many-to-many, repeats of BY values, inner join, left join, anti join, overwritten variables, ADSL variables]
+      - id: sas-by-group-processing
+        title: BY-group processing and FIRST./LAST.
+        summary: How SAS flags the first and last record of each BY group, and how clinical programmers use it for per-subject derivations, first-occurrence flags and baseline selection.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [sas.by-group, sas.retain, sas.sort, sas.where-if]
+        keywords: [FIRST., LAST., BY statement, RETAIN, baseline record, first occurrence, AOCCPFL]
+      - id: sas-retain-sum-lag
+        title: RETAIN, the sum statement, LAG and DIF
+        summary: Carrying values across observations — running totals, carrying the last value forward (and why LOCF is controversial), previous-record values with LAG, and the conditional-LAG trap.
+        minutes: 60
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [sas.retain, sas.lag, sas.pdv, stats.missing-data]
+        prerequisites: [sas-by-group-processing]
+        keywords: [RETAIN, sum statement, cumulative dose, running total, LOCF, last observation carried forward, DTYPE, LAG, DIF, queue, previous visit, change from previous]
+      - id: sas-proc-sql
+        title: PROC SQL for clinical programmers
+        summary: Queries, joins and summaries in PROC SQL — how SQL joins differ from a DATA step MERGE, GROUP BY and HAVING, remerging, CASE, subqueries, CALCULATED, and INTO macro variables for denominators.
+        minutes: 75
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [sas.sql, sql.joins, sql.aggregate, sas.macro-variables]
+        prerequisites: [sas-merge]
+        keywords: [PROC SQL, SELECT, INNER JOIN, LEFT JOIN, Cartesian product, GROUP BY, HAVING, COUNT DISTINCT, remerging, CASE, subquery, INTO, CALCULATED, CREATE TABLE]
+      - id: sas-arrays-do-loops
+        title: Arrays and DO loops
+        summary: Processing repeated columns with ARRAY and iterative DO, DO WHILE/UNTIL, DIM(), _TEMPORARY_ arrays and generating rows in a loop — illustrated with race checkboxes, lab unit conversion and visit schedules.
+        minutes: 60
+        difficulty: intermediate
+        tracks: [programmer]
+        skills: [sas.arrays, sas.data-step, sdtm.dm]
+        prerequisites: [sas-data-step-and-pdv]
+        keywords: [ARRAY, DO loop, DO WHILE, DO UNTIL, DIM, _TEMPORARY_, variable lists, checkbox fields, RACE, MULTIPLE, unit conversion, OUTPUT in a loop]
+      - id: sas-proc-transpose
+        title: Reshaping with PROC TRANSPOSE
+        summary: Wide-to-long and long-to-wide reshaping with BY, ID, VAR, PREFIX= and NAME=, turning the wide raw vitals form into a VS-like structure, the DATA step alternative, and the classic transpose errors.
+        minutes: 65
+        difficulty: intermediate
+        tracks: [programmer]
+        skills: [sas.transpose, sas.arrays, sdtm.findings]
+        prerequisites: [sas-arrays-do-loops]
+        keywords: [PROC TRANSPOSE, long, wide, _NAME_, _LABEL_, ID statement, PREFIX=, NAME=, LET, duplicate ID value, VS domain, findings, reshape]

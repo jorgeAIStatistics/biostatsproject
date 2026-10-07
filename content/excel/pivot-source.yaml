@@ -1,0 +1,131 @@
+sheets:
+  - id: site-summary-by-hand
+    title: Every site on the study, summarised by hand
+    description: >-
+      All 42 sites of CBX417-301 with their randomized counts, taken from `oncology/sdtm/dm.csv`. The
+      study total is 420 and the sites really do sum to it.
+
+      Columns D and E are the country summary somebody built beside the data: twelve country codes typed
+      out by hand, each with a `SUMIFS` against the country column. It was correct when it was written.
+
+      Two things have since happened to column B, and both are planted: one site's code was entered with
+      a trailing space, and one site's code is a spelling that does not appear in the summary list at all.
+      Neither is visible on screen, neither raises an error, and the twelve subtotals no longer add up to
+      the study total.
+
+      The gap is 41 subjects. The ten tasks find both causes and close it. This is the failure a
+      PivotTable does not have, because a pivot enumerates its groups from the data instead of from
+      somebody's memory.
+    columns: [Site, Country, Randomized, 'Summary: country', 'Summary: randomized']
+    formats:
+      C: '0'
+      E: '0'
+    rows:
+      - [1001, 'USA', 12, 'USA', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D2)']
+      - [1002, 'USA', 13, 'CAN', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D3)']
+      - [1003, 'USA', 6, 'DEU', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D4)']
+      - [1004, 'USA', 1, 'FRA', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D5)']
+      - [1005, 'USA', 13, 'ESP', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D6)']
+      - [1006, 'USA', 7, 'ITA', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D7)']
+      - [1007, 'USA', 2, 'POL', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D8)']
+      - [1008, 'USA', 1, 'GBR', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D9)']
+      - [1009, 'USA', 15, 'JPN', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D10)']
+      - [1010, 'CAN', 6, 'KOR', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D11)']
+      - [1011, 'CAN', 20, 'TWN', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D12)']
+      - [1012, 'CAN', 12, 'AUS', '=SUMIFS($C$2:$C$43,$B$2:$B$43,D13)']
+      - [1013, 'DEU', 10]
+      - [1014, 'DEU', 16]
+      - [1015, 'DEU', 13]
+      - [1016, 'DEU', 17]
+      - [1017, 'FRA', 11]
+      - [1018, 'FRA', 2]
+      - [1019, 'FRA', 7]
+      - [1020, 'SPA', 12]
+      - [1021, 'ESP', 3]
+      - [1022, 'ESP', 8]
+      - [1023, 'ITA', 14]
+      - [1024, 'ITA', 4]
+      - [1025, 'ITA', 15]
+      - [1026, 'POL', 20]
+      - [1027, 'POL ', 29]
+      - [1028, 'POL', 18]
+      - [1029, 'GBR', 7]
+      - [1030, 'GBR', 5]
+      - [1031, 'GBR', 2]
+      - [1032, 'JPN', 11]
+      - [1033, 'JPN', 4]
+      - [1034, 'JPN', 16]
+      - [1035, 'JPN', 14]
+      - [1036, 'KOR', 10]
+      - [1037, 'KOR', 6]
+      - [1038, 'KOR', 8]
+      - [1039, 'TWN', 15]
+      - [1040, 'TWN', 5]
+      - [1041, 'AUS', 3]
+      - [1042, 'AUS', 7]
+    tasks:
+      - prompt: >-
+          Total the randomized column across all 42 sites. This number is not in dispute — it is the
+          study's randomized population.
+        cell: G2
+        expected: 420
+        hint: The data rows run from 2 to 43.
+        solution: '=SUM(C2:C43)'
+      - prompt: >-
+          Now total the twelve country subtotals in `E2:E13`. Every one of them is a `SUMIFS` over the
+          same column you just added up, so this should give the same answer.
+        cell: G3
+        expected: 379
+        hint: It does not. Nothing is broken; the subtotals are each individually correct.
+        solution: '=SUM(E2:E13)'
+      - prompt: >-
+          How many subjects are in no country subtotal at all?
+        cell: G4
+        expected: 41
+        hint: Subtract the summary total from the study total.
+        solution: '=SUM(C2:C43)-SUM(E2:E13)'
+      - prompt: >-
+          Start with Poland. How many site rows does the criterion `"POL"` match?
+        cell: G5
+        expected: 2
+        hint: Three sites on this study are in Poland.
+        solution: '=COUNTIF(B2:B43,"POL")'
+      - prompt: >-
+          Now ask the same question with a wildcard: `"POL*"` matches `POL` followed by anything at all.
+        cell: G6
+        expected: 3
+        hint: The third Polish site is being matched by the wildcard and not by the literal code.
+        solution: '=COUNTIF(B2:B43,"POL*")'
+      - prompt: >-
+          Site 1027 is on row 28. How many characters are in its country code?
+        cell: G7
+        expected: 4
+        hint: '`LEN` counts every character, including the ones you cannot see.'
+        solution: '=LEN(B28)'
+      - prompt: >-
+          How many randomized subjects does that one trailing space hide from the summary? Compare the
+          wildcard total against the literal one.
+        cell: G8
+        expected: 29
+        hint: '`SUMIFS` with `"POL*"` minus `SUMIFS` with `"POL"`.'
+        solution: '=SUMIFS(C2:C43,B2:B43,"POL*")-SUMIFS(C2:C43,B2:B43,"POL")'
+      - prompt: >-
+          That accounts for 29 of the 41. The rest is a different problem. Site 1020 is on row 21 — how
+          many times does its country code appear in the summary's list of twelve codes in `D2:D13`?
+        cell: G9
+        expected: 0
+        hint: The code in `B21` is spelled correctly as far as Excel is concerned. It is simply not a code anybody typed into the summary.
+        solution: '=COUNTIF(D2:D13,B21)'
+      - prompt: >-
+          How many randomized subjects are at that site?
+        cell: G10
+        expected: 12
+        hint: Use `B21` itself as the criterion rather than typing the code.
+        solution: '=SUMIFS(C2:C43,B2:B43,B21)'
+      - prompt: >-
+          **Close it.** Add the two findings back to the summary total. If both causes are accounted for,
+          you land on the study total exactly.
+        cell: G11
+        expected: 420
+        hint: 379 + 29 + 12. A residual of zero is what tells you there is no third cause.
+        solution: '=SUM(E2:E13)+29+12'

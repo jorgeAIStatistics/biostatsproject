@@ -1,0 +1,275 @@
+items:
+  - id: trials.crf.check-types
+    format: classify
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.data-management]
+    lesson: trials-crf-to-database
+    title: Classify the edit checks
+    prompt: |
+      Classify each CBX417-301 data check by type.
+    categories: [Range/plausibility, Date logic, Cross-form, Cross-source reconciliation]
+    entries:
+      - { text: "Weight above 250 kg", category: "Range/plausibility" }
+      - { text: "AE end date before AE start date", category: Date logic }
+      - { text: "AE start date before the informed-consent date", category: Cross-form }
+      - { text: "Serious AE in the safety database with no matching AE in EDC", category: Cross-source reconciliation }
+      - { text: "Study drug dispensed to a subject with no randomization record in the IxRS transfer", category: Cross-source reconciliation }
+      - { text: "Death page completed but the End of Treatment reason is not 'Death' or another reason recorded before death", category: Cross-form }
+      - { text: "Systolic blood pressure below 60 mmHg", category: "Range/plausibility" }
+    hints:
+      - "Does the check look at one field, two fields on the same page, fields on different pages, or data from different systems?"
+    solution: |
+      Range checks look at one value; date logic compares dates on one record; cross-form checks compare pages; reconciliation compares systems (EDC, safety database, IxRS, lab vendor).
+
+  - id: trials.crf.programmer-finds-issue
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.data-management, trials.lifecycle]
+    lesson: trials-crf-to-database
+    title: You find an impossible value while programming
+    prompt: |
+      While programming SDTM VS you find a weight of 700 kg for one subject at C3D1; the subject weighed 70 kg at every other visit. What should you do?
+    choices:
+      - text: "Report the record (subject, visit, RECORD_ID, value) to data management so it can be queried with the site"
+        correct: true
+        feedback: "The site verifies against source and corrects the EDC; the correction flows to SDTM in the next transfer with an audit trail."
+      - text: "Divide by 10 in the SDTM program"
+        feedback: "Programmatic 'fixes' bypass the audit trail and break when the corrected value arrives (it would become 7 kg)."
+      - text: "Delete the record from SDTM"
+        feedback: "Collected data must not be silently removed."
+      - text: "Leave it and say nothing — the lock will fix it"
+        feedback: "Nothing fixes an issue nobody reports. Programmers are often the first to see cross-visit anomalies."
+    solution: |
+      Report it with enough detail to raise a query. If the analysis deadline arrives before resolution, the handling is agreed with the team and documented, never improvised in code.
+
+  - id: trials.crf.dictionary
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [trials.data-management, trials.safety]
+    lesson: trials-crf-to-database
+    title: Which dictionary?
+    prompt: |
+      Which pairing of data and coding dictionary is standard?
+    choices:
+      - text: "Adverse events and medical history → MedDRA; concomitant medications → WHODrug"
+        correct: true
+        feedback: "MedDRA covers medical conditions and events; WHODrug covers medicinal products."
+      - text: "Adverse events → WHODrug; medications → MedDRA"
+        feedback: "Reversed."
+      - text: "Adverse events → CTCAE; medications → ATC"
+        feedback: "CTCAE grades severity, it does not code terms. ATC is a classification used within WHODrug, not the coding dictionary itself."
+      - text: "Everything → CDISC controlled terminology"
+        feedback: "CDISC CT standardizes values such as units and test codes; it does not code verbatim AE or medication terms."
+    solution: |
+      MedDRA for AEs and medical history; WHODrug Global for medications. Both are licensed and versioned; the version is documented in define.xml and outputs.
+
+  - id: trials.crf.genuine-extreme
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.data-management, qc.data-cleaning]
+    lesson: trials-crf-to-database
+    title: A confirmed extreme value
+    prompt: |
+      A range check flagged ALT = 1850 U/L for a CBX-417 subject. The site confirmed the value against the lab report, and a grade 4 "ALT increased" AE is recorded for the same date. What happens to the value?
+    choices:
+      - text: "It stays unchanged in EDC, SDTM and ADaM; the query is closed as confirmed"
+        correct: true
+        feedback: "Confirmed values are data, and this one is clinically important (potential drug-induced liver injury)."
+      - text: "It is winsorized to a plausible maximum in ADaM"
+        feedback: "Altering confirmed safety values would hide a potential safety signal."
+      - text: "It is excluded from lab summaries as an outlier"
+        feedback: "Excluding it would understate hepatotoxicity."
+      - text: "It is re-queried until the site changes it"
+        feedback: "Queries ask for verification, not a particular answer."
+    solution: |
+      Confirmed extreme values stay. Cleaning makes data true to source, not tidy. This subject should appear in liver-safety analyses (for example eDISH and Hy's law screens).
+
+  - id: trials.crf.sae-recon-fields
+    format: multi
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.data-management, trials.safety]
+    lesson: trials-crf-to-database
+    title: What does SAE reconciliation compare?
+    prompt: |
+      Select the items typically compared between the EDC AE records and the safety database during SAE reconciliation.
+    choices:
+      - text: "Existence of each SAE in both databases (by subject)"
+        correct: true
+        feedback: "Missing cases in either system are the most important finding."
+      - text: "Event term (verbatim and/or coded)"
+        correct: true
+        feedback: "Different terms may mean different events or a coding inconsistency."
+      - text: "Onset date"
+        correct: true
+        feedback: "Dates must agree for the same event."
+      - text: "Seriousness, outcome and causality assessment"
+        correct: true
+        feedback: "These drive expedited reporting and safety tables; they must be consistent."
+      - text: "The subject's baseline blood pressure"
+        feedback: "Not part of the SAE case data being reconciled."
+    hints:
+      - "Think about what would make the same SAE look different in two systems."
+    solution: |
+      Existence, term, onset date, seriousness criteria, outcome and causality (and often the stop date and action taken). Discrepancies are queried with the site or corrected in the safety database, and the reconciliation is signed off before lock.
+
+  - id: trials.crf.lock-order
+    format: order
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.data-management]
+    lesson: trials-crf-to-database
+    title: Toward database lock
+    prompt: |
+      Order the final steps before the CBX417-301 primary-analysis database lock.
+    steps:
+      - "Last data entered for visits up to the data cutoff (2025-03-31)"
+      - "Queries resolved; coding completed and approved"
+      - "SAE, IxRS and lab reconciliations completed"
+      - "Investigator sign-off and final (blinded) data review"
+      - "Lock approved and write access removed"
+      - "Final SDTM/ADaM/TLF runs on the locked data"
+    hints:
+      - "Reconciliation needs the data to be entered and coded first."
+      - "Programs are rerun after lock, not before."
+    solution: |
+      Entry → cleaning and coding → reconciliation → sign-off and final review → lock → final runs. In practice the steps overlap, but the lock checklist in the DMP requires each to be complete.
+
+  - id: trials.crf.date-check-code
+    format: code
+    language: sas
+    modes: [independent]
+    difficulty: intermediate
+    skills: [trials.data-management, sas.dates, sas.data-step]
+    lesson: trials-crf-to-database
+    title: Offline check — AE end before start
+    minutes: 12
+    prompt: |
+      `WORK.RAW_AE` holds EDC text dates such as `07 MAR 2023`; partial dates contain `UN`/`UNK`. Write a DATA step creating `WORK.Q_END_BEFORE_START` with the records whose **complete** end date is before their **complete** start date. Keep `RECORD_ID SUBJECT_ID AE_TERM AE_START AE_END`. Avoid filling the log with invalid-data notes for partial dates.
+    starter: |
+      data q_end_before_start;
+        set raw_ae;
+        /* convert and compare */
+      run;
+    hints:
+      - "The `??` modifier in `input(x, ?? date11.)` suppresses invalid-data notes and sets `_ERROR_` to 0 for unconvertible values."
+      - "Only compare when both converted dates are non-missing, e.g. `n(ASTDT_N, AENDT_N) = 2`."
+    checks:
+      - pattern: "input\\s*\\(\\s*ae_start\\s*,\\s*\\?\\?\\s*date11\\.\\s*\\)"
+        message: "Converts AE_START with input(..., ?? date11.)"
+      - pattern: "input\\s*\\(\\s*ae_end\\s*,\\s*\\?\\?\\s*date11\\.\\s*\\)"
+        message: "Converts AE_END with input(..., ?? date11.)"
+      - pattern: "aendt_n\\s*<\\s*astdt_n|astdt_n\\s*>\\s*aendt_n"
+        message: "Compares end date with start date"
+      - pattern: "\\bn\\s*\\(|not\\s+missing|nmiss\\s*\\(|\\^=\\s*\\.|\\bne\\s+\\."
+        message: "Requires both dates to be non-missing before comparing"
+      - pattern: "keep\\s+record_id"
+        message: "Keeps RECORD_ID so each finding points at one raw row"
+    reference: |
+      data q_end_before_start;
+        set raw_ae;
+        ASTDT_N = input(AE_START, ?? date11.);
+        AENDT_N = input(AE_END, ?? date11.);
+        if n(ASTDT_N, AENDT_N) = 2 and AENDT_N < ASTDT_N then output;
+        format ASTDT_N AENDT_N date9.;
+        keep RECORD_ID SUBJECT_ID AE_TERM AE_START AE_END;
+      run;
+    solution: |
+      Missing values are smaller than any number in SAS, so without the non-missing condition an ongoing AE (blank end date → missing) would satisfy `AENDT_N < ASTDT_N` and be flagged wrongly. `n()` counts non-missing arguments. Partial dates convert to missing silently thanks to `??`; report them with a separate check.
+
+  - id: trials.crf.invalid-date-log
+    format: log
+    modes: [debug]
+    difficulty: intermediate
+    skills: [trials.data-management, sas.log, sas.dates]
+    lesson: trials-crf-to-database
+    title: Notes from a date conversion
+    prompt: |
+      A colleague converts EDC text dates in a 5-record AE extract. Click every log line that signals something you must act on.
+    program: |
+      data ae_dates;
+        set raw_ae;
+        ASTDT_N = input(AE_START, date11.);
+        AENDT_N = input(AE_END, date11.);
+        format ASTDT_N AENDT_N date9.;
+      run;
+    log: |
+      1    data ae_dates;
+      2      set raw_ae;
+      3      ASTDT_N = input(AE_START, date11.);
+      4      AENDT_N = input(AE_END, date11.);
+      5      format ASTDT_N AENDT_N date9.;
+      6    run;
+
+      NOTE: Invalid argument to function INPUT at line 3 column 13.
+      RECORD_ID=AE-000103 SUBJECT_ID=1033-0002 AE_TERM=Rash AE_START=UN APR 2023 AE_END=30 APR 2023 CONSENT_DATE=15 MAR 2023 ASTDT_N=. AENDT_N=30APR2023 _ERROR_=1 _N_=3
+      NOTE: Invalid argument to function INPUT at line 3 column 13.
+      RECORD_ID=AE-000105 SUBJECT_ID=1044-0011 AE_TERM=Headache AE_START=31 FEB 2023 AE_END=02 MAR 2023 CONSENT_DATE=10 JAN 2023 ASTDT_N=. AENDT_N=02MAR2023 _ERROR_=1 _N_=5
+      NOTE: Mathematical operations could not be performed at the following places. The results of the operations have been set to missing values.
+            Each place is given by: (Number of times) at (Line):(Column).
+            2 at 3:13
+      NOTE: There were 5 observations read from the data set WORK.RAW_AE.
+      NOTE: The data set WORK.AE_DATES has 5 observations and 8 variables.
+    issues: [8, 10]
+    lineNotes:
+      - line: 8
+        note: "A partial date (`UN APR 2023`). It is not a data error to query as invalid; it needs a partial-date rule: SDTM keeps the known part (`AESTDTC = \"2023-04\"`), ADaM imputes per the SAP. Converting it with DATE11. is the wrong approach."
+      - line: 10
+        note: "An impossible date (`31 FEB 2023`): a genuine data error. Raise a query so the site corrects it at source."
+      - line: 12
+        note: "A summary of the two invalid conversions above — a consequence, not a new problem."
+      - line: 16
+        note: "Row counts are as expected (5 in, 5 out)."
+    solution: |
+      Two different problems hide behind the same NOTE: a partial date (handle with ISO 8601 partial dates in SDTM and imputation in ADaM) and an impossible date (query). Never let "Invalid argument" notes stand in a production log: either handle the case explicitly or suppress with `??` *and* report the records with a dedicated check.
+    explanation:
+      objective: "Distinguish data problems from handling problems in a log."
+      given: "A conversion step and its log with two invalid-argument notes."
+      relevant: "The AE_START values printed in the PDV dumps."
+      irrelevant: "The row counts and the summary note."
+      method: "Read each NOTE's PDV dump to see which value failed and why."
+      interpretation: "One failure is legitimate incomplete data; the other is an error needing a query."
+      changes: "If the site later completes the partial date, the first note disappears without any code change."
+      interviewer: "That you read PDV dumps and treat 'Invalid argument' notes as findings to classify, not noise."
+
+  - id: trials.crf.interview-recon
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [trials.data-management, communication.interviewing]
+    lesson: trials-crf-to-database
+    title: Reconciliation
+    prompt: |
+      **Interviewer:** "What is SAE reconciliation, and what other reconciliations happen in a typical oncology trial?"
+    modelAnswer: |
+      Serious adverse events are reported twice: by the site into EDC, and to pharmacovigilance for expedited reporting, which lands in the safety database. SAE reconciliation compares the two — that every SAE exists in both, with consistent terms, onset dates, seriousness criteria, outcome and causality — and discrepancies are queried and resolved before lock.
+
+      Other reconciliations: IxRS versus EDC, covering randomization records, dates, stratification values and kits dispensed (including kit numbers that are not on the kit list); central lab data versus EDC sample collection records; and often PK samples and imaging data. Programmers frequently write the comparison listings.
+    rubric:
+      - Explains why two databases exist for SAEs
+      - Names fields compared (existence, term, dates, seriousness, outcome, causality)
+      - Mentions IxRS reconciliation
+      - Mentions lab/vendor reconciliation
+      - States it is completed before lock
+    redFlags:
+      - "Thinks reconciliation means reconciling production and QC outputs"
+    followUps:
+      - "What would you do if an SAE is in the safety database but the site says it is not an AE?"
+
+  - id: trials.crf.speed-dmp
+    format: text
+    modes: [speed]
+    difficulty: foundation
+    skills: [trials.data-management]
+    lesson: trials-crf-to-database
+    title: Expand DMP
+    prompt: |
+      Edit checks, coding conventions and the lock checklist are documented in the **DMP**. What does DMP stand for?
+    accept: ["Data Management Plan"]
+    acceptPatterns: ["^data\\s+management\\s+plan$"]
+    solution: |
+      Data Management Plan — the study's rulebook for data collection, cleaning, coding, reconciliation and lock.

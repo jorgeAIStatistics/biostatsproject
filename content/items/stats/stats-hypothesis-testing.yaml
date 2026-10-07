@@ -1,0 +1,474 @@
+items:
+  - id: stats.ht.p-definition
+    format: mcq
+    modes: [check, interview, speed]
+    difficulty: foundation
+    skills: [stats.hypothesis-testing, communication.interpretation]
+    lesson: stats-hypothesis-testing
+    title: What a p-value is a probability of
+    prompt: |
+      A primary efficacy comparison reports **p = 0.003**.
+
+      Which statement correctly describes what that number is?
+    choices:
+      - text: "If the treatment truly had no effect, a difference at least this extreme would occur in about 0.3% of trials."
+        correct: true
+        feedback: "This is the definition: the probability of data at least this extreme, computed under the assumption that the null hypothesis is true."
+      - text: "There is a 0.3% probability that the treatment has no effect."
+        feedback: "This is the inverted conditional — P(H₀ | data) rather than P(data | H₀). Getting that quantity requires a prior and a Bayesian analysis; under plausible priors it is usually far larger than the p-value."
+      - text: "There is a 99.7% probability that the treatment works."
+        feedback: "Same inversion, stated as a complement. A p-value says nothing about the probability of any hypothesis."
+      - text: "The treatment effect is large enough to matter clinically."
+        feedback: "A p-value carries no information about effect size. A tiny, clinically irrelevant difference produces a small p-value in a large enough trial."
+    solution: |
+      $p = P(\text{data at least this extreme} \mid H_0 \text{ true})$.
+
+      The condition is the part people drop. Reversing the conditional turns it into $P(H_0 \mid \text{data})$, which is a different quantity requiring a prior — exactly the reversal clinicians already know from sensitivity versus positive predictive value.
+    explanation:
+      objective: "State the conditional direction of a p-value correctly."
+      given: "A single p-value from a primary comparison."
+      relevant: "Which event is conditioned on and which is the outcome."
+      method: "Write the definition as a conditional probability and check which side H0 sits on."
+      assumptions: "The p-value is only valid under the model that generated it: the test's distributional assumptions, the pre-specified analysis, and no selection among analyses."
+      interpretation: "A small p-value is evidence against the null world, not a probability attached to any hypothesis."
+      changes: "If you want P(H0 | data) you need a prior. Under a neutral prior a p of 0.05 typically corresponds to a posterior probability of the null around 20 to 30 percent — much less impressive than the p-value looks."
+      interviewer: "That you state the conditional in the correct direction unprompted, and that you can name the diagnostic-testing analogy a clinician already understands."
+
+  - id: stats.ht.not-significant
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [stats.hypothesis-testing, stats.confidence-intervals, communication.interpretation]
+    lesson: stats-hypothesis-testing
+    title: Two non-significant results that mean opposite things
+    prompt: |
+      Two trials of two different drugs both report "no significant difference versus placebo (p > 0.05)".
+
+      - **Trial A:** difference −0.3 mmHg, 95% CI (−0.9, +0.3)
+      - **Trial B:** difference −6.0 mmHg, 95% CI (−14.0, +2.0)
+
+      What is the correct reading?
+    choices:
+      - text: "Trial A rules out a clinically meaningful effect; Trial B is uninformative and is compatible with a large benefit."
+        correct: true
+        feedback: "Exactly. Both fail to reject the null, but only Trial A's interval is narrow enough to say the effect is small. Trial B was too small to conclude anything."
+      - text: "Both trials demonstrate that their drugs do not work."
+        feedback: "Failing to reject H₀ is not evidence that H₀ is true. Trial B's interval includes a 14 mmHg benefit."
+      - text: "Trial B is the more promising result because its point estimate is larger."
+        feedback: "The point estimate alone is not the message — the interval spans from a large benefit to a modest harm. It is promising only in the sense that it justifies a bigger trial."
+      - text: "Neither can be interpreted without the exact p-values."
+        feedback: "The intervals carry the information the p-values lack. Exact p-values would add nothing here."
+    solution: |
+      **Trial A is an informative negative**: the whole interval lies within ±1 mmHg, so any true effect is clinically negligible. **Trial B is uninformative**: the interval runs from a 14 mmHg benefit to a 2 mmHg harm.
+
+      Identical verdicts under a 0.05 rule, opposite scientific content. This is the clearest argument for reporting intervals rather than significance verdicts, and it is why ICH E9 asks for them.
+    explanation:
+      objective: "Distinguish an informative negative trial from an underpowered one."
+      given: "Two non-significant results with their confidence intervals."
+      relevant: "The width and location of each interval relative to what would matter clinically."
+      irrelevant: "The exact p-values; both exceed 0.05 and that is all the test contributes."
+      method: "Ask what values the interval rules out, not whether it contains zero."
+      numbers: "Trial A's interval is 1.2 mmHg wide and entirely within a clinically negligible band. Trial B's is 16 mmHg wide and includes effects that would be practice-changing."
+      interpretation: "Absence of evidence is not evidence of absence — but a sufficiently narrow interval around zero IS evidence of absence, which is what Trial A provides."
+      changes: "If the clinically relevant threshold were 0.5 mmHg rather than 2, Trial A would no longer be conclusive either. What counts as 'ruled out' depends on a threshold someone has to state."
+      interviewer: "That you reach for the interval rather than the p-value, and that you can name the clinical threshold as the thing that makes a negative trial conclusive."
+
+  - id: stats.ht.one-sided-switch
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [stats.hypothesis-testing, qc.mindset, trials.design]
+    lesson: stats-hypothesis-testing
+    title: p = 0.06 and a proposed one-sided test
+    prompt: |
+      The pre-specified primary analysis is a two-sided test at α = 0.05. It returns **p = 0.0984**.
+
+      A team member proposes: *"The effect is clearly in the expected direction. Let's report the one-sided p of 0.0492, which is significant."*
+
+      What is your response?
+    choices:
+      - text: "No — the SAP specified two-sided. Switching after seeing the data inflates the true type I error and must be reported as a deviation if done at all."
+        correct: true
+        feedback: "Correct. The problem is not that one-sided tests are invalid; it is that choosing the sidedness after seeing the result is data-dependent selection."
+      - text: "Yes — a one-sided test is appropriate whenever the effect is in the expected direction."
+        feedback: "That reasoning makes the choice depend on the data, which is precisely what invalidates it. 'Expected direction' is determined before unblinding or not at all."
+      - text: "Yes, provided the one-sided test is described in the CSR."
+        feedback: "Disclosure helps, but it does not restore the type I error rate. A post-hoc switch remains a protocol deviation, and a reviewer will treat the result as exploratory."
+      - text: "No, because one-sided tests are never acceptable in clinical trials."
+        feedback: "Too strong. One-sided tests at 2.5% are used and accepted — when pre-specified. The objection is to the timing of the choice, not the method."
+    solution: |
+      Refuse, and say why: the sidedness is part of the pre-specified analysis. Halving a p-value after seeing which side the effect landed on means the true false-positive rate is 10%, not 5%, because you would have switched either way.
+
+      The constructive response: report the pre-specified result honestly, present the confidence interval so the reader can see how close it was, and if the team believes one-sided is scientifically right, argue it in the SAP of the next trial.
+    explanation:
+      objective: "Recognise data-dependent analysis selection and respond to it."
+      given: "A pre-specified two-sided test, a non-significant result, and a proposal to switch."
+      relevant: "That the SAP fixed the sidedness before unblinding."
+      irrelevant: "Whether the effect is in the 'expected' direction — that is knowable only after the analysis, which is the whole problem."
+      method: "Ask what the procedure's error rate would be across repetitions in which the team behaves the same way. If they would switch whichever direction the effect took, the effective alpha is 0.10."
+      assumptions: "That the SAP is final and was signed before unblinding, which is what makes the type I error claim meaningful."
+      interpretation: "This is an integrity issue rather than a technical one, and it is the kind of thing an inspection or a reviewer looks for."
+      changes: "If the SAP HAD pre-specified a one-sided 2.5% test, the significance threshold would be 0.025 — and 0.0492 would still not reach it. Worth computing before the argument gets heated."
+      interviewer: "That you object on pre-specification grounds rather than on a blanket rule, and that you offer a constructive path rather than only a refusal."
+
+  - id: stats.ht.within-arm
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [stats.hypothesis-testing, trials.design, communication.interpretation]
+    lesson: stats-hypothesis-testing
+    title: The placebo arm is "significant"
+    prompt: |
+      In VTX221-201, the placebo arm's mean Week 12 change from baseline is **−3.30 mmHg**, and a one-sample t-test against zero gives **p = 0.0148**.
+
+      What does that p-value demonstrate?
+    choices:
+      - text: "Nothing about efficacy — it reflects regression to the mean, the placebo effect and measurement conditions. A treatment effect is a between-arm comparison."
+        correct: true
+        feedback: "Correct, and this is why trials have control arms at all. Subjects were enrolled on a high screening reading, so their next readings are expected to be lower regardless of what they were given."
+      - text: "That placebo lowers blood pressure."
+        feedback: "Placebo has no pharmacological effect on blood pressure. The observed drop has other explanations, which is exactly the point."
+      - text: "That the randomization failed."
+        feedback: "The within-arm change says nothing about balance between arms. Baseline characteristics were well balanced here."
+      - text: "That the measurements are unreliable."
+        feedback: "Regression to the mean is a consequence of selecting subjects on an extreme value, not of unreliable measurement — though measurement error does contribute to it."
+    solution: |
+      It demonstrates that **something** changed in the placebo arm, and the candidates are all non-pharmacological: regression to the mean (subjects were enrolled with screening SBP ≥ 140, so their subsequent readings drift down), the placebo effect, and familiarity with the measurement procedure.
+
+      The actual evidence for efficacy is the **between-arm** difference, which subtracts all of these away. In this trial screening SBP averaged 151.3 mmHg and Day 1 baseline averaged 150.4 mmHg — a 0.9 mmHg drop before any treatment at all.
+    explanation:
+      objective: "Interpret a within-arm change correctly, and name what a control arm is for."
+      given: "A significant one-sample test in a placebo arm."
+      relevant: "How subjects were selected into the trial (on a high screening reading)."
+      method: "Ask what would produce this change in the absence of any drug effect. Regression to the mean is the dominant answer whenever entry criteria select on the outcome variable."
+      numbers: "Screening SBP averaged 151.3 mmHg; Day 1 baseline averaged 150.4 mmHg. That 0.9 mmHg drop happened before randomization and before any dose."
+      assumptions: "That the one-sample test is even the right question — it is not, for an efficacy claim."
+      interpretation: "A control arm converts an uninterpretable within-arm change into an interpretable between-arm contrast."
+      changes: "In a single-arm study you cannot subtract this away, which is why single-arm evidence is accepted only where a placebo response is implausible — for example objective tumour response in a disease with no spontaneous remissions."
+      interviewer: "That you name regression to the mean specifically, rather than waving at 'the placebo effect', and that you connect it to the entry criteria."
+
+  - id: stats.ht.hand-t
+    format: numeric
+    modes: [guided, check]
+    difficulty: foundation
+    skills: [stats.hypothesis-testing, stats.t-tests]
+    lesson: stats-hypothesis-testing
+    title: Compute a one-sample t statistic
+    prompt: |
+      A single-arm study of **25** subjects reports a mean change from baseline of **−6.4 mmHg** with an SD of **8.2 mmHg**.
+
+      Test $H_0: \mu = 0$. What is the t statistic?
+
+      Give your answer to two decimal places.
+    answer: -3.90
+    tolerance: 0.02
+    hints:
+      - "t = (estimate − null value) / standard error."
+      - "The standard error is SD/√n, and √25 = 5."
+      - "The null value is 0, so the numerator is just the observed mean."
+    solution: |
+      **SE** $= 8.2/\sqrt{25} = 8.2/5 = 1.64$ mmHg.
+
+      $$t = \frac{-6.4 - 0}{1.64} = -3.9024$$
+
+      With $df = 24$, the two-sided p-value is 0.00067, and the critical value is $t_{0.975,24} = 2.0639$. Since $|-3.90| > 2.06$, reject $H_0$.
+    explanation:
+      objective: "Compute a one-sample test statistic from summary statistics."
+      given: "n, mean and SD; a null value of zero."
+      relevant: "All three, plus the fact that the null value is 0."
+      calculating: "t = (mean − null) / (SD/sqrt(n))."
+      method: "Rescale the observed effect by its own standard error so it can be compared with a known reference distribution."
+      numbers: "SE = 8.2/5 = 1.64. t = -6.4/1.64 = -3.9024. df = 25 - 1 = 24."
+      assumptions: "Approximately normal sampling distribution of the mean, and independent subjects. With n = 25 and a roughly symmetric outcome this is reasonable."
+      interpretation: "The observed mean is 3.9 standard errors below zero — far into the tail of the t distribution with 24 df."
+      changes: "Testing against a clinically relevant threshold of -5 instead of 0 would give t = (-6.4 + 5)/1.64 = -0.85, which is not significant. Same data, different question."
+      interviewer: "That you write the general form (estimate − null)/SE rather than memorising a special case."
+
+  - id: stats.ht.two-sided-p
+    format: numeric
+    modes: [check, qc, speed]
+    difficulty: foundation
+    skills: [stats.hypothesis-testing, qc.compare]
+    lesson: stats-hypothesis-testing
+    title: One-sided to two-sided
+    prompt: |
+      Your QC program reports a **one-sided** p-value of **0.0246** for a comparison where the production table shows a two-sided test.
+
+      What two-sided p-value should production be showing?
+    answer: 0.0492
+    tolerance: 0.0005
+    hints:
+      - "A two-sided test counts 'at least this extreme' in both directions."
+      - "The t distribution is symmetric, so the two tails are equal."
+    solution: |
+      $2 \times 0.0246 = 0.0492$.
+
+      Because the $t$ distribution is symmetric, the two-sided p-value is exactly twice the one-sided p-value in the direction of the observed effect.
+
+      **Why this matters in QC:** a factor of exactly 2 between two p-values is almost always a sidedness mismatch, not a computational error. Check `sides=` in SAS, `alternative=` in R and SciPy before you look anywhere else. Note also that 0.0492 is significant at 0.05 while 0.0246 would not be significant against a one-sided 0.025 threshold — the thresholds move with the sidedness.
+    explanation:
+      objective: "Convert between one- and two-sided p-values and recognise the QC signature."
+      given: "A one-sided p-value and a mismatch with a two-sided production table."
+      relevant: "That the reference distribution is symmetric."
+      calculating: "Two-sided p = 2 x one-sided p."
+      method: "'At least this extreme' means at least this far from the null in either direction, and symmetry makes the two tails equal."
+      numbers: "2 x 0.0246 = 0.0492."
+      assumptions: "Symmetry of the reference distribution. This holds for t and z; it does NOT hold for chi-square or F, where the test is intrinsically one-tailed and there is no factor of 2 to apply."
+      interpretation: "The discrepancy is a specification mismatch between the two programs, not a bug in either one's arithmetic."
+      changes: "For an exact binomial or Fisher test the doubling rule fails — those distributions are asymmetric and the two-sided p is defined by a different rule entirely."
+      interviewer: "That a factor of exactly 2 makes you check sidedness first, and that you know the doubling rule does not generalise to chi-square or exact tests."
+
+  - id: stats.ht.multiplicity-calc
+    format: numeric
+    modes: [check, independent]
+    difficulty: intermediate
+    skills: [stats.hypothesis-testing, stats.multiplicity]
+    lesson: stats-hypothesis-testing
+    title: The cost of eight independent tests
+    prompt: |
+      A team runs **8** independent tests, each at α = 0.05, in a situation where **none** of the eight effects is real.
+
+      What is the probability that at least one comes out "significant"?
+
+      Give your answer as a proportion to three decimal places.
+    answer: 0.337
+    tolerance: 0.003
+    hints:
+      - "It is easier to compute the probability that NONE is significant."
+      - "Each test independently fails to reject with probability 0.95."
+      - "1 − 0.95⁸."
+    solution: |
+      $$P(\text{at least one}) = 1 - (1 - 0.05)^8 = 1 - 0.95^8 = 1 - 0.6634 = 0.3366$$
+
+      About a **one-in-three** chance of a false positive, in a world where nothing works.
+
+      With a Bonferroni correction each test would be compared against $0.05/8 = 0.00625$, restoring the family-wise error rate to approximately 5% at the cost of power.
+    explanation:
+      objective: "Quantify the family-wise error rate for multiple independent tests."
+      given: "Eight independent tests at the 5% level, all nulls true."
+      relevant: "The number of tests and the per-test level."
+      calculating: "1 minus the probability that every test fails to reject."
+      method: "Complement rule plus independence: P(no false positive) = 0.95^8."
+      numbers: "0.95^8 = 0.6634, so the family-wise error rate is 0.3366."
+      assumptions: "Independence between tests. Real endpoints are usually correlated, which makes the true rate somewhat lower than this — but still far above 5%, and the correlation structure is rarely known."
+      interpretation: "This is why the SAP fixes a testing hierarchy: the alternative is a false-positive rate nobody controls."
+      changes: "At 20 tests the rate reaches 64%. With a fixed-sequence hierarchy there is no penalty at all, because testing stops at the first failure — which is why PFS-then-OS ordering is specified before unblinding."
+      interviewer: "That you compute it via the complement without hesitating, and that you can name at least two control strategies and their costs."
+
+  - id: stats.ht.r-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [stats.hypothesis-testing, stats.t-tests, r.models]
+    lesson: stats-hypothesis-testing
+    title: A test whose specification is visible in the code
+    minutes: 12
+    prompt: |
+      Write a function `compare_arms(data, active)` that compares the Week 12 `CHG` in the named active arm against `"Placebo"` and returns a one-row data frame with `difference`, `lower`, `upper`, `t`, `df` and `p`.
+
+      Requirements that make this production code rather than exploration:
+
+      - Filter to `PARAMCD == "SYSBP"`, `ANL01FL == "Y"`, `AVISITN == 12`.
+      - Use the **pooled** two-sample test (state it explicitly — do not rely on R's default).
+      - Use a **two-sided** alternative (state it explicitly).
+      - Return the difference as **active minus placebo**, so a negative number means the drug lowered BP more.
+    starter: |
+      compare_arms <- function(data, active) {
+        w12 <- data |>
+          dplyr::filter(___)
+
+        a <- w12$CHG[w12$TRTP == active]
+        p <- w12$CHG[w12$TRTP == "Placebo"]
+
+        tt <- t.test(___)
+
+        data.frame(difference = ___, lower = ___, upper = ___,
+                   t = ___, df = ___, p = ___)
+      }
+    reference: |
+      compare_arms <- function(data, active) {
+        w12 <- data |>
+          dplyr::filter(PARAMCD == "SYSBP", ANL01FL == "Y", AVISITN == 12)
+
+        a <- w12$CHG[w12$TRTP == active]
+        p <- w12$CHG[w12$TRTP == "Placebo"]
+
+        tt <- t.test(a, p, var.equal = TRUE, alternative = "two.sided")
+
+        data.frame(
+          difference = unname(tt$estimate[1] - tt$estimate[2]),
+          lower      = tt$conf.int[1],
+          upper      = tt$conf.int[2],
+          t          = unname(tt$statistic),
+          df         = unname(tt$parameter),
+          p          = tt$p.value
+        )
+      }
+    hints:
+      - "Passing the active arm's vector first to `t.test(a, p)` makes the difference active − placebo, which is the direction you want."
+      - "`var.equal = TRUE` gives the pooled test. R's default is FALSE (Welch), so you must say so."
+      - "`tt$estimate` is a length-2 vector of the two group means; `tt$conf.int`, `tt$statistic`, `tt$parameter` and `tt$p.value` hold the rest."
+    checks:
+      - pattern: "PARAMCD\\s*==\\s*[\"']SYSBP[\"']"
+        message: "Filters to the systolic BP parameter"
+      - pattern: "AVISITN\\s*==\\s*12"
+        message: "Restricts to the Week 12 visit (one record per subject)"
+      - pattern: "ANL01FL\\s*==\\s*[\"']Y[\"']"
+        message: "Uses only analysis-flagged records"
+      - pattern: "var\\.equal\\s*=\\s*TRUE"
+        message: "States the pooled variance assumption explicitly"
+      - pattern: "alternative\\s*=\\s*[\"']two\\.sided[\"']"
+        message: "States the two-sided alternative explicitly"
+      - pattern: "t\\.test\\s*\\(\\s*a\\s*,\\s*p\\b"
+        message: "Puts the active arm first so the difference is active minus placebo"
+    expectedOutput: |
+      ```text
+        difference     lower     upper         t  df            p
+      1   -8.97625 -12.61945 -5.333055 -4.867037 155 2.764557e-06
+      ```
+    solution: |
+      ```r
+      compare_arms <- function(data, active) {
+        w12 <- data |>
+          dplyr::filter(PARAMCD == "SYSBP", ANL01FL == "Y", AVISITN == 12)
+
+        a <- w12$CHG[w12$TRTP == active]
+        p <- w12$CHG[w12$TRTP == "Placebo"]
+
+        tt <- t.test(a, p, var.equal = TRUE, alternative = "two.sided")
+
+        data.frame(
+          difference = unname(tt$estimate[1] - tt$estimate[2]),
+          lower      = tt$conf.int[1],
+          upper      = tt$conf.int[2],
+          t          = unname(tt$statistic),
+          df         = unname(tt$parameter),
+          p          = tt$p.value
+        )
+      }
+      ```
+
+      Three habits this encodes: the analysis population is visible in the filter, the variance assumption and the sidedness are stated rather than inherited from a default, and the direction of the difference is determined by argument order rather than by the alphabet.
+    explanation:
+      objective: "Write a comparison function whose statistical specification is readable from the code itself."
+      given: "A BDS vital-signs data frame and a requirement for pooled, two-sided, active-minus-placebo."
+      relevant: "The three filter conditions, the two t.test arguments, and the argument order."
+      method: "Encode every specification decision explicitly rather than relying on a language default that differs between R, SAS and SciPy."
+      numbers: "For the 20 mg arm: difference -8.976, CI (-12.619, -5.333), t = -4.867 on 155 df, p = 2.76e-06."
+      assumptions: "Pooled variance assumes equal variances between arms. Here the SDs are 11.50 and 11.61, so the assumption is comfortable — but it is the SAP's call, not the data's."
+      interpretation: "A reviewer can read the specification off the function without running it, which is the property that makes code reviewable."
+      changes: "Switching to var.equal = FALSE gives t = -4.866 on 154.64 df — practically identical here, and materially different when arm sizes or variances differ."
+      interviewer: "That you write defaults out explicitly, and that you control the sign by argument order rather than by post-hoc negation."
+
+  - id: stats.ht.variance-test-trap
+    format: mcq
+    modes: [qc, check, interview]
+    difficulty: advanced
+    skills: [stats.hypothesis-testing, stats.t-tests, qc.mindset]
+    lesson: stats-hypothesis-testing
+    title: Using the F test to pick the t test
+    prompt: |
+      A program contains this logic:
+
+      > Run PROC TTEST. If the Folded F test for equality of variances has p > 0.05, report the Pooled row; otherwise report the Satterthwaite row.
+
+      What is wrong with it?
+    choices:
+      - text: "It makes the analysis data-dependent, so the actual type I error is not the nominal 0.05 — and the F test is itself unreliable under non-normality, which is when it matters."
+        correct: true
+        feedback: "Both halves matter. The two-stage procedure has its own error rate, and the screening test is least trustworthy exactly in the situations it is meant to detect."
+      - text: "Nothing — this is the standard recommended approach."
+        feedback: "It appears in older textbooks but is not recommended practice. A pre-specified single method is what a SAP should contain."
+      - text: "The Folded F test should be run at 0.10 rather than 0.05."
+        feedback: "Changing the screening threshold does not fix the underlying problem: the choice is still made after seeing the data."
+      - text: "PROC TTEST does not produce an equality-of-variances test."
+        feedback: "It does — the Folded F appears in the default output, which is precisely why this trap is so easy to fall into."
+    solution: |
+      Two problems, and each alone is disqualifying.
+
+      **Data-dependent selection.** Choosing the analysis after looking at the data means the procedure's real type I error is not what you claimed. It is a two-stage procedure and must be evaluated as one.
+
+      **An unreliable screen.** The F test for variance equality is highly sensitive to departures from normality — far more so than the t-test is. It flags non-normality as unequal variance, so it fails in exactly the situation you were hoping it would diagnose.
+
+      **What to do instead:** pre-specify one method in the SAP. Welch is the safer default: it is nearly as efficient as the pooled test when variances are equal, and substantially better when they are not.
+    explanation:
+      objective: "Identify why a plausible-looking adaptive rule is invalid."
+      given: "A two-stage procedure that selects the t-test based on a preliminary variance test."
+      relevant: "That the selection depends on the observed data, and that the screening test has poor properties."
+      method: "Evaluate the composite procedure, not its two halves separately. Its error rate is a property of the whole decision rule."
+      assumptions: "The Folded F assumes normality and is not robust to violations; the t-test is comparatively robust. The screen is more fragile than the thing it screens."
+      interpretation: "'The data told us which test to use' is never a defence in a confirmatory setting."
+      changes: "Pre-specifying Welch unconditionally removes the problem and costs very little power when the variances really are equal."
+      interviewer: "That you object on pre-specification grounds AND know the statistical fragility of the F test, rather than only one of the two."
+
+  - id: stats.ht.interpret-open
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [stats.hypothesis-testing, communication.interviewing, communication.audiences]
+    lesson: stats-hypothesis-testing
+    title: Correcting a medical writer's draft
+    prompt: |
+      **Interviewer:** "A medical writer sends you this sentence for the CSR: *'VTX-221 20 mg was highly significantly superior to placebo (p < 0.0001), proving a strong treatment effect with only a 0.01% chance of being due to chance.'* What do you send back?"
+    modelAnswer: |
+      I'd flag four separate problems and give them a replacement sentence, because a list of objections without a rewrite just creates another round trip.
+
+      First, "only a 0.01% chance of being due to chance" inverts the conditional. The p-value is the probability of data this extreme *if* there were no effect — it is not the probability that the result is a fluke. That's the correction that matters most, because it is the sentence a reviewer would notice.
+
+      Second, "proving" overstates what one trial does. We report evidence; we don't prove.
+
+      Third, "highly significantly" has no defined meaning. A result is significant at a pre-specified level or it isn't — gradations of significance aren't a thing, and they read as advocacy.
+
+      Fourth, and most importantly for the reader, the sentence never says how *big* the effect is. A p-value is compatible with any effect size given enough patients. The clinically useful number is missing.
+
+      My replacement: *"VTX-221 20 mg reduced systolic blood pressure by 8.98 mmHg more than placebo at Week 12 (95% CI 5.33 to 12.62 mmHg; p < 0.0001)."* Estimate first, interval second, p-value last.
+
+      I'd also say why I care, so it doesn't read as pedantry: the interval is what ends up informing clinical use, and a sentence that overclaims in a CSR is the kind of thing that attracts questions we'd rather not spend time on.
+    rubric:
+      - Identifies the inverted conditional as the primary error and states the correct direction
+      - Flags "proving" as overclaiming from a single trial
+      - Notes that "highly significant" is undefined
+      - Points out that effect size is absent and that the interval carries it
+      - Supplies a concrete replacement sentence in estimate-interval-p order
+      - Explains the practical reason, not only the formal one
+    redFlags:
+      - "Objects only to the wording without correcting the probability statement"
+      - "Approves the sentence with minor edits"
+      - "Cannot produce a replacement when asked"
+      - "Is dismissive of the medical writer rather than collaborative"
+
+  - id: stats.ht.qc-p-halved
+    format: numeric
+    modes: [qc, check]
+    difficulty: intermediate
+    skills: [stats.hypothesis-testing, qc.discrepancy]
+    lesson: stats-hypothesis-testing
+    title: Reconciling a p-value discrepancy
+    prompt: |
+      Production reports **p = 0.0984** for a secondary endpoint. Your QC program reports **p = 0.0492** on the same data with the same model.
+
+      Neither programmer has made an arithmetic error. Assuming production is correct and follows the SAP's two-sided specification, what **ratio** does production's p-value bear to yours?
+
+      Give the ratio as a number.
+    answer: 2
+    tolerance: 0.01
+    hints:
+      - "Divide one p-value by the other."
+      - "What analysis choice changes a p-value by exactly this factor, with no change to the data or the model?"
+    solution: |
+      $0.0984 / 0.0492 = 2$ exactly.
+
+      A factor of exactly 2 between two p-values from the same data and model is the signature of a **sidedness mismatch**: your QC program ran a one-sided test where the SAP specifies two-sided.
+
+      The finding is against **QC**, not production — your program needs `alternative = "two.sided"` (R) or `sides=2` (SAS). Note the consequence: the correct, pre-specified result is *not* significant at 0.05, and the one-sided version would have looked significant. This is exactly the discrepancy you want to catch before it reaches a table.
+    explanation:
+      objective: "Diagnose a p-value discrepancy from its ratio and assign the finding correctly."
+      given: "Two p-values from the same data and model, and the SAP's two-sided specification."
+      relevant: "The exact ratio of 2 and which program the SAP supports."
+      calculating: "0.0984 / 0.0492."
+      method: "Systematic discrepancies have signatures. Exactly 2 in a t or z p-value means sidedness; sqrt(n) in a dispersion statistic means SD versus SE; sqrt(n/(n-1)) means the population SD divisor."
+      numbers: "0.0984 / 0.0492 = 2.000."
+      interpretation: "QC findings are written against whichever program departs from the specification — here QC itself, which is a normal and healthy outcome of dual programming."
+      changes: "If the ratio had been close to but not exactly 2, sidedness would not explain it and you would look instead at the degrees of freedom or the variance assumption."
+      interviewer: "That you reconcile by identifying the transformation rather than by rerunning and hoping, and that you are willing to conclude your own program is the one at fault."

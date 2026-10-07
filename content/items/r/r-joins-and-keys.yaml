@@ -1,0 +1,767 @@
+items:
+  - id: r.joins.many-to-many
+    format: numeric
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [r.joins]
+    lesson: r-joins-and-keys
+    title: How many rows come out
+    prompt: |
+      ```r
+      a <- data.frame(id = c(1, 1, 2), x = c("a", "b", "c"))
+      b <- data.frame(id = c(1, 1, 2), y = c("X", "Y", "Z"))
+      nrow(left_join(a, b, by = "id"))
+      ```
+
+      Three rows joined to three rows. How many rows does the result have?
+    answer: 5
+    tolerance: 0
+    hints:
+      - "Key 1 appears twice on the left and twice on the right."
+      - "Each matching pair produces a row — so key 1 gives 2 × 2."
+      - "Key 2 appears once on each side."
+    solution: |
+      **5.** A many-to-many join produces a Cartesian product **within each key**:
+
+      - Key 1: 2 left rows × 2 right rows = **4 rows**
+      - Key 2: 1 × 1 = **1 row**
+
+      ```text
+        id x y
+      1  1 a X
+      2  1 a Y
+      3  1 b X
+      4  1 b Y
+      5  2 c Z
+      ```
+
+      dplyr warns and names the offending rows. **SAS's `MERGE` on the same data gives 3 rows**, matching
+      observation-by-observation within the BY group and carrying the last value forward — a plausible
+      row count with wrong values, which is the more dangerous failure.
+
+      The fix is to declare what you expect: `relationship = "many-to-one"` turns the warning into an
+      error at the point of the mistake.
+    explanation:
+      objective: "Predict the row count of a join where the key repeats on both sides."
+      given: "Two three-row data frames sharing a duplicated key."
+      relevant: "How many times each key value appears on each side."
+      calculating: "The sum over keys of (left count x right count)."
+      numbers: "Key 1: 2 x 2 = 4. Key 2: 1 x 1 = 1. Total 5."
+      method: "A join emits one row per matching pair, so duplicated keys multiply."
+      interpretation: "Row inflation is the symptom; every downstream count is affected proportionally."
+      changes: "SAS MERGE would give 3 rows by matching positionally and carrying values forward — a different and quieter kind of wrong."
+      interviewer: "That you can state what SAS does differently, since that is what makes the SAS habit dangerous when carried into R."
+
+  - id: r.joins.anti-direction
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: intermediate
+    skills: [r.joins, qc.compare]
+    lesson: r-joins-and-keys
+    title: Which direction is a finding
+    prompt: |
+      Two reconciliation checks on a study:
+
+      ```r
+      anti_join(advs, adsl, by = "USUBJID")   # A
+      anti_join(adsl, advs, by = "USUBJID")   # B
+      ```
+
+      Which one must return **zero** rows, and why?
+    choices:
+      - text: "**A** — a vital-signs record whose subject is not in ADSL is an orphan, meaning the datasets disagree about who was in the study."
+        correct: true
+        feedback: "Correct. B may legitimately be non-zero: a subject randomized but withdrawn before any assessment has no vital-signs records."
+      - text: "**B** — every subject must have vital-signs records."
+        feedback: "Not so. A subject who withdrew before any assessment legitimately has none, and that is a fact about the study rather than a defect."
+      - text: "Both must be zero."
+        feedback: "Only A. Requiring B to be zero would mean no subject could ever withdraw before their first assessment."
+      - text: "Neither — both are informational."
+        feedback: "A is a genuine data-integrity finding. A record belonging to nobody cannot be analysed and cannot be explained."
+    solution: |
+      **A must be zero.** A record whose subject does not exist in ADSL is an **orphan**: either the
+      identifier is wrong, or a subject was removed from ADSL who should not have been. Either way the
+      two datasets disagree about the study population, and that is a finding for the vendor.
+
+      **B may legitimately be non-zero.** A subject randomized and withdrawn before any assessment has no
+      vital-signs records. Worth reporting — it feeds the disposition discussion — but not a defect.
+
+      ```r
+      stopifnot(nrow(anti_join(advs, adsl, by = "USUBJID")) == 0)   # assert
+      message(nrow(anti_join(adsl, advs, by = "USUBJID")),
+              " subject(s) with no records")                        # report
+      ```
+
+      On this study both are zero, because every randomized subject has at least a baseline measurement.
+    explanation:
+      objective: "Distinguish the two directions of a reconciliation and their different severities."
+      given: "Two anti_join calls differing only in argument order."
+      relevant: "Which dataset defines the study population."
+      method: "ADSL is the authoritative list of randomized subjects; other datasets describe them."
+      numbers: "On this study both return 0 rows — 270 subjects in ADSL, all 270 appearing in ADVS."
+      assumptions: "ADSL contains every randomized subject, which is its defining property."
+      interpretation: "One direction is an integrity violation; the other is a study fact worth reporting."
+      changes: "Restricting ADVS to a later visit changes direction B substantially — only 238 subjects have a Week 12 record."
+      interviewer: "That you assert one direction and merely report the other, rather than treating them symmetrically."
+
+  - id: r.joins.relationship-arg
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [r.joins, qc.mindset]
+    lesson: r-joins-and-keys
+    title: Declaring what you expect
+    prompt: |
+      You are attaching subject-level treatment from ADSL onto every record of ADVS.
+
+      ```r
+      advs |> left_join(adsl_sub, by = "USUBJID", relationship = ___)
+      ```
+
+      Which value belongs in the blank?
+    choices:
+      - text: "`\"many-to-one\"` — ADVS may repeat a subject across visits; ADSL must not repeat at all."
+        correct: true
+        feedback: "Correct. It errors if ADSL ever gains a duplicate key, which is exactly the failure that would silently inflate every downstream count."
+      - text: "`\"one-to-many\"`"
+        feedback: "That is the reverse — it requires the *left* side to be unique, and ADVS has about 11 records per subject."
+      - text: "`\"one-to-one\"`"
+        feedback: "Too strict. ADVS legitimately has many rows per subject, so this would error on correct data."
+      - text: "`\"many-to-many\"`"
+        feedback: "That silences the warning rather than asserting anything, which is the opposite of what you want here."
+    solution: |
+      **`"many-to-one"`.** The left side (ADVS) may repeat a key; the right side (ADSL) must not.
+
+      Read it as "many rows on the left map to one row on the right". It errors if ADSL ever has a
+      duplicate `USUBJID` — the failure that would otherwise duplicate ADVS records silently and inflate
+      every count computed afterwards.
+
+      **This is the structural fix rather than a check.** An unexpected many-to-many only *warns* by
+      default, and a warning in a long script scrolls past. Declaring the relationship converts it into
+      an error at the line where the assumption breaks, rather than a wrong number three steps later.
+
+      Pair it with a row-count assertion afterwards: a left join against a unique key cannot change the
+      row count, and asserting that survives someone later editing the `by` clause.
+    explanation:
+      objective: "Choose the correct relationship declaration for a common clinical join."
+      given: "A record-level dataset joined to a subject-level one."
+      relevant: "Which side may repeat the key and which must be unique."
+      method: "Read the argument as (left cardinality)-to-(right cardinality)."
+      numbers: "ADVS has 3,082 rows from 270 subjects, about 11 per subject; ADSL has exactly one row per subject."
+      assumptions: "ADSL's one-row-per-subject grain is a definitional property, so asserting it is always appropriate."
+      interpretation: "The declaration turns a default warning into an error at the point of failure."
+      changes: "If the right side were also record-level — joining ADVS to ADLB, say — no relationship declaration would make the join meaningful; you would restrict one side first."
+      interviewer: "That you also add the row-count assertion, since the two checks catch different failures."
+
+  - id: r.joins.inner-vs-left
+    format: numeric
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [r.joins, tlf.denominators, stats.missing-data]
+    lesson: r-joins-and-keys
+    title: The join type chooses the denominator
+    prompt: |
+      ADSL has **270** ITT subjects. Only **238** have a Week 12 systolic record.
+
+      ```r
+      adsl |> inner_join(w12, by = "USUBJID")
+      ```
+
+      How many rows does this return?
+    answer: 238
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "`inner_join` keeps only rows with a match on both sides."
+      - "How many ADSL subjects have a matching Week 12 record?"
+    solution: |
+      **238** — `inner_join` silently drops the 32 subjects with no Week 12 record.
+
+      ```r
+      adsl |> inner_join(w12, by = "USUBJID")                             # 238
+      adsl |> left_join(w12, by = "USUBJID", relationship = "one-to-one") # 270
+      ```
+
+      **The choice of join verb *is* the missing-data strategy**, and that makes it a SAP decision rather
+      than a coding convenience:
+
+      - `inner_join` → **observed cases**. Common for a continuous endpoint analysed at a single visit.
+      - `left_join` → **ITT**, with `NA` for the 32 subjects, so an imputation rule can then be applied.
+
+      For a **binary responder** endpoint the second is usually preferred with non-responder imputation,
+      because the subjects who discontinued are unlikely to have been responders — and an observed-case
+      analysis would systematically flatter the treatment.
+
+      Every percentage in the table differs depending on which you pick, and nothing in the output says
+      which was used.
+    explanation:
+      objective: "Recognise that the join type determines the analysis denominator."
+      given: "A 270-subject population and 238 subjects with the analysis visit."
+      relevant: "Which subjects have a match on both sides."
+      calculating: "The count of subjects present in both datasets."
+      numbers: "270 ITT subjects; 238 with a Week 12 systolic record; 32 dropped by an inner join."
+      assumptions: "Whether the 32 should be excluded or retained with NA is an estimand decision under ICH E9(R1)."
+      interpretation: "An observed-case denominator flatters a responder endpoint, because discontinuers are unlikely to have responded."
+      changes: "A left join keeps all 270 with NA, which lets the SAP's imputation rule be applied deliberately and visibly."
+      interviewer: "That you frame the verb choice as a missing-data decision rather than a technical one."
+
+  - id: r.joins.grain-check
+    format: code
+    language: r
+    modes: [guided, independent, qc]
+    difficulty: foundation
+    skills: [r.joins, qc.mindset]
+    lesson: r-joins-and-keys
+    title: Check the grain before you merge
+    minutes: 10
+    prompt: |
+      Write `check_key(data, key = "USUBJID", label = deparse(substitute(data)))` that:
+
+      - Returns the data unchanged if `key` is unique.
+      - Otherwise **stops**, naming the dataset, the number of duplicated keys, and up to three examples.
+
+      It must return the data so it can be dropped into a pipeline before a join.
+    starter: |
+      check_key <- function(data, key = "USUBJID", label = deparse(substitute(data))) {
+        dups <- ___
+
+        if (___) {
+          stop(___)
+        }
+
+        data
+      }
+    reference: |
+      check_key <- function(data, key = "USUBJID", label = deparse(substitute(data))) {
+        ids  <- data[[key]]
+        dups <- unique(ids[duplicated(ids)])
+
+        if (length(dups) > 0) {
+          stop(label, ": ", key, " is not unique — ", length(dups),
+               " duplicated value(s): ",
+               paste(utils::head(dups, 3), collapse = ", "),
+               if (length(dups) > 3) ", ..." else "")
+        }
+
+        data
+      }
+    hints:
+      - "`unique(ids[duplicated(ids)])` gives each offending key once rather than once per repeat."
+      - "Include the dataset name in the message — in a pipeline with several joins, 'key is not unique' alone does not say which one."
+      - "Return `data` on success so the function can sit mid-pipeline."
+    checks:
+      - pattern: "duplicated\\s*\\("
+        message: "Detects duplicate key values"
+      - pattern: "stop\\s*\\("
+        message: "Fails loudly rather than returning a dataset that will inflate a join"
+      - pattern: "label"
+        message: "Names the dataset in the error message"
+      - pattern: "head\\s*\\("
+        message: "Limits the listed examples so the message stays readable"
+    expectedOutput: |
+      ```text
+      > adsl |> check_key() |> nrow()
+      [1] 270
+
+      > advs |> check_key()
+      Error: advs: USUBJID is not unique — 270 duplicated value(s):
+        VTX221-201-101-001, VTX221-201-101-002, VTX221-201-101-003, ...
+      ```
+    solution: |
+      **Naming the dataset is the part that pays off.** A pipeline with three joins throws the same
+      generic message from any of them; `"adsl: USUBJID is not unique"` tells you where to look
+      immediately.
+
+      `deparse(substitute(data))` captures the caller's expression as text, so `adsl |> check_key()`
+      reports `adsl`. It is a little of R's metaprogramming, and this is one of the few places where it
+      earns its keep.
+
+      **Returning the data is what makes it survive.** A check returning `TRUE` has to be called on its
+      own line, which means it drifts away from the join it protects and eventually gets deleted during a
+      refactor. A check that passes the data through sits inside the pipeline permanently:
+
+      ```r
+      combined <- advs |>
+        left_join(check_key(adsl_sub) |> select(USUBJID, TRT01P), by = "USUBJID")
+      ```
+    explanation:
+      objective: "Write a reusable, pipeline-friendly key-uniqueness assertion."
+      given: "A data frame and the name of its key column."
+      relevant: "Whether any key value appears more than once."
+      method: "duplicated() flags repeats; unique() reduces them to the distinct offending values."
+      assumptions: "The caller knows which side of a join should be unique; the function does not infer it."
+      computation: "deparse(substitute(data)) recovers the caller's variable name for the message."
+      interpretation: "A duplicate on the 'one' side of a join inflates every downstream count silently."
+      changes: "Parameterising the key lets the same function guard a composite key by passing a pasted column, or ADSL, ADTTE and any other one-row-per-subject structure."
+      interviewer: "That you design the check to live inside the pipeline, because a check that is easy to skip will be."
+
+  - id: r.joins.reconcile
+    format: code
+    language: r
+    modes: [guided, independent, qc]
+    difficulty: intermediate
+    skills: [r.joins, qc.compare]
+    lesson: r-joins-and-keys
+    title: Reconcile two datasets in both directions
+    minutes: 12
+    prompt: |
+      Write `reconcile(left, right, key = "USUBJID", left_name = "left", right_name = "right")`
+      returning a one-row data frame with:
+
+      - `n_left`, `n_right` — distinct key values in each
+      - `only_left`, `only_right` — counts present in one and not the other
+      - `orphan_ok` — `TRUE` when `only_right` is zero
+
+      Treat `right` as the record-level dataset, so `only_right` counts orphans.
+    starter: |
+      library(dplyr)
+
+      reconcile <- function(left, right, key = "USUBJID",
+                            left_name = "left", right_name = "right") {
+        l <- ___
+        r <- ___
+
+        data.frame(
+          n_left     = ___,
+          n_right    = ___,
+          only_left  = ___,
+          only_right = ___,
+          orphan_ok  = ___
+        )
+      }
+    reference: |
+      library(dplyr)
+
+      reconcile <- function(left, right, key = "USUBJID",
+                            left_name = "left", right_name = "right") {
+        l <- unique(left[[key]])
+        r <- unique(right[[key]])
+
+        only_left  <- length(setdiff(l, r))
+        only_right <- length(setdiff(r, l))
+
+        data.frame(
+          n_left     = length(l),
+          n_right    = length(r),
+          only_left  = only_left,
+          only_right = only_right,
+          orphan_ok  = only_right == 0
+        )
+      }
+    hints:
+      - "`unique()` first — the record-level dataset has many rows per key."
+      - "`setdiff(a, b)` gives values in `a` not in `b`; the direction determines the meaning."
+      - "`only_right` counts keys present in the record-level data but absent from the subject list — orphans."
+    checks:
+      - pattern: "unique\\s*\\("
+        message: "Reduces to distinct key values before comparing"
+      - pattern: "setdiff\\s*\\("
+        message: "Uses setdiff to find keys present in one dataset only"
+      - pattern: "only_right\\s*==\\s*0"
+        message: "Flags whether the orphan count is acceptable"
+      - pattern: "data\\.frame\\s*\\("
+        message: "Returns a one-row summary"
+    expectedOutput: |
+      ```text
+      > reconcile(adsl, advs)
+        n_left n_right only_left only_right orphan_ok
+      1    270     270         0          0      TRUE
+      ```
+    solution: |
+      On this study everything reconciles: 270 subjects in ADSL, 270 appearing in ADVS, nothing in either
+      direction. **That is what a clean pair looks like**, and seeing it once makes an unclean pair
+      recognisable.
+
+      **The two directions are not symmetric**, which is why `orphan_ok` flags only one of them.
+      `only_left` — subjects with no records — can legitimately be positive when someone withdrew before
+      their first assessment. `only_right` — records with no subject — cannot: the datasets disagree
+      about who was in the study.
+
+      **Run it on every transfer**, and run it again restricted to the analysis visit. Reconciling on
+      "appears anywhere" gives 270/270 here; restricting to Week 12 systolic records gives 238, and
+      confusing the two is how a table denominator goes wrong.
+    explanation:
+      objective: "Produce a two-directional reconciliation as a reusable one-row summary."
+      given: "A subject-level dataset and a record-level one sharing a key."
+      relevant: "The distinct key values in each and the set differences both ways."
+      method: "setdiff in both directions, after reducing each side to distinct keys."
+      numbers: "270 in ADSL, 270 distinct subjects in ADVS, 0 in either direction."
+      assumptions: "The left dataset is the authoritative subject list, so keys present only on the right are orphans."
+      interpretation: "only_left can be legitimately positive; only_right cannot."
+      changes: "Restricting the record-level dataset to a single visit before reconciling gives a different and equally useful answer — 238 rather than 270."
+      interviewer: "That you build it to be run on every transfer rather than as a one-off investigation."
+
+  - id: r.joins.row-count
+    format: numeric
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [r.joins, qc.compare]
+    lesson: r-joins-and-keys
+    title: What the row count should be
+    prompt: |
+      `advs` has **3,082** rows. `adsl_sub` has **270** rows, one per subject, and every ADVS subject
+      appears in it.
+
+      ```r
+      advs |> left_join(adsl_sub, by = "USUBJID", relationship = "many-to-one")
+      ```
+
+      How many rows does the result have?
+    answer: 3082
+    tolerance: 0
+    hints:
+      - "A left join keeps every row of the left dataset."
+      - "How many matches does each ADVS row find on the right?"
+      - "Can a row be duplicated if the right side has a unique key?"
+    solution: |
+      **3,082 — unchanged.**
+
+      A left join against a **unique** right key cannot change the row count: each left row finds exactly
+      one match, gains the new columns, and stays one row.
+
+      That makes it an assertion worth writing:
+
+      ```r
+      stopifnot(nrow(combined) == nrow(advs))
+      ```
+
+      **Why assert it when `relationship = "many-to-one"` already guards the key?** They catch different
+      things. The `relationship` argument checks the key *structure*; the row-count assertion checks the
+      *outcome*. They come apart when the join key is composite and you name only part of it, or when a
+      later edit changes the `by` clause. The row-count check is agnostic to how the join was specified,
+      so it survives refactoring.
+    explanation:
+      objective: "Predict the row count of a left join against a unique key."
+      given: "Row counts for both sides and the guarantee that the right key is unique."
+      relevant: "That each left row finds exactly one match."
+      calculating: "The left row count, unchanged."
+      numbers: "3,082 ADVS rows, each matching exactly one of the 270 ADSL rows."
+      method: "A join emits one row per matching pair; with a unique right key each left row produces exactly one."
+      interpretation: "Any change in the row count means an assumption was violated."
+      changes: "If the right side had a duplicate key, the affected left rows would be duplicated and the count would rise — silently, without the relationship declaration."
+      interviewer: "That you can say why the row-count assertion adds something beyond the relationship declaration."
+
+  - id: r.joins.safe-join-code
+    format: code
+    language: r
+    modes: [independent]
+    difficulty: advanced
+    skills: [r.joins, qc.mindset, adam.adsl]
+    lesson: r-joins-and-keys
+    title: A join you can defend in review
+    minutes: 15
+    prompt: |
+      Write `attach_subject_vars(records, adsl, vars = c("TRT01P", "ITTFL", "SAFFL"))` that attaches
+      subject-level variables onto a record-level dataset.
+
+      It must:
+
+      1. Assert that `USUBJID` is unique in `adsl`.
+      2. Assert there are **no orphans** — every record's subject exists in `adsl`.
+      3. `select()` only `USUBJID` plus `vars` before joining, to avoid `.x`/`.y` suffixes.
+      4. Declare `relationship = "many-to-one"`.
+      5. Assert the row count is unchanged.
+    starter: |
+      library(dplyr)
+
+      attach_subject_vars <- function(records, adsl,
+                                      vars = c("TRT01P", "ITTFL", "SAFFL")) {
+        stopifnot(___)
+
+        orphans <- ___
+        stopifnot(___)
+
+        out <- records |>
+          left_join(___)
+
+        stopifnot(___)
+        out
+      }
+    reference: |
+      library(dplyr)
+
+      attach_subject_vars <- function(records, adsl,
+                                      vars = c("TRT01P", "ITTFL", "SAFFL")) {
+        stopifnot(!any(duplicated(adsl$USUBJID)))
+
+        orphans <- setdiff(unique(records$USUBJID), adsl$USUBJID)
+        stopifnot(length(orphans) == 0)
+
+        out <- records |>
+          left_join(select(adsl, USUBJID, all_of(vars)),
+                    by = "USUBJID",
+                    relationship = "many-to-one")
+
+        stopifnot(nrow(out) == nrow(records))
+        out
+      }
+    hints:
+      - "`all_of(vars)` selects by a character vector and errors if a name is missing — safer than bare `vars`."
+      - "`setdiff(unique(records$USUBJID), adsl$USUBJID)` finds orphan subjects."
+      - "The final assertion compares the output row count against the input, not against a literal."
+    checks:
+      - pattern: "duplicated\\s*\\(\\s*adsl\\$USUBJID\\s*\\)"
+        message: "Asserts the subject-level key is unique"
+      - pattern: "setdiff\\s*\\("
+        message: "Checks for orphan subjects before joining"
+      - pattern: "all_of\\s*\\(\\s*vars\\s*\\)"
+        message: "Selects the requested columns safely by name"
+      - pattern: "relationship\\s*=\\s*[\"']many-to-one[\"']"
+        message: "Declares the expected join cardinality"
+      - pattern: "nrow\\s*\\(\\s*out\\s*\\)\\s*==\\s*nrow\\s*\\(\\s*records\\s*\\)"
+        message: "Asserts the row count did not change"
+    expectedOutput: |
+      ```text
+      > out <- attach_subject_vars(advs, adsl)
+      > nrow(advs); nrow(out); names(out)[(ncol(out)-2):ncol(out)]
+      [1] 3082
+      [1] 3082
+      [1] "TRT01P"  "ITTFL.y" "SAFFL"
+      ```
+    solution: |
+      Five checks around one join, and each catches a different failure:
+
+      | Check | Catches |
+      |---|---|
+      | Unique `USUBJID` in ADSL | The duplicate that would inflate every record |
+      | No orphans | Datasets disagreeing about the study population |
+      | `select()` before join | Dragging across dozens of unwanted columns (though not a same-name collision — see below) |
+      | `relationship = "many-to-one"` | A duplicate key introduced by a later edit |
+      | Row count unchanged | Anything the other four missed |
+
+      **Look closely at that output — it shows the limit of this defence.** The attached column came back
+      as `ITTFL.y`, not `ITTFL`, because ADVS *already has* an `ITTFL` column. Selecting on the right side
+      stops you dragging across forty unwanted columns, but it cannot prevent a collision when the name
+      you want already exists on the left.
+
+      Three ways to handle it, and the choice is a real decision rather than a formatting one:
+
+      ```r
+      # 1. Rename on the way in — explicit about which is which
+      select(adsl, USUBJID, ITTFL_SL = ITTFL)
+
+      # 2. Control the suffixes so the origin is readable
+      left_join(..., suffix = c("", "_adsl"))
+
+      # 3. Drop the left-hand copy first, if ADSL is authoritative
+      records |> select(-ITTFL) |> left_join(...)
+      ```
+
+      **Option 3 is usually right for population flags**, because ADSL is the authoritative source and a
+      copy carried on a BDS dataset can be stale. But it is a decision to make deliberately — silently
+      accepting `ITTFL.y` means every later reference to bare `ITTFL` picks the *left* copy, which may not
+      be the one you just attached.
+
+      **`all_of(vars)`** rather than bare `vars` is the safe tidyselect idiom: it errors if a requested
+      column is missing, rather than silently returning fewer columns than asked for.
+
+      This is roughly what `admiral::derive_vars_merged()` does, with the same checks built in — because
+      the package authors know this is where ADaM derivations go wrong.
+    explanation:
+      objective: "Write a defensible subject-variable join with layered assertions."
+      given: "A record-level dataset, a subject-level dataset, and a list of variables to attach."
+      relevant: "Key uniqueness, orphan records, column-name collisions and the row count."
+      method: "Assert before, declare during, assert after — each check covering a different failure."
+      numbers: "3,082 ADVS rows in and out; 270 unique ADSL subjects; 0 orphans."
+      assumptions: "ADSL is the authoritative subject list, so any record without a matching subject is an error rather than a missing value."
+      computation: "all_of() errors on a missing column name. Note that selecting on the right side does NOT prevent a suffix when the same name exists on the left — ADVS already carries ITTFL, so the attached copy arrives as ITTFL.y."
+      interpretation: "A reviewer can read the function and see every assumption stated rather than implied."
+      changes: "admiral's derive_vars_merged() implements the same pattern with a check_type argument, which is why using it gets the assertions for free."
+      interviewer: "That you can name what each check catches, rather than listing checks as a ritual."
+
+  - id: r.joins.silent-inflation
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [r.joins, qc.discrepancy]
+    lesson: r-joins-and-keys
+    title: Twenty-eight rows from nowhere
+    minutes: 10
+    prompt: |
+      The merged dataset has **3,110** rows. `advs` has **3,082**. Twenty-eight records appeared, and
+      every one of them looks like a real subject at a real visit.
+
+      `lookup` is a site reference table that was supposed to have one row per site.
+
+      Click the line that causes the inflation.
+    code: |
+      library(dplyr)
+
+      combined <- advs |>
+        left_join(select(adsl, USUBJID, TRT01P), by = "USUBJID",
+                  relationship = "many-to-one") |>
+        left_join(lookup, by = "SITEID") |>
+        filter(PARAMCD == "SYSBP")
+
+      nrow(combined)
+    answerLines: [6]
+    lineNotes:
+      - line: 6
+        note: "This join declares no `relationship`, and `lookup` is not guaranteed to have one row per site. A site appearing twice in `lookup` duplicates every record from that site. dplyr warns about the unexpected many-to-many, but a warning in a long script scrolls past — and the row count is the only other symptom."
+      - line: 4
+        note: "This join is correctly guarded: it declares many-to-one, so a duplicate USUBJID in ADSL would error rather than inflate."
+      - line: 7
+        note: "The filter reduces rows; it cannot create them."
+    fixed: |
+      library(dplyr)
+
+      stopifnot(!any(duplicated(lookup$SITEID)))
+
+      combined <- advs |>
+        left_join(select(adsl, USUBJID, TRT01P), by = "USUBJID",
+                  relationship = "many-to-one") |>
+        left_join(lookup, by = "SITEID",
+                  relationship = "many-to-one") |>
+        filter(PARAMCD == "SYSBP")
+
+      stopifnot(nrow(combined) == sum(advs$PARAMCD == "SYSBP"))
+    hints:
+      - "One join is guarded and one is not. Which?"
+      - "Row counts can only grow at a join. Which joins are there?"
+      - "What would happen if a site appeared twice in the reference table?"
+    solution: |
+      **Line 6.** The `lookup` join declares no `relationship`, so a duplicated `SITEID` in the reference
+      table duplicates every record from that site.
+
+      **Note the asymmetry in the original code.** The first join is guarded; the second is not. That is
+      the common pattern — the join everyone worries about gets a check, and the innocuous-looking lookup
+      table does not. Reference tables are exactly where duplicates hide, because they are maintained by
+      hand and rarely validated.
+
+      Two fixes, and you want both:
+
+      ```r
+      stopifnot(!any(duplicated(lookup$SITEID)))   # before
+      left_join(lookup, by = "SITEID", relationship = "many-to-one")  # during
+      ```
+
+      **Why this class of bug is expensive:** it inflates rather than breaks. Every individual row is a
+      real subject at a real visit with real values, so the data passes eyeballing. Only the row count
+      and any denominator computed from it are wrong — and those surface in a table weeks later, far from
+      the join.
+    explanation:
+      objective: "Locate the unguarded join in a pipeline with silent row inflation."
+      given: "An output row count 28 higher than the input, from a pipeline with two joins and a filter."
+      relevant: "Which joins declare a relationship and which do not."
+      irrelevant: "The filter, which can only reduce the row count."
+      method: "Row counts grow only at joins; check each join's guarantees in turn."
+      numbers: "3,082 input rows, 3,110 output — 28 extra from duplicated site lookups."
+      assumptions: "A reference table having one row per key is an assumption, not a guarantee, especially when maintained manually."
+      interpretation: "Every duplicated row is individually plausible, so the inflation is invisible except in the count."
+      changes: "Declaring many-to-one on the second join turns the default warning into an error at the point of failure."
+      interviewer: "That you notice the asymmetry — one join guarded, one not — since that pattern is how these survive review."
+
+  - id: r.joins.sas-merge
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: advanced
+    skills: [r.joins, r.sas-translation, sas.merge]
+    lesson: r-joins-and-keys
+    title: What SAS MERGE does with duplicate keys
+    prompt: |
+      Two datasets, both with duplicate keys:
+
+      ```text
+      A: id=1 x=a    B: id=1 y=X
+         id=1 x=b       id=1 y=Y
+         id=2 x=c       id=1 y=Z
+                        id=2 y=W
+      ```
+
+      dplyr's `left_join` produces **7** rows (2 × 3 for key 1, plus 1 for key 2) and warns.
+
+      What does a SAS `MERGE ... BY id;` produce?
+    choices:
+      - text: "**3 rows** for key 1 — matched position by position, with the last value of the shorter side carried forward — plus 1 for key 2."
+        correct: true
+        feedback: "Correct. SAS matches observation by observation within the BY group and carries the last value forward when one side runs out. The result is neither an inner nor a cross join."
+      - text: "The same 7 rows as dplyr."
+        feedback: "SAS MERGE does not produce a Cartesian product. That is precisely what makes it more dangerous."
+      - text: "An error, because the BY variable is not unique."
+        feedback: "SAS errors only when the data is not *sorted* by the BY variables. Duplicates are accepted silently."
+      - text: "2 rows — only the pairs that match exactly."
+        feedback: "MERGE does not drop rows for having too many matches; it pads."
+    solution: |
+      **4 rows total: 3 for key 1, 1 for key 2.** SAS matches positionally within the BY group:
+
+      ```text
+      (a, X)
+      (b, Y)
+      (b, Z)   <- x carried forward; A ran out of rows
+      (c, W)
+      ```
+
+      The result is neither an inner join nor a Cartesian product. It is a structure with **no standard
+      meaning**, produced without warning.
+
+      **Why this is worse than dplyr's behaviour.** A Cartesian product is obviously wrong — the row count
+      explodes and you investigate. SAS's version gives a plausible row count with values silently
+      carried forward from the wrong record, so it passes both eyeballing and a row-count check.
+
+      **The defence is the same in both languages**: verify key uniqueness before merging.
+      `PROC SORT NODUPKEY DUPOUT=` in SAS, `stopifnot(!any(duplicated(...)))` in R.
+    explanation:
+      objective: "Contrast SAS MERGE and dplyr join behaviour on duplicate keys."
+      given: "Two datasets with a key duplicated on both sides."
+      relevant: "That MERGE matches positionally within the BY group rather than by key."
+      calculating: "The row count and value pairing SAS produces."
+      numbers: "Key 1 gives 3 rows (the longer side's length) rather than 2 x 3 = 6; key 2 gives 1. Total 4 against dplyr's 7."
+      assumptions: "MERGE requires sorted input and errors if unsorted, but accepts duplicates silently."
+      interpretation: "A plausible row count with wrong values is harder to detect than an exploded row count."
+      changes: "PROC SQL in SAS produces a genuine Cartesian product like dplyr, which is why it is often the safer choice when key uniqueness is uncertain."
+      interviewer: "That you can explain why the quieter failure is the more dangerous one."
+
+  - id: r.joins.open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [r.joins, qc.mindset, communication.interviewing]
+    lesson: r-joins-and-keys
+    title: The table that will not reconcile
+    prompt: |
+      **Interviewer:** "A table you produced shows 1,247 subjects in a column header where the disposition table says 1,205. Where do you start?"
+    modelAnswer: |
+      A count that is too high almost always means rows were duplicated somewhere, so I'd work backwards
+      through the joins rather than forwards through the logic.
+
+      **First, confirm which number is right.** The disposition table's count comes from ADSL, which is
+      one row per randomized subject by definition, so 1,205 is almost certainly the truth and my 1,247
+      is inflated. I'd verify that ADSL itself has no duplicate `USUBJID` — if it does, the problem is
+      upstream of both tables and much more serious.
+
+      **Then find where the count changed.** I'd walk the pipeline and print the row count and distinct
+      subject count after every step. Row counts only grow at joins, so the step where distinct subjects
+      exceeded 1,205 is the join at fault. That usually takes two minutes and beats reading the code.
+
+      **Then look at the offending key.** Once I know the join, `count(key) |> filter(n > 1)` names the
+      duplicated values. In my experience it is rarely the ADSL join — that one gets attention. It is
+      usually a lookup or reference table that someone assumed had one row per key: a site table, a
+      visit-window table, a parameter-metadata table. Those are maintained by hand and rarely validated.
+
+      **Then decide whether the duplicate is a data problem or a code problem.** If the reference table
+      genuinely should have one row per site and has two, that is a query to whoever maintains it. If it
+      legitimately has several rows per site — one per period, say — then my join is wrong and needs a
+      restriction or a different key.
+
+      **Then prevent the recurrence**, which is the part that matters more than the fix. Declare
+      `relationship = "many-to-one"` on every join where I expect a unique right side, assert key
+      uniqueness before using any dataset as a lookup, and assert the row count after each join. Those
+      three habits turn this class of bug from a week-later mystery into an error at the line that
+      caused it.
+
+      The thing I would not do is adjust the number to match. A count discrepancy is telling me something
+      about the data, and the discrepancy is more valuable than the table.
+    rubric:
+      - Recognises that an inflated count means duplicated rows rather than a counting error
+      - Identifies ADSL as the authoritative source and checks it first
+      - Proposes tracing row counts step by step rather than reading code
+      - Names lookup and reference tables as the usual culprit and says why
+      - Distinguishes a data problem from a code problem in the resolution
+      - Proposes structural prevention (relationship declarations, assertions) not just a fix
+      - Declines to reconcile by adjusting the number
+    redFlags:
+      - "Assumes their own number is correct"
+      - "Starts by re-reading code rather than measuring where the count changes"
+      - "Fixes it with a distinct() or a deduplication without finding the cause"
+      - "Does not propose any way to prevent recurrence"

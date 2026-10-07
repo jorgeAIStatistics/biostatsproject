@@ -1,0 +1,638 @@
+items:
+  - id: sdtm.key.usubjid-scope
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sdtm.identifiers]
+    lesson: sdtm-identifiers-and-keys
+    title: How far does USUBJID have to be unique?
+    prompt: |
+      A sponsor is preparing a submission containing three studies. In each study, subjects are numbered
+      `0001` upwards within each site.
+
+      What does SDTMIG require of `USUBJID`?
+    choices:
+      - text: "It must be unique across **all studies in the submission**, which is why study and site are conventionally folded into it."
+        correct: true
+        feedback: "Correct. SUBJID need only be unique within the study; USUBJID has submission scope. CBX417-301 uses STUDYID-SITEID-SUBJID, giving CBX417-301-1001-0002."
+      - text: "It must be unique within the study only; `STUDYID` distinguishes studies in a pooled dataset."
+        feedback: "That is SUBJID's requirement. If USUBJID were only study-unique, a pooled dataset would need USUBJID and STUDYID together as the key — which is exactly what the submission-scope rule avoids."
+      - text: "It must be unique within the site."
+        feedback: "Far too narrow. A 42-site study would then have 42 subjects called 0001 in one domain."
+      - text: "It must match the randomization number so that IxRS and EDC agree."
+        feedback: "Some sponsors do use the randomization number, but nothing requires it — and screen failures have no randomization number at all, yet still need a USUBJID."
+    hints:
+      - "What is the widest thing a USUBJID might end up in?"
+    explanation:
+      objective: "State USUBJID's uniqueness scope."
+      relevant: "That submissions contain several studies and datasets get pooled."
+      interpretation: "The scope requirement is what forces the study prefix into the value."
+      changes: "A sponsor pooling across programmes needs the convention to be consistent between them, which is a submission-planning decision."
+
+  - id: sdtm.key.seq-stability
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [sdtm.identifiers, qc.data-cleaning]
+    lesson: sdtm-identifiers-and-keys
+    title: The reconciliation that breaks at the next data cut
+    prompt: |
+      A safety scientist keeps a spreadsheet of adverse events still under medical review. Each row
+      records `USUBJID` and `AESEQ`.
+
+      After the next data cut, several rows point at the wrong event.
+
+      Why?
+    choices:
+      - text: "`AESEQ` is assigned when the domain is built. A new event early in a subject's record shifts every later `AESEQ` by one."
+        correct: true
+        feedback: "Correct. --SEQ is a surrogate key: it identifies a row within one build, not the thing the row is about."
+      - text: "The AE domain was rebuilt with a different sort order, which is a programming error."
+        feedback: "Even with an identical sort order, inserting a record renumbers everything after it. The shift is inherent to sequential numbering, not to the sort."
+      - text: "`AESEQ` should be `AESPID`, which does not move."
+        feedback: "AESPID is the site's CRF line number and does not renumber — but it has gaps whenever a record is excluded, and it is not guaranteed unique in every EDC. It is also not what SUPPAE and ADAE point at."
+      - text: "The events were merged during medical coding."
+        feedback: "Coding changes AEDECOD, not AESEQ. The renumbering happens regardless of coding."
+    hints:
+      - "What happens to records 3 through 9 when a new record 3 appears?"
+    solution: |
+      **`--SEQ` is a surrogate key.** It is assigned at build time by sorting and numbering, so it
+      identifies a row within one build and nothing more.
+
+      In CBX417-301 `AESEQ` runs contiguously from 1 for every one of the 414 subjects with adverse
+      events, up to a maximum of 17. Add one event to a subject with ten, in a position that is not last,
+      and up to nine `AESEQ` values change while the events themselves did not.
+
+      **The right key depends on the job:**
+
+      | Job | Key |
+      |---|---|
+      | Join `SUPPAE` to `AE` within one build | `USUBJID` + `AESEQ` |
+      | Trace `ADAE` back to `AE` within one build | `USUBJID` + `AESEQ` |
+      | Reconcile this data cut against the last | `USUBJID` + `AEDECOD` + `AESTDTC` |
+      | Track an event in an external tracker | the natural key, or the verbatim term plus dates |
+
+      The natural key is not guaranteed unique — two separate rashes can start on the same day — so the
+      reconciliation has to cope with a small number of ambiguous matches rather than assuming one-to-one.
+    explanation:
+      objective: "Explain why a stored --SEQ goes stale."
+      relevant: "That --SEQ is assigned by sorting and numbering at build time."
+      method: "Distinguish identifying a row from identifying the thing the row describes."
+      interpretation: "Anything outside the current build that stores a --SEQ is storing a pointer into a dataset that no longer exists."
+      changes: "A sponsor could assign --SEQ once and freeze it, but nothing in the IG requires or supports that, and new records would then need numbers above the existing maximum."
+
+  - id: sdtm.key.natural-vs-surrogate
+    format: mapping
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [sdtm.identifiers, qc.data-cleaning]
+    lesson: sdtm-identifiers-and-keys
+    title: Which key for which job?
+    prompt: |
+      For each task, choose the key you would actually use on CBX417-301.
+    sourceLabel: Task
+    targetLabel: Key
+    targets:
+      - "USUBJID + AESEQ (surrogate)"
+      - "USUBJID + AEDECOD + AESTDTC (natural)"
+      - "LBREFID (external)"
+      - "SITEID + SUBJID"
+    pairs:
+      - source: "Join the 4,932 SUPPAE rows back to their parent AE records"
+        target: "USUBJID + AESEQ (surrogate)"
+        note: "SUPPAE carries IDVAR = 'AESEQ' and IDVARVAL = the AESEQ value. It is the only key it stores."
+      - source: "Compare this week's AE extract with last week's to find genuinely new events"
+        target: "USUBJID + AEDECOD + AESTDTC (natural)"
+        note: "AESEQ renumbers between builds; the natural key does not."
+      - source: "Find every laboratory result from the blood draw that the vendor reported as haemolysed"
+        target: "LBREFID (external)"
+        note: "3,995 accession numbers across 25,450 records, a median of 7 results per draw — exactly this study's panel size."
+      - source: "Check that a subject identifier was not keyed with another site's prefix"
+        target: "SITEID + SUBJID"
+        note: "All 468 SUBJID values start with their own SITEID. The one raw case where they did not was a real duplicate-identifier incident."
+    hints:
+      - "Two of these are internal keys, one is external, and one is a consistency check rather than a join."
+    solution: |
+      Each key has one job it is good at and at least one job it is dangerous for.
+
+      **`--SEQ`** joins within a build and breaks across builds.
+      **The natural key** survives across builds and is not guaranteed unique.
+      **`--REFID`** identifies something in an external system — a specimen, a kit — that no internal key
+      can express. `LBSEQ` numbers records; it cannot say "these seven came from one tube".
+      **`SITEID` + `SUBJID`** is not a join key at all. It is a consistency check, and it is the one that
+      catches the highest-consequence defect in this whole area: two people sharing an identifier.
+
+      In CBX417-301, the raw files contain a subject registered as `1019-0001` at site **1020** — a
+      64-year-old woman and a 74-year-old man under one identifier across four raw files. The check
+      `startsWith(SUBJID, SITEID)` finds it in one line.
+    explanation:
+      objective: "Match key type to task."
+      method: "Ask whether the task spans builds, spans datasets, or spans systems."
+      interpretation: "The SITEID/SUBJID entry is the odd one out deliberately: not every key is for joining."
+
+  - id: sdtm.key.refid-purpose
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sdtm.identifiers]
+    lesson: sdtm-identifiers-and-keys
+    title: What LBREFID is for
+    prompt: |
+      CBX417-301's `LB` domain has **25,450** records and **3,995** distinct `LBREFID` values — a median
+      of **7** records per value.
+
+      The study's laboratory panel is ALT, AST, bilirubin, creatinine, haemoglobin, neutrophils and
+      platelets.
+
+      What does `LBREFID` identify?
+    choices:
+      - text: "The specimen — one accession number per blood draw, shared by every test run on it."
+        correct: true
+        feedback: "Correct, and the median of 7 is the panel size. This is the unit the laboratory queries on: 'accession CL97026619 was haemolysed' resolves against all its records at once."
+      - text: "The laboratory that performed the test."
+        feedback: "That is LBNAM, which in this study holds CENTRAL LAB plus three local laboratories."
+      - text: "The visit at which the sample was taken."
+        feedback: "That is VISIT/VISITNUM. Several accessions can belong to one visit — unscheduled repeats, hematology and chemistry drawn separately."
+      - text: "A sponsor-assigned record identifier, equivalent to `LBSEQ`."
+        feedback: "--REFID is an identifier that came in *with* the data from an external system. --SEQ is assigned by the sponsor at build time."
+    hints:
+      - "How many tests are in the panel? Compare that with the median records per LBREFID."
+    explanation:
+      objective: "Identify what an external reference identifier represents."
+      given: "Record count, distinct count and the panel size."
+      calculating: "25,450 / 3,995 = 6.4 mean, median 7."
+      numbers: "Median 7 matches the seven-test panel exactly."
+      interpretation: "--REFID reconstructs a real-world object that no sponsor-assigned key can express."
+
+  - id: sdtm.key.split-trap
+    format: text
+    modes: [guided, debug]
+    difficulty: intermediate
+    skills: [sdtm.identifiers, qc.code-review]
+    lesson: sdtm-identifiers-and-keys
+    title: What does the second element hold?
+    prompt: |
+      A colleague derives the site from `USUBJID`:
+
+      ```r
+      site <- strsplit(usubjid, "-")[[1]][2]
+      ```
+
+      On CBX417-301, `usubjid` is `"CBX417-301-1001-0002"`.
+
+      What value does `site` actually get? Give the exact string.
+    accept:
+      - "301"
+    acceptPatterns:
+      - "^\\s*[\"']?301[\"']?\\s*$"
+    monospace: true
+    placeholder: "the exact string"
+    datasets: [oncology/sdtm/dm]
+    hints:
+      - "Count the hyphens in the whole value, including the ones inside STUDYID."
+      - "`CBX417-301` is the study identifier."
+    solution: |
+      **`"301"`** — for every subject in the study.
+
+      ```r
+      strsplit("CBX417-301-1001-0002", "-")[[1]]
+      # [1] "CBX417" "301"    "1001"   "0002"
+      ```
+
+      Four pieces, not three, because `STUDYID` itself contains a hyphen. The program produces a
+      plausible-looking site identifier, it is the same for all 468 subjects, and nothing errors.
+
+      **`USUBJID` is an opaque key.** Its composition — `STUDYID-SITEID-SUBJID` here — is a sponsor
+      convention documented in define.xml, and nothing in SDTMIG guarantees it. Another sponsor may use
+      the randomization number or an opaque sequence.
+
+      Read the columns that exist:
+
+      ```r
+      dm$SITEID   # "1001"
+      dm$SUBJID   # "1001-0002"
+      ```
+
+      If you genuinely must parse — for example when handed a list of identifiers with no dataset —
+      anchor on the study identifier rather than counting hyphens:
+
+      ```r
+      sub(paste0("^", studyid, "-"), "", usubjid)   # "1001-0002"
+      ```
+    explanation:
+      objective: "Predict the output of a string-splitting derivation."
+      given: "A USUBJID whose STUDYID contains a hyphen."
+      relevant: "The number of hyphens in the full value."
+      irrelevant: "The site's actual number, which the program never reaches."
+      interpretation: "The failure is silent and uniform, which is worse than an error: every subject gets the same wrong site and any site-level summary collapses to one row."
+      changes: "A study identifier without a hyphen would make this code work, which is why the habit survives from study to study."
+
+  - id: sdtm.key.lbrefid-count
+    format: numeric
+    modes: [independent]
+    difficulty: intermediate
+    skills: [sdtm.identifiers, sdtm.findings]
+    lesson: sdtm-identifiers-and-keys
+    title: How many results per specimen?
+    prompt: |
+      CBX417-301's `LB` domain has **25,450** records and **3,995** distinct `LBREFID` values.
+
+      What is the mean number of `LB` records per `LBREFID`? Give your answer to one decimal place.
+    answer: 6.4
+    tolerance: 0.05
+    unit: records per accession
+    datasets: [oncology/sdtm/lb]
+    hints:
+      - "One division."
+      - "Compare your answer with the size of the study's laboratory panel."
+    solution: |
+      **6.4** records per accession.
+
+      ```text
+      25,450 / 3,995 = 6.37
+      ```
+
+      The **median** is 7, which is the size of the panel: ALT, AST, bilirubin, creatinine, haemoglobin,
+      neutrophils, platelets.
+
+      The mean sits below the median because not every draw runs the full panel. This study collects
+      haematology alone at Cycle 1 Day 8 — `LB` has 1,248 records at `VISITNUM = 11`, which is 416
+      subjects times three haematology tests — and those accessions contribute three records each. Seven
+      records are `LBSTAT = "NOT DONE"` (four haemolysed samples, three clotted) and still occupy a row,
+      which is correct: the test was ordered and the record documents why there is no result.
+
+      **The practical use.** When the laboratory queries a specimen — "accession CL97026619 was
+      haemolysed, results unreliable" — `LBREFID` retrieves every affected record in one filter. Trying to
+      do the same with `USUBJID` and `LBDTC` fails whenever two draws happened on one day, which
+      unscheduled repeats make common: `LB` has 68 unscheduled records at `VISITNUM = 11.01` alone.
+    explanation:
+      objective: "Relate an external identifier's cardinality to the study's collection design."
+      given: "Record count and distinct accession count."
+      calculating: "25,450 / 3,995."
+      numbers: "6.37 mean, 7 median, 7 tests in the panel."
+      assumptions: "That every record from one draw shares an accession, which is how the vendor's export is structured."
+      interpretation: "The gap between mean and median is the haematology-only visits, not a data problem."
+      changes: "A study with separate chemistry and haematology accessions would halve the mean."
+
+  - id: sdtm.key.uniqueness-code
+    format: code
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [sdtm.identifiers, qc.data-cleaning, r.dplyr]
+    lesson: sdtm-identifiers-and-keys
+    title: The identifier check battery
+    language: r
+    prompt: |
+      Write the pre-delivery identifier checks for CBX417-301's DM and AE domains. The program must
+      **stop** if any of these fails:
+
+      1. `USUBJID` is unique in DM and never missing.
+      2. Every `SUBJID` starts with its own `SITEID`.
+      3. `AESEQ` is unique within `USUBJID` in AE, and never missing.
+      4. Every `USUBJID` in AE exists in DM (no orphan records).
+
+      Then print the number of AE natural-key groups — `USUBJID` + `AEDECOD` + `AESTDTC` — that occur
+      more than once, as a list for a human to review.
+    starter: |
+      library(readr); library(dplyr)
+
+      dm <- read_csv("data/oncology/sdtm/dm.csv", show_col_types = FALSE)
+      ae <- read_csv("data/oncology/sdtm/ae.csv", show_col_types = FALSE)
+      # ...
+    datasets: [oncology/sdtm/dm, oncology/sdtm/ae]
+    checks:
+      - pattern: "stopifnot\\("
+        message: "The checks must stop the program, not print a warning."
+      - pattern: "duplicated\\("
+        message: "Test uniqueness with duplicated() on USUBJID and on USUBJID+AESEQ."
+      - pattern: "startsWith\\(|substr\\(|str_starts\\("
+        message: "Check that SUBJID begins with SITEID."
+      - pattern: "%in%"
+        message: "Check that every AE USUBJID exists in DM."
+      - pattern: "AEDECOD"
+        message: "The natural-key review list uses AEDECOD and AESTDTC, not AESPID."
+      - pattern: "AESPID"
+        absent: true
+        message: "Do not reconcile on AESPID — it is the site's line number and has gaps."
+    reference: |
+      library(readr); library(dplyr)
+
+      dm <- read_csv("data/oncology/sdtm/dm.csv", show_col_types = FALSE)
+      ae <- read_csv("data/oncology/sdtm/ae.csv", show_col_types = FALSE)
+
+      # 1. USUBJID unique and non-null in DM
+      stopifnot(!any(duplicated(dm$USUBJID)), !any(is.na(dm$USUBJID)))
+
+      # 2. SUBJID carries its own site prefix
+      stopifnot(all(startsWith(dm$SUBJID, dm$SITEID)))
+
+      # 3. AESEQ unique within subject, non-null
+      stopifnot(!any(duplicated(paste(ae$USUBJID, ae$AESEQ))), !any(is.na(ae$AESEQ)))
+
+      # 4. No orphan AE records
+      stopifnot(all(ae$USUBJID %in% dm$USUBJID))
+
+      # Natural-key duplicates: a review list, not a pass/fail
+      nat <- ae |>
+        count(USUBJID, AEDECOD, AESTDTC) |>
+        filter(n > 1)
+
+      cat("natural-key duplicate groups:", nrow(nat), "\n")
+    expectedOutput: |
+      natural-key duplicate groups: 0
+    solution: |
+      All four assertions pass on the delivered domains, and the natural-key list comes back empty.
+
+      **Why the four are assertions and the fifth is not.** Uniqueness of `USUBJID` and `--SEQ`,
+      referential integrity and the site-prefix consistency are all conditions that cannot legitimately
+      fail. A natural-key duplicate *can* legitimately occur — a subject really can have two separate
+      episodes of the same preferred term starting on the same day — so the correct output is a list for
+      a human, not a stopped program.
+
+      Here it is empty because the duplicates were removed upstream: `raw/ae.csv` has 2,472 rows and
+      `sdtm/ae.csv` has 2,466. The answer key documents 17 exact duplicate rows created by a double EDC
+      export, five of them in the adverse-event file, plus one record excluded for starting before
+      informed consent.
+
+      **Check 2 is the one people leave out**, and it is the one that catches the highest-consequence
+      defect in this area. The raw files contain a subject registered as `1019-0001` at site **1020** —
+      64/F in one file and 74/M in another, four raw records deep. `startsWith(SUBJID, SITEID)` finds it
+      in one line; nothing else in the battery would.
+
+      **Check 4 is not implied by check 1.** `USUBJID` being unique in DM says nothing about whether an
+      AE record refers to a subject who exists. On this study all 17 SDTM domains pass with zero orphans.
+    explanation:
+      objective: "Write the identifier battery that runs before every delivery."
+      method: "Assert the conditions that cannot legitimately fail; list the ones that can."
+      computation: "duplicated() for uniqueness, %in% for referential integrity, startsWith() for prefix consistency."
+      numbers: "All four assertions pass; 0 natural-key duplicate groups on the delivered AE domain."
+      assumptions: "That SUBJID embeds SITEID, which is this study's convention and is documented in define.xml."
+      interpretation: "The distinction between an assertion and a review list is the design decision in this exercise."
+      changes: "A sponsor whose SUBJID does not embed the site would replace check 2 with a lookup against the site list."
+
+  - id: sdtm.key.spid-seq-gap
+    format: numeric
+    modes: [independent, debug]
+    difficulty: advanced
+    skills: [sdtm.identifiers, qc.discrepancy]
+    lesson: sdtm-identifiers-and-keys
+    title: The subject whose AESPID is always one too high
+    prompt: |
+      Subject `CBX417-301-1027-0019` has these AE records:
+
+      | `AESEQ` | `AESPID` | `AEDECOD` | `AESTDTC` |
+      |---:|---:|---|---|
+      | 1 | 2 | Diarrhea | 2023-05-22 |
+      | 2 | 3 | Arthralgia | 2023-06-02 |
+      | 3 | 4 | Leukopenia | 2023-06-08 |
+      | 4 | 5 | Decreased appetite | 2023-06-10 |
+      | 5 | 6 | Nausea | 2023-06-30 |
+      | 6 | 7 | Diarrhea | 2023-07-30 |
+      | 7 | 8 | Fatigue | 2023-08-02 |
+
+      The raw CRF has one more line for this subject than SDTM does: line 1, *"Chronic lower back pain"*,
+      which started before the subject's informed consent date.
+
+      How many AE lines did the site enter for this subject on the CRF?
+    answer: 8
+    tolerance: 0
+    unit: CRF lines
+    datasets: [oncology/sdtm/ae, oncology/raw/ae]
+    hints:
+      - "AESPID is the line number the site filled in. What is the highest one here?"
+      - "Add the excluded line."
+    solution: |
+      **Eight.** Seven appear in SDTM; line 1 was excluded because the event started before informed
+      consent, and the offset propagates through every remaining record.
+
+      This is the cleanest illustration of what `AESPID` and `AESEQ` actually are:
+
+      | | `AESPID` | `AESEQ` |
+      |---|---|---|
+      | Who assigns it | the site, on the CRF | the sponsor, at build time |
+      | What it counts | lines on the form | records in the domain |
+      | Has gaps | yes, whenever a record is excluded | no |
+      | Renumbers between data cuts | no | yes |
+
+      Across the whole study, `AESEQ` equals `AESPID` for **2,446 of 2,466** records. They differ for
+      **20 records across 7 subjects**. This subject accounts for seven of them; the other six subjects
+      each have at least one event with a **partial** start date (`2023-09`, `2024`), and those records
+      end up in a different position in the sequence from their CRF line order.
+
+      **The practical lesson is that 2,446 out of 2,466 is exactly enough agreement to be dangerous.** A
+      program that joins `SUPPAE` to `AE` on `AESPID` would work for 99.2% of records and mis-join 20 of
+      them — silently, because both values are small integers and neither join produces an error.
+      `SUPPAE` stores `IDVAR = "AESEQ"`, and that is the variable it means.
+    explanation:
+      objective: "Reconstruct what the CRF held from the identifiers in SDTM."
+      given: "Seven SDTM records with AESPID running 2 to 8, and the fact that line 1 was excluded."
+      relevant: "That AESPID is the site's line number and survives exclusion as a gap."
+      calculating: "The maximum AESPID, which is already the CRF line count here."
+      numbers: "7 SDTM records, AESPID 2-8, plus the excluded line 1 = 8 CRF lines."
+      assumptions: "That the site numbered lines contiguously from 1, which this EDC does."
+      interpretation: "AESPID preserves the trace back to the paper; AESEQ does not, and is not meant to."
+      changes: "If the exclusion had been line 8 rather than line 1, AESEQ and AESPID would have agreed on all seven remaining records and the discrepancy would be invisible."
+      interviewer: "That you can explain why a sponsor keeps both variables instead of just one."
+
+  - id: sdtm.key.duplicate-subject
+    format: open
+    modes: [interview, boss, qc]
+    difficulty: advanced
+    skills: [sdtm.identifiers, qc.data-cleaning, communication.documentation]
+    lesson: sdtm-identifiers-and-keys
+    title: Two people, one subject identifier
+    prompt: |
+      Two weeks before database lock, a listing programmer reports that subject `1019-0001` has two
+      different ages and two different sexes. You check the raw files:
+
+      ```text
+      demographics.csv  DEM-000204  SITE_ID 1019  SUBJECT_ID 1019-0001  AGE 64  SEX F
+      demographics.csv  DEM-000211  SITE_ID 1020  SUBJECT_ID 1019-0001  AGE 74  SEX M
+      ```
+
+      The same identifier also appears twice in `enrollment.csv`, `baseline_disease.csv` and
+      `vitals.csv`. The central laboratory's file has the second subject as `1020-0001`.
+
+      What has happened, what do you do about it, and what would have caught it earlier?
+    modelAnswer: |
+      **What happened.** Site 1020 keyed another site's prefix when registering their first subject. The
+      subject is genuinely a site 1020 subject — the central laboratory received the correct identifier
+      `1020-0001`, which is why the two sources disagree and why the lab file is the evidence. Two real,
+      different people are sharing one identifier: a 64-year-old woman at site 1019 and a 74-year-old man
+      at site 1020.
+
+      **Why it is urgent rather than tidy-up.** Every join in the study is on `USUBJID`. If this reaches
+      SDTM, one subject's demographics attach to the other's adverse events, exposure and laboratory
+      results. Nothing errors; counts come out plausible and wrong. And it is a `USUBJID` collision, which
+      means it is the one class of defect that corrupts data you did not touch.
+
+      **What I do, in order.**
+
+      1. Stop and quantify before proposing anything: which raw files carry the wrong identifier, how many
+         records, and whether any of them have already been mapped. Here it is four files —
+         `demographics`, `enrollment`, `baseline_disease`, `vitals` — one record each.
+      2. Hand it to data management as a query to the site, not as a programming fix. Changing a subject
+         identifier is a source-data correction: the site confirms which subject is which and corrects it
+         in the EDC, and there is an audit trail. A programmer silently remapping it in the SDTM code
+         creates a permanent, undocumented divergence between the database and the submission.
+      3. Check the scope. The corrected subject is a screen failure at site 1020, which limits the blast
+         radius — no exposure, no efficacy, and only screening data. That is worth establishing early
+         because it changes the urgency of the conversation.
+      4. Once corrected, re-run the identifier battery and confirm `startsWith(SUBJID, SITEID)` holds for
+         all 468 rows.
+
+      **What would have caught it earlier.** A single check:
+
+      ```r
+      stopifnot(all(startsWith(dm$SUBJID, dm$SITEID)))
+      ```
+
+      That one line fails on this record the first time DM is built. More generally, the check is "does
+      the identifier agree with the other columns that describe the same thing", and it belongs in the
+      data-management edit checks in the EDC rather than in SDTM programming — the best version of this
+      fix is that the EDC pre-fills the site prefix and the coordinator cannot type it at all.
+
+      A uniqueness check on `USUBJID` in DM would *also* have caught it, but later and less usefully: it
+      fires only after both records have been loaded, and it tells you there is a duplicate without
+      telling you which one is wrong. The site-prefix check points straight at the culprit.
+    rubric:
+      - "Identifies that two different people share one identifier, and that the risk is silent cross-contamination on joins"
+      - "Treats it as a data-management query to the site rather than a programming fix, and says why (audit trail, source data)"
+      - "Quantifies the scope before proposing a fix: which files, how many records, what the subject's status is"
+      - "Names the SUBJID/SITEID consistency check as the specific control that would have caught it"
+      - "Notes that the central laboratory file is the corroborating evidence for which identifier is correct"
+      - "Mentions the preventive control: EDC pre-fills the site prefix"
+    redFlags:
+      - "Fixing it in the SDTM mapping code without a query and without a paper trail"
+      - "Deleting one of the two records"
+      - "Assuming the duplicate is a double entry of the same person"
+      - "Relying only on a USUBJID uniqueness check, which fires late and does not say which record is wrong"
+    followUps:
+      - "The site says the 1019 record is the wrong one. How would you test that claim against the data?"
+      - "What if the mis-keyed subject had been randomized and dosed rather than screen-failed?"
+      - "Which other raw files would you check for the same identifier?"
+
+  - id: sdtm.key.orphan-check
+    format: mcq
+    modes: [independent, qc]
+    difficulty: advanced
+    skills: [sdtm.identifiers, qc.data-cleaning]
+    lesson: sdtm-identifiers-and-keys
+    title: Unique in DM is not the same as no orphans
+    prompt: |
+      A QC programmer runs one check and declares the identifiers sound:
+
+      ```r
+      stopifnot(!any(duplicated(dm$USUBJID)))
+      ```
+
+      Which defect can still be present?
+    choices:
+      - text: "An AE, LB or EX record whose `USUBJID` does not exist in DM at all — a mistyped identifier in one domain."
+        correct: true
+        feedback: "Correct. Uniqueness in DM says nothing about referential integrity from the other domains. CBX417-301 passes both: all 17 domains have zero orphan USUBJID values."
+      - text: "A duplicate `AESEQ` within a subject."
+        feedback: "Also true, and also uncaught — but a --SEQ duplicate is a within-domain problem that a --SEQ check finds. The orphan is the one that a DM-only check is structurally blind to."
+      - text: "Nothing — if DM is sound, the study is keyed correctly."
+        feedback: "DM is one of 21 datasets. A typed identifier in the laboratory vendor's file never touches DM."
+      - text: "A missing `USUBJID` in DM."
+        feedback: "duplicated() does not catch nulls either, which is why the real check is `!any(duplicated(x)) && !any(is.na(x))` — but the orphan case is the more instructive gap."
+    hints:
+      - "The check looks at one dataset. How many datasets have a USUBJID?"
+    solution: |
+      **Referential integrity is a separate check**, and it points the other way:
+
+      ```r
+      # DM is internally sound
+      stopifnot(!any(duplicated(dm$USUBJID)), !any(is.na(dm$USUBJID)))
+
+      # ... and every other domain refers to a subject that exists
+      for (d in domains) stopifnot(all(d$USUBJID %in% dm$USUBJID))
+      ```
+
+      CBX417-301 passes both. All 17 SDTM datasets with a `USUBJID` — `AE`, `CM`, `MH`, `EX`, `LB`, `VS`,
+      `EG`, `RS`, `TR`, `DS`, `DV`, `DD`, `SS`, `SV`, `SE`, `SUPPAE`, `SUPPDM` — have **zero** records
+      whose subject is missing from DM.
+
+      **Where orphans actually come from.** Not usually from the sponsor's own mapping, which builds
+      `USUBJID` the same way everywhere. They come from **vendor files**: a central laboratory, an imaging
+      vendor or an IxRS export keyed independently, where a transposed digit produces a subject nobody has
+      heard of. CBX417-301's answer key documents three such records under `TRANSPOSED SUBJECT ID` in the
+      laboratory file.
+
+      The reverse check is worth running too, and it is not a defect: subjects in DM with no records in a
+      given domain. The 48 screen failures have no `VS` records at all, by design.
+    explanation:
+      objective: "Identify the gap left by a within-dataset uniqueness check."
+      given: "A single duplicated() call on DM."
+      relevant: "That 17 datasets carry USUBJID and only one of them was checked."
+      method: "Distinguish internal consistency from referential integrity."
+      assumptions: "That DM is the authoritative subject list, which it is by definition."
+      interpretation: "Orphans arise at system boundaries — vendor files — rather than inside the sponsor's own mapping."
+      changes: "The reverse direction, DM subjects with no records in a domain, is expected rather than a defect: this study's 48 screen failures have no VS records at all."
+
+  - id: sdtm.key.open-reconcile
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [sdtm.identifiers, qc.compare, communication.interpretation]
+    lesson: sdtm-identifiers-and-keys
+    title: Reconciling two data cuts
+    prompt: |
+      A safety physician asks: "Between last month's data cut and this one, which adverse events are
+      genuinely new, and which existing ones changed?"
+
+      Both cuts are SDTM AE domains with the same structure. Describe how you would do it and what you
+      would warn them about.
+    modelAnswer: |
+      "The first thing I'd say is that I can't do it on `AESEQ`, which is the obvious key and the wrong
+      one.
+
+      `--SEQ` is assigned when the domain is built, by sorting and numbering. If a subject gained an event
+      that sorts before existing ones, every later `AESEQ` for that subject shifts by one. Joining the two
+      cuts on `USUBJID` and `AESEQ` would report those as 'changed' when nothing about them changed, and
+      would pair up events that have nothing to do with each other.
+
+      So I'd join on the natural key: `USUBJID`, `AEDECOD` and `AESTDTC`. That's stable across builds
+      because it describes the event rather than its position.
+
+      Three warnings I'd give upfront.
+
+      **The natural key isn't guaranteed unique.** A subject can genuinely have two episodes of the same
+      preferred term starting on the same day. On the current cut of the study I've been working with,
+      zero groups are duplicated on that key — but that's a property of this cut, not a guarantee, and the
+      reconciliation has to handle the many-to-many case rather than assume one-to-one.
+
+      **`AEDECOD` can change without the event changing.** Medical coding gets revised; a term coded as
+      one preferred term last month can be recoded this month. That makes an event look like one
+      disappearing and a different one appearing. So I'd do a second pass on `USUBJID` plus `AETERM` plus
+      `AESTDTC` — the verbatim term, which doesn't move — and reconcile the differences between the two
+      passes. Those are the recodings.
+
+      **`AESTDTC` can change too**, usually from a query resolving a partial date. An event that was
+      `2023-09` last month and `2023-09-14` this month is the same event and won't match on either pass. I
+      handle those by matching on subject plus verbatim term plus a date compatibility test — same event
+      if the more precise date is consistent with the partial one.
+
+      What I'd deliver is four lists: genuinely new events, events whose seriousness, grade, outcome or
+      end date changed, recodings, and date refinements. Not one list, because those four need different
+      people to look at them, and merging them is how a reconciliation stops being read.
+
+      One more thing I'd raise. If the physician is keeping a tracker with `AESEQ` in it — and they often
+      are — those pointers are already stale. I'd offer to give them the natural key instead."
+    rubric:
+      - "Rejects --SEQ as the reconciliation key and explains renumbering"
+      - "Proposes the natural key USUBJID + AEDECOD + AESTDTC"
+      - "Warns that the natural key is not guaranteed unique and that the join must handle duplicates"
+      - "Raises recoding: AEDECOD changes without the event changing, and proposes a verbatim-term pass"
+      - "Raises date refinement from partial to complete as a second source of false non-matches"
+      - "Delivers separated lists rather than one, with a reason"
+    redFlags:
+      - "Joining on USUBJID and AESEQ"
+      - "Assuming AEDECOD is stable across data cuts"
+      - "Treating every non-match as a new event"
+      - "Producing a single undifferentiated difference report"
+    followUps:
+      - "How would you detect that a term was recoded rather than that an event was added and another removed?"
+      - "The physician's tracker stores AESEQ. What do you tell them?"
+      - "How would you handle an event whose start date went from 2023-09 to 2023-09-14?"

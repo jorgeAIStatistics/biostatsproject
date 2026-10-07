@@ -1,0 +1,487 @@
+items:
+  - id: stats.tt.pooled-vs-welch
+    format: mcq
+    modes: [check, qc, speed]
+    difficulty: intermediate
+    skills: [stats.t-tests, r.sas-translation, qc.compare]
+    lesson: stats-t-tests-paired
+    title: Three languages, three defaults
+    prompt: |
+      A SAP says only: *"Week 12 change from baseline will be compared between arms using a two-sample t test."*
+
+      Production is in SAS, QC is in R, and an exploratory check is in Python. Without any extra arguments, what does each produce?
+    choices:
+      - text: "SAS prints both pooled and Satterthwaite rows; R defaults to Welch; SciPy defaults to pooled."
+        correct: true
+        feedback: "Correct, and it is why this SAP sentence is under-specified. Two programmers accepting their language's default can disagree without either making a mistake."
+      - text: "All three default to the pooled test."
+        feedback: "R's `t.test()` defaults to `var.equal = FALSE`, which is Welch."
+      - text: "All three default to Welch."
+        feedback: "SciPy's `ttest_ind` defaults to `equal_var=True`, which is pooled."
+      - text: "SAS defaults to pooled; R and SciPy both default to Welch."
+        feedback: "SAS does not default — PROC TTEST prints both rows and leaves the choice to you. And SciPy defaults to pooled, not Welch."
+    solution: |
+      - **SAS**: PROC TTEST prints the Pooled row *and* the Satterthwaite row, plus a Folded F test. It makes no choice.
+      - **R**: `t.test()` has `var.equal = FALSE` — Welch.
+      - **SciPy**: `ttest_ind()` has `equal_var=True` — pooled.
+
+      The finding here is against **the SAP**, not any programmer. Ask for it to say which method, and write the argument explicitly in all three programs even when you are choosing the default.
+    explanation:
+      objective: "Recognise an under-specified analysis and predict how three tools will diverge."
+      given: "A SAP sentence naming only 'a two-sample t test' and three implementations."
+      relevant: "Each tool's default behaviour for the equal-variance assumption."
+      method: "Compare the documented defaults rather than assuming they agree."
+      assumptions: "The pooled test assumes equal variances; Welch does not. Which is appropriate is a pre-specification decision, not a data-driven one."
+      interpretation: "When two programs disagree and neither has a bug, the specification is the defect."
+      changes: "With nearly equal SDs and group sizes the two methods agree to several decimals, which is why this gap can hide for years before surfacing on an unbalanced comparison."
+      interviewer: "That you raise the specification rather than picking one and moving on, and that you know all three defaults without looking them up."
+
+  - id: stats.tt.when-paired
+    format: mcq
+    modes: [check, interview]
+    difficulty: foundation
+    skills: [stats.t-tests, trials.design]
+    lesson: stats-t-tests-paired
+    title: Which of these designs is paired?
+    prompt: |
+      Which comparison calls for a **paired** t test?
+    choices:
+      - text: "A crossover trial where every subject receives both treatments in sequence, comparing the two treatment periods."
+        correct: true
+        feedback: "The design deliberately created pairs: each subject contributes one measurement under each treatment, so each subject yields one difference."
+      - text: "A parallel-group trial comparing mean change from baseline between the drug arm and the placebo arm."
+        feedback: "Different subjects in each arm — there is no correspondence between subject 5 on drug and subject 5 on placebo. This is a two-sample comparison, even though the outcome is itself a change score."
+      - text: "Comparing baseline characteristics between two randomized arms."
+        feedback: "Independent groups. Also worth knowing: testing baseline balance is discouraged in confirmatory trials, since any imbalance is by construction due to chance."
+      - text: "Comparing Week 12 systolic BP between subjects who completed and subjects who dropped out."
+        feedback: "Two different sets of subjects, so unpaired — and a comparison that is confounded by the reason for dropout."
+    solution: |
+      The **crossover**. Pairing is a property of the design: it exists when each observation in one set corresponds to a specific observation in the other, because they share a subject, a matched pair, or an experimental unit.
+
+      The parallel-group change-score comparison is the distractor worth studying. `CHG` already used the within-subject pairing; the two arms remain independent.
+    explanation:
+      objective: "Identify pairing from the design rather than from the shape of the data."
+      given: "Four candidate comparisons."
+      relevant: "Whether a one-to-one correspondence exists between observations in the two sets."
+      method: "Ask: does each observation on the left have a specific partner on the right, determined by the design? If the pairing would be arbitrary, the test is unpaired."
+      assumptions: "A paired test requires exactly equal numbers on the two sides, and requires them to be aligned."
+      interpretation: "Crossover designs exist precisely to obtain this pairing, because it is so much more efficient."
+      changes: "Matched case-control and left-eye/right-eye comparisons are paired for the same reason. Comparing two arms of a parallel trial never is."
+      interviewer: "That you volunteer the change-from-baseline boundary case, which is the one that separates candidates who have analysed a trial from those who have read about one."
+
+  - id: stats.tt.chg-not-paired
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [stats.t-tests, adam.bds]
+    lesson: stats-t-tests-paired
+    title: Pairing twice
+    prompt: |
+      A programmer writes: *"Since `CHG = AVAL − BASE` is a within-subject difference, I'll compare `CHG` between the drug and placebo arms using a **paired** t test to take advantage of the pairing."*
+
+      What is wrong?
+    choices:
+      - text: "The pairing has already been used to compute CHG. The two arms contain different subjects, so comparing CHG between them is a two-sample problem."
+        correct: true
+        feedback: "Correct. There is no correspondence between a drug subject and a placebo subject to pair on."
+      - text: "Nothing — CHG values are paired and a paired test is correct."
+        feedback: "The CHG values within one arm are paired with that arm's baselines, which is already done. Across arms there is nothing to pair."
+      - text: "The error is using CHG at all; the analysis should use AVAL."
+        feedback: "Analysing CHG is standard and reasonable. ANCOVA on CHG adjusting for BASE is usually better still, but CHG is not the error here."
+      - text: "A paired test is fine as long as the two arms have the same number of subjects."
+        feedback: "Equal sizes make the test *runnable*, not *meaningful* — the pairs would be determined by row order, which is arbitrary."
+    solution: |
+      The within-subject pairing was consumed in computing `CHG`. What remains is a comparison of two independent groups of subjects, so the analysis is a **two-sample** test.
+
+      The giveaway that something is wrong: a paired test requires exactly equal group sizes. Here the arms have 81 and 77 subjects, so the test cannot even run — and if the sizes happened to match, it would silently pair subjects by row order, which means nothing.
+    explanation:
+      objective: "Recognise that a pairing can only be used once."
+      given: "A proposal to run a paired test on change scores across two arms."
+      relevant: "Which subjects contribute to each side of the comparison."
+      method: "Trace where the pairing lives. AVAL and BASE are paired within subject; CHG is the result of that pairing; two arms' CHG values come from disjoint sets of subjects."
+      assumptions: "A paired test assumes a known one-to-one correspondence. Here none exists."
+      computation: "In practice the test errors on unequal lengths (81 vs 77), which is the software telling you the design is not paired."
+      interpretation: "A more powerful analysis of the same data does exist — ANCOVA on CHG adjusting for BASE — but it gains power by modelling the baseline covariate, not by pairing across arms."
+      changes: "In a crossover trial the same subjects DO appear under both treatments, and then the paired analysis is correct."
+      interviewer: "That you name the unequal group sizes as the immediate practical signal, not only the conceptual argument."
+
+  - id: stats.tt.rank-test-claim
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [stats.t-tests, communication.interpretation]
+    lesson: stats-t-tests-paired
+    title: What the Wilcoxon rank-sum test tests
+    prompt: |
+      A draft CSR says: *"The Wilcoxon rank-sum test showed a significant difference in median change from baseline between arms (p = 0.0021)."*
+
+      Is that an accurate description of what the test showed?
+    choices:
+      - text: "Not quite — the rank-sum test assesses whether one group tends to produce larger values. It is a test of medians only if the two distributions have the same shape."
+        correct: true
+        feedback: "It tests P(X > Y) = 0.5, a stochastic-dominance statement. Under a pure location-shift model that coincides with a median comparison; otherwise it need not."
+      - text: "Yes — the rank-sum test is the non-parametric test of medians."
+        feedback: "This is the standard teaching shortcut, and it is not accurate. With differently shaped distributions the test can be significant while the medians are identical."
+      - text: "No — the rank-sum test compares means, not medians."
+        feedback: "It compares neither directly; it works on ranks and tests a stochastic-ordering statement."
+      - text: "Yes, provided both samples exceed 30."
+        feedback: "Sample size affects whether an exact or approximate p-value is used; it does not change what the null hypothesis is."
+    solution: |
+      The test's null is $P(X > Y) = 0.5$ — that a randomly chosen value from one group is equally likely to exceed a randomly chosen value from the other. That is a statement about **stochastic ordering**, not about medians.
+
+      It coincides with a test of medians under a **location-shift** model: same shape, different location. If the distributions differ in shape, the rank-sum test can reject while the medians are equal.
+
+      The defensible wording: *"values in the treated arm tended to be lower (Wilcoxon rank-sum p = 0.0021)"*, with medians reported descriptively alongside.
+    explanation:
+      objective: "State a rank test's null hypothesis accurately rather than by the usual shorthand."
+      given: "A CSR sentence describing a rank-sum result as a test of medians."
+      relevant: "What the test statistic is a function of — ranks, not medians."
+      method: "The rank-sum statistic counts how often values from one group exceed values from the other, which estimates P(X > Y)."
+      assumptions: "Interpreting it as a median comparison requires the location-shift model: identical distribution shapes differing only by a constant."
+      interpretation: "Report what was tested and give medians as description. The two are complementary, not the same claim."
+      changes: "If the SAP pre-specifies the location-shift assumption and it is plausible for the endpoint, describing it as a median comparison becomes defensible — but say so."
+      interviewer: "That you can state the actual null, and that you offer replacement wording rather than only objecting."
+
+  - id: stats.tt.paired-hand
+    format: numeric
+    modes: [guided, check]
+    difficulty: foundation
+    skills: [stats.t-tests, stats.descriptive]
+    lesson: stats-t-tests-paired
+    title: Paired t by hand
+    prompt: |
+      Eight subjects, seated systolic BP (mmHg) before and after treatment:
+
+      | Subject | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+      |---|---:|---:|---:|---:|---:|---:|---:|---:|
+      | Pre | 158 | 146 | 162 | 151 | 149 | 167 | 155 | 144 |
+      | Post | 142 | 139 | 145 | 148 | 136 | 150 | 141 | 137 |
+
+      Compute the paired t statistic. Give your answer to two decimal places.
+    answer: -6.19
+    tolerance: 0.03
+    hints:
+      - "First reduce each subject to one number: d = Post − Pre. The eight differences sum to −94."
+      - "The squared deviations of the differences from their mean sum to 201.5, so s_d = √(201.5/7)."
+      - "t = mean difference / (s_d / √8), with √8 = 2.8284."
+    solution: |
+      **Differences:** −16, −7, −17, −3, −13, −17, −14, −7. They sum to −94.
+
+      **Mean difference:** $-94/8 = -11.75$ mmHg.
+
+      **SD of the differences:** $\sqrt{201.5/7} = \sqrt{28.7857} = 5.3652$.
+
+      **Standard error:** $5.3652/\sqrt{8} = 1.8969$.
+
+      $$t = \frac{-11.75}{1.8969} = -6.1943$$
+
+      With $df = 7$, $p = 0.00045$ and the 95% CI is (−16.24, −7.26).
+
+      Note the degrees of freedom: **7, not 15**. There are 8 pairs, not 16 independent observations.
+    explanation:
+      objective: "Compute a paired t statistic from raw paired data."
+      given: "Eight pre/post pairs."
+      relevant: "The eight differences; the individual pre and post values matter only through them."
+      calculating: "Mean and SD of the differences, then t = mean/SE."
+      method: "A paired t test is a one-sample t test applied to the within-subject differences."
+      numbers: "Differences sum to -94, mean -11.75. Sum of squared deviations 201.5, s_d = 5.3652. SE = 5.3652/2.8284 = 1.8969. t = -6.1943 on 7 df."
+      assumptions: "That the differences are approximately normally distributed — a much weaker requirement than normality of the raw measurements, since differencing tends to symmetrise."
+      computation: "df = number of PAIRS minus 1 = 7. Using 15 would be treating 16 correlated measurements as independent."
+      changes: "Ignoring the pairing and running a two-sample test on the same 16 numbers gives t = -3.51 on 11.83 df, p = 0.0044 — the same data, an order of magnitude less evidence."
+      interviewer: "That you reduce to differences first and get the degrees of freedom right, since df is where a misunderstanding of pairing shows up."
+
+  - id: stats.tt.pooled-sd
+    format: numeric
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [stats.t-tests]
+    lesson: stats-t-tests-paired
+    title: The pooled standard deviation
+    prompt: |
+      Week 12 change from baseline:
+
+      | Arm | n | SD |
+      |---|---:|---:|
+      | VTX-221 10 mg | 81 | 11.4842 |
+      | Placebo | 77 | 11.6100 |
+
+      Compute the pooled SD, $s_p$, to four decimal places.
+    answer: 11.5457
+    tolerance: 0.005
+    unit: mmHg
+    hints:
+      - "Pool the *variances*, weighted by degrees of freedom, then take the square root at the end."
+      - "s_p² = [(n₁−1)s₁² + (n₂−1)s₂²] / (n₁ + n₂ − 2), so the weights are 80 and 76 and the divisor is 156."
+      - "11.4842² = 131.8868 and 11.6100² = 134.7921."
+    solution: |
+      $$s_p^2 = \frac{80 \times 131.8868 + 76 \times 134.7921}{156} = \frac{10551.0 + 10244.2}{156} = \frac{20795.2}{156} = 133.3026$$
+
+      $$s_p = \sqrt{133.3026} = 11.5457 \text{ mmHg}$$
+
+      It lies between the two arm SDs and closer to the 10 mg arm's, because that arm contributes more degrees of freedom (80 versus 76).
+    explanation:
+      objective: "Compute a degrees-of-freedom-weighted pooled standard deviation."
+      given: "Two arm sample sizes and SDs."
+      relevant: "Both SDs and both sample sizes."
+      calculating: "The pooled variance, then its square root."
+      method: "Weight each arm's VARIANCE by its degrees of freedom, because df measures how much information stands behind each estimate. Square-root only at the end."
+      numbers: "11.4842^2 = 131.8868 with weight 80; 11.6100^2 = 134.7921 with weight 76; weighted total 20795.2 over 156 gives 133.3026; the square root is 11.5457."
+      assumptions: "That the two arms share a common underlying variance. If they do not, pooling produces a number that describes neither."
+      computation: "Averaging the two SDs directly (11.5471) happens to be close here because the sizes are nearly equal — but it is the wrong operation and diverges when they are not."
+      interpretation: "s_p is the single SD the pooled t test uses for both arms."
+      changes: "With 20 subjects in one arm and 200 in the other, the pooled SD would sit very close to the larger arm's, and the naive average of the two SDs would be badly wrong."
+      interviewer: "That you pool variances rather than SDs, and that you can say why the weights are n-1."
+
+  - id: stats.tt.correlation-benefit
+    format: numeric
+    modes: [check, independent]
+    difficulty: advanced
+    skills: [stats.t-tests, stats.correlation]
+    lesson: stats-t-tests-paired
+    title: What the correlation buys you
+    prompt: |
+      In a paired dataset, the pre measurements have SD **8.000**, the post measurements have SD **5.064**, and the two are correlated at **ρ = 0.751**.
+
+      Using
+
+      $$\operatorname{Var}(D) = \sigma_1^2 + \sigma_2^2 - 2\rho\sigma_1\sigma_2$$
+
+      what is the SD of the within-subject differences? Give your answer to three decimal places.
+    answer: 5.365
+    tolerance: 0.02
+    hints:
+      - "σ₁² = 64.000 and σ₂² = 25.643."
+      - "The cross term is 2 × 0.751 × 8.000 × 5.064 = 60.857."
+      - "Subtract, then take the square root."
+    solution: |
+      $$\operatorname{Var}(D) = 64.000 + 25.643 - 2(0.751)(8.000)(5.064) = 89.643 - 60.857 = 28.786$$
+
+      $$s_d = \sqrt{28.786} = 5.365$$
+
+      **Compare with no correlation.** If $\rho = 0$, the variance would be 89.643 and $s_d = 9.468$ — nearly twice as large. The correlation term is the entire benefit of the paired design, and it is worth exactly $2\rho\sigma_1\sigma_2$.
+    explanation:
+      objective: "Quantify the variance reduction that pairing provides."
+      given: "The two marginal SDs and their correlation."
+      relevant: "All three; the correlation is what makes the difference."
+      calculating: "The SD of the within-subject differences."
+      method: "Var(X - Y) = Var(X) + Var(Y) - 2Cov(X,Y), and Cov = rho x sd1 x sd2."
+      numbers: "8.000^2 = 64.000; 5.064^2 = 25.643; 2 x 0.751 x 8.000 x 5.064 = 60.857; 89.643 - 60.857 = 28.786; sqrt = 5.365."
+      assumptions: "That the correlation is positive, which is what makes pairing help. A negative correlation would make the paired variance LARGER than the unpaired one."
+      interpretation: "The minus sign is the whole point: between-subject variation appears in both terms and cancels."
+      changes: "At rho = 0.30 — the correlation between baseline and Week 12 in the real trial data — the benefit shrinks markedly: the standard error falls by 16% rather than by half."
+      interviewer: "That you can write the variance-of-a-difference formula from memory and explain which term is the refund."
+
+  - id: stats.tt.r-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [stats.t-tests, r.joins, qc.compare]
+    lesson: stats-t-tests-paired
+    title: A paired test that cannot be silently misaligned
+    minutes: 14
+    prompt: |
+      `pre` and `post` are two data frames, each with columns `USUBJID` and `SBP`. They may be in **different row orders**, and a few subjects may appear in only one of them.
+
+      Write `paired_sbp(pre, post)` that:
+
+      1. Joins the two on `USUBJID` so subjects are matched by identifier, **not by row position**.
+      2. Keeps only subjects present in both (an inner join).
+      3. Computes `DIFF = SBP_post − SBP_pre`.
+      4. Returns the result of a **one-sample** t test on `DIFF`.
+
+      Returning a one-sample test on an explicit difference column — rather than calling `t.test(x, y, paired = TRUE)` — makes the pairing visible in the data instead of implied by row order.
+    starter: |
+      library(dplyr)
+
+      paired_sbp <- function(pre, post) {
+        paired <- ___
+
+        t.test(___)
+      }
+    reference: |
+      library(dplyr)
+
+      paired_sbp <- function(pre, post) {
+        paired <- inner_join(
+          pre  |> select(USUBJID, SBP_pre  = SBP),
+          post |> select(USUBJID, SBP_post = SBP),
+          by = "USUBJID"
+        ) |>
+          mutate(DIFF = SBP_post - SBP_pre)
+
+        t.test(paired$DIFF, mu = 0)
+      }
+    hints:
+      - "`inner_join(..., by = \"USUBJID\")` matches on the identifier and drops subjects missing from either side."
+      - "Rename the two SBP columns during `select()` so they do not collide, e.g. `SBP_pre = SBP`."
+      - "A one-sample `t.test(paired$DIFF, mu = 0)` is numerically identical to `t.test(post, pre, paired = TRUE)` — but the pairing is now a column you can inspect."
+    checks:
+      - pattern: "inner_join\\s*\\("
+        message: "Matches subjects with an inner join rather than by row position"
+      - pattern: "by\\s*=\\s*[\"']USUBJID[\"']"
+        message: "Joins on the subject identifier"
+      - pattern: "SBP_post\\s*-\\s*SBP_pre|SBP_pre\\s*-\\s*SBP_post"
+        message: "Computes an explicit difference column"
+      - pattern: "t\\.test\\s*\\("
+        message: "Runs a t test on the differences"
+      - pattern: "mu\\s*=\\s*0"
+        message: "States the null value explicitly"
+    solution: |
+      ```r
+      paired_sbp <- function(pre, post) {
+        paired <- inner_join(
+          pre  |> select(USUBJID, SBP_pre  = SBP),
+          post |> select(USUBJID, SBP_post = SBP),
+          by = "USUBJID"
+        ) |>
+          mutate(DIFF = SBP_post - SBP_pre)
+
+        t.test(paired$DIFF, mu = 0)
+      }
+      ```
+
+      Two habits worth keeping from this. **Join, never zip:** `t.test(x, y, paired = TRUE)` pairs element 1 with element 1 and will not warn you if the vectors were sorted differently — every pair after the first mismatch is wrong and nothing tells you. **Make the difference a column:** you can then print it, check its distribution, count how many subjects were dropped by the inner join, and hand it to QC.
+
+      A production version would also return the number of subjects dropped, since silently losing subjects to an inner join is its own class of bug.
+    explanation:
+      objective: "Implement a paired analysis whose pairing is explicit and auditable."
+      given: "Two data frames that may be misordered and may not contain the same subjects."
+      relevant: "That row position is not a reliable pairing key."
+      method: "Join on the subject identifier, difference within the joined row, then run a one-sample test."
+      assumptions: "An inner join implicitly decides that subjects missing from either side are excluded — a complete-case decision the SAP should state rather than the code make silently."
+      computation: "t.test(diff, mu = 0) and t.test(post, pre, paired = TRUE) give identical numbers; only the auditability differs."
+      interpretation: "Code that makes its pairing visible is code a reviewer can check without running it."
+      changes: "If subjects missing a post value should be handled some other way — LOCF, multiple imputation, or an MMRM using all visits — that is an estimand decision, and the inner join is quietly making it for you."
+      interviewer: "That you join rather than zip, and that you flag the dropped subjects as a decision rather than an implementation detail."
+
+  - id: stats.tt.misaligned-pairs
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [stats.t-tests, qc.discrepancy, r.joins]
+    lesson: stats-t-tests-paired
+    title: The paired test that pairs the wrong people
+    minutes: 10
+    prompt: |
+      This code runs without error or warning and produces a p-value of 0.31, while a colleague's analysis of the same data gives p < 0.001.
+
+      `vs` is a BDS dataset with one row per subject per visit.
+
+      Click the line that causes the problem.
+    code: |
+      base <- vs |>
+        filter(AVISITN == 0) |>
+        arrange(USUBJID)
+
+      week12 <- vs |>
+        filter(AVISITN == 12) |>
+        arrange(SITEID, USUBJID)
+
+      t.test(week12$AVAL, base$AVAL, paired = TRUE)
+    answerLines: [7]
+    lineNotes:
+      - line: 7
+        note: "`arrange(SITEID, USUBJID)` sorts the Week 12 data by site first, while the baseline data was sorted by subject alone. The two vectors are now in different orders, and `paired = TRUE` pairs them by POSITION — so almost every subject is compared against a different subject's baseline. R issues no warning because both vectors have the same length."
+      - line: 3
+        note: "Sorting the baseline by USUBJID is reasonable in itself; the defect is that the other side is sorted differently."
+      - line: 10
+        note: "The call is syntactically fine. It is doing exactly what it was asked to do, with vectors that do not correspond."
+    fixed: |
+      paired <- inner_join(
+        vs |> filter(AVISITN == 0)  |> select(USUBJID, BASE = AVAL),
+        vs |> filter(AVISITN == 12) |> select(USUBJID, WK12 = AVAL),
+        by = "USUBJID"
+      ) |>
+        mutate(DIFF = WK12 - BASE)
+
+      t.test(paired$DIFF, mu = 0)
+    hints:
+      - "The code runs cleanly and gives a plausible-looking answer. What is `paired = TRUE` actually matching on?"
+      - "Compare the two `arrange()` calls."
+      - "If subjects are missing at one visit, would the lengths even match — and what would R do if they did?"
+    solution: |
+      Line 7. The two vectors are sorted differently, so `paired = TRUE` pairs subject *i* of one with subject *i* of the other — different people.
+
+      Because the pairs are now essentially random, the correlation that pairing exploits is destroyed, the SD of the "differences" balloons, and the test loses all its power. The result looks like a null finding rather than like an error, which is what makes this class of bug dangerous.
+
+      **The fix is structural, not a sort:** join on `USUBJID`, difference within the joined row, and run a one-sample test. Then a reviewer can see the pairing in the data.
+
+      A second defect lurks even after matching the sort order: if any subject is missing a Week 12 value, the lengths differ and `t.test` errors — or worse, if two subjects are missing from opposite sides, the lengths match and everything silently shifts.
+    explanation:
+      objective: "Find a silent pairing bug that produces a plausible wrong answer."
+      given: "Two filtered vectors sorted by different keys, passed to a paired test."
+      relevant: "The two arrange() calls and the fact that paired = TRUE matches by position."
+      irrelevant: "The t.test call itself is correct; it is the inputs that do not correspond."
+      method: "When a paired analysis loses power unexpectedly, suspect the pairing before suspecting the effect."
+      assumptions: "paired = TRUE assumes the caller has aligned the vectors. R does not and cannot verify it."
+      computation: "Mispairing destroys the correlation, so Var(D) rises toward sigma1^2 + sigma2^2 and the standard error inflates by roughly 1/sqrt(1 - rho) — here enough to turn p < 0.001 into p = 0.31."
+      interpretation: "No error, no warning, a publishable-looking null result. This is the failure mode QC exists for."
+      changes: "Joining on USUBJID makes the bug impossible, and an inner join surfaces the missing-subject problem as a visible row count instead of a silent shift."
+      interviewer: "That your instinct on any paired analysis is to check what the pairing is keyed on."
+
+  - id: stats.tt.default-mismatch
+    format: numeric
+    modes: [qc, check]
+    difficulty: intermediate
+    skills: [stats.t-tests, qc.compare, r.sas-translation]
+    lesson: stats-t-tests-paired
+    title: Which row did production use?
+    prompt: |
+      Production (SAS) reports **df = 156** for a two-sample comparison of 81 and 77 subjects. QC (R) reports **df = 155.41**.
+
+      What is $n_1 + n_2 - 2$ for this comparison?
+    answer: 156
+    tolerance: 0
+    hints:
+      - "The pooled test has exactly n₁ + n₂ − 2 degrees of freedom."
+      - "81 + 77 − 2."
+    solution: |
+      $81 + 77 - 2 = 156$ — so **production used the Pooled row** and **QC used Welch** (R's default, whose Satterthwaite df is the non-integer 155.41).
+
+      Neither program has an arithmetic error. The finding is that the SAP did not specify which method, so the two programmers took different defaults.
+
+      The practical resolution: get the SAP amended or clarified, then make both programs state the choice explicitly. Note also how small the consequence is here — p = 0.00306 versus 0.00307 — which is *why* the ambiguity survives in so many SAPs until it meets an unbalanced comparison.
+    explanation:
+      objective: "Identify which t-test variant a program used, from its degrees of freedom alone."
+      given: "Two group sizes and two reported df values."
+      relevant: "That pooled df is exactly n1 + n2 - 2 and Welch df is generally fractional."
+      calculating: "81 + 77 - 2 = 156."
+      method: "An integer df equal to n1 + n2 - 2 identifies the pooled test; a fractional df below it identifies Welch."
+      numbers: "Pooled df = 156; the Satterthwaite approximation gives 155.41 because the arm variances are not exactly equal."
+      interpretation: "Degrees of freedom are a fingerprint. They tell you what test was run even when the output does not label it."
+      changes: "Welch df falls further below n1 + n2 - 2 as the variances and group sizes diverge; a df near min(n1, n2) - 1 signals badly unequal arms."
+      interviewer: "That you diagnose from the df rather than rerunning both versions to see which matches."
+
+  - id: stats.tt.design-open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [stats.t-tests, trials.design, communication.interviewing]
+    lesson: stats-t-tests-paired
+    title: Proposing a crossover
+    prompt: |
+      **Interviewer:** "A team is planning a parallel-group trial of an antihypertensive and the sample size is coming out larger than they'd like. Someone suggests a crossover design instead. Talk me through whether that's a good idea."
+    modelAnswer: |
+      The appeal is real and worth quantifying first, because that's what makes the rest of the conversation concrete. A crossover pairs each subject with themselves, which removes between-subject variation from the denominator. The gain is exactly a function of the within-subject correlation: variance of the difference is σ₁² + σ₂² − 2ρσ₁σ₂, so with a correlation around 0.75 you'd cut the standard error by roughly half, which is the same as quadrupling the sample size in a parallel design. For blood pressure, where within-subject correlation is typically decent, that's a genuinely large saving.
+
+      Then the conditions, because a crossover only works if the disease and the drug cooperate. The condition has to be stable — blood pressure qualifies, progressive cancer does not. The treatment effect has to be reversible, so the subject can return to baseline. You need a washout period long enough that the first treatment has cleared, and you have to be able to justify its length pharmacologically. And you need to be willing to assume no carryover effect, which you can test for but with poor power — that test is itself a well-known weak point of the design.
+
+      The costs I'd put on the table. Every subject takes longer, so the trial may not be shorter in calendar time even with fewer subjects. Dropout hurts more: losing a subject in period two costs you the whole pair, not half of it. Period effects have to be modelled. And a crossover can't answer questions about outcomes that change the subject permanently — mortality, progression, cure — which is why you almost never see them for efficacy in oncology.
+
+      For this specific case I'd say a crossover is plausible and worth costing out, and I'd want to know two things before recommending it: what the within-subject correlation looks like in prior data, because that's what determines the saving, and whether the regulatory path expects a parallel-group pivotal trial regardless. If the crossover would be supportive rather than pivotal, the sample-size saving may be buying the wrong thing.
+
+      I'd also mention the cheaper option first: if the goal is simply more power, adjusting for baseline in an ANCOVA gets a meaningful fraction of the benefit with no design change at all — in the VTX-221 data it cut the standard error by about 11% versus an unadjusted change-score analysis.
+    rubric:
+      - Quantifies the crossover's efficiency in terms of the within-subject correlation
+      - Names the design conditions (stable condition, reversible effect, adequate washout, no carryover)
+      - Identifies the costs (duration, dropout severity, period effects, unsuitable endpoints)
+      - Says explicitly when a crossover is impossible (progressive disease, irreversible outcomes)
+      - Asks what prior data say about the correlation before recommending
+      - Offers covariate adjustment as the lower-cost alternative
+    redFlags:
+      - "Recommends the crossover purely on the sample-size saving"
+      - "Does not mention carryover or washout"
+      - "Cannot say what determines the size of the efficiency gain"
+      - "Treats it as a purely statistical decision with no clinical or regulatory input"

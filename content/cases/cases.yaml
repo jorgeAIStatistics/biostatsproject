@@ -1,0 +1,585 @@
+cases:
+  # ------------------------------------------------------------------
+  - id: case-qc-mismatch
+    title: The demographics table that will not reconcile
+    summary: Two programs, one table, four discrepancies. Find each cause and decide which program is wrong.
+    difficulty: intermediate
+    minutes: 60
+    labs: [qc, sas, r, stats]
+    skills: [qc.compare, qc.discrepancy, stats.descriptive, r.sas-translation, tlf.demographics]
+    datasets: [cardio/adam/adsl]
+    scenario: |
+      It is Thursday. Table 14.1.2 (Demographic and Baseline Characteristics) is due to the medical
+      writer on Monday, and your QC program does not match production.
+
+      You are the QC programmer. Production was written in SAS by a colleague who is on leave until
+      Tuesday. You wrote your check in R from the same shell and the same SAP.
+
+      Four cells disagree:
+
+      | Cell | Production (SAS) | QC (R) |
+      |---|---:|---:|
+      | Placebo age, Q1 | 50.0 | 49.5 |
+      | Placebo baseline SBP, SD | 9.85 | 1.03 |
+      | 20 mg, n (%) female | 39 (43.8%) | 39 (44.3%) |
+      | Overall BMI, mean | 30.81 | 30.79 |
+
+      **Nobody has made an arithmetic error.** Every discrepancy has a specific, identifiable cause,
+      and for each one you have to decide which program departs from the specification — because the
+      finding is written against *that* program, and it might be yours.
+
+      The shell says: continuous variables as `n, mean (SD), median (Q1, Q3), min, max`; categorical
+      as `n (%)`; percentages based on the **ITT population**; all summaries on the ITT population.
+    steps:
+      - id: reproduce
+        title: Reproduce both numbers before theorising
+        body: |
+          Do not start by reading the SAS code. Start by computing the cell four different plausible
+          ways in your own environment and seeing which reproduces each side.
+
+          For the Q1 discrepancy, compute Q1 of placebo age using `quantile(type = 7)` and
+          `quantile(type = 2)`. One of them will reproduce production exactly.
+
+          This habit matters: a discrepancy you can *reproduce on demand* is a discrepancy you
+          understand. One you can only describe is a guess.
+        done: You can produce both the production value and the QC value from the same data, on demand, for at least two of the four cells.
+      - id: classify
+        title: Name the mechanism for each
+        body: |
+          Each of the four has a different cause. Work out which:
+
+          - A **definition** difference — the two languages compute the same named statistic differently.
+          - A **statistic** difference — one program computed a different quantity than the shell asked for.
+          - A **denominator** difference — the same count divided by a different population.
+          - A **population or missing-data** difference — the two programs summarised different rows.
+
+          For the SD cell, the ratio is informative: $1.03 \times \sqrt{91} = 9.85$. That ratio names
+          the mechanism immediately.
+
+          For the percentage cell, the counts match (39 = 39) but the percentages differ — so the
+          numerator is agreed and the denominator is not. Work out what denominator gives 44.3% for 39
+          subjects, and what population that corresponds to.
+        done: A written table with one row per discrepancy naming the mechanism and the evidence for it.
+      - id: assign
+        title: Decide which program is wrong
+        body: |
+          This is the part that requires judgement rather than computation. For each discrepancy, read
+          the shell and the SAP and decide which program departs from it.
+
+          Expect a mixed result. In a real QC cycle, roughly as many findings turn out to be QC errors
+          as production errors, and a QC programmer who has never written a finding against their own
+          program is probably not reading the spec carefully.
+
+          For at least one of these four, the honest answer is **"the specification is ambiguous"** —
+          the finding is then written against the shell or the SAP, and it goes to the study
+          statistician rather than to the programmer.
+        done: Each discrepancy is assigned to production, to QC, or to the specification, with a one-sentence justification.
+      - id: write
+        title: Write the findings
+        body: |
+          Write each finding the way a QC log expects it: the output and cell, the production value, the
+          QC value, the cause, and the proposed resolution. Two sentences each, no more.
+
+          Compare your wording against this:
+
+          > **T14.1.2, Placebo column, Age Q1.** Production 50.0, QC 49.5. Production uses the SAS
+          > default quantile definition (`QNTLDEF=5`); QC used R's default (type 7). The shell does not
+          > specify a definition. **Resolution:** confirm with the study statistician; QC will align to
+          > SAS's default unless the SAP says otherwise.
+
+          Note what that does: it states the numbers, names the mechanism, identifies that the
+          specification is silent, and proposes a resolution without unilaterally deciding.
+        done: Four findings written, each naming the mechanism and proposing a resolution.
+    debrief: |
+      **The four mechanisms.**
+
+      **Q1 (50.0 vs 49.5)** — quantile definition. SAS's default is `QNTLDEF=5`; R's is type 7. The
+      medians in the same table match perfectly, which is the diagnostic signature: every quantile
+      definition agrees on the median and they diverge only on the quartiles. Finding against the
+      *shell*, which should state the definition.
+
+      **SD (9.85 vs 1.03)** — wrong statistic. $1.03 \times \sqrt{91} = 9.85$, so one program reported
+      the standard **error** where the shell asked for the standard **deviation**. A factor of exactly
+      $\sqrt{n}$ between two dispersion statistics always means this. Finding against whichever program
+      requested `STDERR`.
+
+      **Percentage (43.8% vs 44.3%)** — denominator. $39/89 = 43.8\%$ (ITT) and $39/88 = 44.3\%$
+      (safety). The shell says ITT. Finding against the program using 88.
+
+      **Mean BMI (30.81 vs 30.79)** — missing data. One program computed the mean over subjects with a
+      non-missing BMI; the other divided by all ITT subjects, treating missing as excluded from the
+      numerator but not the denominator — or the two used different rounding of the intermediate
+      height/weight values. Check `n` in both: if the `n` printed alongside the mean differs, the
+      populations differ, and that is a more serious finding than the mean itself.
+
+      **The habit worth taking away.** Systematic discrepancies have signatures:
+
+      | Ratio between the two values | Almost certainly |
+      |---|---|
+      | Exactly $\sqrt{n}$ | SD versus SE |
+      | Exactly 2 (on a p-value) | One- versus two-sided |
+      | Exactly $\sqrt{n/(n-1)}$ | Population versus sample SD |
+      | Last decimal only | Rounding before versus after computing |
+      | Differs by exactly the count of missing values | Missing-data handling |
+
+      Diagnosing by ratio is faster than reading code, and it tells you *what to look for* when you do.
+
+  # ------------------------------------------------------------------
+  - id: case-censoring-rules
+    title: Five censoring rules and one disagreement
+    summary: Your ADTTE gives 332 PFS events; the vendor's gives 338. Both followed the SAP. Find out why.
+    difficulty: advanced
+    minutes: 90
+    labs: [cdisc, stats, qc, trials]
+    skills: [adam.adtte, stats.survival, qc.discrepancy, trials.endpoints, sdtm.dates]
+    datasets: [oncology/adam/adtte, oncology/sdtm/rs, oncology/sdtm/ds, oncology/sdtm/cm]
+    scenario: |
+      CBX417-301 is approaching its primary analysis. You have derived ADTTE; a vendor has
+      independently derived theirs. The PFS event counts differ:
+
+      | | Your derivation | Vendor |
+      |---|---:|---:|
+      | PFS events | 332 | 338 |
+      | Censored | 88 | 82 |
+
+      Six subjects are classified as events by the vendor and as censored by you. Both derivations
+      claim to implement the SAP's censoring rules, which are:
+
+      1. **Event** — documented progression per RECIST 1.1, or death from any cause.
+      2. **Censor at last adequate assessment** — no progression and no death by the data cut-off.
+      3. **Censor at last adequate assessment before new anticancer therapy** — if therapy started
+         before progression.
+      4. **Censor at last adequate assessment before the gap** — if progression or death occurred
+         after two or more consecutively missed scheduled assessments.
+      5. **Censor at randomization** — no baseline assessment, or no adequate post-baseline assessment.
+
+      A six-subject difference against 331 planned events will not change the significance of the primary
+      comparison. **It will still hold up the database lock**, because the two derivations must
+      reconcile before anyone signs anything.
+    steps:
+      - id: identify
+        title: Find the six subjects
+        body: |
+          Before analysing anything, get the list. Join the two ADTTE datasets on `USUBJID` restricted to
+          `PARAMCD = 'PFS'` and find the rows where `CNSR` differs.
+
+          For each, pull everything relevant: their RS records (response assessments and dates), DS
+          (disposition, including death), CM and PR (subsequent anticancer therapy), and the visit
+          schedule from SV.
+
+          Build one small table per subject — a timeline. Most censoring disagreements become obvious
+          the moment the events are in date order, and stay invisible while they are in separate datasets.
+        done: A per-subject timeline for all six, with every assessment, therapy start and disposition date in order.
+      - id: classify-rules
+        title: Decide which rule applies to each subject
+        body: |
+          Work through the rules **in the order the SAP states them**, because the order matters: a
+          subject who both started new therapy and had a long assessment gap can be censored under rule 3
+          or rule 4 at different dates.
+
+          The cases that generate disagreement in practice:
+
+          - Progression documented **on the same day** new therapy started. Is that "before"?
+          - A subject who missed two scheduled scans, then progressed at the third. Rule 4 says censor
+            at the last adequate assessment — but what counts as "two consecutively missed"?
+          - Death with no prior progression, occurring after a long gap with no assessments.
+          - A subject whose only post-baseline scan was assessed as `NE` (not evaluable).
+
+          For each of the six, write down which rule you applied and why, and what date it implies.
+        done: Each of the six subjects has a rule number, a censoring or event date, and a one-sentence justification.
+      - id: ambiguity
+        title: Find the genuine ambiguity
+        body: |
+          At least some of the six will turn out to be **genuinely ambiguous** — the SAP does not decide
+          them, and both derivations are defensible readings.
+
+          This is the important part of the exercise. The answer is not "I am right and the vendor is
+          wrong"; it is "the SAP is silent on X, here are the two readings, here is the impact of each,
+          and here is what I recommend."
+
+          Quantify the impact: rerun the primary stratified log-rank and Cox model under both
+          classifications. If the conclusion is unchanged, say so — that is the single most useful
+          sentence you can give the study team, because it tells them how urgent this is.
+        done: The ambiguities are named, both readings are stated, and the analysis has been rerun under each.
+      - id: recommend
+        title: Write the reconciliation memo
+        body: |
+          Write for the study statistician, in under a page:
+
+          - Six subjects differ; here they are, with the rule each derivation applied.
+          - Of those, N are clear errors in one derivation (say which, and why).
+          - M are genuine SAP ambiguities; here are the readings.
+          - Under both classifications the stratified log-rank p is X and Y, and the hazard ratio is
+            Z and W — so the conclusion does not change.
+          - Recommendation: clarify the SAP with the following wording, and rerun.
+
+          Do not bury the impact statement at the end. It is the first thing the reader needs.
+        done: A memo that a statistician could act on without opening any of the datasets.
+    debrief: |
+      **Why censoring rules generate so much work.** PFS is not observed continuously. Progression is
+      detected only at scheduled scans, so the "time to progression" you record is really "time to the
+      scan at which progression was detected" — an interval-censored quantity being analysed as if it
+      were right-censored. Every censoring rule is an attempt to prevent that approximation from
+      biasing the comparison.
+
+      Rules 3 and 4 exist for a specific reason: both new anticancer therapy and a long assessment gap
+      are **informative** — they are more likely to happen to subjects who are doing badly. Continuing
+      to follow such a subject and counting their eventual progression would attribute to the study
+      drug an event that the subsequent therapy or the unobserved interval is really responsible for.
+
+      **What this exercise is really teaching.** Reconciling two derivations is a large fraction of
+      real clinical programming work, and almost none of it is arithmetic. It is: reading a
+      specification precisely, building timelines from several domains, distinguishing an error from a
+      defensible alternative reading, and quantifying the impact before escalating.
+
+      The memo is the deliverable. A programmer who finds six discrepancies and emails a list of
+      subject IDs has done a third of the job. One who classifies them, quantifies the impact and
+      proposes wording has done all of it.
+
+      :::standard{kind="convention"}
+      The five censoring rules above follow the pattern used in most oncology SAPs and echo the
+      approach in FDA's guidance on clinical trial endpoints for cancer drug approvals. The specific
+      wording, the definition of "adequate assessment", and the handling of same-day events vary by
+      sponsor — they are SAP decisions, not a fixed standard.
+      :::
+
+  # ------------------------------------------------------------------
+  - id: case-dirty-labs
+    title: The lab dataset that says a subject weighs 3 kilograms
+    summary: Work a real cleaning cycle — find the issues, classify them, decide what is a query and what is a derivation.
+    difficulty: foundation
+    minutes: 75
+    labs: [qc, python, cdisc]
+    skills: [qc.data-cleaning, sdtm.findings, sas.missing-values, communication.documentation]
+    datasets: [oncology/raw/labs, oncology/raw/vitals, oncology/raw/demographics]
+    scenario: |
+      You have joined the data management side of a study team. The CBX417-301 raw exports have arrived
+      and the first cleaning cycle is yours.
+
+      Data management's job is **not** to make the data look clean. It is to find everything that is
+      wrong, decide who can resolve each item, and produce a record that survives an inspection. A value
+      quietly corrected in an analysis program is worse than one left flagged, because the flagged one
+      is visible.
+
+      Your inputs are the raw files. There is an answer key at
+      `data/oncology/answer-key/data_issues.csv`, and **you should not open it until step 4** — the
+      value of this exercise is in what you find without it.
+    steps:
+      - id: profile
+        title: Profile before you look for anything
+        body: |
+          For every raw file, produce a profile before forming any hypothesis: row count, distinct
+          subject count, column types, missing counts per column, and for numeric columns the min,
+          max and a handful of extreme values.
+
+          Most issues announce themselves here. A weight column whose minimum is 3.2 and maximum is 310
+          is telling you it contains both kilograms and pounds, or a decimal error, before you have run
+          a single check.
+
+          Write this as a reusable function. You will run it on every dataset you ever receive.
+        done: A profile report for each raw file, and a written list of the columns that look suspicious and why.
+      - id: rules
+        title: Write the rules before the code
+        body: |
+          List the checks in plain language first, grouped by type:
+
+          - **Structural** — duplicate keys, orphan records, subjects in one file and not another
+          - **Format** — dates that do not parse, numerics stored as text, unexpected categories
+          - **Range** — physiologically implausible values
+          - **Consistency** — end before start, AE onset before consent, visit out of window
+          - **Cross-file** — randomized with no exposure, exposure with no randomization
+
+          For each rule, decide in advance: is a failure a **query** (only the site can resolve it) or a
+          **derivation** (the mapping handles it deterministically)?
+
+          That distinction is the entire discipline. A unit conversion with a documented factor is a
+          derivation. A weight of 3.2 kg in an adult oncology trial is a query — you do not know whether
+          it is 3.2 in the wrong unit, 32, or a transcription of someone else's value, and guessing is
+          inventing data.
+        done: A written rule list where every rule is labelled query or derivation, with a reason.
+      - id: implement
+        title: Implement, and keep the record ids
+        body: |
+          Write the pipeline so each rule is a small function returning the offending rows, and the main
+          script collects them into one issue table with columns: file, record id, subject, variable,
+          issue type, raw value, proposed resolution.
+
+          **Every issue must carry a record id.** An issue report that says "3 implausible weights" is
+          useless to a data manager; one that names the subject, the visit and the value can be turned
+          into a query the same afternoon.
+
+          Resist dropping rows. The cleaned output keeps everything usable and flags the rest.
+        done: Running the script from a fresh checkout reproduces `issues.csv` identically, and every row names a specific record.
+      - id: compare
+        title: Compare with the answer key — then explain the gaps
+        body: |
+          Now open `data/oncology/answer-key/data_issues.csv`.
+
+          Compute two things: **what you missed** and **what you flagged that is not in the key**.
+
+          The misses are the more useful list. For each, ask why: was there no rule for that category,
+          or did the rule exist and not fire? A missing rule is a gap in your checklist; a rule that did
+          not fire is a bug.
+
+          The false positives matter too. Flagging a genuinely extreme but valid value wastes a site's
+          time, and a query log full of noise trains sites to ignore queries.
+        done: A gap analysis naming each missed issue type and whether the cause was a missing rule or a failing one.
+      - id: memo
+        title: Write the data management memo
+        body: |
+          One page for a data manager who is not a programmer:
+
+          - How many issues, by type and severity
+          - Which subjects are affected
+          - The three issues that block analysis and why
+          - What you need from the sites, phrased as questions a site can answer
+
+          "Subject 1042's Week 8 weight is 3.2 kg; please confirm the value and units" is a query.
+          "Weight looks wrong" is not.
+        done: A memo a data manager could send to sites without editing.
+    debrief: |
+      **Query versus derivation is the whole job.** Everything in a cleaning cycle sorts into one of
+      the two, and putting something in the wrong bucket is how data gets invented.
+
+      A derivation is deterministic and documented: creatinine reported in mg/dL is multiplied by 88.4
+      to give µmol/L; a date recorded as `2025-03` with a day unknown is imputed per the SAP's rule and
+      flagged with `DTYPE`. Anyone can reproduce it, and define.xml records it.
+
+      A query is anything requiring knowledge you do not have. The 3.2 kg weight might be 32 kg, might
+      be 3.2 kg recorded in the wrong row, might be a paediatric value in an adult study. **You cannot
+      know**, and any of the three "fixes" would be fabrication.
+
+      **The unit problem deserves special mention** because it is the most common serious issue in real
+      lab data and the easiest to get wrong. Converting by inferring the unit from the magnitude —
+      "this creatinine is 88, so it must be µmol/L" — works until it meets a genuinely abnormal value,
+      at which point it silently corrupts exactly the records that matter most. Flag rows with a missing
+      unit; never guess it.
+
+      **What an inspector looks for** is not a clean dataset. It is a traceable one: every change has a
+      reason, a timestamp and a person, and nothing was altered without one.
+
+  # ------------------------------------------------------------------
+  - id: case-ae-table
+    title: Building an adverse event table that reconciles
+    summary: Produce Table 14.3.1 from ADAE and ADSL, then make every number tie back to the disposition table.
+    difficulty: intermediate
+    minutes: 75
+    labs: [tlf, sas, qc, cdisc]
+    skills: [tlf.safety-tables, tlf.denominators, adam.occds, qc.compare, sas.freq]
+    datasets: [cardio/sdtm/ae, cardio/adam/adsl]
+    scenario: |
+      You have been given the shell for Table 14.3.1, *Overview of Treatment-Emergent Adverse Events*,
+      and Table 14.3.2, *TEAEs by System Organ Class and Preferred Term*.
+
+      The shell for 14.3.1 asks for, per treatment arm:
+
+      ```text
+                                                Placebo    10 mg     20 mg
+                                                (N=90)     (N=90)    (N=88)
+      Subjects with >=1 TEAE                    n (%)      n (%)     n (%)
+      Subjects with >=1 related TEAE            n (%)      n (%)     n (%)
+      Subjects with >=1 serious TEAE            n (%)      n (%)     n (%)
+      Subjects with >=1 severe TEAE             n (%)      n (%)     n (%)
+      TEAE leading to discontinuation           n (%)      n (%)     n (%)
+      Total number of TEAEs                     n          n         n
+      ```
+
+      Every row but the last counts **subjects**. The last counts **events**. The denominators are the
+      safety population, from ADSL.
+
+      This looks like an hour of work and it is — if you get the counting unit and the denominators
+      right the first time. If you do not, it is a day.
+    steps:
+      - id: denominators
+        title: Establish the denominators first
+        body: |
+          Before touching ADAE, compute the column headers from **ADSL**: the number of subjects with
+          `SAFFL = 'Y'` in each actual treatment arm.
+
+          Check those against the disposition table. They must match exactly, and if they do not, stop
+          — you have a population problem that will contaminate every number downstream.
+
+          Note that safety uses **actual** treatment (`TRT01A`), not planned. A subject randomized to
+          placebo who received drug belongs in the drug column here and in the placebo column of every
+          efficacy table.
+        done: Three denominators computed from ADSL, reconciled against the disposition table.
+      - id: teae
+        title: Derive the treatment-emergent flag and check its edges
+        body: |
+          `TRTEMFL = 'Y'` for events starting on or after first dose and within the follow-up window.
+
+          The interesting part is the edges:
+
+          - Events with a **partial onset date** — only month and year. The SAP's imputation rule decides,
+            and the usual convention is conservative (treat as emergent unless it can be ruled out).
+          - Events starting **on the day of first dose**. On or after, so these are emergent.
+          - Events in subjects who were **randomized but never dosed** — no first dose, so nothing can be
+            treatment-emergent, and these subjects are not in the safety population at all.
+
+          Count how many events each edge case affects and record it. If the number is material,
+          it belongs in the ADRG.
+        done: TRTEMFL derived, with a documented count of records affected by each edge rule.
+      - id: subject-counts
+        title: Count subjects, not events
+        body: |
+          For each row of 14.3.1 except the last, count **distinct subjects** satisfying the condition.
+
+          The trap is that a subject can contribute to several rows and must be counted once in each:
+          a subject with a mild non-serious TEAE and a separate serious one counts in "≥1 TEAE" and in
+          "≥1 serious TEAE".
+
+          Build it with an explicit distinct count, and then verify with a different method — a
+          `PROC FREQ` on a subject-level flag dataset, say, against a `PROC SQL` `COUNT(DISTINCT)`.
+          Two methods agreeing is worth ten minutes.
+
+          **The self-check:** every subject row count must be ≤ the "≥1 TEAE" count, which must be ≤ the
+          denominator. A percentage above 100% means you counted events.
+        done: Table 14.3.1 produced, with every row passing the monotonicity self-check.
+      - id: soc-pt
+        title: Build the SOC/PT table and get the ordering right
+        body: |
+          Table 14.3.2 nests preferred terms within system organ classes. Each subject is counted once
+          per SOC and once per PT — so a subject with two different PTs in the same SOC counts **once**
+          in the SOC row and **once in each** PT row. The SOC row is therefore not the sum of its PT rows.
+
+          That last sentence is the single most common misunderstanding of AE tables, and the most
+          common QC finding on them.
+
+          Ordering is conventionally by descending frequency in a specified column (often the highest
+          dose or the total), with alphabetical as a tie-break. The shell says which; if it does not,
+          ask rather than choosing.
+        done: Table 14.3.2 produced, with SOC totals that are correctly less than or equal to the sum of their PT rows.
+      - id: reconcile
+        title: Reconcile everything against everything
+        body: |
+          Run the full set of cross-checks that a reviewer would:
+
+          - Column headers match the disposition table
+          - "≥1 TEAE" in 14.3.1 equals the count of distinct subjects in 14.3.2
+          - "TEAE leading to discontinuation" matches the count of subjects with `DCSREAS = 'ADVERSE EVENT'`
+            in the disposition table — **or, if it does not, you can explain why**
+          - Total event count equals the row count of the TEAE-flagged dataset
+
+          The third check is the interesting one. These two numbers come from different sources — the AE
+          dataset's action-taken variable and the disposition dataset's reason — and they routinely
+          disagree by one or two subjects for legitimate reasons.
+        done: A reconciliation checklist, with every discrepancy either resolved or explained in writing.
+    debrief: |
+      **Subjects versus events is the axis everything turns on.** Almost every error in an AE table is
+      a counting-unit error, and they are easy to spot once you know the signatures: percentages above
+      100%, a SOC row larger than its denominator, or a total that equals the record count where a
+      subject count was wanted.
+
+      **Why SOC totals are not the sum of PT rows.** A subject with nausea and vomiting — two PTs in
+      *Gastrointestinal disorders* — contributes 1 to the SOC row and 1 to each of the two PT rows.
+      Summing the PT rows gives 2 for a SOC row of 1. This is correct, it surprises every reader once,
+      and it is why the SOC row is computed independently rather than by summation.
+
+      **The discontinuation reconciliation is a genuine judgement call.** The AE dataset records action
+      taken with study treatment per event; the disposition dataset records the primary reason the
+      subject left the study. A subject can discontinue *treatment* for an AE but remain in the study
+      for follow-up, in which case `DCSREAS` may not say "adverse event". The numbers legitimately
+      differ, and the CSR should not present them as though they should match.
+
+      **What makes this an employable skill** is not producing the table — a macro can do that. It is
+      knowing the reconciliation checklist, running it unprompted, and being able to explain a
+      discrepancy rather than hiding it.
+
+  # ------------------------------------------------------------------
+  - id: case-trace-value
+    title: Trace one number from the table back to the CRF
+    summary: A reviewer questions a single cell. Follow it from the TLF to the analysis record to ADaM to SDTM to the raw data.
+    difficulty: intermediate
+    minutes: 45
+    labs: [cdisc, qc, tlf]
+    skills: [adam.traceability, sdtm.mapping, qc.mindset, tlf.anatomy]
+    datasets: [oncology/adam/adsl, oncology/sdtm/dm, oncology/raw/demographics]
+    scenario: |
+      A regulatory reviewer sends a question about the demographics table:
+
+      > "Table 14.1.1 reports 210 subjects in the CBX-417 + Docetaxel arm. Please confirm the derivation
+      > of the treatment variable and demonstrate traceability to the source data for the subjects in
+      > this column."
+
+      This is not an unusual question and it is not an accusation. It is the reviewer exercising the
+      **traceability** that ADaM exists to provide, and being unable to answer it quickly is the problem
+      — not the question.
+
+      Your task is to walk one cell all the way down and produce the chain of evidence.
+    steps:
+      - id: cell-to-records
+        title: From the cell to the analysis records
+        body: |
+          Start at the cell: 210 subjects, CBX-417 + Docetaxel column, demographics table.
+
+          Identify exactly which records produce it: rows of ADSL where `ITTFL = 'Y'` and
+          `TRT01P = 'CBX-417 + Docetaxel'`. Extract that subject list.
+
+          Confirm the count is 210 and that the list contains no duplicates — `USUBJID` must be unique
+          in ADSL, and if it is not, the whole table is wrong in a way that will not be visible anywhere else.
+        done: A list of 210 USUBJIDs, verified unique, that reproduces the cell exactly.
+      - id: adam-to-sdtm
+        title: From ADaM back to SDTM
+        body: |
+          Pick one subject. Find where `TRT01P` came from: in SDTM it is `DM.ARM` (planned) — not
+          `DM.ACTARM`, which is what was actually received.
+
+          Verify for your subject that `ADSL.TRT01P` equals `DM.ARM`, and note whether `ARM` and
+          `ACTARM` agree for them. In this study a small number of subjects differ, and those are
+          exactly the subjects a reviewer would look at.
+
+          Then do it for all 210 at once: join ADSL to DM and assert that `TRT01P = ARM` for every row.
+          A single mismatch is a finding.
+        done: A programmatic assertion that TRT01P equals DM.ARM for all 210 subjects, plus a list of any subject whose ARM and ACTARM differ.
+      - id: sdtm-to-raw
+        title: From SDTM back to the raw data
+        body: |
+          `DM.ARM` is itself derived — from the randomization file, not from the CRF. Open
+          `data/oncology/raw/randomization` and trace your subject's arm assignment to its source record.
+
+          This is where the chain usually gets interesting, because the randomization system is a
+          separate source from the EDC. Check: does every randomized subject in the raw file appear in
+          DM? Does every subject in DM with a non-missing `ARM` appear in the randomization file?
+
+          The lineage file `data/oncology/lineage/sdtm_raw_map.csv` records which raw record produced each
+          SDTM record — use it to confirm your reasoning rather than to do the work for you.
+        done: The chain is complete for at least one subject, and the cross-file reconciliation between DM and the randomization file has been run for all of them.
+      - id: document
+        title: Write the response
+        body: |
+          Write what you would actually send back. It should be short and should contain:
+
+          - The derivation, stated once: `ADSL.TRT01P = DM.ARM`, which derives from the randomization
+            system record, with the define.xml origin given as such.
+          - The verification performed, with counts: 210 subjects, all unique, all matching DM.ARM.
+          - Any exceptions, with an explanation. Subjects whose ACTARM differs from ARM are *expected*
+            and are handled by the safety population using ACTARM.
+          - A pointer to where the reviewer can see this themselves — the define.xml entry and the ADRG
+            section.
+
+          The tone matters: this is a factual answer, not a defence.
+        done: A written response of under 300 words that answers the question and points at the documentation.
+    debrief: |
+      **This is what traceability means operationally.** ADaM's fundamental principle is not a slogan —
+      it is the requirement that this walk is always possible, for any value in any output. When a
+      derivation cannot be traced, the analysis dataset has failed at its main job regardless of whether
+      the number is right.
+
+      **The chain has four links and each can break differently:**
+
+      | Link | How it breaks |
+      |---|---|
+      | TLF cell → analysis records | Population filter in the table program differs from the flag in ADSL |
+      | Analysis records → ADaM variable | Derivation not documented in define.xml, or documented differently from the code |
+      | ADaM → SDTM | `USUBJID` not identical between the two, or the SDTM predecessor not recorded |
+      | SDTM → raw | No lineage kept, so the mapping cannot be demonstrated |
+
+      **The `ARM` versus `ACTARM` point generalises.** Planned treatment drives efficacy (the ITT
+      principle preserves randomization); actual treatment drives safety (you attribute an event to the
+      drug that was given). A subject where the two differ appears in different columns of different
+      tables, and that is correct. Being able to explain it calmly is worth more than never having such
+      a subject.
+
+      **Do this once on your own study data** and the concept stops being abstract. Most programmers
+      learn traceability as a definition and then meet it for the first time under time pressure,
+      during a submission, when a reviewer asks.

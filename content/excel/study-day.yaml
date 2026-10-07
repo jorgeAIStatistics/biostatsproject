@@ -1,0 +1,114 @@
+sheets:
+  - id: study-day
+    title: Study day from first dose
+    description: >-
+      Adverse events for four subjects of CBX417-301 with each subject's first dose date, taken from
+      `oncology/sdtm/ae.csv` and `oncology/sdtm/dm.csv`. The published `AESTDY` values for these rows
+      are 6, 7, 28, 35, 129, 18, −3, 1, 2 and 6.
+
+      Two things make this harder than subtracting one date from another. **There is no Day 0** — the
+      day before first dose is −1 and the day of first dose is 1 — so a plain subtraction is off by one
+      for every event on or after dosing. And the last row carries a partial date, which is not a date at
+      all as far as Excel is concerned.
+
+      Row 8 is the one worth studying: an event that started *before* the subject was dosed.
+    columns: [Subject, First Dose, AE Term, AE Start]
+    formats:
+      B: 'yyyy-mm-dd'
+      D: 'yyyy-mm-dd'
+    rows:
+      - ['1001-0002', '2022-07-08', 'Diarrhea', '2022-07-13']
+      - ['1001-0002', '2022-07-08', 'Stomatitis', '2022-07-14']
+      - ['1001-0002', '2022-07-08', 'Stomatitis', '2022-08-04']
+      - ['1001-0002', '2022-07-08', 'Tiredness', '2022-08-11']
+      - ['1001-0002', '2022-07-08', 'nausea', '2022-11-13']
+      - ['1001-0003', '2022-09-29', 'hair loss', '2022-10-16']
+      - ['1001-0004', '2022-11-07', 'Back pain', '2022-11-04']
+      - ['1001-0004', '2022-11-07', 'Emesis', '2022-11-07']
+      - ['1001-0004', '2022-11-07', 'fatigue', '2022-11-08']
+      - ['1001-0004', '2022-11-07', 'Nausea', '2022-11-12']
+      - ['1001-0005', '2023-01-16', 'Rash', '2023-01']
+    tasks:
+      - prompt: >-
+          A date in Excel is a number: whole days since 1899-12-30. Show the number behind `B2` by
+          referencing it in a cell formatted as a plain number.
+        cell: F2
+        expected: 44750
+        hint: >-
+          Formatting is a costume, not a type. `=B2` returns the underlying value, and the cell's format
+          decides whether you see a date or a count of days.
+        solution: '=B2'
+      - prompt: >-
+          Subtract first dose from AE start for row 2 — the obvious way to get a study day.
+        cell: F3
+        expected: 5
+        hint: Both are numbers, so the difference is a count of days.
+        solution: '=D2-B2'
+      - prompt: >-
+          The published `AESTDY` for that row is **6**, not 5. Write the study-day formula that respects
+          the no-Day-0 convention, and confirm it gives 6.
+        cell: F4
+        expected: 6
+        hint: >-
+          On or after first dose, add 1. Strictly before it, do not — which is what creates the jump
+          straight from −1 to 1 with no zero in between.
+        solution: '=IF(D2>=B2,D2-B2+1,D2-B2)'
+      - prompt: >-
+          Apply the same formula to row 8, where the back pain started three days **before** the subject
+          was dosed.
+        cell: F5
+        expected: -3
+        hint: >-
+          A negative study day is not an error. It is a pre-treatment event, and it is the reason the
+          formula needs the `IF` rather than always adding 1.
+        solution: '=IF(D8>=B8,D8-B8+1,D8-B8)'
+      - prompt: >-
+          Row 9 is an event on the day of first dose itself. What study day does the formula give?
+        cell: F6
+        expected: 1
+        hint: The day of first dose is Day 1, which is exactly what "no Day 0" means.
+        solution: '=IF(D9>=B9,D9-B9+1,D9-B9)'
+      - prompt: >-
+          Row 6 is the latest event for subject 1001-0002. What is its study day?
+        cell: F7
+        expected: 129
+        hint: Same formula, further out.
+        solution: '=IF(D6>=B6,D6-B6+1,D6-B6)'
+      - prompt: >-
+          `DATEDIF` is often reached for here. Compute `DATEDIF(B2,D6,"D")` and compare it with the 129
+          you just produced.
+        cell: F8
+        expected: 128
+        hint: >-
+          `DATEDIF` returns *elapsed* days, which is the subtraction without the convention applied. It
+          is not wrong; it answers a different question, and using it as a study day is off by one.
+        solution: '=DATEDIF(B2,D6,"D")'
+      - prompt: >-
+          The last row has `2023-01` — a partial date, recorded when a site knew the month but not the
+          day. Is `D12` a number?
+        cell: F9
+        expected: false
+        hint: Excel has no representation for "some day in January". It stores the text and moves on.
+        solution: '=ISNUMBER(D12)'
+      - prompt: >-
+          Compute a study day for that row, returning `Partial date` instead of an error, so the sheet
+          shows the reason rather than `#VALUE!`.
+        cell: F10
+        expected: Partial date
+        hint: >-
+          Wrap the arithmetic in `IFERROR`. Do not impute a day: a partial date stays partial until
+          someone at the site answers the query.
+        solution: '=IFERROR(D12-B12,"Partial date")'
+      - prompt: >-
+          Show `B2` back as ISO 8601 text, the format every CDISC date uses.
+        cell: F11
+        expected: '2022-07-08'
+        hint: '`TEXT(value, format)` converts a serial number to a formatted string.'
+        solution: '=TEXT(B2,"yyyy-mm-dd")'
+      - prompt: >-
+          A protocol visit is scheduled three months after first dose. Give that date for subject
+          1001-0002 as ISO text.
+        cell: F12
+        expected: '2022-10-08'
+        hint: '`EDATE(start, months)` moves whole months and handles month lengths for you.'
+        solution: '=TEXT(EDATE(B2,3),"yyyy-mm-dd")'

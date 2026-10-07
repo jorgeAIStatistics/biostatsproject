@@ -1,0 +1,160 @@
+sheets:
+  - id: import-damage
+    title: A quarterly batch export, after a default open
+    description: >-
+      The first ten rows of `manufacturing/raw/batch_export_2023Q3_upgraded.csv`. The historian that
+      wrote this file uses **DD/MM/YYYY**, and `batch_export_2024Q3_lims.csv` sitting in the same folder
+      uses **MM/DD/YYYY**. Neither file says so anywhere.
+
+      Column B is what the file contains. Column C is what the cells hold after the file was opened by
+      double-clicking it on a machine with US regional settings.
+
+      Five of the ten dates were silently reinterpreted as a different real date. The other five could
+      not be read as `MM/DD` at all, so they were left as text. No warning was shown for either.
+    columns: [Batch ID, Date in file, Date as imported, Production line]
+    formats:
+      C: 'yyyy-mm-dd'
+    rows:
+      - ['HBX14-2023-043', '04/07/2023', 45023, 'LINE-A']
+      - ['HBX14-2023-044', '08/07/2023', 45145, 'LINE-B']
+      - ['HBX14-2023-045', '11/07/2023', 45237, 'LINE-C']
+      - ['HBX14-2023-046', '15/07/2023', '15/07/2023', 'LINE-A']
+      - ['HBX14-2023-047', '19/07/2023', '19/07/2023', 'LINE-B']
+      - ['HBX14-2023-048', '25/07/2023', '25/07/2023', 'LINE-C']
+      - ['HBX14-2023-049', '31/07/2023', '31/07/2023', 'LINE-A']
+      - ['HBX14-2023-050', '06/08/2023', 45085, 'LINE-B']
+      - ['HBX14-2023-051', '10/08/2023', 45207, 'LINE-C']
+      - ['HBX14-2023-052', '14/08/2023', '14/08/2023', 'LINE-A']
+    tasks:
+      - prompt: >-
+          How many of the ten imported dates are actually **dates** — that is, numbers?
+        cell: F2
+        expected: 5
+        hint: '`COUNT` counts numbers and ignores text. A date is a number.'
+        solution: '=COUNT(C2:C11)'
+      - prompt: >-
+          And how many were left as text because `15/07` cannot be read as month 15?
+        cell: F3
+        expected: 5
+        hint: '`COUNTA` counts everything non-empty. The gap between `COUNTA` and `COUNT` is the text.'
+        solution: '=COUNTA(C2:C11)-COUNT(C2:C11)'
+      - prompt: >-
+          Row 2 is batch HBX14-2023-043, started on **4 July 2023**. Show what date the sheet now holds,
+          as ISO text.
+        cell: F4
+        expected: '2023-04-07'
+        hint: '`TEXT(value,"yyyy-mm-dd")` renders a serial number as an ISO date.'
+        solution: '=TEXT(C2,"yyyy-mm-dd")'
+      - prompt: >-
+          By how many days is that row wrong? The true start date is 4 July 2023.
+        cell: F5
+        expected: -88
+        hint: 'Subtract the true date from the imported one. `DATE(2023,7,4)` builds the true date.'
+        solution: '=C2-DATE(2023,7,4)'
+      - prompt: >-
+          Row 5 reads `15/07/2023` in both columns. Is the imported value a number?
+        cell: F6
+        expected: false
+        hint: >-
+          There is no fifteenth month, so this one could not be converted. On screen it is left-aligned
+          while the converted rows are right-aligned — that alignment difference is the only warning
+          you get.
+        solution: '=ISNUMBER(C5)'
+      - prompt: >-
+          Repair row 5 from the original text in `B5`: pull out the day, month and year and build a real
+          date, then show it as ISO text.
+        cell: F7
+        expected: '2023-07-15'
+        hint: '`MID(B5,1,2)` is the day, `MID(B5,4,2)` the month, `MID(B5,7,4)` the year. `DATE(y,m,d)`.'
+        solution: '=TEXT(DATE(VALUE(MID(B5,7,4)),VALUE(MID(B5,4,2)),VALUE(MID(B5,1,2))),"yyyy-mm-dd")'
+      - prompt: >-
+          Now repair row 2 the same way, and notice what made it possible.
+        cell: F8
+        expected: '2023-07-04'
+        hint: >-
+          Column B still holds the original text. If the file had been opened directly there would be no
+          column B — only the wrong date, and nothing to recover it from.
+        solution: '=TEXT(DATE(VALUE(MID(B2,7,4)),VALUE(MID(B2,4,2)),VALUE(MID(B2,1,2))),"yyyy-mm-dd")'
+      - prompt: >-
+          A reviewer checks that every batch in this Q3 file really falls in Q3 2023. Of the five
+          converted dates, how many pass that check?
+        cell: F9
+        expected: 1
+        hint: >-
+          `COUNTIFS` with two date criteria. Build the bounds with `DATE` and join them to the operator
+          with `&`, as in `">="&DATE(2023,7,1)`.
+        solution: '=COUNTIFS(C2:C11,">="&DATE(2023,7,1),C2:C11,"<="&DATE(2023,9,30))'
+
+  - id: identifier-damage
+    title: Which identifiers survive an import
+    description: >-
+      Six values as they appear in the CBX417-301 raw extracts, and what a General-format cell makes of
+      each one. Four survive unchanged and two do not, and the rule that separates them is mechanical:
+      **a value that can be read as a number will be read as a number.**
+
+      The last row is not from this study — CBX417-301 lab accession numbers begin with letters and come
+      through intact. It is here because sixteen-digit specimen barcodes are common and they do not.
+    columns: [Field, As written in the file, As Excel stored it]
+    formats: {}
+    rows:
+      - ['Site number', '1001', 1001]
+      - ['Subject id', '1001-0002', '1001-0002']
+      - ['Subject id, with a trailing space', '1001-0004 ', '1001-0004 ']
+      - ['Lab accession', 'CL97026619', 'CL97026619']
+      - ['ICF version', '2.0', 2]
+      - ['Specimen barcode', '4519026317480935', 4519026317480930]
+    tasks:
+      - prompt: >-
+          Is the stored site number in `C2` text?
+        cell: F2
+        expected: false
+        hint: '`1001` parses as a number, so that is what the cell holds.'
+        solution: '=ISTEXT(C2)'
+      - prompt: >-
+          Is the stored subject id in `C3` text?
+        cell: F3
+        expected: true
+        hint: '`1001-0002` cannot be read as a number, so nothing was converted.'
+        solution: '=ISTEXT(C3)'
+      - prompt: >-
+          Here is why that difference matters. The enrolment report you will meet in the layout lesson
+          stores its sites as the text `"Site 1001"`. Compare the stored site number with the text
+          `"1001"`.
+        cell: F4
+        expected: false
+        hint: >-
+          Excel's comparison operators do not convert between types. A number is never equal to a text
+          string, whatever both of them look like on screen.
+        solution: '=C2="1001"'
+      - prompt: >-
+          Now count how many cells in `C2:C7` match the **criterion** `"1001"`. The criterion is the
+          same text string you just compared against.
+        cell: F5
+        expected: 1
+        hint: >-
+          Criteria arguments follow a different rule from comparison operators: they do convert. This is
+          not an inconsistency you can reason around — it is two rules you have to know separately.
+        solution: '=COUNTIF(C2:C7,"1001")'
+      - prompt: >-
+          Row 4's subject id ends in a space. How many characters does `TRIM` remove?
+        cell: F6
+        expected: 1
+        hint: '`LEN` before and after `TRIM`. Nothing on screen tells you the space is there.'
+        solution: '=LEN(C4)-LEN(TRIM(C4))'
+      - prompt: >-
+          The CRF recorded ICF version `2.0`. How long is the stored value?
+        cell: F7
+        expected: 1
+        hint: >-
+          `2.0` and `2` are the same number, so the trailing zero is not data as far as Excel is
+          concerned. It is data as far as the protocol is concerned.
+        solution: '=LEN(C6)'
+      - prompt: >-
+          Excel holds 15 significant decimal digits. The barcode has sixteen. By how much does the
+          stored value differ from the one in the file?
+        cell: F8
+        expected: 5
+        hint: >-
+          Subtract the stored value from the true one. Unlike a stripped leading zero, this loss is not
+          recoverable from the cell — the digit is gone.
+        solution: '=4519026317480935-C7'

@@ -1,0 +1,262 @@
+items:
+  - id: trials.recist.pd-from-nadir
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.oncology]
+    lesson: trials-oncology-response-recist
+    title: Progression while smaller than baseline
+    prompt: |
+      Baseline SLD 80 mm; nadir 50 mm (week 12); week 18 SLD 61 mm; no new lesions; non-target lesions stable. What is the week-18 target response?
+    choices:
+      - text: "PD — +22% and +11 mm from the nadir"
+        correct: true
+        feedback: "(61 − 50) / 50 = 22% ≥ 20% and 11 mm ≥ 5 mm. Progression is measured from the nadir."
+      - text: "PR — still 23.75% below baseline"
+        feedback: "PR needs ≥ 30% below baseline, and PD criteria take precedence anyway."
+      - text: "SD — the tumor is smaller than at baseline"
+        feedback: "Being smaller than baseline does not rule out progression; the nadir is the reference for PD."
+      - text: "NE — the nadir is not a scheduled assessment"
+        feedback: "The nadir is the smallest SLD on study, from any adequate assessment."
+    solution: |
+      PD. Compare with the nadir for progression (+22%, +11 mm) and with baseline for response.
+
+  - id: trials.recist.five-mm
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.oncology]
+    lesson: trials-oncology-response-recist
+    title: The 5 mm rule
+    prompt: |
+      Baseline SLD 22 mm; nadir 15 mm; current SLD 18 mm; no new lesions. What is the target response?
+    choices:
+      - text: "SD — +20% from nadir but only +3 mm, below the 5 mm absolute requirement"
+        correct: true
+        feedback: "Both conditions are required for PD. Relative to baseline the SLD is −18%, not enough for PR."
+      - text: "PD — +20% from nadir"
+        feedback: "The 5 mm absolute increase is also required."
+      - text: "PR — below baseline"
+        feedback: "−18% from baseline is not a ≥ 30% decrease."
+      - text: "CR — lesions are small"
+        feedback: "CR requires disappearance of all target lesions (nodes < 10 mm short axis)."
+    solution: |
+      SD. The 5 mm rule protects small tumors from being called progressive because of measurement noise.
+
+  - id: trials.recist.censor-no-pd
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.oncology, adam.adtte]
+    lesson: trials-oncology-response-recist
+    title: Censoring date without PD or death
+    prompt: |
+      A subject is alive at the data cutoff (2025-03-31) without documented progression. The last adequate tumor assessment was on 2024-12-02; the subject was last known alive on 2025-03-20. What are the PFS censoring date and `CNSR`?
+    choices:
+      - text: "2024-12-02, CNSR = 1"
+        correct: true
+        feedback: "Censor at the last adequate tumor assessment: progression-free status is only known up to that scan."
+      - text: "2025-03-31, CNSR = 1"
+        feedback: "Censoring at the cutoff would count unobserved time as progression-free."
+      - text: "2025-03-20, CNSR = 1"
+        feedback: "Last known alive is the OS censoring date, not PFS."
+      - text: "2024-12-02, CNSR = 0"
+        feedback: "CNSR = 0 means an event occurred."
+    solution: |
+      PFS: 2024-12-02, `CNSR = 1`. OS for the same subject: censored at `LSTALVDT` = 2025-03-20, `CNSR = 1`.
+
+  - id: trials.recist.cnsr-map
+    format: mapping
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.oncology, adam.adtte]
+    lesson: trials-oncology-response-recist
+    title: Situation to CNSR
+    prompt: |
+      Map each PFS situation to the CBX417-301 `CNSR` value.
+    sourceLabel: Situation
+    targetLabel: CNSR
+    pairs:
+      - { source: "PD documented at a scheduled scan, no missed scans before it", target: "0" }
+      - { source: "Alive, no PD at the cutoff", target: "1" }
+      - { source: "No post-baseline assessment, alive", target: "2" }
+      - { source: "New anticancer therapy started, then PD", target: "3" }
+      - { source: "Two consecutive scans missed, then death", target: "4" }
+      - { source: "Death without PD, no missed scans", target: "0", note: "Death is part of the PFS event definition (composite)." }
+    targets: ["0", "1", "2", "3", "4"]
+    solution: |
+      0 = event (PD or death); 1 = no event; 2 = no baseline/post-baseline assessment; 3 = new anticancer therapy; 4 = event after ≥ 2 missed assessments. The numbering is a SAP convention; always check the study's table.
+
+  - id: trials.recist.pct-change
+    format: numeric
+    modes: [guided]
+    difficulty: foundation
+    skills: [trials.oncology]
+    lesson: trials-oncology-response-recist
+    title: Percent change from baseline
+    prompt: |
+      Baseline SLD = 90 mm; week 12 SLD = 60 mm. What is the percent change from baseline (one decimal, with sign)?
+    answer: -33.3
+    tolerance: 0.05
+    unit: "%"
+    hints:
+      - "Percent change = (current − baseline) / baseline × 100."
+    solution: |
+      (60 − 90) / 90 × 100 = −33.3%. A decrease of at least 30% qualifies as PR at this time point (confirmation still needed for confirmed ORR).
+
+  - id: trials.recist.confirmation
+    format: mcq
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.oncology, trials.endpoints]
+    lesson: trials-oncology-response-recist
+    title: Is the response confirmed?
+    prompt: |
+      Randomized 2023-01-10. Assessments: week 6 SD; week 12 (2023-04-04) PR; unscheduled 2023-04-25 PR; week 18 (2023-05-16) SD; week 24 PD. Using the CBX417-301 rule (confirmation by a subsequent CR/PR ≥ 28 days later), what is the confirmed best overall response (`CBOR`)?
+    choices:
+      - text: "SD"
+        correct: true
+        feedback: "The only later PR is 21 days after the first; the next assessment ≥ 28 days later is SD. The unconfirmed PR counts as SD."
+      - text: "PR"
+        feedback: "The repeat PR came 21 days later, short of the 28-day requirement."
+      - text: "PD"
+        feedback: "PD occurred later, but best response before it was SD (unconfirmed PR)."
+      - text: "NE"
+        feedback: "SD criteria are met (SD or better at ≥ 35 days)."
+    hints:
+      - "Count days from 2023-04-04 to 2023-04-25."
+      - "Is there any PR or CR at least 28 days after the first PR?"
+    solution: |
+      2023-04-25 − 2023-04-04 = 21 days < 28. The first assessment ≥ 28 days later is week 18 (SD). Unconfirmed BOR is PR; confirmed BOR is SD; the subject is not a responder for ORR and has no DoR record.
+
+  - id: trials.recist.aval-calc
+    format: numeric
+    modes: [independent]
+    difficulty: foundation
+    skills: [trials.oncology, adam.adtte]
+    lesson: trials-oncology-response-recist
+    title: Compute AVAL
+    prompt: |
+      Randomized 2023-09-12; PD documented at the scan on 2024-01-16, no missed scans. What is `AVAL` (days) in `ADTTE` for PFS, using `AVAL = ADT − STARTDT + 1`?
+    answer: 127
+    tolerance: 0
+    unit: days
+    hints:
+      - "Days remaining in September after the 12th: 18. Then add October, November, December and 16 days of January."
+    solution: |
+      18 + 31 + 30 + 31 + 16 = 126 days between the dates; + 1 = **127**. In months: 127 / 30.4375 = 4.17.
+
+  - id: trials.recist.censor-order-bug
+    format: hotspot
+    language: sas
+    modes: [debug]
+    difficulty: advanced
+    skills: [trials.oncology, adam.adtte, sas.data-step]
+    lesson: trials-oncology-response-recist
+    title: New-therapy subjects counted as events
+    prompt: |
+      QC finds that subjects who started a new anticancer therapy **before** progression have `CNSR = 0` with the PD date. `WORK.SUBJ_PFS` has one row per subject with pre-computed dates: `PDDT`, `DTHDT`, `NATDT` (new therapy start), `LASTADT` (last adequate assessment before the event or overall), `LASTADT_NAT` (last adequate assessment on or before `NATDT`), `NMISSED` (consecutive missed assessments before the event) and `NOPOSTBL` (1 = no baseline/post-baseline assessment and no early death). Click the line that causes the defect.
+    code: |
+      data pfs;
+        set subj_pfs;
+        if NOPOSTBL = 1 then do; ADT = RANDDT; CNSR = 2; end;
+        else if not missing(min(PDDT, DTHDT)) and NMISSED < 2 then do; ADT = min(PDDT, DTHDT); CNSR = 0; end;
+        else if not missing(NATDT) and (missing(min(PDDT, DTHDT)) or NATDT < min(PDDT, DTHDT)) then do; ADT = LASTADT_NAT; CNSR = 3; end;
+        else if NMISSED >= 2 then do; ADT = LASTADT; CNSR = 4; end;
+        else do; ADT = LASTADT; CNSR = 1; end;
+        AVAL = ADT - RANDDT + 1;
+      run;
+    answerLines: [4]
+    lineNotes:
+      - line: 4
+        note: "The event branch is tested before the new-therapy branch. A subject with new therapy and later PD satisfies line 4 first, so line 5 never runs. The SAP order is CNSR 2 → 3 → 4 → event → 1."
+      - line: 5
+        note: "Correct logic, but unreachable for subjects who also have an event, because of the IF/ELSE order."
+    fixed: |
+      data pfs;
+        set subj_pfs;
+        if NOPOSTBL = 1 then do; ADT = RANDDT; CNSR = 2; end;
+        else if not missing(NATDT) and (missing(min(PDDT, DTHDT)) or NATDT < min(PDDT, DTHDT)) then do; ADT = LASTADT_NAT; CNSR = 3; end;
+        else if not missing(min(PDDT, DTHDT)) and NMISSED >= 2 then do; ADT = LASTADT; CNSR = 4; end;
+        else if not missing(min(PDDT, DTHDT)) then do; ADT = min(PDDT, DTHDT); CNSR = 0; end;
+        else do; ADT = LASTADT; CNSR = 1; end;
+        AVAL = ADT - RANDDT + 1;
+      run;
+    hints:
+      - "In an IF / ELSE IF chain, the first true condition wins."
+      - "Which rule should win when a subject has both a new therapy date and a later PD?"
+    solution: |
+      Reorder the chain to match the SAP precedence. Also note the fixed version tests `NMISSED >= 2` only for subjects with an event — a censored subject with missed scans is simply CNSR 1 at the last adequate assessment.
+    explanation:
+      objective: "Find why the new-therapy censoring rule never applies to subjects who later progress."
+      given: "An IF/ELSE IF chain implementing the censoring table and the QC symptom."
+      relevant: "The order of the branches."
+      irrelevant: "How the input dates were computed — they are correct."
+      method: "Trace subject E (new therapy 2023-07-20, PD 2023-08-28, no missed scans) through the chain: line 4 is true, so CNSR = 0 at the PD date."
+      interpretation: "Every subject with post-therapy progression becomes an event, changing the estimand from hypothetical to treatment policy without anyone deciding it."
+      changes: "If the SAP used a treatment-policy strategy for new therapy, counting these events would be correct — and the CNSR 3 row would not exist."
+      interviewer: "That you implement precedence explicitly and test the edge cases for every rule."
+
+  - id: trials.recist.which-rule
+    format: classify
+    modes: [independent]
+    difficulty: intermediate
+    skills: [trials.oncology, adam.adtte]
+    lesson: trials-oncology-response-recist
+    title: Which censoring rule applies?
+    prompt: |
+      Data cutoff 2025-03-31; scans every 6 weeks (±7 days) from randomization. Classify each subject by the PFS outcome under the CBX417-301 rules.
+    categories: ["Event (CNSR 0)", "Censored: no PD or death (CNSR 1)", "Censored at randomization (CNSR 2)", "Censored: new anticancer therapy (CNSR 3)", "Censored: event after 2+ missed scans (CNSR 4)"]
+    entries:
+      - { text: "SD at weeks 6 and 12; died of pneumonia at week 15; no PD", category: "Event (CNSR 0)" }
+      - { text: "No scan after baseline; withdrew consent at week 3; alive", category: "Censored at randomization (CNSR 2)" }
+      - { text: "SD at week 6; weeks 12 and 18 missed; PD at week 24", category: "Censored: event after 2+ missed scans (CNSR 4)" }
+      - { text: "SD at weeks 6–30; started a new chemotherapy at week 32; PD at week 36", category: "Censored: new anticancer therapy (CNSR 3)" }
+      - { text: "PR confirmed; SD since; last scan 2025-03-10; alive", category: "Censored: no PD or death (CNSR 1)" }
+      - { text: "SD at week 6; week 12 missed; PD at week 18", category: "Event (CNSR 0)", note: "Only one missed assessment before the event, so the PD counts." }
+    hints:
+      - "Apply the rules in the SAP order: 2, then 3, then 4, then event, then 1."
+      - "Count missed scheduled assessments immediately before the event."
+    solution: |
+      Deaths without PD are events; no post-baseline scan and no early death → censored at randomization; new therapy before PD → CNSR 3; two or more missed scans before the event → CNSR 4; one missed scan does not trigger censoring.
+
+  - id: trials.recist.interview-bor
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [trials.oncology, communication.interviewing]
+    lesson: trials-oncology-response-recist
+    title: Confirmed best overall response
+    prompt: |
+      **Interviewer:** "How would you derive confirmed best overall response from visit-level RECIST responses?"
+    modelAnswer: |
+      I start from the visit-level overall responses (for example `ADRS` `PARAMCD = "OVRLRESP"`), keeping adequate assessments from randomization up to the first PD, excluding assessments after new anticancer therapy or the cutoff. A CR or PR is confirmed if a later assessment at least 28 days afterwards (per the SAP) shows the same or better response with no PD in between; CR needs a subsequent CR, PR needs a subsequent PR or CR. The best confirmed response is then the best of: confirmed CR, confirmed PR, SD (if SD or better was documented at least the minimum interval after randomization — 35 days here), PD, else NE. Unconfirmed PRs fall back to SD when the SD criterion is met.
+
+      I would store unconfirmed and confirmed best response as separate parameters (`BOR`, `CBOR`) with `AVAL` coding 1–5, set `ADT` to the date of the first response for responders, and QC with a listing of every subject's visit sequence next to the derived result, focusing on boundary cases such as a repeat PR at 21 days.
+    rubric:
+      - Restricts to the right window (before PD, new therapy, cutoff)
+      - States the confirmation interval and what counts as confirmation
+      - Handles unconfirmed PR → SD and the SD minimum interval
+      - Separates BOR and CBOR
+      - Describes QC of boundary cases
+    redFlags:
+      - "Takes the best response at any visit without confirmation"
+      - "Includes scans after new therapy"
+    followUps:
+      - "How would NE between two PRs affect confirmation?"
+      - "Where would DoR start for a confirmed responder?"
+
+  - id: trials.recist.speed-pr-threshold
+    format: numeric
+    modes: [speed]
+    difficulty: foundation
+    skills: [trials.oncology]
+    lesson: trials-oncology-response-recist
+    title: PR threshold
+    prompt: |
+      Under RECIST 1.1, a partial response requires at least what percentage decrease in the sum of target lesion diameters from baseline?
+    answer: 30
+    tolerance: 0
+    unit: "%"
+    solution: |
+      30%. Progression requires ≥ 20% increase from the nadir plus ≥ 5 mm absolute increase (or new lesions / unequivocal non-target progression).

@@ -1,0 +1,731 @@
+items:
+  - id: sdtm.vseg.wide-to-long
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sdtm.findings, sdtm.mapping]
+    lesson: sdtm-vs-eg-domains
+    title: Why the column name becomes a value
+    prompt: |
+      The vital-signs CRF page has a `SYSBP` column. The `VS` domain has no such column — the systolic
+      blood pressure lives in `VSORRES` on records where `VSTESTCD = "SYSBP"`.
+
+      A colleague argues the wide form is better: fewer rows, easier to read, and a blood pressure and a
+      pulse from the same visit sit side by side where you can see them.
+
+      What is the argument they are missing?
+    choices:
+      - text: "Column names are not comparable across sponsors — one study writes `SYSBP`, another `SBP`, another `BP_SYS`. Putting the measurement in a controlled-terminology *value* means a reviewer's tool can find it without being told the sponsor's column names."
+        correct: true
+        feedback: "Correct. That comparability is the reason the standard exists at all, and it is worth the inconvenience of having to pivot back for a ratio."
+      - text: "Wide datasets cannot be stored in SAS transport format, so long is a technical requirement."
+        feedback: "Transport format is indifferent to shape. The constraint is about comparability, not storage."
+      - text: "Long format is smaller, because a wide table would need a column for each of the 76 published vital-signs test codes."
+        feedback: "There is a size argument and it is real, but it is secondary. A sponsor could carry only the six columns it collected and still be unreadable to a generic tool."
+      - text: "`VSORRES` is character, so a wide layout would need one character column per test and lose the numeric type."
+        feedback: "`VSORRES` is character in both layouts. The typing question is what `VSSTRESN` is for and is unrelated to shape."
+    hints:
+      - "Ask who reads the dataset besides you."
+    solution: |
+      **The measurement's identity has to be data, not metadata.**
+
+      A reviewer's tool has to work on every study that arrives. If the measurement is a column *name*,
+      reading the data requires knowing the sponsor's column names — which is the exact problem
+      standards exist to remove. Put it in a controlled-terminology value and every study's systolic
+      blood pressure is `VSTESTCD = "SYSBP"`, a published term from **VSTESTCD (C66741)**.
+
+      **Your colleague's inconvenience is real** and worth naming honestly: long data is harder to read
+      by eye and harder to compute a ratio from. Body mass index needs weight and height side by side
+      again. That pivot is paid in ADaM, and it is the price of the comparability.
+
+      The same transformation is what turns almost every CRF page into a Findings domain — `LB`, `EG`,
+      `PE`, `QS`, `PC`. Learn it once on vital signs and it transfers.
+    explanation:
+      objective: "Justify the wide-to-long transformation that defines the Findings class."
+      relevant: "That the dataset is read by tools and reviewers who have never seen the study."
+      irrelevant: "Readability by the programmer who built it."
+      interpretation: "The cost is real and is paid downstream in ADaM, which is where the pivot back belongs."
+
+  - id: sdtm.vseg.where-ecog-went
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [sdtm.findings, sdtm.mapping, trials.oncology]
+    lesson: sdtm-vs-eg-domains
+    title: The column that left the page
+    prompt: |
+      CBX417-301's raw vital-signs export has these columns:
+
+      ```text
+      SYSBP  DIABP  PULSE  TEMP  TEMP_UNIT  WEIGHT  WEIGHT_UNIT  HEIGHT  HEIGHT_UNIT  ECOG
+      ```
+
+      Six of them produce `VS` records. `ECOG` produces none.
+
+      Where does it go, and why?
+    choices:
+      - text: "`RS`, as 3,075 records with `RSTESTCD = \"ECOG101\"`. SDTM places data by what it is — a performance status is a clinical classification, not a vital sign — rather than by which form it arrived on."
+        correct: true
+        feedback: "Correct. The same principle sends a pre-consent condition from the adverse-event page to `MH`."
+      - text: "`VS`, as `VSTESTCD = \"ECOG\"`, because that is the page it was collected on."
+        feedback: "Domain assignment follows the nature of the observation, not the CRF layout. And `ECOG` is not a published `VSTESTCD` term."
+      - text: "`SUPPVS`, as a supplemental qualifier of the visit's vital-signs records."
+        feedback: "A supplemental qualifier is for a collected field with no standard home. Performance status has one — it is a clinical classification with its own published test code."
+      - text: "`QS`, because a performance status is a questionnaire item."
+        feedback: "ECOG is an investigator-assigned clinical classification rather than a subject-completed questionnaire, and CDISC publishes it as a clinical classification test code."
+    hints:
+      - "Which observation class does a performance status belong to, and what is being 'tested'?"
+    solution: |
+      **`RS`.** The record looks like this:
+
+      ```text
+      RSTESTCD = "ECOG101"
+      RSCAT    = "ECOG"
+      RSTEST   = "ECOG1-Performance Status"
+      RSORRES  = "Restricted in physically strenuous activity but ambulatory and able to
+                  carry out work of a light or sedentary nature, e.g., light house work,
+                  office work"
+      RSSTRESC = "1"
+      RSEVAL   = "INVESTIGATOR"
+      ```
+
+      `ECOG101` is the single published term in **ECOG1TC (C101815)**, non-extensible. Its results have
+      their own codelists: **ECOG101OR (C179943)** for the descriptive string in `RSORRES` and
+      **ECOG101STR (C179944)** for `0`–`5` in `RSSTRESC`. The long string is the exact published
+      submission value — the scale's own wording — because `1` alone is ambiguous across scales and the
+      string *is* the definition.
+
+      **`RSCAT = "ECOG"` is a sponsor value.** The published category codelist **ONCRSCAT (C124298)** is
+      extensible and includes `RECIST 1.1`, which this study also uses, but does not publish `ECOG`. The
+      extension belongs in define.xml.
+
+      **The general rule this illustrates:** the CRF is a data-collection convenience and the domain
+      structure is a semantic one. A single page routinely feeds several domains, and a single domain
+      routinely draws from several pages.
+    explanation:
+      objective: "Route a field to a domain by what it is rather than where it was collected."
+      relevant: "That performance status is a clinical classification with its own published test code."
+      irrelevant: "The CRF page layout."
+      numbers: "3,075 ECOG101 records in RS, alongside 1,928 RECIST overall-response records."
+      interviewer: "That you do not assume one CRF page equals one domain."
+
+  - id: sdtm.vseg.vspos-null
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [sdtm.findings, sdtm.ct, sdtm.roles]
+    lesson: sdtm-vs-eg-domains
+    title: A qualifier that is null on purpose
+    prompt: |
+      In CBX417-301's `VS` domain, `VSPOS = "SITTING"` on **10,179** records and null on **7,206**.
+
+      A validation programmer opens a finding: *"VSPOS missing on 41% of records."*
+
+      What is the correct response?
+    choices:
+      - text: "The 10,179 are exactly the systolic, diastolic and pulse records. Position does not apply to a temperature, a weight or a height, and a null qualifier that does not apply is correct."
+        correct: true
+        feedback: "Correct — 3,393 x 3 = 10,179, and the other 7,206 are the three tests position is meaningless for."
+      - text: "Populate the missing records with `\"NOT APPLICABLE\"` so the variable is complete."
+        feedback: "`NOT APPLICABLE` is not a `POSITION` term, and filling a qualifier that does not apply destroys its only job — saying how the blood pressures were taken."
+      - text: "Query the sites for the missing positions, since they were presumably recorded on paper."
+        feedback: "Nobody records the position a weight was taken in. There is nothing to query."
+      - text: "It is a genuine finding: `VSPOS` is Expected in SDTMIG, so it must be populated on every record."
+        feedback: "A variable's core status governs whether the *column* is present, not whether every row has a value."
+    hints:
+      - "10,179 divided by 3 is 3,393. What has 3,393 records?"
+    solution: |
+      **10,179 = 3,393 × 3**, the systolic, diastolic and pulse records.
+
+      | Test | Records | `VSPOS` |
+      |---|---:|---|
+      | `SYSBP`, `DIABP`, `PULSE` | 3,393 each | `SITTING` |
+      | `TEMP`, `WEIGHT` | 3,393 each | *(null)* |
+      | `HEIGHT` | 420 | *(null)* |
+
+      Position matters for a blood pressure and a pulse — a supine reading differs from a sitting one,
+      which is why protocols specify it and why the value is worth carrying. It is meaningless for a
+      temperature, a weight and a height.
+
+      `VSPOS` uses **POSITION (C71148)**, extensible, 17 terms: `SITTING`, `STANDING`, `SUPINE`,
+      `SEMI-RECUMBENT` and so on. There is no term meaning "does not apply", and there should not be —
+      **the absence of a value is how SDTM says a qualifier does not apply.**
+
+      Compare with `ARMNRS` in `DM`, which exists *because* a null in `ARM` needs explaining. The
+      difference is whether the null is surprising. A null arm on a randomized subject is surprising; a
+      null position on a weight is not.
+    explanation:
+      objective: "Distinguish a deliberate null from missing data in a qualifier."
+      given: "A population count and its complement."
+      calculating: "Which tests account for 10,179 records."
+      numbers: "3,393 x 3 = 10,179 haemodynamic records; 3,393 x 2 + 420 = 7,206 for the rest."
+      interpretation: "Absence is the standard's way of saying 'not applicable', and filling it in removes information."
+
+  - id: sdtm.vseg.intp-stresn
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [sdtm.findings, qc.data-cleaning]
+    lesson: sdtm-vs-eg-domains
+    title: 5,601 records, 1,867 ECGs
+    prompt: |
+      `EG` has 5,601 records: 1,867 each of `QTCFAG`, `EGHRMN` and `INTP`.
+
+      A programmer writes a QTcF summary and reports "mean QTcF over 5,601 ECG records". A second
+      programmer writes `mean(EGSTRESN)` over the whole domain and gets a number.
+
+      What has gone wrong, in each case?
+    choices:
+      - text: "The first confuses records with ECGs — 5,601 measurements from 1,867 ECGs. The second averages across three different quantities, and `EGSTRESN` is null on all 1,867 `INTP` records, so it is a mean of QTcF and heart rate pooled together."
+        correct: true
+        feedback: "Correct. Both errors come from not filtering to a parameter first, which is the standing hazard of a long dataset."
+      - text: "Only the second is wrong. 5,601 is the correct number of ECG records."
+        feedback: "It is the correct number of *records*, but the sentence says 'ECG records' meaning ECGs, and there are 1,867 of those. Reporting a denominator you have not checked is the first error."
+      - text: "Only the first is wrong. `mean(EGSTRESN)` is safe because R drops nulls automatically."
+        feedback: "Dropping the nulls is not the problem — the remaining 3,734 values are QTcF intervals in milliseconds and heart rates in beats per minute, pooled."
+      - text: "Neither is wrong; both are standard ways of summarising a Findings domain."
+        feedback: "Neither is a defensible summary. Every Findings summary starts by filtering to one `--TESTCD`."
+    hints:
+      - "How many distinct quantities are in the `EGSTRESN` column?"
+    solution: |
+      **Two versions of the same error: not filtering to a parameter.**
+
+      ```text
+      5,601 EG records  =  1,867 ECGs x 3 tests
+      ```
+
+      | `EGTESTCD` | Records | `EGSTRESC` | `EGSTRESN` |
+      |---|---:|---|---|
+      | `QTCFAG` | 1,867 | the number as text | ms, populated |
+      | `EGHRMN` | 1,867 | the number as text | beats/min, populated |
+      | `INTP` | 1,867 | `NORMAL` or `ABNORMAL` | **null on all 1,867** |
+
+      **The denominator error.** "5,601 ECG records" is 1,867 ECGs counted three times. If the reader
+      hears it as a number of ECGs, every derived rate is out by a factor of three.
+
+      **The pooling error.** `mean(EGSTRESN)` over the domain drops the 1,867 nulls silently and averages
+      1,867 QTcF intervals in milliseconds with 1,867 heart rates in beats per minute. The result is a
+      number, it has no units, and nothing warns.
+
+      **This is the structural cost of long data**, and the discipline that removes it is one line:
+      filter to a `--TESTCD` before you do anything numeric. It is the same discipline that stops a mean
+      over `LB.LBSTRESN` from mixing creatinine with platelets.
+    explanation:
+      objective: "Identify two failure modes of summarising a long Findings dataset."
+      given: "The domain's record count and its three-test structure."
+      relevant: "That EGSTRESN holds two different quantities and a null."
+      calculating: "5,601 / 3 = 1,867 ECGs."
+      interpretation: "A mean over a long dataset without a parameter filter is meaningless even when it runs cleanly."
+      changes: "Adding a fourth test to the panel changes the record count and not the ECG count."
+
+  - id: sdtm.vseg.count-rows
+    format: numeric
+    modes: [independent]
+    difficulty: intermediate
+    skills: [sdtm.findings, sdtm.mapping]
+    lesson: sdtm-vs-eg-domains
+    title: How many VS records should there be?
+    prompt: |
+      CBX417-301's raw vital-signs page is one row per subject per visit, with six measurement columns.
+
+      - **3,441** raw rows, of which **3,393** map to `VS` (the rest are screening visits of screen
+        failures, whose other domains this study does not submit)
+      - `SYSBP`, `DIABP`, `PULSE`, `TEMP` and `WEIGHT` are collected at **every** visit
+      - `HEIGHT` is collected **once**, at screening, and exists for the **420** randomized subjects
+
+      How many records does `VS` have?
+    answer: 17385
+    tolerance: 0
+    unit: records
+    datasets: [oncology/sdtm/vs, oncology/raw/vitals]
+    hints:
+      - "Five tests at every mapped visit, plus height once per subject."
+      - "A null measurement does not become a record."
+    solution: |
+      **17,385.**
+
+      ```text
+      3,393 mapped visits x 5 tests  = 16,965
+                       + 420 heights =    420
+                                       -------
+                                        17,385
+      ```
+
+      **The number that is not in that sum is the interesting one.** 3,441 raw rows × 6 columns is
+      **20,646** candidate records, and the domain has 17,385. The 3,261 difference is:
+
+      | | Records |
+      |---|---:|
+      | Height null at 2,973 of 3,441 raw visits (collected once) | 2,973 |
+      | 48 raw rows excluded from mapping, × 6 | 288 |
+
+      **A null measurement is not a record.** A transposition that emits a row for every cell gives every
+      visit an empty height record, and those 2,973 empty rows then have to be explained to somebody —
+      or worse, are silently counted as height measurements that were attempted and failed.
+
+      That is a different thing from a `NOT DONE` record, which `LB` uses to document a test that *was*
+      scheduled and *did* fail. Height at Cycle 4 Day 1 was never scheduled, so there is nothing to
+      document.
+    explanation:
+      objective: "Predict a transposed domain's row count from the CRF's shape."
+      given: "Raw rows, mapped rows, which tests repeat and which do not."
+      relevant: "That height is collected once and that null cells do not become records."
+      irrelevant: "The number of measurement columns on the page, which overstates the count by 3,261."
+      calculating: "3,393 x 5 + 420."
+      numbers: "16,965 + 420 = 17,385, matching the delivered domain."
+      assumptions: "That every mapped visit has all five repeating measurements, which holds here."
+      changes: "If height were remeasured at every visit the domain would have 20,358 records."
+
+  - id: sdtm.vseg.convert-temp
+    format: numeric
+    modes: [guided, independent]
+    difficulty: foundation
+    skills: [sdtm.findings, sdtm.mapping, qc.data-cleaning]
+    lesson: sdtm-vs-eg-domains
+    title: A temperature in Fahrenheit
+    prompt: |
+      Twelve of CBX417-301's 3,393 temperature records arrived in Fahrenheit, because the sites at
+      centre 1002 and 1004 used Fahrenheit thermometers and recorded the unit.
+
+      One of them reads:
+
+      ```text
+      VSORRES = 97.2    VSORRESU = F
+      ```
+
+      The study's standard unit is Celsius. What is `VSSTRESN`, to one decimal place?
+    answer: 36.2
+    tolerance: 0.05
+    unit: C
+    datasets: [oncology/sdtm/vs]
+    hints:
+      - "$(F - 32) \\times 5/9$."
+      - "`VSORRES` and `VSORRESU` do not change."
+    solution: |
+      **36.2 °C.**
+
+      ```text
+      (97.2 - 32) x 5 / 9 = 36.222...   ->  VSSTRESN = 36.2   VSSTRESU = "C"
+                                            VSORRES  = 97.2   VSORRESU = "F"   (unchanged)
+      ```
+
+      The record is subject `CBX417-301-1002-0001`'s screening temperature, and the study's answer key
+      classifies it as **"NON-STANDARD UNIT (TEMPERATURE IN F)"** with the resolution *"Not an error:
+      unit recorded."*
+
+      **This is not a data problem.** The site wrote down what its thermometer showed and wrote down
+      which scale it was on. Querying them to re-enter it in Celsius would invent a number they never
+      measured. Converting in SDTM and keeping the original is exactly what the `--ORRES`/`--STRES` pair
+      exists for.
+
+      **What makes the units trap dangerous is the aggregate, not the record.** A temperature of 97.2 °C
+      is visibly impossible in a listing. But a mean computed over `VSORRES` — pooling the 12
+      unconverted Fahrenheit readings with the 3,381 Celsius ones — comes out at **36.82 °C** where the
+      correct mean over `VSSTRESN` is **36.61 °C**. Both look like perfectly reasonable mean body
+      temperatures. Weight behaves the same way: 70.55 kg pooled against 70.28 kg converted.
+    explanation:
+      objective: "Convert a collected value into the study's standard unit."
+      given: "The value, its unit, and the study's standard unit."
+      calculating: "The standardized result only — the original pair is unchanged."
+      numbers: "(97.2 - 32) x 5/9 = 36.222, stored at one decimal as 36.2."
+      assumptions: "That the site's recorded unit is correct, which is what makes this a conversion rather than a query."
+      interpretation: "12 records out of 3,393 move the domain mean by 0.21 C, which no range check would flag."
+      changes: "Had the site not recorded the unit, no conversion would be possible and the value would have to be queried."
+
+  - id: sdtm.vseg.lobxfl-height
+    format: numeric
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [sdtm.findings, adam.baseline, qc.data-cleaning]
+    lesson: sdtm-vs-eg-domains
+    title: Height has 420 records and how many flags?
+    prompt: |
+      `VSLOBXFL` is set to `Y` on the last non-missing observation before first exposure, per subject and
+      test.
+
+      `HEIGHT` is measured **once**, at screening, for all **420** randomized subjects — so every height
+      record is before first exposure and there is only one per subject.
+
+      CBX417-301 treated **416** of the 420.
+
+      How many `HEIGHT` records carry `VSLOBXFL = "Y"`?
+    answer: 416
+    tolerance: 0
+    unit: records
+    datasets: [oncology/sdtm/vs, oncology/sdtm/dm]
+    hints:
+      - "\"Before exposure\" needs an exposure to be before."
+      - "Four randomized subjects were never dosed."
+    solution: |
+      **416.** Four height records are not flagged.
+
+      ```text
+      420  HEIGHT records (one per randomized subject, screening only)
+      416  flagged VSLOBXFL = "Y"
+        4  not flagged  ->  ARMNRS = "ASSIGNED, NOT TREATED"
+      ```
+
+      `--LOBXFL` is the **last observation before exposure**. The four randomized-but-never-treated
+      subjects have no `RFXSTDTC`, so there is no exposure for an observation to be before, and no record
+      can satisfy the definition. The flag is correctly null for all four.
+
+      The same four subjects appear everywhere this pattern does. Across the whole domain:
+
+      ```text
+      416 subjects x 6 tests = 2,496 flags, and VS has exactly 2,496
+      ```
+
+      `EG` gives 416 × 3 = **1,248**, and has exactly that.
+
+      **This is the check worth running before anyone asks.** A `--LOBXFL` count that is not
+      *treated subjects × tests* means either a subject has no pre-exposure observation for a test —
+      which is real and happens twice in `LB` — or the derivation anchored on the wrong date. Both are
+      worth knowing about, and one arithmetic line distinguishes them.
+    explanation:
+      objective: "Predict a baseline-flag count and explain the shortfall."
+      given: "Height is collected once for 420 randomized subjects; 416 were treated."
+      relevant: "That --LOBXFL requires a first exposure to be measured against."
+      irrelevant: "That every height record is at screening — that guarantees timing, not eligibility for the flag."
+      calculating: "420 records minus the 4 never-treated subjects."
+      numbers: "416 flags on HEIGHT; 2,496 = 416 x 6 across VS; 1,248 = 416 x 3 across EG."
+      assumptions: "That all 416 treated subjects have a screening height, which holds here."
+      changes: "If the flag were defined against randomization rather than exposure, all 420 would be flagged."
+
+  - id: sdtm.vseg.transpose-code
+    format: code
+    modes: [independent, guided]
+    difficulty: intermediate
+    skills: [sdtm.findings, sdtm.mapping, r.tidyr]
+    lesson: sdtm-vs-eg-domains
+    title: Rotate the vital-signs page
+    language: r
+    prompt: |
+      Write R that reads the raw vital-signs page and produces the long structure `VS` needs.
+
+      - Pivot `SYSBP`, `DIABP`, `PULSE`, `TEMP`, `WEIGHT` and `HEIGHT` into `VSTESTCD` / `VSORRES`
+      - Drop rows where the measurement is missing (height is null at most visits)
+      - Set `VSORRESU`: `mmHg` for the two blood pressures, `beats/min` for pulse, and the **collected**
+        unit column for temperature, weight and height. The pound is `LB` in CDISC terminology and `lb`
+        in the raw file
+      - Set `VSSTRESU` to the study's standard unit (`C`, `kg`, `cm`, otherwise the original unit) and
+        `VSSTRESN` to the converted value, using $(F - 32) \times 5/9$ and $\times\ 0.45359237$
+      - Assert that no record is left without an original unit, then print the test-by-unit table
+    starter: |
+      library(readr); library(dplyr); library(tidyr)
+
+      raw_vitals <- read_csv("data/oncology/raw/vitals.csv", show_col_types = FALSE)
+      # ...
+    datasets: [oncology/raw/vitals, oncology/sdtm/vs]
+    checks:
+      - pattern: "pivot_longer\\(|gather\\("
+        message: "Pivot the six measurement columns into VSTESTCD and VSORRES."
+      - pattern: "names_to"
+        message: "The column name becomes VSTESTCD — name the target explicitly."
+      - pattern: "filter\\(\\s*!is\\.na\\("
+        message: "Drop rows where the measurement is missing; a null cell is not a record."
+      - pattern: "TEMP_UNIT"
+        message: "Temperature's unit is collected, not assumed."
+      - pattern: "WEIGHT_UNIT"
+        message: "Weight's unit is collected, not assumed."
+      - pattern: "32"
+        message: "Convert Fahrenheit to Celsius."
+      - pattern: "0\\.45359237"
+        message: "Convert pounds to kilograms with the exact factor."
+      - pattern: "stopifnot\\("
+        message: "Assert that every record has an original unit."
+      - pattern: "VSSTRESU"
+        message: "Set the standard unit as well as the standard result."
+      - pattern: "VSORRES\\s*<-\\s*VSSTRESN|VSORRES\\s*=\\s*VSSTRESN"
+        absent: true
+        message: "Never overwrite the original result with the converted one — the original pair is the audit trail."
+    reference: |
+      library(readr); library(dplyr); library(tidyr)
+
+      raw_vitals <- read_csv("data/oncology/raw/vitals.csv", show_col_types = FALSE)
+
+      long <- raw_vitals |>
+        pivot_longer(c(SYSBP, DIABP, PULSE, TEMP, WEIGHT, HEIGHT),
+                     names_to = "VSTESTCD", values_to = "VSORRES") |>
+        filter(!is.na(VSORRES)) |>
+        mutate(
+          VSORRESU = case_when(VSTESTCD == "SYSBP"  ~ "mmHg",
+                               VSTESTCD == "DIABP"  ~ "mmHg",
+                               VSTESTCD == "PULSE"  ~ "beats/min",
+                               VSTESTCD == "TEMP"   ~ TEMP_UNIT,
+                               VSTESTCD == "WEIGHT" ~ WEIGHT_UNIT,
+                               VSTESTCD == "HEIGHT" ~ HEIGHT_UNIT),
+          VSORRESU = if_else(VSORRESU == "lb", "LB", VSORRESU),
+          VSSTRESU = case_when(VSTESTCD == "TEMP"   ~ "C",
+                               VSTESTCD == "WEIGHT" ~ "kg",
+                               VSTESTCD == "HEIGHT" ~ "cm",
+                               TRUE                 ~ VSORRESU),
+          VSSTRESN = case_when(
+            VSTESTCD == "TEMP"   & VSORRESU == "F"  ~ round((VSORRES - 32) * 5 / 9, 1),
+            VSTESTCD == "WEIGHT" & VSORRESU == "LB" ~ round(VSORRES * 0.45359237, 1),
+            TRUE                                    ~ VSORRES)
+        )
+
+      stopifnot(!any(is.na(long$VSORRESU)))
+
+      print(table(VSTESTCD = long$VSTESTCD, VSORRESU = long$VSORRESU))
+    expectedOutput: |
+      > print(table(VSTESTCD = long$VSTESTCD, VSORRESU = long$VSORRESU))
+              VSORRESU
+      VSTESTCD beats/min    C   cm    F   kg   LB mmHg
+        DIABP          0    0    0    0    0    0 3441
+        HEIGHT         0    0  468    0    0    0    0
+        PULSE       3441    0    0    0    0    0    0
+        SYSBP          0    0    0    0    0    0 3441
+        TEMP           0 3429    0   12    0    0    0
+        WEIGHT         0    0    0    0 3431   10    0
+    solution: |
+      **The `filter(!is.na(VSORRES))` is doing most of the work.** Without it the pivot emits
+      3,441 × 6 = 20,646 rows, of which 2,973 are empty height cells at visits where height was never
+      scheduled. With it, height contributes 468 records — one per screened subject.
+
+      **The unit comes from three different places** and that is the part worth reading carefully:
+
+      | Test | Unit source | Why |
+      |---|---|---|
+      | `SYSBP`, `DIABP`, `PULSE` | Assigned constant | The protocol fixes it; the CRF has no unit field |
+      | `TEMP`, `WEIGHT`, `HEIGHT` | Collected column | The site can vary it, and does |
+
+      A program that assigns all six units as constants produces a `VS` domain in which twelve
+      temperatures claim to be in Celsius and are in Fahrenheit. Nothing detects that: the values are
+      all plausible temperatures for *some* scale.
+
+      **`lb` becomes `LB`.** The CDISC submission value in **VSRESU (C66770)** is uppercase. Case is not
+      cosmetic in controlled terminology — `lb` is not a published term, and a conformance check compares
+      the string.
+
+      **What this reference is not.** It stops one step short of `VS`: the delivered domain has 3,393
+      mapped visits rather than 3,441, because 47 screening visits belong to screen failures and one row
+      carries a mis-keyed subject identifier. Those exclusions are subject-level decisions made against
+      `DM`, not part of the transposition, and doing them in the same step is how they end up
+      undocumented.
+    explanation:
+      objective: "Turn a wide CRF page into the long structure a Findings domain needs."
+      given: "Six measurement columns, three of which carry a collected unit."
+      relevant: "That null cells are not records and that three units are collected rather than assigned."
+      method: "Pivot, drop nulls, resolve units per test, convert, assert."
+      computation: "Two conversions keyed on test and unit together; the original pair left untouched."
+      numbers: "3,441 rows x 5 repeating tests plus 468 heights; 12 Fahrenheit and 10 pound records."
+      assumptions: "That the collected unit is correct, which the study's answer key confirms for all 22 records."
+      interpretation: "The output is the transposition only — subject-level exclusions belong in a separate, documented step."
+      changes: "A study collecting height in inches would need a third conversion and would expose a factor table keyed on unit alone."
+
+  - id: sdtm.vseg.lost-qualifier
+    format: mcq
+    modes: [qc, boss]
+    difficulty: advanced
+    skills: [sdtm.findings, sdtm.supp, sdtm.mapping]
+    lesson: sdtm-vs-eg-domains
+    title: Three collected values, two submitted ones
+    prompt: |
+      CBX417-301's raw ECG export has three interpretation values:
+
+      | `INTERPRETATION` | Raw records |
+      |---|---:|
+      | `Normal` | 1,641 |
+      | `Abnormal, not clinically significant` | 220 |
+      | `Abnormal, clinically significant` | **6** |
+
+      `EG` has `EGSTRESC = "NORMAL"` on 1,641 records and `"ABNORMAL"` on 226. There is no `SUPPEG`
+      dataset.
+
+      What has happened, and what should have?
+    choices:
+      - text: "The clinical-significance distinction was collected and is not carried anywhere, so the six records that matter clinically are indistinguishable from the 220 that do not. It needed either a `SUPPEG` qualifier or a second `EGTESTCD`, and the decision needed documenting either way."
+        correct: true
+        feedback: "Correct. There is no published EGTESTCD term for clinical significance, so the study has to choose a mechanism — and 'we dropped it' is a choice that has to be written down."
+      - text: "Nothing is wrong. `EGSTRESC` uses the `NORMABNM` codelist, which is non-extensible, so `Abnormal, clinically significant` could not have been submitted."
+        feedback: "A non-extensible codelist constrains what goes in *that variable*. It says nothing about whether a second collected fact can be carried elsewhere — which is precisely what supplemental qualifiers are for."
+      - text: "The six clinically significant abnormalities should have become adverse events instead, so losing them from `EG` is harmless."
+        feedback: "A clinically significant ECG abnormality may well also be reported as an adverse event, and both records would then exist. That is a separate judgement and does not justify discarding the collected field."
+      - text: "The mapping should have set `EGSTRESC = \"ABNORMAL\"` only for the 6 clinically significant records and `\"NORMAL\"` for the other 220."
+        feedback: "That would assert that 220 abnormal tracings were normal. The interpretation and its clinical significance are two facts, not one."
+    hints:
+      - "Count the collected values, then count the submitted ones."
+      - "What mechanism does SDTM provide for a collected field with no standard variable?"
+    solution: |
+      **226 = 220 + 6, and the two are no longer distinguishable.**
+
+      The 6 clinically significant abnormalities are the records a cardiologist would actually want to
+      look at, and in the delivered domain they look exactly like the 220 that need no action.
+
+      **What was available:**
+
+      | Mechanism | How it would look |
+      |---|---|
+      | Supplemental qualifier | `SUPPEG` with `IDVAR = "EGSEQ"`, a sponsor `QNAM` such as `EGCLSIG`, `QVAL` of `Y`/`N` |
+      | A second test code | A second `EG` record per ECG answering the clinical-significance question |
+
+      There is no published `EGTESTCD` term for clinical significance, so either way it is a sponsor
+      construction that has to appear in define.xml and on the annotated CRF.
+
+      **What is not available is doing nothing quietly.** A field that is collected and then not
+      submitted has to be annotated `[NOT SUBMITTED]` on the aCRF with a reason in the cSDRG — which is
+      how a reviewer finds out that the study asked a question and did not deliver the answer. This
+      study's aCRF does exactly that for other fields, such as the eligibility ECOG and the end-of-treatment
+      last-dose date.
+
+      **The general test:** if you cannot answer "where did this CRF field go?" for every field on the
+      page, the mapping is not finished. "Nowhere, deliberately, because ⟨reason⟩" is a complete answer.
+      Silence is not.
+    explanation:
+      objective: "Detect a collected field that disappeared in mapping, and name the mechanisms that could have carried it."
+      given: "Three collected values, two submitted ones, and no SUPPEG dataset."
+      relevant: "That 226 is the sum of two distinct collected categories."
+      calculating: "220 + 6 = 226."
+      method: "Reconcile every raw field against its destination; an unexplained collapse is a finding."
+      assumptions: "That there is no published test code for clinical significance, which is why it needs a sponsor mechanism."
+      interpretation: "The loss is invisible in the domain — every record is conformant and the distinction is simply gone."
+      changes: "A SUPPEG record per ECG would add 1,867 rows and make the six findable."
+
+  - id: sdtm.vseg.outlier-triage
+    format: classify
+    modes: [debug, qc, boss]
+    difficulty: advanced
+    skills: [sdtm.findings, qc.data-cleaning, qc.discrepancy]
+    lesson: sdtm-vs-eg-domains
+    title: Which of these vital signs is wrong?
+    prompt: |
+      A data manager sends you five extreme values from CBX417-301's vital-signs page and asks which are
+      data errors.
+    categories: [Data error - query the site, Correct as collected - keep, Correct as collected - convert]
+    entries:
+      - text: "`HEIGHT = 17` cm at screening"
+        category: Data error - query the site
+        note: "Record VS-001253. The last digit was omitted; the site corrected it to 172 cm from source. No unit makes 17 cm a human height."
+      - text: "`WEIGHT = 732` kg at Cycle 12 Day 1, for a subject weighing 73-76 kg at every other visit"
+        category: Data error - query the site
+        note: "Record VS-002026. The decimal point was omitted; corrected to 73.2 kg. The subject's own other visits are what makes it unambiguous."
+      - text: "`WEIGHT = 131.2` kg at screening, for a subject whose body mass index is over 50"
+        category: Correct as collected - keep
+        note: "Record VS-000305. Source-verified. The subject's weights across the study run 128.7 to 131.6 kg — internally consistent, and a real body weight."
+      - text: "`SYSBP = 204` mmHg at Cycle 4 Day 1"
+        category: Correct as collected - keep
+        note: "Record VS-003382. Source-verified and corroborated by a grade 3 hypertension adverse event in AE. This is the domain's maximum systolic and it is real."
+      - text: "`TEMP = 97.2` with `TEMP_UNIT = F` at screening"
+        category: Correct as collected - convert
+        note: "One of 12 Fahrenheit records. The site recorded the unit, so nothing needs querying. VSORRES stays 97.2 F and VSSTRESN becomes 36.2 C."
+      - text: "`WEIGHT = 199.1` with `WEIGHT_UNIT = lb` at Cycle 4 Day 1"
+        category: Correct as collected - convert
+        note: "One of 10 pound records. VSSTRESN = 199.1 x 0.45359237 = 90.3 kg, and VSORRESU becomes LB, the uppercase CDISC submission value."
+    hints:
+      - "Two of these have a unit that explains them."
+      - "For the remaining three, ask what the same subject's other visits say."
+    solution: |
+      **Three questions, in order, and they are not statistical.**
+
+      **1. Is there a unit that makes it true?** Two of the five have one. 97.2 in Fahrenheit is a normal
+      temperature; 199.1 in pounds is a normal weight. The site recorded the unit, which makes these
+      correct data collection rather than errors — the study's answer key labels all 22 such records
+      *"Not an error: unit recorded."* Querying them would invent a number nobody measured.
+
+      **2. Is it impossible, or merely unusual?** A height of 17 cm is impossible. A weight of 131.2 kg
+      is unusual. That difference is not a percentile — it is physiology, and it decides whether you
+      query or verify.
+
+      **3. What does the rest of the subject's own data say?** This is the check that settles the
+      ambiguous ones. The 732 kg record belongs to a subject weighing 73–76 kg at every other visit; the
+      131.2 kg record belongs to a subject weighing 128.7–131.6 kg at every other visit. Same
+      "outlier" status, opposite verdicts, and the subject's own series is what distinguishes them.
+
+      **Why an outlier rule cannot do this.** A rule that trims the extremes of `VS` deletes the systolic
+      of 204 — a real grade 3 hypertension that `AE` corroborates — and leaves the 17 cm height
+      untouched, because 17 is not an extreme value, it is a *small* one and it sits comfortably inside
+      any percentile-based filter.
+
+      The delivered domain's ranges after all of this: height 144–192 cm, weight 36.1–131.6 kg, systolic
+      85–204 mmHg, diastolic 47–112, pulse 48–126, temperature 35.5–39.3 °C. Every extreme in that list
+      survived review.
+    explanation:
+      objective: "Triage extreme values into errors, genuine values and unit conversions."
+      given: "Five extreme values, two of which carry a non-standard unit."
+      relevant: "The unit column, physiological possibility, and the subject's own other visits."
+      irrelevant: "How far each value sits from the domain mean."
+      method: "Unit first, then possibility, then the subject's own series."
+      assumptions: "That the site's recorded unit is trustworthy — which is why it is collected rather than assumed."
+      interpretation: "Two of the five extremes are the domain's true maximum values and belong in the safety database."
+      changes: "Without the WEIGHT_UNIT column, the 199.1 record would be indistinguishable from a data error."
+
+  - id: sdtm.vseg.open-vs-eg
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [sdtm.findings, sdtm.mapping, communication.interpretation]
+    lesson: sdtm-vs-eg-domains
+    title: One page, 17,385 rows
+    prompt: |
+      An interviewer says: "The vital-signs CRF page has six measurement columns and you collected 3,441
+      of them. Your `VS` domain has 17,385 rows. Walk me through how you got from one to the other, and
+      tell me what you'd check before you handed it over."
+    modelAnswer: |
+      "The page is wide and the domain is long, and the rotation is the whole job.
+
+      **The arithmetic.** 3,441 raw visit rows, of which 3,393 map — the 48 that don't are screening
+      visits belonging to screen failures, and that study submits only `DM` and `DS` for them. Each
+      mapped visit produces one record per **non-missing** measurement. Five tests are collected at every
+      visit, so that's 16,965. Height is collected once at screening, so it contributes 420 — one per
+      randomized subject. 16,965 plus 420 is 17,385.
+
+      The number I'd offer unprompted is the one that *isn't* in that sum: 3,441 times 6 is 20,646. The
+      3,261 difference is mostly the empty height cells at visits where height was never scheduled. A
+      null cell is not a record, and a transposition that emits one anyway gives every visit a phantom
+      height measurement.
+
+      **The transformation.** The column name becomes a value. `SYSBP` stops being a column and becomes
+      `VSTESTCD = 'SYSBP'`, a published term from **VSTESTCD (C66741)**, paired with the published
+      `VSTEST` name. That's what makes the data comparable across sponsors — a reviewer's tool finds
+      systolic blood pressure without being told what I called my columns.
+
+      **Two things about that page specifically.** One column doesn't go to `VS` at all: ECOG performance
+      status is collected there and belongs in `RS` with `RSTESTCD = 'ECOG101'`, because SDTM places data
+      by what it is rather than by which form it came on. And the units are **collected, not assumed** —
+      blood pressure and pulse have protocol-fixed units, but temperature, weight and height each have a
+      unit column the site fills in. Twelve temperatures came in Fahrenheit and ten weights in pounds.
+
+      **What I'd check before handing it over**, roughly in this order:
+
+      1. **Row count against the arithmetic above.** If 17,385 doesn't fall out of 3,393 × 5 + 420, I
+         have either dropped records or emitted empty ones, and the difference tells me which.
+      2. **Every record has a `VSORRESU`.** A null unit means a test I did not anticipate, and it is the
+         fastest signal that the export changed.
+      3. **`VSSTRESU` is constant within a test.** Six tests, six standard units. Two distinct standard
+         units for one test means a conversion did not fire.
+      4. **Conversions spot-checked by hand.** (97.2 − 32) × 5/9 = 36.2, and 199.1 × 0.45359237 = 90.3.
+         And that `VSORRES` still says 97.2 — overwriting the original with the converted value destroys
+         the audit trail.
+      5. **`VSLOBXFL` count equals treated subjects times tests.** 416 × 6 = 2,496, and it is exactly
+         2,496. If it isn't, either a subject genuinely has no pre-exposure observation for a test — real,
+         and worth knowing — or the flag was anchored on the wrong date.
+      6. **Physiological ranges per test after conversion**, not percentiles. This is what catches a unit
+         error, because a unit error moves a whole test's worth of values at once. It also surfaces the
+         individual data errors: this study had a 17 cm height and a 732 kg weight, both queried and
+         corrected, against a 131.2 kg weight and a 204 mmHg systolic that were verified and kept.
+
+      **And one thing I'd say about the aggregate risk.** A unit error doesn't make a summary look
+      absurd — it makes it slightly wrong. Pooling those twelve Fahrenheit readings unconverted moves the
+      mean temperature from 36.61 to 36.82 °C. Both are believable body temperatures, and no range check
+      on the mean would ever fire."
+    rubric:
+      - "Derives 17,385 from 3,393 mapped visits x 5 repeating tests plus 420 heights"
+      - "States that a null measurement does not become a record, and quantifies the difference from 20,646"
+      - "Explains that the column name becomes a controlled-terminology value, and why"
+      - "Knows ECOG leaves the page for RS and gives the reason (what it is, not where it was collected)"
+      - "Distinguishes protocol-fixed units from collected units, with the three tests that carry a unit column"
+      - "Keeps VSORRES/VSORRESU unchanged while converting into VSSTRESN/VSSTRESU"
+      - "Offers concrete pre-delivery checks including the --LOBXFL arithmetic (416 x 6 = 2,496)"
+      - "Prefers physiological range checks over percentile-based outlier rules, and says why"
+    redFlags:
+      - "Emitting a record for every cell, including null heights"
+      - "Assigning all six units as constants"
+      - "Overwriting VSORRES with the converted value"
+      - "Putting ECOG in VS because it was on the vital-signs page"
+      - "Proposing to delete extreme values without going back to source"
+      - "Not being able to reproduce the row count from the CRF's shape"
+    followUps:
+      - "Your row count comes out 2,973 too high. What happened?"
+      - "A new export arrives with a SPO2 column. What does your program do, and what should it do?"
+      - "How would you check that the Fahrenheit conversions were applied and applied only where they should be?"

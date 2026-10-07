@@ -1,0 +1,171 @@
+.dt {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+  font-size: 12.5px;
+}
+.dt__caption {
+  padding: 8px 12px;
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.dt__scroll {
+  overflow: auto;
+  position: relative;
+}
+.dt__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-strong);
+}
+.dt__th {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  user-select: none;
+}
+.dt__th:last-child {
+  border-right: 0;
+}
+.dt__th.is-sortable {
+  cursor: pointer;
+}
+.dt__th.is-sortable:hover {
+  color: var(--text);
+  background: var(--surface-3);
+}
+.dt__th.is-numeric {
+  justify-content: flex-end;
+}
+.dt__th svg {
+  width: 12px;
+  height: 12px;
+  color: var(--accent);
+}
+.dt__th-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dt__th--num {
+  justify-content: flex-end;
+  color: var(--text-4);
+  position: sticky;
+  left: 0;
+  background: var(--surface-2);
+  z-index: 3;
+}
+.dt__row {
+  display: grid;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.dt__row:hover {
+  background: var(--surface-2);
+}
+.dt__row.is-clickable {
+  cursor: pointer;
+}
+.dt__row.is-highlight {
+  background: var(--accent-soft);
+}
+.dt__row.is-highlight:hover {
+  background: var(--accent-soft-2);
+}
+.dt__cell {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  border-right: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  min-width: 0;
+}
+.dt__cell:last-child {
+  border-right: 0;
+}
+.dt__cell.is-numeric {
+  justify-content: flex-end;
+}
+.dt__cell.is-missing {
+  color: var(--text-4);
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 5px,
+    color-mix(in srgb, var(--text-4) 12%, transparent) 5px 6px
+  );
+}
+.dt__cell.is-highlight {
+  background: color-mix(in srgb, var(--warning) 22%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warning) 60%, transparent);
+  font-weight: 600;
+}
+.dt__cell.is-diff {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger-text);
+  font-weight: 600;
+}
+.dt__cell--num {
+  justify-content: flex-end;
+  color: var(--text-4);
+  font-size: 11px;
+  position: sticky;
+  left: 0;
+  background: inherit;
+  z-index: 1;
+}
+.dt__row:hover .dt__cell--num {
+  background: var(--surface-2);
+}
+.dt__empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-3);
+}
+.dt--dense .dt__th {
+  height: 28px;
+}
+
+/* Dataset embed (inside lessons) */
+.ds-embed {
+  margin: 1.3em 0;
+}
+.ds-embed__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: var(--text-sm);
+}
+.ds-embed__name {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-semibold);
+  font-size: 12.5px;
+}
+.ds-embed__label {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+.ds-embed__foot {
+  margin-top: 6px;
+  font-size: var(--text-xs);
+  color: var(--text-3);
+}

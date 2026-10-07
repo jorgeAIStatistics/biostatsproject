@@ -1,0 +1,286 @@
+/* Long-form reading typography for lessons, documents and explanations. */
+.prose {
+  font-size: var(--text-prose);
+  line-height: var(--leading-prose);
+  color: var(--text);
+  overflow-wrap: break-word;
+}
+.prose--compact {
+  font-size: var(--text-md);
+  line-height: 1.62;
+}
+.prose--inline,
+.prose--inline > p {
+  display: inline;
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+.prose > :last-child {
+  margin-bottom: 0;
+}
+
+.prose p {
+  margin: 0 0 1em;
+}
+.prose--compact p {
+  margin: 0 0 0.7em;
+}
+
+.prose .md-h2 {
+  position: relative;
+  margin: 2.4em 0 0.8em;
+  padding-top: 0.2em;
+  font-size: 1.42em;
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.018em;
+  scroll-margin-top: calc(var(--topbar-height) + 16px);
+}
+.prose .md-h2:first-child {
+  margin-top: 0;
+}
+.prose .md-anchor {
+  position: absolute;
+  left: -26px;
+  top: 0.42em;
+  color: var(--text-4);
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+.prose .md-anchor svg {
+  width: 16px;
+  height: 16px;
+}
+.prose .md-h2:hover .md-anchor {
+  opacity: 1;
+}
+.prose .md-h3,
+.prose h3 {
+  margin: 1.8em 0 0.6em;
+  font-size: 1.12em;
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  scroll-margin-top: calc(var(--topbar-height) + 16px);
+}
+.prose h4 {
+  margin: 1.4em 0 0.5em;
+  font-size: 1em;
+  font-weight: var(--weight-semibold);
+}
+
+.prose ul,
+.prose ol {
+  margin: 0 0 1em;
+  padding-left: 1.45em;
+}
+.prose li {
+  margin: 0.3em 0;
+}
+.prose li > p {
+  margin: 0 0 0.4em;
+}
+.prose li::marker {
+  color: var(--text-4);
+}
+.prose ol > li::marker {
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.prose strong {
+  font-weight: var(--weight-semibold);
+}
+
+.prose blockquote {
+  margin: 1.2em 0;
+  padding: 0.2em 0 0.2em 1.1em;
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-2);
+  font-style: normal;
+}
+.prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.prose :not(pre) > code,
+.prose code.var {
+  padding: 0.12em 0.36em;
+  border-radius: 4px;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 0.84em;
+  font-weight: 450;
+  white-space: break-spaces;
+}
+.prose code.var {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  font-weight: 520;
+}
+
+.prose hr {
+  margin: 2em 0;
+}
+
+.prose a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  text-underline-offset: 2px;
+}
+.prose a:hover {
+  text-decoration-color: var(--accent);
+}
+
+/* Tables */
+.md-table {
+  margin: 1.2em 0 1.4em;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.md-table table {
+  width: 100%;
+  font-size: 13.5px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+.prose--compact .md-table table {
+  font-size: 13px;
+}
+.md-table th {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.md-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.md-table tr:last-child td {
+  border-bottom: 0;
+}
+.md-table tbody tr:hover td {
+  background: var(--surface-2);
+}
+.md-table td code,
+.md-table th code {
+  white-space: nowrap;
+}
+
+/* Math */
+.prose .katex {
+  font-size: 1.06em;
+}
+.prose .katex-display {
+  margin: 1.1em 0;
+  padding: 0.6em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Callouts inside prose use the ui.css callout styles; tighten content */
+.prose .callout .callout__content {
+  font-size: 0.95em;
+  line-height: 1.62;
+}
+.prose .callout .callout__content > :last-child {
+  margin-bottom: 0;
+}
+.prose .disclosure__content {
+  font-size: 0.95em;
+  padding-top: 12px;
+}
+.prose .disclosure__content > :last-child {
+  margin-bottom: 0;
+}
+.prose .disclosure__content .codeblock {
+  margin: 0.8em 0;
+}
+
+/* Tabs */
+.md-tabs {
+  margin: 1.3em 0;
+}
+.md-tabs__list {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: -1px;
+}
+.md-tabs__tab {
+  position: relative;
+  padding: 7px 12px;
+  border: 0;
+  background: none;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.md-tabs__tab:hover {
+  color: var(--text);
+}
+.md-tabs__tab[aria-selected='true'] {
+  color: var(--text);
+}
+.md-tabs__tab[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.md-tabs__panel > .codeblock:first-child {
+  margin-top: 10px;
+}
+
+/* Side-by-side columns */
+.md-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+  margin: 1.2em 0;
+}
+.md-col {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.md-col__label {
+  padding: 8px 12px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.md-col__body {
+  padding: 10px 12px;
+  font-size: 0.94em;
+}
+.md-col__body > :last-child {
+  margin-bottom: 0;
+}
+.md-col__body .codeblock,
+.md-col__body .md-table {
+  margin: 0.4em 0;
+}
+
+.md-term {
+  text-decoration: underline dotted var(--text-4);
+  text-underline-offset: 3px;
+  cursor: help;
+}

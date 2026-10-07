@@ -1,0 +1,518 @@
+items:
+  - id: stats.rd.outlier-vs-influential
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: intermediate
+    skills: [stats.diagnostics, qc.mindset]
+    lesson: stats-regression-diagnostics
+    title: An outlier that does not matter
+    prompt: |
+      A subject in the primary ANCOVA has a studentized residual of **−3.42**, leverage of **0.027** (average leverage is 0.017) and Cook's distance of **0.076**.
+
+      Removing them changes the treatment effect from −7.715 to −7.650 mmHg.
+
+      What is the correct description?
+    choices:
+      - text: "A genuine outlier but not influential — its leverage is near average, so it has little pull on the fit."
+        correct: true
+        feedback: "Correct. Cook's D combines outlyingness and leverage; here the leverage factor h/(1−h)² = 0.028 is small, so the product stays at 0.076 despite the large residual."
+      - text: "An influential observation that should be excluded."
+        feedback: "Cook's D of 0.076 is far below any influence threshold, and the fit moves by 0.065 mmHg. Nothing here is influential."
+      - text: "A high-leverage point."
+        feedback: "Leverage of 0.027 is above the 0.017 average but well below the 2p/n = 0.034 flag. It is unusual in y, not in x."
+      - text: "Evidence that the model is misspecified."
+        feedback: "With n = 238 you would expect about 0.6 observations beyond ±3 by chance. Finding a few is unremarkable."
+    solution: |
+      **Outlier, not influential.** The two concepts are independent:
+
+      - **Outlier** = unusual $y$ (large residual) — yes, at −3.42
+      - **High leverage** = unusual $x$ — no, 0.027 against an average of 0.017
+      - **Influential** = removal changes the fit — no, by 0.065 mmHg
+
+      Cook's D makes this explicit:
+
+      $$D_i = \underbrace{\frac{e_i^2}{p\hat\sigma^2}}_{2.71} \times \underbrace{\frac{h_i}{(1-h_i)^2}}_{0.028} = 0.076$$
+
+      The outlyingness factor is large and the leverage factor is small, so the product is small. **The correct action is to leave the subject in the analysis** — and, separately, to look at their record in case the extreme value reflects a data issue worth querying.
+    explanation:
+      objective: "Distinguish outlyingness, leverage and influence using the quantities that measure each."
+      given: "A studentized residual, a leverage value, a Cook's distance and the effect of deletion."
+      relevant: "All four; each measures a different thing."
+      calculating: "Whether the observation is influential, which the refit answers directly."
+      method: "Cook's D is the product of an outlyingness factor and a leverage factor. A large value requires both."
+      numbers: "e^2/(p sigma^2) = 2.71; h/(1-h)^2 = 0.0266/0.9475 = 0.028; product 0.076. Deletion moves the estimate by 0.065 mmHg."
+      assumptions: "Thresholds (2p/n, 4/n, |r| > 3, D > 1) are conventions for what to examine, not tests."
+      interpretation: "Unusual and unimportant are compatible. With 238 subjects, one extreme value near the middle of the predictor range is absorbed by the rest."
+      changes: "The same residual at leverage 0.5 would give h/(1-h)^2 = 2.0 and a Cook's D around 5.4 — genuinely influential."
+      interviewer: "That you name the refit as the decisive check rather than relying on a threshold."
+
+  - id: stats.rd.leverage-sum
+    format: numeric
+    modes: [check, guided, speed]
+    difficulty: intermediate
+    skills: [stats.diagnostics, stats.linear-regression]
+    lesson: stats-regression-diagnostics
+    title: Average leverage
+    prompt: |
+      A model with an **intercept**, a **three-level treatment factor** and **one continuous covariate** is fitted to **238** subjects.
+
+      What is the average leverage across observations?
+
+      Give your answer to five decimal places.
+    answer: 0.01681
+    tolerance: 0.0002
+    hints:
+      - "Average leverage is p/n, where p is the number of estimated parameters."
+      - "A three-level factor contributes 2 columns, not 3."
+      - "p = 1 + 2 + 1 = 4."
+    solution: |
+      Parameters: **1** intercept + **2** treatment dummies (3 levels − 1) + **1** covariate = **4**.
+
+      $$\bar{h} = \frac{p}{n} = \frac{4}{238} = 0.01681$$
+
+      This is exact, not approximate: the hat values always sum to $p$, because $\sum_i h_i = \operatorname{trace}(H) = \operatorname{rank}(X) = p$.
+
+      **It is also a useful check.** If the leverages in your output do not sum to the number of parameters, either the design matrix is rank-deficient (collinear predictors) or you are not looking at every observation.
+
+      The conventional flag $2p/n = 0.0336$ follows directly.
+    explanation:
+      objective: "Compute average leverage and understand why it is exactly p/n."
+      given: "A model specification and a sample size."
+      relevant: "The parameter count and n."
+      calculating: "p divided by n."
+      method: "The hat values sum to the trace of the hat matrix, which equals the rank of the design matrix, which is p for a full-rank model."
+      numbers: "p = 1 + 2 + 1 = 4; 4/238 = 0.016807."
+      assumptions: "Full rank. With perfectly collinear predictors the rank is less than the nominal parameter count and the sum falls accordingly."
+      interpretation: "Leverage is bounded between 1/n and 1, and averages p/n, so thresholds are naturally expressed as multiples of p/n."
+      changes: "At n = 20 with the same model, average leverage would be 0.20 and a single subject could easily exceed 0.5 — which is why influence matters far more in small studies."
+      interviewer: "That you count a k-level factor as k-1 columns, and that you can state the sum-to-p identity as a check."
+
+  - id: stats.rd.small-residual-trap
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [stats.diagnostics]
+    lesson: stats-regression-diagnostics
+    title: Why raw residuals hide the worst points
+    prompt: |
+      An analyst screens for problem observations by sorting the **raw** residuals and examining the largest.
+
+      Why does this systematically miss the most important ones?
+    choices:
+      - text: "Var(eᵢ) = σ²(1 − hᵢ), so high-leverage points have smaller residual variance — the points that pulled the line toward themselves have small raw residuals."
+        correct: true
+        feedback: "Exactly. A point with leverage approaching 1 is fitted almost exactly, with a residual near zero, precisely because it dominated the fit."
+      - text: "Raw residuals are in the wrong units."
+        feedback: "Units are a presentation issue. The problem is that the residual *variance* differs across observations, so raw residuals are not comparable to each other."
+      - text: "Raw residuals do not sum to zero."
+        feedback: "They do sum to zero whenever the model has an intercept — that is one of the normal equations. It is not the issue."
+      - text: "Raw residuals are affected by the sample size."
+        feedback: "Their scale is set by the residual SD, not directly by n."
+    solution: |
+      Because $\operatorname{Var}(e_i) = \sigma^2(1 - h_i)$. High-leverage points have **smaller** residual variance, so their raw residuals tend to be small — not because they fit well, but because they dragged the fitted line toward themselves.
+
+      In the limit, a point with $h_i = 1$ is fitted exactly and has a residual of exactly zero, while being the most influential observation in the dataset.
+
+      **The fix:** divide by $\sqrt{1 - h_i}$ to get standardized residuals, or use externally studentized residuals, which additionally exclude the point from its own variance estimate so a genuine outlier cannot inflate the $\hat\sigma$ it is judged against.
+    explanation:
+      objective: "Explain why raw residuals are the wrong screening tool."
+      given: "A screening procedure based on sorting raw residuals."
+      relevant: "That residual variance depends on leverage."
+      method: "Var(e_i) = sigma^2(1 - h_i), so residuals from high-leverage observations are shrunk toward zero."
+      numbers: "At h = 0.5 the residual SD is 0.71 sigma; at h = 0.9 it is 0.32 sigma; at h = 1 it is exactly zero."
+      assumptions: "The identity holds for any OLS fit; it is a property of the hat matrix, not of the data."
+      interpretation: "The observations most in need of attention are the ones this screen is least able to find."
+      changes: "Standardizing by sqrt(1-h) fixes the variance; externally studentizing additionally removes the point from the sigma estimate, which matters when a single outlier is large enough to inflate it."
+      interviewer: "That you can state the variance formula and give the h = 1 limiting case, which makes the argument unanswerable."
+
+  - id: stats.rd.normality-test
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: intermediate
+    skills: [stats.diagnostics, qc.mindset]
+    lesson: stats-regression-diagnostics
+    title: Shapiro–Wilk as a decision rule
+    prompt: |
+      A programmer's standard practice is: run Shapiro–Wilk on the residuals; if p < 0.05, switch from the t-test to a rank test.
+
+      What is wrong with this?
+    choices:
+      - text: "It makes the analysis data-dependent, invalidating the stated error rate — and the test is underpowered at small n and oversensitive at large n, so it fires at the wrong times."
+        correct: true
+        feedback: "Both halves matter. The two-stage procedure has its own error rate, and the screening test is worst exactly where you want it to work."
+      - text: "Nothing — this is the recommended approach for checking assumptions."
+        feedback: "It appears in older texts but is not recommended practice. Pre-specification is what a SAP requires."
+      - text: "Shapiro–Wilk should be applied to the raw data, not the residuals."
+        feedback: "The normality assumption is about the *errors*, so residuals are the right target. The problem is using it as a switch."
+      - text: "A 0.01 threshold should be used instead of 0.05."
+        feedback: "Changing the threshold does not fix the fact that the choice is made after seeing the data."
+    solution: |
+      Two independent problems.
+
+      **Data-dependent analysis.** Selecting the test based on the data makes it a two-stage procedure whose true type I error is not the nominal 0.05, and it cannot be pre-specified.
+
+      **Bad calibration.** At $n = 1000$ a normality test detects departures far too small to affect a t-test. At $n = 20$ it detects nothing even when the departure matters. It fires most often exactly where it is least needed.
+
+      **What to do instead:** look at the Q–Q plot, judge whether the departure is large enough to matter given the sample size, and pre-specify the analysis in the SAP based on what you know about the outcome. A formal test is reportable as description; it should not be a decision rule.
+
+      Note too that normality is the *least* important of the regression assumptions at large $n$ — the CLT protects the sampling distribution of the coefficients. Independence is the one that will hurt you.
+    explanation:
+      objective: "Recognise an assumption-checking practice that undermines the analysis it is meant to protect."
+      given: "A rule that switches the analysis based on a normality test result."
+      relevant: "That the switch depends on the observed data."
+      method: "Evaluate the composite two-stage procedure, not each stage separately."
+      assumptions: "The normality assumption concerns the errors and matters least among the LINE assumptions at large n."
+      interpretation: "A significant Shapiro-Wilk at n = 1000 is almost guaranteed and almost never consequential."
+      changes: "If the outcome is known in advance to be badly behaved — PK concentrations, cytokine levels — the right response is to pre-specify a transformation or a rank method in the SAP, not to decide at analysis time."
+      interviewer: "That you also rank the assumptions, since knowing normality matters least is what separates a checklist from understanding."
+
+  - id: stats.rd.average-leverage
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [stats.diagnostics]
+    lesson: stats-regression-diagnostics
+    title: The leverage flag threshold
+    prompt: |
+      A regression with **6** parameters is fitted to **90** observations.
+
+      Using the conventional $2p/n$ rule, above what leverage value would you flag an observation for examination?
+
+      Give your answer to four decimal places.
+    answer: 0.1333
+    tolerance: 0.001
+    hints:
+      - "Average leverage is p/n."
+      - "6/90 = 0.0667."
+      - "Double it."
+    solution: |
+      $$\bar{h} = \frac{6}{90} = 0.0667, \qquad \frac{2p}{n} = 0.1333$$
+
+      Notice how much larger this is than in the 238-subject example (0.0336). **With fewer observations and more parameters, every observation has more leverage** — average leverage is $p/n$, so it grows as $p$ rises and $n$ falls.
+
+      This is why influence diagnostics matter most in small studies: at $n = 90$ with 6 parameters, a single observation can easily reach a leverage of 0.3 or more and genuinely dominate the fit.
+    explanation:
+      objective: "Compute a leverage screening threshold and see how it scales."
+      given: "A parameter count and a sample size."
+      relevant: "Both."
+      calculating: "Twice the average leverage."
+      method: "Average leverage is p/n by the sum-to-p identity; the conventional flag is twice that."
+      numbers: "6/90 = 0.06667; 2 x 0.06667 = 0.13333."
+      assumptions: "The 2p/n rule is a convention for what to look at, not a test."
+      interpretation: "A higher threshold in a smaller study reflects that leverage is genuinely more concentrated there."
+      changes: "At n = 238 with p = 4 the threshold is 0.0336 — four times smaller, because there are more observations sharing the same total leverage of p."
+      interviewer: "That you note how the threshold scales with p/n, rather than treating 2p/n as a fixed number."
+
+  - id: stats.rd.cooks-components
+    format: numeric
+    modes: [check, independent]
+    difficulty: advanced
+    skills: [stats.diagnostics]
+    lesson: stats-regression-diagnostics
+    title: The leverage factor in Cook's distance
+    prompt: |
+      For an observation with leverage $h_i = 0.0266$, compute the leverage factor of Cook's distance:
+
+      $$\frac{h_i}{(1 - h_i)^2}$$
+
+      Give your answer to four decimal places.
+    answer: 0.0281
+    tolerance: 0.0005
+    hints:
+      - "1 − 0.0266 = 0.9734."
+      - "0.9734² = 0.94751."
+      - "0.0266 / 0.94751."
+    solution: |
+      $$\frac{0.0266}{(1 - 0.0266)^2} = \frac{0.0266}{0.94751} = 0.0281$$
+
+      Multiplying by the outlyingness factor $e_i^2/(p\hat\sigma^2) = 2.71$ gives Cook's D = 0.076 — small, despite a studentized residual of −3.42.
+
+      **Watch how violently this factor grows with leverage:**
+
+      | $h_i$ | $h_i/(1-h_i)^2$ |
+      |---:|---:|
+      | 0.03 | 0.032 |
+      | 0.10 | 0.123 |
+      | 0.30 | 0.612 |
+      | 0.50 | 2.000 |
+      | 0.80 | 20.00 |
+
+      The same residual at leverage 0.5 would give Cook's D around 5.4 rather than 0.076 — a 70-fold difference from leverage alone. **This is why leverage, not residual size, is what makes an observation dangerous.**
+    explanation:
+      objective: "Evaluate and interpret the leverage component of Cook's distance."
+      given: "A leverage value."
+      relevant: "Only that value."
+      calculating: "h/(1-h)^2."
+      method: "Cook's D factorises into an outlyingness term and a leverage term; this is the second."
+      numbers: "1 - 0.0266 = 0.9734; squared = 0.94751; 0.0266/0.94751 = 0.02807."
+      assumptions: "The formula assumes the model is fitted by OLS; the identity is exact."
+      interpretation: "The factor grows without bound as leverage approaches 1, which is why a single high-leverage point can dominate a fit entirely."
+      changes: "At h = 0.5 the factor is 2.0, seventy times larger than at h = 0.027 — the same residual becomes seriously influential."
+      interviewer: "That you can show the factorisation and explain which term is doing the work in a given case."
+
+  - id: stats.rd.refit-check
+    format: numeric
+    modes: [qc, check, independent]
+    difficulty: intermediate
+    skills: [stats.diagnostics, qc.compare]
+    lesson: stats-regression-diagnostics
+    title: The only diagnostic that settles it
+    prompt: |
+      The primary ANCOVA gives a 20 mg versus placebo effect of **−7.7152 mmHg**. Refitting without the observation with the largest Cook's distance gives **−7.6504 mmHg**.
+
+      By how many mmHg did the estimate change? Give your answer to four decimal places.
+    answer: 0.0648
+    tolerance: 0.002
+    unit: mmHg
+    hints:
+      - "Take the absolute difference between the two estimates."
+      - "7.7152 − 7.6504."
+    solution: |
+      $$|-7.7152 - (-7.6504)| = 0.0648 \text{ mmHg}$$
+
+      Against a treatment effect of 7.7 mmHg and a standard error of 1.65 mmHg, that is a change of **0.8% of the estimate** and **4% of one standard error**. The conclusion is unaffected in every respect.
+
+      **This refit is the diagnostic that actually answers the question.** Leverage, studentized residuals and Cook's D are all proxies for "would deleting this observation change my conclusion?" — and you can simply answer it directly.
+
+      The sentence this supports in a report: *"Excluding the observation with the largest studentized residual changed the estimated treatment difference by 0.065 mmHg."* Concrete, checkable, and far more convincing than "diagnostics were satisfactory".
+    explanation:
+      objective: "Quantify the influence of a single observation directly."
+      given: "The estimate with and without the most influential observation."
+      relevant: "Both estimates."
+      calculating: "Their absolute difference, in context."
+      method: "Delete and refit. Every influence statistic approximates this quantity; computing it removes the approximation."
+      numbers: "7.7152 - 7.6504 = 0.0648 mmHg, which is 0.8% of the estimate and 4% of the SE of 1.648."
+      assumptions: "Deleting one observation is a sensitivity analysis, not the primary analysis — the primary includes all observed data."
+      interpretation: "Expressing the change relative to the standard error is what makes it interpretable; an absolute mmHg figure alone does not say whether it matters."
+      changes: "If the change had been comparable to one standard error, the result would genuinely rest on one subject and that would need reporting prominently."
+      interviewer: "That you express the change relative to the SE rather than in raw units, and that you frame the refit as the definitive check."
+
+  - id: stats.rd.r-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [stats.diagnostics, r.models, qc.code-review]
+    lesson: stats-regression-diagnostics
+    title: A diagnostics table you can hand to data management
+    minutes: 14
+    prompt: |
+      Write `flag_observations(fit, data, id_col = "USUBJID")` that returns a data frame of observations worth examining.
+
+      Requirements:
+
+      - One row per flagged observation, with the **subject identifier**, not just a row number.
+      - Columns `leverage`, `rstudent`, `cooksd`, and a `reason` string naming which rule fired.
+      - Flag when leverage > 2p/n, |rstudent| > 3, **or** Cook's D > 4/n.
+      - Use `nobs(fit)` for n, not `nrow(data)` — they differ if rows were dropped for missing values.
+      - Sort by Cook's distance, descending.
+    starter: |
+      flag_observations <- function(fit, data, id_col = "USUBJID") {
+        n <- ___
+        p <- ___
+
+        d <- data.frame(
+          id       = data[[id_col]],
+          leverage = ___,
+          rstudent = ___,
+          cooksd   = ___
+        )
+
+        # build reason, filter, sort
+      }
+    reference: |
+      flag_observations <- function(fit, data, id_col = "USUBJID") {
+        n <- nobs(fit)
+        p <- length(coef(fit))
+
+        d <- data.frame(
+          id       = data[[id_col]],
+          leverage = hatvalues(fit),
+          rstudent = rstudent(fit),
+          cooksd   = cooks.distance(fit),
+          row.names = NULL
+        )
+
+        hi_lev  <- d$leverage > 2 * p / n
+        hi_res  <- abs(d$rstudent) > 3
+        hi_cook <- d$cooksd > 4 / n
+
+        d$reason <- paste(
+          ifelse(hi_lev, "leverage ", ""),
+          ifelse(hi_res, "outlier ", ""),
+          ifelse(hi_cook, "influence", ""),
+          sep = ""
+        )
+
+        out <- d[hi_lev | hi_res | hi_cook, ]
+        out[order(-out$cooksd), ]
+      }
+    hints:
+      - "`nobs(fit)` is the number of observations the model actually used; `length(coef(fit))` is p."
+      - "`hatvalues()`, `rstudent()` and `cooks.distance()` all return vectors aligned with the model's rows."
+      - "Build the three logical flags first, then use them both for the `reason` string and for the filter — so the two can never disagree."
+    checks:
+      - pattern: "nobs\\s*\\(\\s*fit\\s*\\)"
+        message: "Uses nobs(fit) rather than nrow(data) for n"
+      - pattern: "length\\s*\\(\\s*coef\\s*\\(\\s*fit\\s*\\)\\s*\\)"
+        message: "Derives p from the fitted model"
+      - pattern: "hatvalues\\s*\\(\\s*fit\\s*\\)"
+        message: "Extracts leverage"
+      - pattern: "rstudent\\s*\\(\\s*fit\\s*\\)"
+        message: "Uses externally studentized residuals rather than raw ones"
+      - pattern: "cooks\\.distance\\s*\\(\\s*fit\\s*\\)"
+        message: "Extracts Cook's distance"
+      - pattern: "data\\s*\\[\\s*\\[\\s*id_col\\s*\\]\\s*\\]"
+        message: "Carries the subject identifier through, not just a row index"
+    expectedOutput: |
+      ```text
+                          id   leverage  rstudent     cooksd              reason
+      182 VTX221-201-109-021 0.02663125 -3.415255 0.07630385 outlier influence
+      82  VTX221-201-105-004 0.01411797  3.296935 0.03733928 outlier influence
+      116 VTX221-201-106-020 0.01597245 -3.079496 0.03713620 outlier influence
+      175 VTX221-201-109-014 0.02223153 -2.187507 0.02676722         influence
+      29  VTX221-201-102-004 0.01530715 -2.629411 0.02620663         influence
+      ```
+    solution: |
+      Three design decisions worth defending.
+
+      **`nobs(fit)` rather than `nrow(data)`.** If any rows were dropped for missing values, these differ, and the thresholds would be computed against the wrong n. The diagnostics vectors are aligned with the model's rows, not the data frame's.
+
+      **The subject identifier travels with the diagnostics.** A row number is useless to a data manager. `VTX221-201-109-021` can be looked up in the CRF, queried, and discussed at a data review meeting — which is what a diagnostics table is actually *for*.
+
+      **The `reason` string is built from the same logicals as the filter**, so the two can never disagree. Building a reason independently of the filter is how a row ends up in the output with an empty reason.
+
+      A production version would also accept the thresholds as arguments, since the SAP may specify different ones.
+    explanation:
+      objective: "Produce an actionable diagnostics table rather than a set of plots."
+      given: "A fitted model and its source data."
+      relevant: "The model's own n and p, the three diagnostic vectors, and the identifier column."
+      method: "Compute thresholds from the fit, build logical flags, use them for both the reason and the filter."
+      numbers: "With p = 4 and n = 238: leverage threshold 0.0336, Cook's threshold 0.0168, residual threshold 3."
+      assumptions: "Thresholds are conventions; a SAP may specify different ones, which is why they belong as arguments in production code."
+      interpretation: "The output is a list of subjects to ask about, not a list of subjects to remove."
+      changes: "Using nrow(data) when rows were dropped for missing values computes both thresholds against an inflated n, making them too small and flagging too much."
+      interviewer: "That you carry the subject identifier through, which is the difference between a statistical exercise and something a data manager can act on."
+
+  - id: stats.rd.funnel-shape
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [stats.diagnostics, stats.linear-regression]
+    lesson: stats-regression-diagnostics
+    title: A fan-shaped residual plot
+    prompt: |
+      The residuals-versus-fitted plot shows a clear funnel: residual spread is small at low fitted values and much larger at high ones.
+
+      What is the consequence, and what would you do?
+    choices:
+      - text: "The coefficients remain unbiased but the standard errors and p-values are wrong. Options are a transformation, weighted least squares, or robust standard errors — pre-specified."
+        correct: true
+        feedback: "Correct. Heteroscedasticity affects the variance of the estimator, not its expectation. OLS is still unbiased; it is simply no longer efficient, and its usual SE formula is invalid."
+      - text: "The coefficients are biased and the model must be refitted."
+        feedback: "Non-constant variance does not bias OLS coefficients. It invalidates the standard errors."
+      - text: "It indicates a non-linear relationship."
+        feedback: "Curvature shows as a systematic bend in the residuals, not as changing spread. A funnel is a variance problem."
+      - text: "Nothing needs doing if the sample size is large."
+        feedback: "Large n does not fix heteroscedasticity — the SE formula stays wrong regardless of how much data you have."
+    solution: |
+      **Unbiased coefficients, invalid standard errors.** OLS remains unbiased under non-constant variance; what fails is the $\operatorname{Var}(\hat\beta) = \sigma^2(X'X)^{-1}$ formula, which assumes a single $\sigma^2$.
+
+      Three remedies, in rough order of how often they are appropriate:
+
+      1. **Transform the outcome** — a log transformation is the right answer when the error is multiplicative, which a funnel widening proportionally suggests. Common for PK concentrations, cytokines and costs.
+      2. **Weighted least squares** — if you know the variance structure, e.g. variance proportional to the fitted value or to a known group.
+      3. **Robust (sandwich, HC0–HC3) standard errors** — leave the coefficients alone and fix only the variance estimate. Available in SAS, R (`sandwich::vcovHC`) and statsmodels (`cov_type="HC3"`).
+
+      As always, **pre-specify**. Switching to robust SEs after seeing the ordinary ones is selection in a different costume.
+    explanation:
+      objective: "Diagnose non-constant variance and choose among the standard remedies."
+      given: "A funnel-shaped residuals-versus-fitted plot."
+      relevant: "That the spread changes with the fitted value, not that the residuals are systematically off-centre."
+      method: "Separate what heteroscedasticity affects (the variance of the estimator) from what it does not (its expectation)."
+      assumptions: "OLS unbiasedness needs correct mean specification and exogeneity, not equal variance. Equal variance is what the SE formula needs."
+      interpretation: "Coefficients can be reported; their p-values and intervals cannot, until the variance is handled."
+      changes: "A funnel that widens proportionally suggests multiplicative error and points at a log transformation; one that widens in steps by group points at weighting."
+      interviewer: "That you state clearly what is and is not biased, since 'heteroscedasticity biases the estimates' is a very common and confident error."
+
+  - id: stats.rd.independence-miss
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [stats.diagnostics, stats.mixed-models, qc.mindset]
+    lesson: stats-regression-diagnostics
+    title: The assumption diagnostics cannot see
+    prompt: |
+      A model is fitted to **all post-baseline visits** of every subject, treating each record as an independent observation. The four standard diagnostic plots look excellent.
+
+      What is the problem?
+    choices:
+      - text: "Independence is violated and the residual plots cannot show it — the standard errors will be substantially too small despite healthy-looking diagnostics."
+        correct: true
+        feedback: "Correct. Residuals from the same subject are correlated, but a residuals-versus-fitted plot has no way to reveal that unless you plot residuals against the subject."
+      - text: "There is no problem — good diagnostic plots confirm the model."
+        feedback: "The plots confirm linearity, equal variance and approximate normality. They say nothing about independence."
+      - text: "The model will have biased coefficients."
+        feedback: "The coefficients are typically still consistent. It is the standard errors that are wrong, usually by a large factor."
+      - text: "Normality will be violated because of the clustering."
+        feedback: "The residuals can be perfectly normal and still be correlated within subject. These are separate assumptions."
+    solution: |
+      **Independence is violated, and the standard plots cannot detect it.**
+
+      Four visits per subject are correlated — a subject who runs high at Week 2 runs high at Week 12. Treating them as independent inflates the effective sample size, and the standard errors shrink by roughly $\sqrt{\text{records per subject}}$ — a factor of about 2 for four visits.
+
+      The plots look fine because they check linearity, equal variance and normality, none of which is violated.
+
+      **How you actually detect it:** by knowing the **grain** of the dataset. `nrow(data)` versus `n_distinct(USUBJID)` answers it in one line. Plotting residuals *against subject* would also show the clustering, but nobody produces that plot by default.
+
+      **The fix is a different model**, not a different diagnostic: an MMRM or a mixed model with a subject random effect, which estimates the within-subject correlation rather than assuming it away.
+    explanation:
+      objective: "Recognise the limits of residual diagnostics."
+      given: "A model fitted to repeated measures with healthy-looking diagnostic plots."
+      relevant: "The structure of the data, which the plots do not encode."
+      irrelevant: "The appearance of the four standard plots, which check other assumptions entirely."
+      method: "Check the grain: compare the number of rows with the number of distinct subjects."
+      numbers: "With about 4 post-baseline records per subject, standard errors are understated by roughly a factor of 2."
+      assumptions: "Independence is the assumption OLS is least robust to and that diagnostics are worst at detecting."
+      interpretation: "Good diagnostic plots are necessary, not sufficient. They cannot validate a model whose structure is wrong."
+      changes: "An MMRM with unstructured covariance models the within-subject correlation directly and also handles dropout under MAR, which a complete-case single-visit analysis does not."
+      interviewer: "That your first check on any analysis is the grain of the dataset, before any plot is drawn."
+
+  - id: stats.rd.outlier-open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [stats.diagnostics, qc.mindset, communication.interviewing]
+    lesson: stats-regression-diagnostics
+    title: An influential subject before database lock
+    prompt: |
+      **Interviewer:** "Two weeks before database lock you find one subject with a Cook's distance of 3.1 in the primary analysis. Removing them moves the treatment effect from significant to non-significant. What do you do?"
+    modelAnswer: |
+      The first thing I'd say is that this is not primarily a statistical decision, and treating it as one is how people get into trouble. So I'd work it as a data question first and an analysis question second.
+
+      **Investigate the record.** A Cook's D of 3.1 means one subject is dominating the fit, so I want to know why. Pull their data: is the value plausible? Check units — mg/dL where the CRF expects µmol/L, pounds for kilograms, a transposed digit. Check the visit window and whether the assessment was done under protocol conditions. Check concomitant medications and protocol deviations. Check whether their baseline is extreme, since that is what gives them the leverage. In my experience most extreme influence values turn out to be data issues, and if it is a data issue the route is a query through data management with an audit trail — not an edit in the analysis program. Two weeks before lock, there is still time to resolve it properly, which is exactly why finding it now rather than after lock matters.
+
+      **Check what the SAP says.** If it pre-specifies handling for influential observations or outliers, follow it. If it does not, the default is that the primary analysis includes all observed data, and that does not change because the result is inconvenient.
+
+      **Then be very careful about sequencing.** I would not want to be in a position where an analysis decision gets made after seeing that it flips significance. If the investigation finds a genuine data error, correcting it is correct regardless of which way the result moves. If the data are genuine, the subject stays in. What I would not do is exclude them, and I would push back firmly if that were suggested — a sensitivity analysis driven by the result is not a sensitivity analysis.
+
+      **Report both, prominently.** If the primary is significant and the sensitivity analysis without this subject is not, that is genuinely important information and it belongs in the CSR, not in a footnote. It tells the reader the conclusion rests heavily on one patient, which is something a regulator will want to weigh. Hiding it would be the worst available option and is the kind of thing that surfaces at an inspection.
+
+      **And I'd escalate.** A result that hinges on one subject is not a decision for the statistician alone. The study statistician, the medical monitor and the data manager should all see it before lock, and it should be minuted.
+
+      The uncomfortable honest part: if the trial's conclusion depends on one patient out of several hundred, the trial may simply be underpowered relative to the variability it encountered, and that is worth saying plainly whatever the p-value ends up being.
+    rubric:
+      - Treats it as a data-investigation question before an analysis question
+      - Names concrete things to check (units, transcription, visit window, deviations, concomitant medication)
+      - Routes any correction through data management with an audit trail
+      - Defers to the SAP and defaults to including all observed data
+      - Refuses to let the effect on significance drive the decision, and says so explicitly
+      - Reports both analyses prominently rather than burying the sensitivity result
+      - Escalates to the medical monitor and study statistician before lock
+      - Notes what it means about the trial if one subject can flip the conclusion
+    redFlags:
+      - "Excludes the subject because the result is better without them"
+      - "Decides alone without escalating"
+      - "Treats the sensitivity analysis as optional or as a footnote"
+      - "Does not investigate whether the value is a data error"
+      - "Suggests changing the analysis model to reduce the influence"

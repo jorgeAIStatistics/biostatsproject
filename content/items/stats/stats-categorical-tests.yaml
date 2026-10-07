@@ -1,0 +1,528 @@
+items:
+  - id: stats.ct.or-vs-rr
+    format: mcq
+    modes: [check, interview, speed]
+    difficulty: intermediate
+    skills: [stats.categorical, communication.interpretation]
+    lesson: stats-categorical-tests
+    title: The odds ratio is not the relative risk
+    prompt: |
+      In a responder analysis, 43/80 (53.8%) on drug and 20/77 (26.0%) on placebo reached the target.
+
+      The relative risk is **2.07** and the odds ratio is **3.31**.
+
+      A draft CSR sentence reads: *"Subjects on VTX-221 20 mg were 3.3 times more likely to achieve control than subjects on placebo."*
+
+      What is wrong?
+    choices:
+      - text: "3.31 is the odds ratio. \"More likely\" describes risk, so the correct figure is the relative risk of 2.07."
+        correct: true
+        feedback: "Correct. 'Times more likely' is a statement about probability; the odds ratio is a statement about odds. Using the OR here overstates the effect by roughly 60%."
+      - text: "Nothing — the odds ratio and relative risk are interchangeable."
+        feedback: "They coincide only when the event is rare, roughly under 10%. At 26% and 54% they differ substantially."
+      - text: "The relative risk should have been computed as 53.8 − 26.0 = 27.8."
+        feedback: "That is the risk *difference*, an absolute measure. The relative risk is the ratio 0.5375/0.2597."
+      - text: "The odds ratio is always smaller than the relative risk, so 3.31 must be a computational error."
+        feedback: "The odds ratio always lies *further from 1* than the relative risk, so for a beneficial effect it is larger. 3.31 is correct as an odds ratio."
+    solution: |
+      "Times more likely" is a **risk** statement, so the number is RR = 2.07, not OR = 3.31.
+
+      $$RR = \frac{0.5375}{0.2597} = 2.069
+      \qquad
+      OR = \frac{43 \times 57}{37 \times 20} = \frac{2451}{740} = 3.312$$
+
+      Acceptable phrasings: *"the odds of control were 3.3 times higher"* (OR) or *"subjects were about twice as likely to achieve control"* (RR). Best of all for a clinical audience: the absolute difference of 27.8 percentage points, because it says what happens to 100 patients.
+    explanation:
+      objective: "Match the effect measure to the words used to describe it."
+      given: "Two proportions and both ratio measures."
+      relevant: "That 'more likely' refers to probability, not odds."
+      calculating: "RR = p1/p0 = 2.069; OR = (a x d)/(b x c) = 3.312."
+      method: "Odds are p/(1-p), so an odds ratio compares p1/(1-p1) with p0/(1-p0). When p is far from 0 the denominators differ materially and the two measures diverge."
+      numbers: "Odds on drug = 43/37 = 1.162; odds on placebo = 20/57 = 0.351; ratio = 3.312. Risks 0.5375 and 0.2597; ratio 2.069."
+      assumptions: "The rare-disease approximation OR is approximately RR requires the event probability to be small in both arms — roughly under 10%."
+      interpretation: "The OR always exaggerates relative to the RR for a beneficial effect, which is why it is a poor choice for patient-facing material."
+      changes: "If the rates were 2% and 4%, RR = 2.00 and OR = 2.04 — indistinguishable in practice, which is why the error hides in rare-event settings."
+      interviewer: "That you can state the direction of the discrepancy and name the rare-event condition under which it vanishes."
+
+  - id: stats.ct.expected-counts
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [stats.categorical]
+    lesson: stats-categorical-tests
+    title: Expected count under independence
+    prompt: |
+      In a 2×2 table, the drug arm has **80** subjects, the total sample is **157**, and **63** subjects overall had the event.
+
+      Under the null hypothesis of no association, what is the expected number of events in the drug arm?
+
+      Give your answer to three decimal places.
+    answer: 32.102
+    tolerance: 0.01
+    hints:
+      - "Expected = (row total × column total) / grand total."
+      - "The row total is 80 and the column total is 63."
+      - "80 × 63 = 5040."
+    solution: |
+      $$E_{11} = \frac{80 \times 63}{157} = \frac{5040}{157} = 32.102$$
+
+      Equivalently: the overall event rate is $63/157 = 0.40127$, and under independence the drug arm should show that same rate: $80 \times 0.40127 = 32.102$.
+
+      Both readings give the same number, and the second is the more intuitive: *"if treatment made no difference, each arm would show the pooled rate."*
+    explanation:
+      objective: "Compute an expected cell count under the independence null."
+      given: "A row total, a column total and the grand total."
+      relevant: "All three; the observed cell count is not needed."
+      calculating: "Row total times column total, divided by grand total."
+      method: "Under independence the joint probability factorises, so the expected count is N times (row proportion) times (column proportion), which simplifies to the product of margins over N."
+      numbers: "80 x 63 / 157 = 5040 / 157 = 32.102. Equivalently 80 x 0.40127 = 32.102."
+      assumptions: "The expected table preserves both sets of margins exactly — it differs from the observed table only in how the total is distributed inside."
+      interpretation: "It is the table you would see if the row and column variables were unrelated but the study had the same size and the same overall event rate."
+      changes: "Expected counts are what determine whether the chi-square approximation is safe. Below about 5 in any cell, switch to Fisher."
+      interviewer: "That you can give both the margins formula and the intuitive 'pooled rate applied to each arm' reading."
+
+  - id: stats.ct.yates-default
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [stats.categorical, qc.compare, r.sas-translation]
+    lesson: stats-categorical-tests
+    title: The chi-square p-values do not match
+    prompt: |
+      Production (SAS `PROC FREQ`) reports **p = 0.0004** for a 2×2 table. QC (R `chisq.test`) reports **p = 0.0007**. Both used the same data.
+
+      What is the most likely cause?
+    choices:
+      - text: "R applied Yates' continuity correction, which it does by default for 2×2 tables; SAS's Chi-Square row does not."
+        correct: true
+        feedback: "Correct. R's `chisq.test()` has `correct = TRUE` by default. SAS prints the corrected version on a separate 'Continuity Adj. Chi-Square' line."
+      - text: "R used Fisher's exact test."
+        feedback: "`chisq.test()` never silently switches to Fisher; it warns about small expected counts but still returns a chi-square p-value."
+      - text: "The two programs used different denominators."
+        feedback: "A denominator difference would change the counts and therefore the statistic and effect measures, not just produce a modest p-value shift with everything else matching."
+      - text: "SAS reported a one-sided p-value."
+        feedback: "Chi-square tests are intrinsically one-tailed in the statistic and have no one- versus two-sided option; neither program offers one here."
+    solution: |
+      R's `chisq.test()` applies **Yates' continuity correction by default** for 2×2 tables. SAS's `Chi-Square` row is uncorrected; its corrected value appears separately as `Continuity Adj. Chi-Square`.
+
+      On the trial's responder table: uncorrected p = 0.000386, Yates-corrected p = 0.000707.
+
+      **Resolution:** the SAP should say which. To match SAS, QC must pass `correct = FALSE`. With expected counts all above 30, the uncorrected test is the appropriate one and the correction is needlessly conservative.
+    explanation:
+      objective: "Diagnose a cross-language p-value discrepancy from defaults rather than from a bug."
+      given: "Two p-values differing by roughly a factor of two, from the same data."
+      relevant: "Each tool's default handling of the continuity correction for 2x2 tables."
+      method: "When magnitudes are close but not equal and no other output differs, suspect a default before suspecting a data problem."
+      numbers: "Uncorrected chi-square 12.599 giving p = 0.000386; Yates-corrected 11.425 giving p = 0.000707."
+      assumptions: "Yates' correction compensates for approximating a discrete distribution with a continuous one; it is conservative and its use is debated."
+      interpretation: "Neither program is wrong; the specification is incomplete."
+      changes: "SciPy's chi2_contingency also defaults to correction=True, so a Python check would match R rather than SAS."
+      interviewer: "That you know which of the three tools does NOT apply the correction by default, since that is the one production usually runs."
+
+  - id: stats.ct.cmh-why
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [stats.categorical, trials.randomization]
+    lesson: stats-categorical-tests
+    title: Why stratify the analysis
+    prompt: |
+      Subjects were randomized **stratified by baseline systolic BP group**. The unstratified chi-square for the responder endpoint is 12.60 (p = 0.00039); the CMH statistic stratified by that group is 14.03 (p = 0.00018).
+
+      Why does the stratified analysis give a stronger result on identical data?
+    choices:
+      - text: "The strata have different event rates, so pooling them adds that variation to the comparison as noise. Comparing within strata removes it."
+        correct: true
+        feedback: "Correct — and it is the same principle as pairing in a paired t test: remove a known source of variation from the denominator."
+      - text: "CMH uses a larger sample size."
+        feedback: "It uses exactly the same subjects. The gain is in how the comparison is structured, not in how much data it uses."
+      - text: "CMH is a one-sided test, so its p-value is half."
+        feedback: "CMH, like chi-square, is intrinsically one-tailed in the statistic and has no sidedness option. And 0.00018 is not half of 0.00039."
+      - text: "Stratified analyses always give smaller p-values."
+        feedback: "Not always. If the strata have similar event rates, stratifying costs a little precision and can give a slightly larger p-value. The gain here comes from genuine between-stratum heterogeneity in baseline risk."
+    solution: |
+      The two strata have quite different control rates — 43/89 (48.3%) in the lower-baseline stratum versus 20/68 (29.4%) in the higher one. That difference has nothing to do with treatment, and pooling folds it into the comparison as noise.
+
+      Stratifying compares arms **within** each stratum and then combines the evidence, which removes that variation from the denominator.
+
+      The stratum-specific odds ratios (3.86 and 3.55) are close to each other, which is what makes a single common odds ratio (3.736) a sensible summary — and is also why the stratified analysis is more efficient rather than merely different.
+    explanation:
+      objective: "Explain why a stratified analysis can be more powerful on identical data."
+      given: "Unstratified and stratified test statistics on the same responder endpoint."
+      relevant: "That the strata differ in baseline event rate."
+      method: "Removing a known source of outcome variation from the comparison shrinks the denominator, exactly as pairing does in a paired t test."
+      numbers: "Stratum 1 control rate 43/89 = 48.3%; stratum 2 20/68 = 29.4%. Stratum ORs 3.858 and 3.546; MH common OR 3.736."
+      assumptions: "CMH assumes a COMMON odds ratio across strata. Here the two stratum ORs are close, so that assumption is comfortable."
+      interpretation: "The common OR (3.736) is slightly further from 1 than the crude OR (3.312), so stratification is also correcting a small amount of confounding by baseline severity."
+      changes: "If one stratum showed OR = 0.6 and the other OR = 4.0, no common OR would summarise them and the pooled estimate would be misleading — look at stratum-specific estimates first."
+      interviewer: "That you connect it to the design (subjects were randomized within strata) and to ICH E9's principle that the analysis should reflect the randomization."
+
+  - id: stats.ct.chisq-hand
+    format: numeric
+    modes: [guided, check]
+    difficulty: intermediate
+    skills: [stats.categorical]
+    lesson: stats-categorical-tests
+    title: Chi-square from a 2×2 by hand
+    prompt: |
+      |  | Controlled | Not controlled | Total |
+      |---|---:|---:|---:|
+      | VTX-221 20 mg | 43 | 37 | 80 |
+      | Placebo | 20 | 57 | 77 |
+      | **Total** | **63** | **94** | **157** |
+
+      Compute the Pearson chi-square statistic (**no** continuity correction), to two decimal places.
+    answer: 12.60
+    tolerance: 0.05
+    hints:
+      - "Expected counts: 32.102, 47.898, 30.898, 46.102."
+      - "Every cell has the same |O − E| = 10.898 — with fixed margins only one cell is free."
+      - "Sum (O−E)²/E over the four cells: 3.700 + 2.480 + 3.844 + 2.576."
+    solution: |
+      **Expected counts** (row × column / total):
+
+      | | Controlled | Not |
+      |---|---:|---:|
+      | 20 mg | 32.102 | 47.898 |
+      | Placebo | 30.898 | 46.102 |
+
+      **Contributions:**
+
+      $$\frac{(43-32.102)^2}{32.102} = 3.700, \quad
+      \frac{(37-47.898)^2}{47.898} = 2.480, \quad
+      \frac{(20-30.898)^2}{30.898} = 3.844, \quad
+      \frac{(57-46.102)^2}{46.102} = 2.576$$
+
+      $$\chi^2 = 12.60 \quad \text{on 1 df}, \quad p = 0.00039$$
+
+      Every cell has the identical discrepancy of 10.898 — with both margins fixed, choosing one cell determines the rest. That is "df = 1" seen arithmetically.
+    explanation:
+      objective: "Compute a chi-square statistic from raw counts."
+      given: "A complete 2x2 table with its margins."
+      relevant: "All four counts and both sets of margins."
+      calculating: "Expected counts, then the sum of squared standardized discrepancies."
+      method: "E = row x col / N for each cell; chi-square sums (O-E)^2/E."
+      numbers: "Expected 32.102, 47.898, 30.898, 46.102. |O-E| = 10.898 in every cell. Contributions 3.700, 2.480, 3.844, 2.576, summing to 12.599."
+      assumptions: "The approximation requires adequate expected counts; here the smallest is 30.9, so it is safe."
+      computation: "The smallest expected count contributes the largest term — dividing by E is what scales each discrepancy by its own variability."
+      interpretation: "12.60 on 1 df is far into the tail; p = 0.00039."
+      changes: "Applying Yates' correction would subtract 0.5 from each |O-E| before squaring, giving 11.42 and p = 0.00071."
+      interviewer: "That you notice the common |O-E| and can explain it as the arithmetic face of df = 1."
+
+  - id: stats.ct.risk-difference
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [stats.categorical, stats.confidence-intervals]
+    lesson: stats-categorical-tests
+    title: Risk difference and its standard error
+    prompt: |
+      43/80 on drug (53.75%) and 20/77 on placebo (25.97%) reached the target.
+
+      Compute the standard error of the risk difference, to four decimal places.
+
+      $$\operatorname{SE} = \sqrt{\frac{\hat{p}_1(1-\hat{p}_1)}{n_1} + \frac{\hat{p}_0(1-\hat{p}_0)}{n_0}}$$
+    answer: 0.0749
+    tolerance: 0.0008
+    hints:
+      - "p̂₁(1−p̂₁) = 0.5375 × 0.4625 = 0.24859; divide by 80."
+      - "p̂₀(1−p̂₀) = 0.2597 × 0.7403 = 0.19226; divide by 77."
+      - "Add the two, then take the square root."
+    solution: |
+      $$\frac{0.5375 \times 0.4625}{80} = \frac{0.248594}{80} = 0.0031074$$
+      $$\frac{0.2597 \times 0.7403}{77} = \frac{0.192259}{77} = 0.0024969$$
+      $$\operatorname{SE} = \sqrt{0.0031074 + 0.0024969} = \sqrt{0.0056043} = 0.0749$$
+
+      So $RD = 0.2778 \pm 1.96(0.0749) = (0.1310,\; 0.4245)$ — a 13.1 to 42.5 percentage-point improvement.
+
+      **Variances add**, even for a difference. The uncertainty in a comparison is always larger than that in either proportion alone.
+    explanation:
+      objective: "Compute the standard error of a difference between two independent proportions."
+      given: "Both proportions and both sample sizes."
+      relevant: "All four numbers."
+      calculating: "The square root of the sum of the two binomial variances."
+      method: "Var(p1-hat - p0-hat) = Var(p1-hat) + Var(p0-hat) for independent arms, and each binomial variance is p(1-p)/n."
+      numbers: "0.5375 x 0.4625 / 80 = 0.0031074; 0.2597 x 0.7403 / 77 = 0.0024969; sum 0.0056043; square root 0.0749."
+      assumptions: "Independent arms and a normal approximation for each proportion. With 43 and 20 events the approximation is reasonable; for rare events it is not, and an exact or Wilson-based interval for the difference would be preferred."
+      interpretation: "The interval (13.1%, 42.5%) is what a clinician acts on: between 13 and 42 additional patients per 100 reach goal."
+      changes: "The NNT is 1/RD = 3.6, and its interval comes from inverting the RD interval: 1/0.4245 = 2.4 to 1/0.1310 = 7.6."
+      interviewer: "That you add variances rather than subtract, and that you can convert the RD into an NNT with an interval."
+
+  - id: stats.ct.odds-ratio-ci
+    format: numeric
+    modes: [check, independent]
+    difficulty: intermediate
+    skills: [stats.categorical, stats.confidence-intervals]
+    lesson: stats-categorical-tests
+    title: Odds ratio confidence interval
+    prompt: |
+      From the table $a = 43$, $b = 37$, $c = 20$, $d = 57$:
+
+      $$OR = \frac{ad}{bc} = 3.312, \qquad \operatorname{SE}(\ln OR) = \sqrt{\frac{1}{a}+\frac{1}{b}+\frac{1}{c}+\frac{1}{d}}$$
+
+      Compute the **lower** limit of the 95% confidence interval, to three decimal places.
+    answer: 1.690
+    tolerance: 0.02
+    hints:
+      - "1/43 + 1/37 + 1/20 + 1/57 = 0.11786, so SE(ln OR) = 0.3433."
+      - "Work on the log scale: ln(3.312) = 1.1975."
+      - "Lower = exp(1.1975 − 1.96 × 0.3433)."
+    solution: |
+      $$\operatorname{SE}(\ln OR) = \sqrt{0.023256 + 0.027027 + 0.050000 + 0.017544} = \sqrt{0.117827} = 0.34327$$
+
+      $$\ln(OR) = \ln(3.312) = 1.19755$$
+
+      $$\text{Lower} = e^{1.19755 - 1.96(0.34327)} = e^{0.52474} = 1.690$$
+      $$\text{Upper} = e^{1.19755 + 1.96(0.34327)} = e^{1.87036} = 6.491$$
+
+      **Note the asymmetry**: the point estimate 3.312 is 1.62 above the lower limit and 3.18 below the upper. That is the signature of a CI built on the log scale — and an odds ratio interval that *is* symmetric around its estimate has almost certainly been computed wrongly.
+    explanation:
+      objective: "Build a confidence interval for a ratio measure on the correct scale."
+      given: "The four cell counts and the point estimate."
+      relevant: "All four counts; each contributes a reciprocal to the variance."
+      calculating: "The interval limits, via the log scale."
+      method: "Ratios are skewed and bounded below by zero, so the normal approximation applies to log(OR), not to OR. Build the interval on the log scale and exponentiate both ends."
+      numbers: "1/43 = 0.023256, 1/37 = 0.027027, 1/20 = 0.050000, 1/57 = 0.017544; sum 0.117827; SE = 0.34327. ln(3.312) = 1.19755. Limits exp(0.52474) = 1.690 and exp(1.87036) = 6.491."
+      assumptions: "The Woolf (log) standard error requires all four cells to be reasonably large; with a zero cell it is undefined and a continuity correction or exact method is needed."
+      interpretation: "The interval excludes 1, so the association is significant at the 5% level — consistent with the chi-square p of 0.0004."
+      changes: "A zero in any cell makes SE(log OR) infinite. The usual fixes are adding 0.5 to every cell (Haldane-Anscombe) or using an exact conditional interval."
+      interviewer: "That you go to the log scale without being prompted, and that you flag asymmetry as the expected property rather than an anomaly."
+
+  - id: stats.ct.r-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [stats.categorical, r.models]
+    lesson: stats-categorical-tests
+    title: One function, all the measures
+    minutes: 14
+    prompt: |
+      Write `two_by_two(a, b, c, d)` taking the four counts of a 2×2 table (row 1 = treated: `a` events, `b` non-events; row 2 = control: `c`, `d`) and returning a data frame with one row per measure and columns `measure`, `estimate`, `lower`, `upper`, for:
+
+      - `"Risk difference"` — on the natural scale
+      - `"Relative risk"` — interval on the log scale
+      - `"Odds ratio"` — interval on the log scale
+
+      Use `qnorm(0.975)` rather than a hard-coded 1.96.
+    starter: |
+      two_by_two <- function(a, b, c, d) {
+        z  <- qnorm(0.975)
+        p1 <- ___
+        p0 <- ___
+
+        # risk difference
+
+        # relative risk (log scale)
+
+        # odds ratio (log scale)
+
+        data.frame(measure = ..., estimate = ..., lower = ..., upper = ...)
+      }
+    reference: |
+      two_by_two <- function(a, b, c, d) {
+        z  <- qnorm(0.975)
+        n1 <- a + b
+        n0 <- c + d
+        p1 <- a / n1
+        p0 <- c / n0
+
+        rd    <- p1 - p0
+        se_rd <- sqrt(p1 * (1 - p1) / n1 + p0 * (1 - p0) / n0)
+
+        rr     <- p1 / p0
+        se_lrr <- sqrt(b / (a * n1) + d / (c * n0))
+
+        or     <- (a * d) / (b * c)
+        se_lor <- sqrt(1/a + 1/b + 1/c + 1/d)
+
+        data.frame(
+          measure  = c("Risk difference", "Relative risk", "Odds ratio"),
+          estimate = c(rd, rr, or),
+          lower    = c(rd - z * se_rd, exp(log(rr) - z * se_lrr), exp(log(or) - z * se_lor)),
+          upper    = c(rd + z * se_rd, exp(log(rr) + z * se_lrr), exp(log(or) + z * se_lor))
+        )
+      }
+    hints:
+      - "The risk difference interval is built on the natural scale: estimate ± z × SE."
+      - "The RR and OR intervals are built on the log scale and exponentiated: `exp(log(est) ± z * se_log)`."
+      - "SE(log RR) = √(b/(a·n₁) + d/(c·n₀)) — note it is not the same expression as SE(log OR)."
+    checks:
+      - pattern: "qnorm\\s*\\(\\s*0?\\.975\\s*\\)"
+        message: "Uses qnorm(0.975) rather than a hard-coded constant"
+      - pattern: "sqrt\\s*\\(\\s*1\\s*/\\s*a\\s*\\+\\s*1\\s*/\\s*b\\s*\\+\\s*1\\s*/\\s*c\\s*\\+\\s*1\\s*/\\s*d\\s*\\)"
+        message: "Computes SE(log OR) as the sum of the four reciprocals"
+      - pattern: "exp\\s*\\(\\s*log\\s*\\("
+        message: "Builds the ratio intervals on the log scale and exponentiates"
+      - pattern: "\\(\\s*a\\s*\\*\\s*d\\s*\\)\\s*/\\s*\\(\\s*b\\s*\\*\\s*c\\s*\\)"
+        message: "Computes the odds ratio as ad/bc"
+      - pattern: "data\\.frame\\s*\\("
+        message: "Returns a data frame of the three measures"
+    expectedOutput: |
+      ```text
+                measure  estimate     lower     upper
+      1 Risk difference 0.2777597 0.1310305 0.4244890
+      2   Relative risk 2.0693750 1.3483417 3.1759850
+      3      Odds ratio 3.3121622 1.6901648 6.4907390
+      ```
+    solution: |
+      ```r
+      two_by_two <- function(a, b, c, d) {
+        z  <- qnorm(0.975)
+        n1 <- a + b; n0 <- c + d
+        p1 <- a / n1; p0 <- c / n0
+
+        rd     <- p1 - p0
+        se_rd  <- sqrt(p1 * (1 - p1) / n1 + p0 * (1 - p0) / n0)
+        rr     <- p1 / p0
+        se_lrr <- sqrt(b / (a * n1) + d / (c * n0))
+        or     <- (a * d) / (b * c)
+        se_lor <- sqrt(1/a + 1/b + 1/c + 1/d)
+
+        data.frame(
+          measure  = c("Risk difference", "Relative risk", "Odds ratio"),
+          estimate = c(rd, rr, or),
+          lower    = c(rd - z * se_rd, exp(log(rr) - z * se_lrr), exp(log(or) - z * se_lor)),
+          upper    = c(rd + z * se_rd, exp(log(rr) + z * se_lrr), exp(log(or) + z * se_lor))
+        )
+      }
+
+      two_by_two(43, 37, 20, 57)
+      ```
+
+      Read the output rows against each other. The risk-difference interval is symmetric around 0.2778. Neither ratio interval is symmetric around its estimate — and the odds ratio's interval is much the widest, because the OR is the most variable of the three measures.
+
+      A production version would guard against zero cells, where `se_lor` becomes infinite and `rr` may be undefined.
+    explanation:
+      objective: "Compute all three standard effect measures with correctly-scaled intervals."
+      given: "The four counts of a 2x2 table."
+      relevant: "All four, plus the row totals derived from them."
+      method: "Absolute measures use the natural scale; ratio measures use the log scale and are exponentiated."
+      numbers: "For (43, 37, 20, 57): RD 0.2778 (0.1310, 0.4245); RR 2.069 (1.348, 3.176); OR 3.312 (1.690, 6.491)."
+      assumptions: "Normal approximations throughout, which require adequate cell counts. None of these expressions is defined when a cell is zero."
+      computation: "SE(log RR) and SE(log OR) are different formulas — a common slip is to reuse the OR expression for the RR."
+      interpretation: "The three rows describe the same table on three scales and answer three different clinical questions."
+      changes: "With a zero cell, add 0.5 to every cell or use an exact conditional method; note in the output that a correction was applied."
+      interviewer: "That you know which intervals need the log scale and why, and that you flag the zero-cell case as needing special handling."
+
+  - id: stats.ct.denominator-qc
+    format: mcq
+    modes: [qc, check, interview]
+    difficulty: advanced
+    skills: [stats.categorical, tlf.denominators, qc.discrepancy]
+    lesson: stats-categorical-tests
+    title: Three defensible percentages
+    prompt: |
+      For the 20 mg arm, 43 subjects reached the Week 12 target. The arm has:
+
+      - 89 randomized (ITT)
+      - 88 treated (safety)
+      - 80 with a Week 12 measurement
+
+      Production reports 48.3%; QC reports 53.8%.
+
+      Which is the finding?
+    choices:
+      - text: "Neither is arithmetically wrong — the finding is that the shell and SAP must state the denominator, and the programs must match it."
+        correct: true
+        feedback: "43/89 = 48.3% and 43/80 = 53.8%. Both are correct divisions; only one matches the specification, and the specification is what must be checked."
+      - text: "QC is wrong — the ITT population is always the denominator."
+        feedback: "ITT is the usual default, but a responder analysis may legitimately use observed cases if the SAP says so. The SAP governs."
+      - text: "Production is wrong — you should never count subjects without a measurement."
+        feedback: "Counting subjects with no measurement as non-responders is a real, conservative and commonly pre-specified imputation. It is a choice, not an error."
+      - text: "Both are wrong — the denominator should be the safety population, 88."
+        feedback: "The safety population is for adverse-event tables. An efficacy responder analysis would not normally use it."
+    solution: |
+      $43/89 = 48.3\%$ (ITT, non-responder imputation) and $43/80 = 53.8\%$ (observed cases). Both are defensible; they answer different questions.
+
+      **The finding is written against the specification**, and the resolution is a sentence in the SAP and the shell saying which population and which missing-data handling apply.
+
+      This matters more than it looks: the observed-case version systematically favours the treatment when dropout is related to lack of response, because non-responders leave the study and disappear from the denominator. That is precisely why ITT with non-responder imputation is the more common pre-specification for a binary endpoint.
+    explanation:
+      objective: "Recognise a denominator discrepancy as a specification defect rather than a programming error."
+      given: "Three candidate denominators and two reported percentages."
+      relevant: "Which population and which missing-data rule the SAP specifies."
+      irrelevant: "The arithmetic; both divisions are correct."
+      method: "When two programs disagree and both are arithmetically right, the specification is the defect."
+      numbers: "43/89 = 48.31%; 43/88 = 48.86%; 43/80 = 53.75%."
+      assumptions: "Observed-case analysis assumes the subjects without a measurement would have behaved like those with one — which is exactly what lack-of-efficacy dropout violates."
+      interpretation: "Observed-case percentages are optimistic when dropout is outcome-related, which it usually is."
+      changes: "Under non-responder imputation the placebo arm's rate also falls, so the risk difference changes less than either percentage does — worth computing before assuming the choice is decisive."
+      interviewer: "That you write the finding against the SAP rather than against a programmer, and that you know which direction observed-case analysis biases a responder endpoint."
+
+  - id: stats.ct.sas-relrisk-row
+    format: mcq
+    modes: [qc, check]
+    difficulty: intermediate
+    skills: [stats.categorical, sas.freq, qc.code-review]
+    lesson: stats-categorical-tests
+    title: Reading the PROC FREQ relative-risk block
+    prompt: |
+      `PROC FREQ` prints:
+
+      ```text
+      Estimates of the Relative Risk (Row1/Row2)
+      Type of Study               Value    95% Confidence Limits
+      Case-Control (Odds Ratio)  3.3122      1.6901      6.4908
+      Cohort (Col1 Risk)         2.0694      1.3483      3.1760
+      ```
+
+      The shell asks for the **relative risk**. Which value goes in the table?
+    choices:
+      - text: "2.0694 — the \"Cohort (Col1 Risk)\" row is the relative risk."
+        correct: true
+        feedback: "Correct. SAS labels the rows by the study design each measure is natural for. A randomized trial is a cohort design, so the Cohort row is the relative risk."
+      - text: "3.3122 — it is the first row under a heading that says \"Relative Risk\"."
+        feedback: "That is the trap. The block heading says 'Relative Risk' but the first row is explicitly labelled '(Odds Ratio)'. This is one of the most common PROC FREQ misreadings."
+      - text: "Neither — PROC FREQ does not compute relative risks."
+        feedback: "It does; `relrisk` produces exactly this block."
+      - text: "Both should be reported, since the shell does not distinguish them."
+        feedback: "The shell asks for one measure. Reporting both without labelling them would be worse, not better."
+    solution: |
+      **2.0694.** The block heading is misleading: SAS groups both ratio measures under "Estimates of the Relative Risk" and then labels each row by the design it belongs to. `Case-Control (Odds Ratio)` is the OR; `Cohort (Col1 Risk)` is the RR.
+
+      `Col1` means the *first column* of the table, so this is the relative risk **of whatever the first column represents**. If the table is ordered with "No event" first, `Col1 Risk` is the relative risk of *not* having the event — a second trap in the same block, and a reason to use `order=data` and check the column order before reading anything off it.
+    explanation:
+      objective: "Read the correct value out of a SAS output block whose labelling invites error."
+      given: "A PROC FREQ relative-risk block containing two rows."
+      relevant: "The row labels, and which column the table places first."
+      irrelevant: "The block heading, which describes both rows loosely."
+      method: "Read the row label, not the block heading. Then verify which column is Col1."
+      numbers: "Odds ratio 3.3122; relative risk 2.0694. Both describe the same table."
+      assumptions: "Col1 is the event column only if the table was ordered that way — ORDER=DATA or a format controls this."
+      interpretation: "A randomized trial is a cohort design, so the Cohort row is the applicable measure."
+      changes: "Reversing the column order makes Col1 Risk the relative risk of NOT having the event, which is 1/RR for the complement — a completely different number that still looks plausible."
+      interviewer: "That you check the column order as well as the row label, since both are silent failure modes."
+
+  - id: stats.ct.safety-open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [stats.categorical, trials.safety, communication.interviewing, communication.audiences]
+    lesson: stats-categorical-tests
+    title: A safety imbalance with four events
+    prompt: |
+      **Interviewer:** "In your safety table, 3 subjects on the high dose had a serious adverse event versus 1 on placebo, out of about 88 per arm. The medical monitor asks whether this is a signal. What do you tell them?"
+    modelAnswer: |
+      I'd start with what the numbers can and cannot support, then move to what would actually answer their question — because a test is not it.
+
+      Statistically, four events total cannot establish anything. Fisher's exact test gives p = 0.37; the expected counts are around 2 per cell, so a chi-square approximation is not even appropriate and R would warn about it. The confidence interval on the risk difference spans zero comfortably. If I quoted a p-value here it would invite exactly the wrong inference — that we looked and found nothing — when the truth is that the study was never able to look.
+
+      What I'd offer instead is the rule of three: with roughly 88 subjects per arm and no more events than this, the data are compatible with a true SAE rate up to around 3 to 4%. So "no signal detected" and "no meaningful excess risk" are very different statements, and only the first is supported.
+
+      Then the part that actually matters, which is clinical rather than statistical. Are the three events the same event, or three unrelated ones? Three cases of syncope in a blood-pressure-lowering drug is a mechanistically coherent signal worth taking seriously even at n = 3; three unrelated events — a fracture, an appendicitis, a pneumonia — is noise. I'd look at the timing relative to dosing, the investigator's causality assessment, whether dose reduction or discontinuation resolved them, and whether the non-serious AE data shows the same pattern at lower severity. In this trial the 20 mg arm does show dose-related dizziness, orthostatic hypotension and syncope at the non-serious level, so an SAE in that family would be much more concerning than an isolated event.
+
+      And I'd be explicit that phase II is not powered for safety comparisons at all — safety characterisation is a pooled, cross-study, phase III and post-marketing activity. The right output here is a clear description, a clinical review of the individual cases, and a note that this should be monitored in the larger programme. Not a test.
+    rubric:
+      - States plainly that four events cannot support a statistical conclusion
+      - Notes that the chi-square approximation is inappropriate at these expected counts
+      - Uses the rule of three or an exact interval to say what the data DO rule out
+      - Distinguishes "no signal detected" from "no excess risk"
+      - "Pivots to the clinical questions: are the events the same, mechanistically plausible, dose-related"
+      - Connects to the non-serious AE data showing a related dose-response
+      - Says what should happen next rather than only what cannot be concluded
+    redFlags:
+      - "Runs a chi-square test and reports the p-value as the answer"
+      - "Concludes 'not significant, so no safety concern'"
+      - "Treats it as purely a statistical question with no clinical review"
+      - "Does not mention that phase II is underpowered for safety"

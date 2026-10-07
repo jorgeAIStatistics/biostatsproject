@@ -1,0 +1,605 @@
+items:
+  - id: excel.import.mixed-column
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [excel.import, qc.data-cleaning]
+    lesson: excel-import-pitfalls
+    title: Half a column of dates
+    prompt: |
+      A ten-row date column was imported by double-clicking a CSV whose dates are written `DD/MM/YYYY`,
+      on a machine set to `MM/DD/YYYY`.
+
+      ```excel
+      =COUNT(C2:C11)    → 5
+      =COUNTA(C2:C11)   → 10
+      ```
+
+      What does that tell you?
+    choices:
+      - text: "Five values were converted to dates and five stayed text — the five whose day is above 12 and so cannot be read as a month."
+        correct: true
+        feedback: "Correct. A mixed column is the normal outcome, and the proportion depends only on which days of the month the rows happen to fall on."
+      - text: "Five cells are empty."
+        feedback: "`COUNTA` returns 10, so all ten cells have content. `COUNTBLANK` would be the check for emptiness."
+      - text: "Five dates failed to parse and were replaced with an error."
+        feedback: "`COUNT` ignores errors too, but there is no error here — the unconverted values are ordinary text and display exactly as the file wrote them."
+      - text: "Five rows are duplicates and Excel deduplicated them on import."
+        feedback: "Excel never removes rows on import. `COUNTA` still sees all ten."
+    solution: |
+      **Five converted, five did not.**
+
+      `15/07/2023` has no valid `MM/DD` reading — there is no fifteenth month — so Excel left it as text.
+      `04/07/2023` does have one, so it became 7 April 2023, a real and wrong date.
+
+      The result is a column that is half numbers and half strings. It will sort into two blocks, it is
+      invisible to `MIN`, `MAX` and any date comparison for the text half, and the only thing on screen
+      that distinguishes the two is **alignment** — converted dates right-align, text left-aligns.
+
+      **`COUNT` against `COUNTA` is the check worth running on every imported date column.** If a date
+      column is not entirely numbers, stop, because a spot-check of five rows can easily land on five of
+      the unconverted ones and tell you nothing was touched.
+    explanation:
+      objective: "Read a mixed-type column from two counting functions."
+      given: "COUNT of 5 and COUNTA of 10 over an imported date column."
+      relevant: "That COUNT counts only numbers and dates are numbers."
+      irrelevant: "Blanks and duplicates, neither of which is consistent with COUNTA = 10."
+      method: "The gap between COUNTA and COUNT is the number of non-numeric, non-empty cells."
+      interpretation: "Partial conversion, which is the usual outcome rather than an unusual one."
+      changes: "Which rows convert depends on the days of the month in the data, not on anything about the file."
+      interviewer: "That you have a one-formula check for this rather than relying on eyeballing a sample."
+
+  - id: excel.import.reversible
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [excel.import, excel.risk]
+    lesson: excel-import-pitfalls
+    title: Which damage can you undo
+    prompt: |
+      Four things happened to four cells on import. Which one is purely a display issue, with the stored
+      value intact?
+    choices:
+      - text: "A large number shows as `1.00E+15` in a narrow General-format column."
+        correct: true
+        feedback: "Correct. Scientific notation is how a General cell renders a value it cannot fit. Widen the column or change the format and the digits come back."
+      - text: "A four-character site id `0107` now reads `107`."
+        feedback: "The stored value really is the number 107. It can be rebuilt with `=RIGHT(\"0000\"&C2,4)` — but only because you happen to know the id is four characters."
+      - text: "A 16-digit barcode now ends in `0`."
+        feedback: "Excel keeps 15 significant decimal digits. The sixteenth is not hidden; it no longer exists in the cell."
+      - text: "`04/07/2023` is now 7 April 2023 and the file has been saved."
+        feedback: "The original characters were overwritten on save. Nothing in the file records that the author meant 4 July."
+    solution: |
+      **Only the scientific notation is cosmetic.** It is what a General-format cell does when the value
+      is too wide for the column or large enough to warrant the shorthand — the number underneath is
+      untouched.
+
+      The other three sit on a scale:
+
+      | Damage | Status |
+      |---|---|
+      | Scientific notation on screen | Reversible — change the format |
+      | Stripped leading zero | Recoverable *if* you know the intended width |
+      | Digit past the 15th | Gone — outside IEEE 754 double precision |
+      | Text converted to a date, then saved | Gone — the original characters were overwritten |
+
+      The middle row is the one that causes trouble in practice, because it *feels* recoverable and the
+      recovery depends on knowledge that is not in the file. Two studies with three- and four-digit site
+      numbers in one workbook, and there is nothing to tell you which padding to apply.
+    explanation:
+      objective: "Separate display effects from real data loss."
+      given: "Four post-import cell states."
+      relevant: "Whether the stored value still contains the original information."
+      method: "Ask what is stored, not what is shown."
+      assumptions: "Excel stores numbers as IEEE 754 doubles and keeps 15 significant decimal digits."
+      interpretation: "Only one of the four can be undone by changing a setting."
+      changes: "A stripped leading zero is recoverable only with outside knowledge of the identifier's width."
+      interviewer: "That you do not treat scientific notation as data loss, and do treat a 16-digit truncation as permanent."
+
+  - id: excel.import.numeric-rule
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [excel.import, sdtm.identifiers]
+    lesson: excel-import-pitfalls
+    title: Why the subject id survives and the site number does not
+    prompt: |
+      Opening `demographics.csv` from CBX417-301 by double-clicking it, the subject id `1001-0002` comes
+      through unchanged while the site id `1001` becomes the number 1001.
+
+      What is the rule?
+    choices:
+      - text: "A value that can be read as a number is read as a number. `1001-0002` cannot be, because of the hyphen between digits."
+        correct: true
+        feedback: "Correct — and it is worth noticing that this is luck, not safety. A study numbering its sites `007` has none of the protection."
+      - text: "Excel preserves any value longer than eight characters."
+        feedback: "Length has nothing to do with it. `123456789012` is twelve characters and becomes a number."
+      - text: "Columns whose header ends in `_ID` are imported as text."
+        feedback: "Excel does not read headers to decide types. Power Query lets you set types per column; a default open does not."
+      - text: "Hyphens are reserved characters and force text."
+        feedback: "Close, but the reasoning is wrong — `3-5` typed into a cell becomes a date in an English locale. The hyphen does not force text; it only stops this particular value parsing as a number."
+    solution: |
+      **One rule covers everything in this lesson:**
+
+      > A value that can be read as a number will be read as a number; a value that can be read as a date
+      > will be read as a date; otherwise it stays text.
+
+      `1001-0002` has no reading as a number or a date, so it survives. `1001` has an obvious reading as a
+      number, so it takes it — and the cell now holds the number 1001, which is **not equal** to the text
+      `"1001"` under Excel's comparison operators. The moment you look it up against a sheet storing
+      `"Site 1001"`, it fails.
+
+      **This is a property of the identifier convention, not of clinical data.** These datasets happen to
+      be safe: `SUBJID` has a hyphen, lab accessions start with letters, site numbers are four digits with
+      no leading zero, and the dates are ISO 8601. Change any one of those conventions and the protection
+      disappears.
+    explanation:
+      objective: "State the rule that decides whether an identifier survives an import."
+      given: "Two identifiers from the same file, one converted and one not."
+      relevant: "Whether each value has a valid numeric or date reading."
+      irrelevant: "Length and column name, neither of which Excel consults."
+      interpretation: "The identifiers in this study are safe by convention rather than by design."
+      changes: "Leading zeros, pure-digit ids and letter-digit combinations that look like dates all lose the protection."
+      interviewer: "That you can say which of your own study's identifiers are at risk, and why."
+
+  - id: excel.import.locale-direction
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [excel.import, qc.compare]
+    lesson: excel-import-pitfalls
+    title: Which file is DD/MM
+    prompt: |
+      Two quarterly batch exports sit in the same folder. Both write dates with slashes and neither states
+      a format anywhere.
+
+      ```text
+      batch_export_2023Q3_upgraded.csv     first row: 04/07/2023
+      batch_export_2024Q3_lims.csv         first row: 07/03/2024
+      ```
+
+      Both files are named for **Q3** — July to September — and every batch in a file falls inside its
+      quarter.
+
+      Which reading is right?
+    choices:
+      - text: "The first file is DD/MM (4 July 2023) and the second is MM/DD (3 July 2024) — those are the only readings that put both batches in Q3."
+        correct: true
+        feedback: "Correct. The file name is the only evidence available, and it happens to be decisive here. That is not a method you can rely on."
+      - text: "Both are DD/MM, so 4 July 2023 and 7 March 2024."
+        feedback: "7 March is Q1, not Q3, so the second file's batch would be in the wrong quarter."
+      - text: "Both are MM/DD, so 7 April 2023 and 3 July 2024."
+        feedback: "7 April is Q2, not Q3, so the first file's batch would be in the wrong quarter."
+      - text: "It cannot be determined without asking the vendor."
+        feedback: "In general that is the right instinct. Here the quarter each file covers resolves it — but only because every row in the file has to land inside a three-month window."
+    solution: |
+      **Two files, two formats, same folder, no declaration in either.**
+
+      | File | Written | Means |
+      |---|---|---|
+      | `batch_export_2023Q3_upgraded.csv` | `04/07/2023` | 2023-07-04 — **DD/MM/YYYY** |
+      | `batch_export_2024Q3_lims.csv` | `07/03/2024` | 2024-07-03 — **MM/DD/YYYY** |
+
+      The quarter in the file name is the only evidence, and it works here because a Q3 file cannot contain
+      an April or a March batch.
+
+      **Do not take the wrong lesson from that.** Inferring a date format from the data is forensics, not a
+      procedure. It works when the data happens to constrain the answer and fails silently when it does
+      not — a file covering a full year, with every batch on a day below the 13th, is perfectly ambiguous
+      and both readings are self-consistent.
+
+      The procedure is to have the format stated in the transfer specification, and to import with
+      **Change Type → Using Locale** so that the format you were told is the format applied.
+    explanation:
+      objective: "Resolve an ambiguous date format from an external constraint."
+      given: "Two slash-date files with no declared format, both named for Q3."
+      relevant: "That every batch in a quarterly file must fall inside that quarter."
+      method: "Test each reading against the constraint and keep the one that survives."
+      numbers: "04/07/2023 as 4 July is in Q3; as 7 April it is in Q2. 07/03/2024 as 3 July is in Q3; as 7 March it is in Q1."
+      assumptions: "That the files really do cover the quarter they are named for."
+      interpretation: "Two conventions in one folder, neither documented."
+      changes: "A file spanning a year, or one where every day is below the 13th, would be unresolvable this way."
+      interviewer: "That you name this as a reason to fix the specification rather than as a clever trick."
+
+  - id: excel.import.days-wrong
+    format: numeric
+    modes: [guided, check]
+    difficulty: foundation
+    skills: [excel.import, excel.logic]
+    lesson: excel-import-pitfalls
+    title: How far did the batch date move
+    prompt: |
+      Batch `HBX14-2023-043` started on **4 July 2023**. The file writes it as `04/07/2023`; a US-locale
+      machine read it as 7 April 2023.
+
+      By how many days is the stored date wrong? Give the size of the error.
+    answer: 88
+    tolerance: 0
+    unit: days
+    hints:
+      - "Both dates are serial numbers, so the difference is a count of days."
+      - "7 April to 4 July: the rest of April, then May, June and four days."
+      - "23 + 31 + 30 + 4."
+    solution: |
+      $$23 \text{ (April)} + 31 \text{ (May)} + 30 \text{ (June)} + 4 = 88 \text{ days}$$
+
+      In the sheet, `=C2-DATE(2023,7,4)` returns **−88**: the stored date is 88 days *earlier* than the
+      truth.
+
+      **The size of the error is the point.** A one-day slip might be dismissed as a rounding or timezone
+      artefact. Eighty-eight days moves the batch into the previous quarter, which means it falls under a
+      different quarterly review, a different trend period and a different release window.
+
+      The same arithmetic applied to a clinical date moves an adverse event across the first-dose date and
+      changes whether it is treatment-emergent. **A date error is never only a date error** — everything
+      derived from it moves with it.
+    explanation:
+      objective: "Quantify a locale-induced date error."
+      given: "A true date of 2023-07-04 and a stored date of 2023-04-07."
+      relevant: "That both are serial numbers, so subtraction gives days."
+      calculating: "The day count between the two dates."
+      numbers: "23 + 31 + 30 + 4 = 88 days."
+      interpretation: "Large enough to move the record into a different quarter, and silent."
+      changes: "A transposition like this is largest when the day and month are far apart, and zero when they are equal — 07/07 reads the same either way."
+
+  - id: excel.import.map-damage
+    format: mapping
+    modes: [guided, check]
+    difficulty: intermediate
+    skills: [excel.import, qc.data-cleaning]
+    lesson: excel-import-pitfalls
+    title: What the cell holds afterwards
+    prompt: |
+      Each of these values appears in a CBX417-301 raw extract or a manufacturing export. Match each one
+      to what a General-format cell holds after a default open on a US-locale machine.
+    sourceLabel: In the file
+    targetLabel: In the cell afterwards
+    pairs:
+      - source: "1001-0002"
+        target: "Unchanged text"
+        note: "No numeric or date reading exists, so nothing is converted."
+      - source: "CL97026619"
+        target: "Unchanged text"
+        note: "Starts with letters. Lab accessions in this study are safe for that reason alone."
+      - source: "1001"
+        target: "The number 1001"
+        note: "Now unequal to the text \"1001\" under every comparison operator."
+      - source: "2.0"
+        target: "The number 2"
+        note: "The trailing zero is not data to Excel. It is data to the protocol — ICF version 2.0."
+      - source: "15/07/2023"
+        target: "Unchanged text"
+        note: "There is no fifteenth month, so no MM/DD reading exists and the string is left alone."
+      - source: "04/07/2023"
+        target: "A date — 7 April 2023"
+        note: "A valid MM/DD reading exists, so it is taken. The file meant 4 July."
+      - source: "4519026317480935"
+        target: "A number ending 480930"
+        note: "Sixteen digits, and Excel keeps fifteen significant ones. The last digit is gone."
+    targets:
+      - "Unchanged text"
+      - "The number 1001"
+      - "The number 2"
+      - "A date — 7 April 2023"
+      - "A number ending 480930"
+      - "An error value"
+    solution: |
+      Three of the seven survive, and all three survive for the same reason: **no numeric or date reading
+      exists.** A hyphen between digits, a leading letter, an impossible month.
+
+      Four are changed, and none of them produces an error — which is why `An error value` is a distractor
+      here and not an answer. Every outcome Excel can reach on import is a perfectly ordinary cell value.
+
+      The two worth dwelling on:
+
+      **`2.0` → `2`.** ICF version 2.0 and ICF version 2 are the same number and different protocol
+      versions. Excel has no way to know that the trailing zero was significant.
+
+      **`04/07/2023` → 7 April.** The only value in the list that becomes something both wrong and
+      completely plausible. The other three changes are at least visible if you look at the cell.
+    explanation:
+      objective: "Predict the post-import state of seven real values."
+      given: "Values from the clinical raw extracts and the manufacturing exports."
+      relevant: "Whether each has a valid numeric or date reading under US regional settings."
+      method: "Apply the single conversion rule to each value in turn."
+      interpretation: "Four conversions, no errors, and one result that is wrong rather than merely different."
+      changes: "On a UK-locale machine `04/07/2023` would be read correctly and `15/07/2023` would also convert — a different set of four."
+
+  - id: excel.import.safe-order
+    format: order
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [excel.import, repro.documentation]
+    lesson: excel-import-pitfalls
+    title: Importing the quarterly export safely
+    prompt: |
+      `batch_export_2023Q3_upgraded.csv` has three preamble lines above the header, Title Case column
+      names and dates written `DD/MM/YYYY`.
+
+      Put the import steps in the order that converts nothing by accident.
+    steps:
+      - "Data → Get Data → From Text/CSV, and select the file rather than double-clicking it."
+      - "In the preview, set Data Type Detection to `Do not detect data types`."
+      - "Transform Data, to open the query editor instead of loading straight to a sheet."
+      - "Remove Top Rows → 3, to drop the report preamble."
+      - "Use First Row as Headers."
+      - "Change Type → Using Locale on the date column, choosing Date and English (United Kingdom)."
+      - "Close & Load, then check the Applied Steps list reads as a description of what was done."
+    solution: |
+      **Two steps carry the weight, and both come early.**
+
+      `Do not detect data types` is what makes the rest of the sequence possible. Once a column has been
+      guessed at, the guess has already been applied — the preview is not a proposal, it is what will load.
+
+      `Transform Data` rather than `Load` keeps you in the editor. Loading first and fixing afterwards
+      means fixing converted values, which is the position this whole lesson is about avoiding.
+
+      **`Using Locale` is the actual fix for the date column.** Telling Power Query the column is a date in
+      English (United Kingdom) converts all 22 rows of the full file correctly — including the fourteen a
+      default open would have left as text — because it is applying a stated format rather than guessing
+      one per row.
+
+      And the last step is not a formality. Applied Steps is the only audit trail an Excel import has, and
+      it is what makes next quarter's file a re-run rather than a repeat of this exercise.
+    explanation:
+      objective: "Sequence an import so that no conversion happens before it is chosen."
+      given: "A CSV with a preamble, non-standard headers and a non-local date format."
+      relevant: "That type detection is applied at preview time, not at load time."
+      method: "Load as text, restructure, then convert each column deliberately."
+      assumptions: "The DD/MM format is known from the transfer specification or inferred from the quarter."
+      interpretation: "Every conversion in the final query is one somebody chose and can be read back."
+      changes: "Skipping Do not detect data types means the dates are already wrong before the editor opens."
+      interviewer: "That you name Using Locale specifically, since it is the step most people do not know exists."
+
+  - id: excel.import.barcode
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [excel.import, excel.risk]
+    lesson: excel-import-pitfalls
+    title: The sixteenth digit
+    prompt: |
+      A specimen barcode is written in the file as `4519026317480935`. Excel stores numbers as IEEE 754
+      doubles and keeps **15 significant decimal digits**.
+
+      By how much does the stored value differ from the value in the file?
+    answer: 5
+    tolerance: 0
+    hints:
+      - "Count the digits: there are sixteen."
+      - "Digits past the fifteenth are replaced by zero, not rounded away."
+      - "What is 4519026317480935 minus 4519026317480930?"
+    solution: |
+      The stored value is `4519026317480930`.
+
+      $$4519026317480935 - 4519026317480930 = 5$$
+
+      **The difference is not the interesting part; the irreversibility is.** A stripped leading zero can
+      be rebuilt if you know the identifier's width. This cannot be rebuilt from anything, because the cell
+      no longer contains the information.
+
+      It is also almost invisible. Sixteen digits still show as sixteen digits; only the last one changed,
+      and it changed to a zero, which looks like a plausible digit for a barcode to end in.
+
+      **The tell is `ISTEXT`.** An identifier that is stored as a number has already been through the
+      numeric parser, and every identifier you care about should be text. If a barcode column returns
+      `FALSE` to `ISTEXT`, the import needs redoing with the column typed as text — and the original file
+      is the only place the truth still exists.
+    explanation:
+      objective: "Quantify precision loss on an over-long numeric identifier."
+      given: "A 16-digit barcode and Excel's 15-significant-digit storage."
+      relevant: "That digits past the fifteenth become zero rather than being rounded."
+      calculating: "The difference between the file value and the stored value."
+      numbers: "4519026317480935 - 4519026317480930 = 5."
+      assumptions: "IEEE 754 double precision, which gives about 15 to 17 significant decimal digits; Excel truncates at 15."
+      interpretation: "A silent, unrecoverable change to a join key."
+      changes: "Importing the column as text avoids the numeric parser entirely and preserves all sixteen digits."
+      interviewer: "That you test with ISTEXT rather than by reading the digits, and that you know the loss is permanent."
+
+  - id: excel.import.two-files
+    format: diff
+    modes: [qc, debug]
+    difficulty: advanced
+    skills: [excel.import, qc.compare, qc.discrepancy]
+    lesson: excel-import-pitfalls
+    title: One pipeline, two quarters, two answers
+    prompt: |
+      An analyst builds a batch-timing summary by opening each quarterly export in Excel and pasting the
+      rows into one workbook. Two quarters are shown below, against the verified dates in
+      `manufacturing/process/batches.csv`.
+
+      Both quarters were handled identically. What explains the pattern?
+    left:
+      title: As pasted from the opened exports
+      columns: [Batch, Source file, Start date in sheet]
+      rows:
+        - [HBX14-2023-043, 2023Q3_upgraded, '2023-04-07']
+        - [HBX14-2023-044, 2023Q3_upgraded, '2023-08-07']
+        - [HBX14-2023-046, 2023Q3_upgraded, '15/07/2023 (text)']
+        - [HBX14-2024-127, 2024Q3_lims, '2024-07-03']
+        - [HBX14-2024-128, 2024Q3_lims, '2024-07-08']
+        - [HBX14-2024-129, 2024Q3_lims, '2024-07-12']
+    right:
+      title: From batches.csv
+      columns: [Batch, Source file, True start date]
+      rows:
+        - [HBX14-2023-043, 2023Q3_upgraded, '2023-07-04']
+        - [HBX14-2023-044, 2023Q3_upgraded, '2023-07-08']
+        - [HBX14-2023-046, 2023Q3_upgraded, '2023-07-15']
+        - [HBX14-2024-127, 2024Q3_lims, '2024-07-03']
+        - [HBX14-2024-128, 2024Q3_lims, '2024-07-08']
+        - [HBX14-2024-129, 2024Q3_lims, '2024-07-12']
+      footnote: "batches.csv is the verified source for all 240 batches."
+    choices:
+      - text: "The 2023 file writes DD/MM and the 2024 file writes MM/DD. A US-locale open reads both as MM/DD, so the 2024 quarter is right by coincidence and the 2023 quarter is wrong wherever the day is below 13."
+        correct: true
+        feedback: "Correct — and the coincidence is the dangerous part. The quarter that validated cleanly is the one that tells the analyst the method works."
+      - text: "The 2023 export was corrupted in transfer."
+        feedback: "The file is intact. Its dates are readable and correct in DD/MM; the damage happened on open, not in transfer."
+      - text: "The 2023 batches genuinely ran in April and August; `batches.csv` is the file that is wrong."
+        feedback: "A file named for Q3 cannot contain an April batch, and `batches.csv` reconciles across all twelve quarterly exports."
+      - text: "Excel applied a different locale to each file because their headers differ."
+        feedback: "Regional settings are a property of the machine, not of the file. Both files were read with the same rule; only one of them was written that way."
+    solution: |
+      **The same rule applied to two files written to different conventions.**
+
+      The Q3 2024 file really is `MM/DD`, so reading it as `MM/DD` gives the right answer on every row. The
+      Q3 2023 file is `DD/MM`, so reading it as `MM/DD` gives:
+
+      - the **wrong date** where both parts are below 13 — `04/07` becomes 7 April, 88 days out;
+      - **text** where the day is above 12 — `15/07/2023` has no `MM/DD` reading and is left alone.
+
+      **Now look at what the analyst experienced.** The 2024 quarter reconciled perfectly against
+      `batches.csv`. Every date matched. That is exactly the evidence you would want that a method is
+      sound, and it is why the 2023 quarter was never re-checked.
+
+      A method that is right by coincidence on one input and silently wrong on another is worse than one
+      that fails on both, because the successful case is what gets cited when the method is questioned.
+
+      The fix is not a better spot-check. It is to stop the guess happening: import with
+      **Change Type → Using Locale**, naming the format per file, and reconcile the whole parsed set
+      against the 240 known batches rather than a sample.
+    explanation:
+      objective: "Explain why one quarter reconciled and another did not under an identical procedure."
+      given: "Two quarters of pasted dates against a verified source."
+      relevant: "That the two source files use different date conventions and the reading is set by the machine."
+      irrelevant: "The differing header styles, which have no effect on type inference."
+      method: "Check each source file's convention against the quarter it covers."
+      numbers: "2023-04-07 against a true 2023-07-04 is 88 days; the unconverted row stayed as the literal text 15/07/2023."
+      assumptions: "batches.csv is the verified reconciliation target for all 240 batches."
+      interpretation: "A procedure validated on the case where it happened to be correct."
+      changes: "On a UK-locale machine the errors would land on the 2024 file instead — the same failure, mirrored."
+      interviewer: "That you treat the clean quarter as the more misleading result, not as reassurance."
+
+  - id: excel.import.hotspot
+    format: hotspot
+    language: text
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [excel.import, qc.mindset, repro.documentation]
+    lesson: excel-import-pitfalls
+    title: Where the file stopped being the file
+    minutes: 8
+    prompt: |
+      A colleague's account of how she checked a vendor's subject list. The count she reported was two
+      lower than the randomization system's.
+
+      Click the step at which the data stopped matching the file.
+    code: |
+      1. Received subject_list.csv from the vendor by email.
+      2. Saved it to the study shared drive.
+      3. Double-clicked it to open it in Excel.
+      4. Widened column A so the subject ids were fully visible.
+      5. Sorted by subject id to make scanning easier.
+      6. Used =COUNTA(A2:A500) to count the ids.
+      7. Noticed two ids looked odd and highlighted them in yellow.
+      8. Pressed Ctrl+S and kept the CSV format when prompted.
+      9. Emailed the count to the study manager.
+    answerLines: [3]
+    lineNotes:
+      - line: 3
+        note: "Every conversion happens here, before anything else in the account. Leading zeros stripped, long ids truncated at 15 significant digits, anything with a valid date reading converted using her regional settings — all silent. Use Data → Get Data → From Text/CSV with data type detection off."
+      - line: 4
+        note: "Widening a column changes nothing about stored values. If it revealed digits behind scientific notation, that was a display problem and is now solved."
+      - line: 5
+        note: "Sorting is harmless to the values, but on a column that is half text and half numbers it produces two separate blocks — which is a useful symptom to notice, not a cause."
+      - line: 7
+        note: "Yellow is a fact about the data stored where no formula can read it and which no export preserves. A real problem, but not the one that changed the count."
+      - line: 8
+        note: "This is where the damage became permanent and overwrote the shared-drive copy — but the values were already wrong three lines earlier. Saving destroyed the evidence; opening destroyed the data."
+    fixed: |
+      1. Received subject_list.csv from the vendor by email.
+      2. Saved it to the study shared drive, read-only.
+      3. Data → Get Data → From Text/CSV → Data Type Detection: Do not detect data types.
+      4. Transform Data, confirmed every column is Text, Close & Load.
+      5. Counted distinct ids, and separately counted ids differing only by case or trailing space.
+      6. Compared against the randomization list and logged the two differences.
+      7. Saved the workbook as .xlsx, leaving subject_list.csv untouched.
+    hints:
+      - "The count was wrong before any formula ran. Which step changed the values?"
+      - "Which step is the one nobody thinks of as an edit?"
+      - "Opening is not a read-only operation."
+    solution: |
+      **Step 3.** Double-clicking the CSV applied every conversion Excel is capable of, before a single
+      formula ran.
+
+      Step 8 is where it became permanent and overwrote the shared-drive copy, and it deserves its own
+      complaint — but by then the values had been wrong for five steps. **Opening destroyed the data;
+      saving destroyed the evidence.**
+
+      Two details in the account point at what went wrong with the count itself. `COUNTA` counts non-empty
+      cells, not distinct subjects, so duplicates and near-duplicates inflate it. And the two ids that
+      "looked odd" were highlighted rather than recorded — a finding stored as a colour, which does not
+      survive the export the study manager will eventually make.
+
+      The rewritten version changes one thing that matters more than the rest: **the CSV is never written
+      to.** Whatever happens in the workbook, the file the vendor sent is still there to compare against.
+    explanation:
+      objective: "Locate the point in a working procedure where the data diverged from the source file."
+      given: "A nine-step account ending in a count two lower than expected."
+      relevant: "That opening a CSV by double-clicking applies type conversion immediately and silently."
+      irrelevant: "Widening the column and sorting, neither of which changes a stored value."
+      method: "Work backwards from the wrong number to the earliest step that could have changed a value."
+      interpretation: "The damaging step is the one that nobody classifies as an edit."
+      changes: "Importing with type detection off, and never saving back over the source, leaves a file to reconcile against."
+      interviewer: "That you separate the step that caused the error from the step that destroyed the ability to detect it."
+
+  - id: excel.import.open-transfer
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [excel.import, communication.documentation, qc.compare]
+    lesson: excel-import-pitfalls
+    title: Specifying a transfer so this cannot happen
+    prompt: |
+      **Interviewer:** "You're setting up a data transfer from a central lab. What do you insist is in the
+      specification, and why?"
+    modelAnswer: |
+      I'd start from what goes wrong when it is not specified, because that is what makes the list
+      defensible rather than a wish list.
+
+      **The date format, stated explicitly, and ISO 8601 if I get to choose.** The reason is that `04/07`
+      has two readings and both are valid dates, so the failure is silent — there is no error, just a
+      record that moved by up to eleven months. I have seen two files in the same folder, one DD/MM and one
+      MM/DD, with nothing in either declaring which. ISO 8601 has one reading, and it also sorts correctly
+      as text, which means an ambiguity cannot be introduced later by whoever opens it next.
+
+      **How partial dates are represented.** A month with no day is not a date, and if the spec is silent
+      the vendor will pick something — a blank, a first-of-month, a literal `UNK`. All three are different
+      downstream and only one of them is honest.
+
+      **The identifier format and its type.** Whether subject ids are zero-padded, how long they are, and
+      that they are text. That is what stops a leading zero being stripped or a long barcode being
+      truncated at 15 significant digits, and both of those break a join without erroring.
+
+      **Units, and one unit per test.** Local-lab units arriving mixed into a central-lab column is a
+      reconciliation problem that looks like an outlier problem.
+
+      **File format, delimiter, encoding, and the row count in a separate control file.** The row count is
+      the cheapest possible detection of a truncated or partial transfer, and it costs the vendor nothing.
+
+      **And that the file is transferred, not emailed as a spreadsheet.** A CSV that has been opened and
+      saved in Excel on the way is no longer the file the vendor produced, and nothing in it records that.
+
+      On my side, the corresponding commitment is that the file is read with every column forced to
+      character and converted deliberately — in code, or through Power Query with the locale named — and
+      that the first thing the import does is reconcile the row count and the distinct subject count
+      against the control file.
+
+      The reason I'd push for all of this at specification time rather than fixing it later is that every
+      failure in this list is silent. There is no error to chase. You find out at reconciliation, if you
+      reconcile, or you do not find out.
+    rubric:
+      - Specifies the date format and gives the reason (ambiguity is silent)
+      - Prefers ISO 8601 and can say why it is safer in both directions
+      - Covers partial dates explicitly
+      - Specifies identifier format and that identifiers are text
+      - Mentions units and one unit per test
+      - Asks for a row count or control file to detect truncation
+      - Commits to reading the file as text and converting deliberately
+      - Frames the whole list around failures being silent rather than erroring
+    redFlags:
+      - "Lists file format and delimiter but not date format"
+      - "Assumes the vendor's file will be correct and plans no reconciliation"
+      - "Says the transfer can be checked by opening it in Excel and looking"
+      - "Treats partial dates as something to fill in rather than to specify"

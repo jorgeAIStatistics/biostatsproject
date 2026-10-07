@@ -1,0 +1,792 @@
+items:
+  - id: sdtm.lb.result-pair
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sdtm.findings, sdtm.mapping]
+    lesson: sdtm-lb-domain
+    title: Why two results per record?
+    prompt: |
+      A record in CBX417-301's `LB` domain reads:
+
+      ```text
+      LBORRES = 0.69    LBORRESU = mg/dL
+      LBSTRESC = "61"   LBSTRESN = 61    LBSTRESU = umol/L
+      ```
+
+      A new programmer proposes deleting `LBORRES` and `LBORRESU` before delivery, on the grounds that
+      they are "the same number twice, in units nobody analyses".
+
+      What is the strongest reason not to?
+    choices:
+      - text: "The original pair is the only record of what the laboratory actually reported, which is what a data manager queries against and what a reviewer verifies. The standard pair exists so results are comparable; the original pair exists so they are auditable."
+        correct: true
+        feedback: "Correct. Analysis needs one unit; verification needs the number printed on the laboratory report. Neither purpose serves the other."
+      - text: "`LBORRES` is Required in SDTMIG v3.4, so deleting it would fail conformance."
+        feedback: "It would indeed be a conformance problem, but that is the consequence rather than the reason. The rule exists because the original result is the audit trail."
+      - text: "You cannot recompute `LBORRES` from `LBSTRESN` because the conversion factor is not stored in the dataset."
+        feedback: "You could in fact recompute it from a known factor. The point is not arithmetic recoverability but evidentiary value — a recomputed number is not what the laboratory reported."
+      - text: "`LBSTRESN` is numeric and cannot hold non-numeric results, so the original is needed for those."
+        feedback: "True but irrelevant here: that is what `LBSTRESC` is for, and this record's result is numeric anyway."
+    hints:
+      - "Ask what each pair is *for*, not which is more precise."
+    solution: |
+      **The two pairs answer different questions, and neither can answer the other's.**
+
+      | | Question | Consumer |
+      |---|---|---|
+      | `LBORRES` / `LBORRESU` | What did the source report, in its own units? | Data manager querying the laboratory; reviewer verifying against a laboratory report |
+      | `LBSTRESC` / `LBSTRESN` / `LBSTRESU` | What is that in the study's standard units? | Anyone computing a mean, a shift table or a toxicity grade |
+
+      CBX417-301 receives 25,450 results from four laboratories in seven original units. You cannot
+      average a column that mixes mg/dL and µmol/L, so the standard pair has to exist. And a data manager
+      chasing a query cannot ask a laboratory about a number the laboratory never printed, so the
+      original pair has to exist too.
+
+      **Three standard-result variables, one original**, for a reason worth remembering: `LBSTRESC` is
+      character and always populated; `LBSTRESN` is numeric and populated only when the standardized
+      result is a number. In this study's `LB` everything is quantitative so they agree everywhere. In
+      `EG`, the 1,867 `INTP` records carry `NORMAL` or `ABNORMAL` in `EGSTRESC` and a null `EGSTRESN`.
+    explanation:
+      objective: "Justify apparent duplication in the Findings result pair."
+      relevant: "That the two pairs have different consumers — analysis and verification."
+      irrelevant: "Which of the two numbers is 'more precise'; they are the same measurement."
+      interpretation: "Comparability and auditability are separate requirements, and SDTM satisfies both by storing both."
+
+  - id: sdtm.lb.range-converts
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [sdtm.findings, qc.data-cleaning]
+    lesson: sdtm-lb-domain
+    title: The range converts too
+    prompt: |
+      A creatinine result arrives from a local laboratory as **0.69 mg/dL**, with that laboratory's
+      reference range of **0.70 to 1.20 mg/dL**. The study's standard unit for creatinine is µmol/L,
+      conversion factor **88.4**.
+
+      A program converts `LBSTRESN` correctly but copies `LBORNRLO` and `LBORNRHI` straight into
+      `LBSTNRLO` and `LBSTNRHI` without multiplying them.
+
+      What does `LBNRIND` come out as, and what is the truth?
+    choices:
+      - text: "`HIGH`, when the value is genuinely very slightly `LOW` — 61.0 µmol/L against a converted range of 61.9 to 106.1."
+        correct: true
+        feedback: "Correct. 61.0 compared against an unconverted 0.70-1.20 is wildly above the upper limit, so the derivation says HIGH. Against the converted range it is 0.9 below the lower limit, so the true indicator is LOW."
+      - text: "`LOW`, and the bug is invisible because the answer happens to be right."
+        feedback: "The right answer by accident would be the dangerous case, but it is not this one: 61.0 against an upper limit of 1.20 is above, not below."
+      - text: "`NORMAL`, because 0.69 is a normal creatinine."
+        feedback: "0.69 mg/dL is clinically unremarkable, but `LBNRIND` is not a clinical judgement — it is a mechanical comparison against whatever numbers are in `LBSTNRLO`/`LBSTNRHI`."
+      - text: "Null, because the units of the result and the range no longer match and the derivation refuses."
+        feedback: "Nothing refuses. `LBNRIND` is arithmetic on two numbers; no derivation checks that their units agree, which is exactly why this bug ships."
+    hints:
+      - "Do the comparison the program would actually do: 61.0 against 0.70 and 1.20."
+      - "Then do the comparison it should have done: 61.0 against 61.9 and 106.1."
+    solution: |
+      **The program says `HIGH`. The truth is `LOW`.**
+
+      ```text
+      What the buggy program compares:   61.0  vs  0.70 - 1.20    ->  HIGH  (by a factor of ~50)
+      What it should compare:            61.0  vs  61.9 - 106.1   ->  LOW   (by 0.9 umol/L)
+      ```
+
+      Both the result and the range carry units, and `LBSTNRLO`/`LBSTNRHI` are the range **in standard
+      units**. Multiply both with the same factor, on adjacent lines, so a reader can see that they match:
+
+      ```text
+      LBSTRESN = LBORRES  * factor
+      LBSTNRLO = LBORNRLO * factor
+      LBSTNRHI = LBORNRHI * factor
+      ```
+
+      **Why this particular bug is expensive.** It does not fail, it does not warn, and it does not look
+      wrong in the dataset — every individual number is a plausible number. It flips `LBNRIND` for every
+      record of that test from that laboratory at once, and the first visible symptom is a shift table
+      with an implausible column.
+
+      In CBX417-301 the real record behind this example has `LBNRIND = "LOW"` with `LBORRES = 0.69 mg/dL`
+      — a normal-looking creatinine that is genuinely 0.01 mg/dL below its own laboratory's lower limit.
+      **Reading that record and concluding "conversion bug" is the opposite error**, and it is why you
+      check the arithmetic rather than your intuition about what a normal creatinine looks like.
+    explanation:
+      objective: "Trace a unit-conversion defect through to the derived indicator."
+      given: "A result, a laboratory range, a conversion factor, and a program that converts one of them."
+      calculating: "Two comparisons: the one the program makes and the one it should make."
+      numbers: "0.69 x 88.4 = 61.0; 0.70 x 88.4 = 61.9; 1.20 x 88.4 = 106.1."
+      interpretation: "HIGH from the bug, LOW in truth — and the record is only 0.9 umol/L outside its range, so the correct answer looks like an error too."
+      changes: "If the factor were 1 (as it is for NEUT and PLAT) the bug would be undetectable because it would have no effect."
+
+  - id: sdtm.lb.nrind-not-grade
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sdtm.findings, sdtm.ct]
+    lesson: sdtm-lb-domain
+    title: 3,637 low results
+    prompt: |
+      CBX417-301's `LB` domain has **3,637** records with `LBNRIND = "LOW"`, of which **2,782** are
+      haemoglobin.
+
+      A study manager reads that as "2,782 haemoglobin toxicities" and asks why the safety tables do not
+      show them.
+
+      What do you tell them?
+    choices:
+      - text: "`LBNRIND` only says the value is outside the laboratory's reference interval. Toxicity grading is a separate derivation with its own criteria and its own version, and it lives in ADaM — `ADLB.ATOXGRN` here."
+        correct: true
+        feedback: "Correct. Mild anaemia is near-universal in a chemotherapy population, and being below a reference limit is not a grade."
+      - text: "The safety tables are filtered to grade 3 and above, so the low haemoglobins are there but suppressed."
+        feedback: "That may be true of a particular table, but it concedes the premise. The 2,782 are not graded values at all."
+      - text: "`LBNRIND` is wrong for haemoglobin because its reference range is sex-specific and the ranges were not applied per sex."
+        feedback: "Haemoglobin does have sex-specific ranges in this study (120-155 g/L for F, 130-175 for M) and they *are* applied. The indicator is correct; the interpretation is not."
+      - text: "Reference-range indicators are only meaningful for chemistry tests, not haematology."
+        feedback: "There is no such distinction. `LBNRIND` means the same thing for every test."
+    hints:
+      - "What information would you need to assign a CTCAE grade that a reference range does not give you?"
+    solution: |
+      **`LBNRIND` is a position, not a severity.**
+
+      | `LBNRIND` | Records |
+      |---|---:|
+      | `NORMAL` | 20,908 |
+      | `LOW` | 3,637 |
+      | `HIGH` | 898 |
+      | *(null)* | 7 |
+
+      The 3,637 low results break down by test as haemoglobin 2,782, neutrophils 307, creatinine 233,
+      AST 271, platelets 27, ALT 14 and bilirubin 3. A chemotherapy population with near-universal mild
+      anaemia is exactly what that distribution describes.
+
+      **Grading needs things a reference range cannot supply**: per-test thresholds, a grading scale with
+      a version, and a rule for subjects whose baseline is already abnormal. All three are SAP decisions,
+      so the grade is an analysis variable — `ADLB.ATOXGR` and `ADLB.ATOXGRN` in this study — and not an
+      SDTM one.
+
+      The seven nulls are the `NOT DONE` records. They have no standardized result, so there is nothing
+      to place relative to a range, and a null indicator is correct rather than missing.
+    explanation:
+      objective: "Separate a reference-range indicator from a toxicity grade."
+      relevant: "That grading requires criteria, a version and a baseline rule, none of which are in LB."
+      numbers: "3,637 LOW, 2,782 of them haemoglobin; 7 nulls, all NOT DONE records."
+      interpretation: "Below the reference limit is a laboratory statement; grade 2 anaemia is a protocol statement."
+
+  - id: sdtm.lb.lobxfl-meaning
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [sdtm.findings, adam.baseline]
+    lesson: sdtm-lb-domain
+    title: LBLOBXFL is not ABLFL
+    prompt: |
+      A statistician asks you to "flag baseline in `LB`" and points at `LBLOBXFL`, which is already
+      populated on 2,910 records.
+
+      Is `LBLOBXFL` the baseline flag they want?
+    choices:
+      - text: "No. `LBLOBXFL` is the last non-missing observation before first exposure, determined by the data. Baseline is whatever the SAP says it is, and it belongs in ADaM as `ABLFL`. They agree on most records in most studies and they are not the same variable."
+        correct: true
+        feedback: "Correct. The distinction matters precisely when the SAP says something other than 'last value before first dose' — as CBX417-301's does for ECG and for tumour assessments."
+      - text: "Yes. `--LOBXFL` is SDTM's name for the baseline flag and `ABLFL` is ADaM's; they are defined identically."
+        feedback: "They are not defined identically. One is fixed by the data and the exposure dates; the other is fixed by the SAP, which can choose a different record."
+      - text: "No, because `LBLOBXFL` flags the *first* observation before exposure rather than the last."
+        feedback: "It flags the last non-missing observation before first exposure. The direction is right; the difference from ABLFL is elsewhere."
+      - text: "Yes, provided you first restrict to records where `LBSTAT` is null."
+        feedback: "`--LOBXFL` already skips missing results, which is why two subject-and-test combinations have no flag at all. The restriction is not the issue."
+    hints:
+      - "Who decides what counts as baseline — the data or a document?"
+    solution: |
+      **No, and the difference is who decides.**
+
+      | | `LB.LBLOBXFL` | `ADLB.ABLFL` |
+      |---|---|---|
+      | Defined by | The data: last non-missing result before first exposure | The statistical analysis plan |
+      | Lives in | SDTM tabulation | ADaM analysis |
+      | Can differ per analysis | No | Yes |
+
+      They coincide whenever the SAP's baseline rule *is* "last non-missing value before first dose",
+      which is the common case. CBX417-301's ADRG records two places where its own rule differs: the ECG
+      baseline is the last **pre-dose** assessment, because the Cycle 1 Day 1 ECG is taken after dosing
+      and shares its date with the first dose; and the tumour-assessment baseline is the last assessment
+      on or before **randomization**.
+
+      **2,910 flags, not 2,912.** 416 treated subjects times 7 tests would be 2,912. `ALT` and `HGB` have
+      415 each: two subject-and-test combinations have no non-missing pre-exposure observation, because
+      both of their pre-dose draws failed (`NOT DONE`, sample haemolysed and sample clotted). There is
+      nothing to flag, so nothing is flagged — and a baseline derivation has to survive that.
+    explanation:
+      objective: "Distinguish an SDTM data-determined flag from an ADaM SAP-determined flag."
+      relevant: "That the SAP can choose a different record, and in this study does for EG and TR."
+      numbers: "2,910 flags against 416 x 7 = 2,912, because two subject-test pairs have no pre-exposure result."
+      interviewer: "That you know which decisions belong to tabulation and which to analysis."
+
+  - id: sdtm.lb.convert-bili
+    format: numeric
+    modes: [guided, independent]
+    difficulty: foundation
+    skills: [sdtm.findings, sdtm.mapping]
+    lesson: sdtm-lb-domain
+    title: Convert a bilirubin and its range
+    prompt: |
+      A local laboratory reports a total bilirubin of **0.5 mg/dL** with a reference range of
+      **0.2 to 1.2 mg/dL**. The study's standard unit for bilirubin is µmol/L, conversion factor
+      **17.104**.
+
+      What is `LBSTNRHI` for this record, in µmol/L, rounded to one decimal place?
+    answer: 20.5
+    tolerance: 0.05
+    unit: umol/L
+    datasets: [oncology/sdtm/lb]
+    hints:
+      - "`LBSTNRHI` is the *upper reference limit*, not the result."
+      - "The same factor that converts the result converts both ends of the range."
+    solution: |
+      **20.5 µmol/L.**
+
+      ```text
+      LBSTRESN = 0.5 x 17.104 =  8.6
+      LBSTNRLO = 0.2 x 17.104 =  3.4
+      LBSTNRHI = 1.2 x 17.104 = 20.5
+      LBNRIND  = NORMAL        (3.4 <= 8.6 <= 20.5)
+      ```
+
+      Those are the exact values on all four of CBX417-301's mg/dL bilirubin records — the local
+      laboratories at sites 1001 and 1033 — and all four come out `NORMAL`.
+
+      **The trap in this question is which number you were asked for.** `LBSTRESN` is 8.6 and is the
+      number the eye goes to. `LBSTNRHI` is the converted upper reference limit, and it is the number
+      that has to move with it. A program that computes the first and forgets the second produces
+      `LBNRIND = "HIGH"` on a record whose result is comfortably inside its own laboratory's range.
+    explanation:
+      objective: "Apply one conversion factor to a result and to both ends of its reference range."
+      given: "A result, a range and a factor, all in the original units."
+      calculating: "The upper reference limit in standard units."
+      numbers: "1.2 x 17.104 = 20.5248, which the study stores as 20.5."
+      assumptions: "That the reference range belongs to the laboratory that produced the result, and is not replaced with the central laboratory's."
+      interpretation: "8.6 falls inside 3.4-20.5, so LBNRIND is NORMAL — which is only true if the range was converted."
+
+  - id: sdtm.lb.vendor-map
+    format: mapping
+    modes: [guided]
+    difficulty: intermediate
+    skills: [sdtm.findings, sdtm.ct, sdtm.mapping]
+    lesson: sdtm-lb-domain
+    title: Fourteen vendor codes, seven test codes
+    prompt: |
+      `raw/labs.csv` contains no `LBTESTCD`. It contains each laboratory's own internal code and its own
+      test name. Send each source code to the `LBTESTCD` it becomes.
+    sourceLabel: Vendor code (and the name that came with it)
+    targetLabel: LBTESTCD
+    targets:
+      - "ALT"
+      - "AST"
+      - "BILI"
+      - "CREAT"
+      - "HGB"
+      - "NEUT"
+      - "PLAT"
+    pairs:
+      - source: "`CH010` — \"ALT (SGPT)\" (central)"
+        target: "ALT"
+        note: "3,452 raw records. SGPT is an older name for the same enzyme."
+      - source: "`L-ALT` — \"Alanine transaminase\" (local)"
+        target: "ALT"
+        note: "4 raw records, a different code and a different name for the same test."
+      - source: "`CH011` — \"AST (SGOT)\" (central)"
+        target: "AST"
+        note: "3,448 raw records."
+      - source: "`CH020` — \"Bilirubin, Total\" (central)"
+        target: "BILI"
+        note: "3,450 raw records, reported in umol/L."
+      - source: "`L-TBIL` — \"Total bilirubin\" (local)"
+        target: "BILI"
+        note: "4 raw records, reported in mg/dL — the conversion cases."
+      - source: "`CH030` — \"Creatinine\" (central)"
+        target: "CREAT"
+        note: "3,448 raw records. Sex-specific reference range."
+      - source: "`HE001` — \"Hemoglobin\" (central)"
+        target: "HGB"
+        note: "3,943 raw records, in g/L."
+      - source: "`L-HGB` — \"Haemoglobin\" (local)"
+        target: "HGB"
+        note: "38 raw records, UK spelling, reported in g/dL. Mapping on the name rather than the code loses every one of them."
+      - source: "`HE010` — \"Absolute Neutrophil Count\" (central)"
+        target: "NEUT"
+        note: "3,945 raw records."
+      - source: "`L-ANC` — \"Neutrophils, absolute\" (local)"
+        target: "NEUT"
+        note: "38 raw records in 10^3/uL — the factor-of-1 conversion."
+      - source: "`HE020` — \"Platelet Count\" (central)"
+        target: "PLAT"
+        note: "3,947 raw records."
+      - source: "`L-PLT` — \"Platelets\" (local)"
+        target: "PLAT"
+        note: "38 raw records in 10^3/uL."
+    hints:
+      - "Two laboratories, two naming systems, one set of tests."
+      - "The `L-` prefix marks the local-laboratory codes."
+    solution: |
+      **Fourteen source codes collapse to seven `LBTESTCD` values** — the seven central-laboratory codes
+      and a parallel local-laboratory set with different codes, different names and UK spelling.
+
+      The two remaining pairs follow the same pattern: `L-AST` → `AST` and `L-CREA` → `CREAT`.
+
+      :::mistake[Mapping on the test name]
+      `Hemoglobin` and `Haemoglobin` are the same test spelled differently. `ALT (SGPT)` and
+      `Alanine transaminase` are the same test named differently. The **code** is the stable key; the
+      name is free text that varies between laboratories and sometimes between transfers from the same
+      laboratory.
+      :::
+
+      **The local set is 130 records out of 25,450** — half a percent of the domain, and the source of
+      almost every unit conversion and every non-standard reference range in it.
+
+      Two operational points that follow from the mapping being a lookup table:
+
+      1. **It lives in the SDTM specification**, is reviewed by someone clinical, and is agreed with the
+         vendor in the data transfer specification before first patient in.
+      2. **It has to fail loudly.** A new vendor code appearing mid-study is routine. A lookup that
+         silently returns blank for an unmatched code loses results without complaining, and the loss is
+         invisible until a test is missing from an output.
+    explanation:
+      objective: "Build the vendor-code-to-LBTESTCD lookup that the raw transfer does not supply."
+      given: "Fourteen codes from two laboratory sources with inconsistent names."
+      relevant: "The code, which is stable."
+      irrelevant: "The test name, which varies by laboratory and by spelling convention."
+      method: "Key the lookup on the code and assert that nothing comes back unmatched."
+      interpretation: "Seven CDISC test codes cover the panel; the fourteen source codes are an artefact of having two laboratories."
+
+  - id: sdtm.lb.lobxfl-count
+    format: numeric
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [sdtm.findings, qc.data-cleaning]
+    lesson: sdtm-lb-domain
+    title: How many LBLOBXFL flags should there be?
+    prompt: |
+      CBX417-301 treated **416** subjects and runs a **7**-test laboratory panel. `LBLOBXFL` is set to
+      `Y` on the last non-missing result before first exposure, for each subject and test.
+
+      Seven records in the domain have `LBSTAT = "NOT DONE"` and no result: four haemolysed samples and
+      three clotted ones. Two of those failures are a subject's **only** two pre-exposure draws for one
+      test — subject `…-1019-0002` for `ALT` and subject `…-1010-0001` for `HGB`, each with both the
+      screening and the Cycle 1 Day 1 sample failed.
+
+      How many records carry `LBLOBXFL = "Y"`?
+    answer: 2910
+    tolerance: 0
+    unit: records
+    datasets: [oncology/sdtm/lb]
+    hints:
+      - "Start from 416 x 7 and subtract what cannot be flagged."
+      - "A subject-and-test combination with no non-missing pre-exposure result has nothing to flag."
+    solution: |
+      **2,910.**
+
+      ```text
+      416 subjects x 7 tests          = 2,912
+      minus ALT  for ...-1019-0002    = -1
+      minus HGB  for ...-1010-0001    = -1
+                                        2,910
+      ```
+
+      Counted in the delivered domain:
+
+      | `LBTESTCD` | Flagged |
+      |---|---:|
+      | `AST`, `BILI`, `CREAT`, `NEUT`, `PLAT` | 416 each |
+      | `ALT` | **415** |
+      | `HGB` | **415** |
+
+      **Both gaps have the same cause.** Both of the subject's pre-dose draws for that test failed, for
+      the same reason each time — haemolysed for the ALT subject, clotted for the HGB subject. There is
+      no non-missing observation before first exposure, so `--LOBXFL` correctly has no `Y`.
+
+      **This is the 0.07% of subject-parameter pairs that a baseline derivation has to handle.** A
+      program that assumes every subject has a baseline for every parameter will produce a null change
+      from baseline for these two, or crash, or — worst — silently pick the first *post*-dose value and
+      report a change of zero.
+
+      The four `NOT DONE` records are why you can tell the difference between "the sample failed" and
+      "the test was never scheduled". Dropping them would make these two gaps look like a programming
+      error.
+    explanation:
+      objective: "Predict a flag count and account for the shortfall."
+      given: "Treated subjects, panel size, and the NOT DONE records with their subjects and tests."
+      relevant: "That the two failed pairs are both pre-exposure draws for the same subject and test."
+      irrelevant: "The other five NOT DONE records, which have a usable pre-exposure result elsewhere."
+      calculating: "416 x 7 minus the two subject-test pairs with no pre-exposure result."
+      numbers: "2,912 - 2 = 2,910, matching the delivered domain."
+      assumptions: "That 420 randomized subjects are not all eligible for the flag — only the 416 with an exposure date."
+      changes: "If either subject's screening draw had succeeded, the count would be 2,911."
+
+  - id: sdtm.lb.convert-code
+    format: code
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [sdtm.findings, qc.data-cleaning, r.dplyr]
+    lesson: sdtm-lb-domain
+    title: Verify every conversion in LB
+    language: r
+    prompt: |
+      You have received `LB` from another programmer. Write R that independently checks the unit
+      conversion on every record that has a standardized result:
+
+      - `LBSTRESN` equals `LBORRES` times the documented factor
+      - `LBSTNRLO` and `LBSTNRHI` equal `LBORNRLO` and `LBORNRHI` times the **same** factor
+
+      The documented factors are: `BILI` mg/dL × 17.104, `CREAT` mg/dL × 88.4, `HGB` g/dL × 10,
+      `NEUT` 10^3/uL × 1, `PLAT` 10^3/uL × 1. Anything else is already in the standard unit.
+
+      Assert that there are no disagreements, then print how many records of each test were rescaled.
+    starter: |
+      library(readr); library(dplyr)
+
+      lb <- read_csv("data/oncology/sdtm/lb.csv", show_col_types = FALSE)
+      # ...
+    datasets: [oncology/sdtm/lb]
+    checks:
+      - pattern: "LBTESTCD"
+        message: "Key the conversion table on the test code, not on the unit alone."
+      - pattern: "LBORRESU"
+        message: "Key the conversion table on the original unit as well — the factor depends on both."
+      - pattern: "left_join\\(|inner_join\\("
+        message: "Join the factor table onto LB rather than writing a chain of if-statements."
+      - pattern: "coalesce\\("
+        message: "Records with no matching conversion row need a factor of 1, not a missing factor."
+      - pattern: "LBSTNRLO"
+        message: "Check the reference range, not only the result — that is the conversion people forget."
+      - pattern: "LBSTNRHI"
+        message: "Check both ends of the reference range."
+      - pattern: "stopifnot\\("
+        message: "Assert that there are no disagreements rather than printing them and hoping someone looks."
+      - pattern: "table\\("
+        message: "Print the per-test count of rescaled records."
+      - pattern: "LBSTRESN\\s*==\\s*"
+        absent: true
+        message: "Do not compare converted floating-point numbers with ==; compare within a tolerance."
+    reference: |
+      library(readr); library(dplyr)
+
+      lb <- read_csv("data/oncology/sdtm/lb.csv", show_col_types = FALSE)
+
+      conv <- tibble::tribble(
+        ~LBTESTCD, ~LBORRESU, ~factor,
+        "BILI",    "mg/dL",    17.104,
+        "CREAT",   "mg/dL",    88.4,
+        "HGB",     "g/dL",     10,
+        "NEUT",    "10^3/uL",  1,
+        "PLAT",    "10^3/uL",  1
+      )
+
+      chk <- lb |>
+        filter(!is.na(LBSTRESN)) |>
+        left_join(conv, by = c("LBTESTCD", "LBORRESU")) |>
+        mutate(
+          factor    = coalesce(factor, 1),
+          exp_res   = as.numeric(LBORRES)  * factor,
+          exp_lo    = as.numeric(LBORNRLO) * factor,
+          exp_hi    = as.numeric(LBORNRHI) * factor,
+          bad_res   = abs(LBSTRESN - exp_res) > 0.05,
+          bad_range = abs(LBSTNRLO - exp_lo) > 0.05 | abs(LBSTNRHI - exp_hi) > 0.05
+        )
+
+      stopifnot(sum(chk$bad_res) == 0, sum(chk$bad_range) == 0)
+
+      print(table(LBTESTCD = chk$LBTESTCD, rescaled = chk$LBSTRESU != chk$LBORRESU))
+    expectedOutput: |
+      > print(table(LBTESTCD = chk$LBTESTCD, rescaled = chk$LBSTRESU != chk$LBORRESU))
+              rescaled
+      LBTESTCD FALSE TRUE
+         ALT    3407    0
+         AST    3409    0
+         BILI   3404    4
+         CREAT  3404    4
+         HGB    3898   38
+         NEUT   3900   38
+         PLAT   3899   38
+    solution: |
+      **The table is keyed on test *and* unit.** A conversion table keyed on unit alone would apply the
+      creatinine factor of 88.4 to a bilirubin reported in mg/dL, which is the same mistake in a
+      different disguise.
+
+      **`coalesce(factor, 1)` is doing real work.** The large majority of records — everything from the
+      central laboratory — has no row in `conv`, and a missing factor would propagate `NA` through every
+      comparison and make `stopifnot` pass on a table full of nothing. A lookup miss here means "already
+      in the standard unit", so the default is 1 and it is written down.
+
+      **Why the range check is separate.** `bad_res` and `bad_range` are two flags rather than one
+      because they fail independently: converting the result and forgetting the range is a real,
+      common defect, and it leaves `bad_res` clean.
+
+      **Why a tolerance rather than `==`.** `0.5 * 17.104` is `8.552` and the domain stores `8.6`. The
+      stored values are rounded to the study's precision, so an exact comparison fails on every
+      converted record. 0.05 is half of the last retained digit.
+
+      **What the output says.** 122 records were rescaled: 4 bilirubin, 4 creatinine, 38 haemoglobin,
+      38 neutrophils and 38 platelets, out of 25,443 with a result. Every one of them is from a local
+      laboratory.
+
+      **And the counter-intuitive part:** `NEUT` and `PLAT` show 38 rescaled records each even though
+      their factor is **1**. `10^3/uL` and `10^9/L` are numerically identical — the unit string changes
+      and the number does not. That is the conversion most likely to be got wrong, because getting it
+      wrong by using 1,000 produces a plausible-looking number three orders of magnitude out.
+    explanation:
+      objective: "QC a unit conversion independently of the program that performed it."
+      given: "The delivered LB domain and the documented factors."
+      relevant: "That the factor depends on the test and the original unit together, and that the range converts with the result."
+      method: "A lookup table joined onto the data, a default of 1 for unmatched rows, and tolerance-based comparisons."
+      computation: "Two independent failure flags — result and range — asserted together."
+      numbers: "122 rescaled records out of 25,443 with a result; zero disagreements."
+      assumptions: "That values are stored rounded to the study's precision, which is why the tolerance is 0.05 rather than 0."
+      interpretation: "NEUT and PLAT are rescaled with a factor of 1 — the unit label changes and the number does not."
+      changes: "A factor of 1,000 on NEUT would leave the unit check passing and put 38 results three orders of magnitude out."
+
+  - id: sdtm.lb.factor-1000
+    format: hotspot
+    modes: [debug, qc, boss]
+    difficulty: advanced
+    skills: [sdtm.findings, qc.code-review, qc.data-cleaning]
+    lesson: sdtm-lb-domain
+    title: The conversion that produces a plausible wrong number
+    prompt: |
+      This conversion passes code review and produces a domain in which every value looks like a
+      laboratory value. One line makes 38 neutrophil counts wrong by three orders of magnitude.
+
+      Click the line responsible. (Line 1 is `conv <- tribble(`.)
+    language: r
+    code: |
+      conv <- tribble(
+        ~LBTESTCD, ~LBORRESU,  ~factor, ~LBSTRESU,
+        "BILI",    "mg/dL",     17.104, "umol/L",
+        "CREAT",   "mg/dL",     88.4,   "umol/L",
+        "HGB",     "g/dL",      10,     "g/L",
+        "NEUT",    "10^3/uL",   1000,   "10^9/L",
+        "PLAT",    "10^3/uL",   1,      "10^9/L"
+      )
+
+      lb <- raw_labs |>
+        mutate(LBTESTCD = unname(testcd[VENDOR_TEST_CODE]),
+               LBORRES  = RESULT,
+               LBORRESU = UNIT) |>
+        left_join(conv, by = c("LBTESTCD", "LBORRESU")) |>
+        mutate(
+          factor   = coalesce(factor, 1),
+          LBSTRESU = coalesce(LBSTRESU, LBORRESU),
+          LBSTRESN = as.numeric(LBORRES)  * factor,
+          LBSTNRLO = as.numeric(REF_LOW)  * factor,
+          LBSTNRHI = as.numeric(REF_HIGH) * factor
+        )
+    answerLines: [7]
+    lineNotes:
+      - line: 7
+        note: "`10^3/uL` and `10^9/L` are numerically identical. 2.06 x 10^3 cells per microlitre is 2.06 x 10^9 cells per litre — the unit changes and the number does not. The factor is 1, as it correctly is for `PLAT` on the next line."
+      - line: 4
+        note: "Correct: 88.4 is the mg/dL to umol/L factor for creatinine, which depends on creatinine's molar mass."
+      - line: 20
+        note: "Correct, and worth noticing: because the range is multiplied by the same wrong factor, `LBNRIND` still comes out NORMAL for these records. The defect hides from the one check most likely to run."
+    fixed: |
+      conv <- tribble(
+        ~LBTESTCD, ~LBORRESU,  ~factor, ~LBSTRESU,
+        "BILI",    "mg/dL",     17.104, "umol/L",
+        "CREAT",   "mg/dL",     88.4,   "umol/L",
+        "HGB",     "g/dL",      10,     "g/L",
+        # 10^3/uL and 10^9/L are numerically identical: the unit label changes,
+        # the number does not. Written out rather than left to fall through, so
+        # a later edit cannot quietly turn it into 1000.
+        "NEUT",    "10^3/uL",   1,      "10^9/L",
+        "PLAT",    "10^3/uL",   1,      "10^9/L"
+      )
+    hints:
+      - "Two rows of the table describe the same pair of units. Do they agree?"
+      - "What is 2.06 x 10^3 cells per microlitre, expressed as cells per litre?"
+    solution: |
+      **Line 7.** The factor for `10^3/uL` to `10^9/L` is **1**, not 1,000.
+
+      ```text
+      2.06 x 10^3 cells per uL  =  2.06 x 10^9 cells per L
+      ```
+
+      A microlitre is 10⁻⁶ litres, so "thousands per microlitre" and "billions per litre" are the same
+      scale. The number does not move; only the label does. The line below it, for `PLAT`, has it right —
+      which is the tell.
+
+      **Why this one is dangerous rather than merely wrong.**
+
+      1. **The result stays plausible.** A neutrophil count of 2,060 is absurd to a haematologist and
+         unremarkable to a program.
+      2. **`LBNRIND` still comes out `NORMAL`.** Line 20 multiplies the reference range by the same wrong
+         factor, so 2,060 is compared against 1,500 to 7,000 and lands inside it. The range check — the
+         thing most likely to catch a conversion error — is neutralised by the error itself.
+      3. **It is systematic.** All 38 local-laboratory neutrophil records in this study go wrong at once,
+         and in a study where the *central* laboratory reported in 10^3/uL it would be all 3,983.
+
+      **What actually catches it** is a plausibility check against a physiological interval for the test,
+      run after conversion and independently of the reference range:
+
+      ```r
+      plaus <- tribble(~LBTESTCD, ~lo, ~hi,
+                       "NEUT", 0.01, 50,
+                       "PLAT", 1,    2000,
+                       "HGB",  20,   250)
+      lb |>
+        inner_join(plaus, by = "LBTESTCD") |>
+        filter(LBSTRESN < lo | LBSTRESN > hi) |>
+        count(LBTESTCD, LBSTRESU)
+      ```
+
+      A conversion error puts a whole laboratory's worth of results three orders of magnitude outside
+      that interval at once, which is a signature no arithmetic care would have produced.
+    explanation:
+      objective: "Find a conversion factor that is wrong in a way the data does not show."
+      given: "A conversion table with two rows describing the same unit pair and disagreeing."
+      relevant: "That 10^3/uL and 10^9/L are the same scale, and that PLAT on the next line is correct."
+      method: "Compare the two rows that share an original unit; then ask what check would fire."
+      computation: "2.06 x 1000 = 2060 in a variable whose plausible range is roughly 0.5 to 15."
+      assumptions: "That the reference range is converted with the same factor — which is correct practice and is what hides this defect."
+      interpretation: "LBNRIND stays NORMAL, so the usual range check passes; only an absolute plausibility check fires."
+      changes: "If the central laboratory also reported in 10^3/uL, this would affect 3,983 records instead of 38."
+
+  - id: sdtm.lb.sex-range-chain
+    format: mcq
+    modes: [qc, boss]
+    difficulty: advanced
+    skills: [sdtm.findings, sdtm.dm, qc.discrepancy]
+    lesson: sdtm-lb-domain
+    title: A demographics bug that surfaces in a shift table
+    prompt: |
+      CBX417-301's raw `SEX` field arrived in nine spellings, including the numeric codes `1` (7 raw
+      rows) and `2` (4 raw rows). Suppose the mapping had been written the wrong way round, so those
+      **11 subjects** got the opposite sex in `DM`.
+
+      Four of the seven laboratory tests have sex-specific reference ranges:
+
+      | Test | F | M |
+      |---|---|---|
+      | `ALT` | 7-35 | 10-50 |
+      | `AST` | 13-35 | 15-40 |
+      | `CREAT` | 44-80 | 62-106 |
+      | `HGB` | 120-155 | 130-175 |
+
+      Which statement best describes what would happen?
+    choices:
+      - text: "No result value changes, no unit changes and no conformance check fires. `LBNRIND` comes out wrong on four tests for eleven subjects, and the first visible symptom is a shift table nobody can reconcile."
+        correct: true
+        feedback: "Correct. The reference range is the only thing that moves, and nothing in LB knows the sex it was chosen with."
+      - text: "A Pinnacle 21-style conformance check on `LBNRIND` would flag the affected records, because the indicator would no longer agree with the range."
+        feedback: "It would agree with the range perfectly — the wrong range was applied consistently. Conformance checks verify structure and terminology, not whether the right range was chosen."
+      - text: "`LBSTRESN` would be wrong for those subjects, because the standardization uses the reference range."
+        feedback: "Standardization is a unit conversion and has nothing to do with the reference range. The results themselves are untouched."
+      - text: "Only `HGB` would be affected in practice, because the other three ranges overlap enough that the indicator rarely changes."
+        feedback: "The `CREAT` ranges barely overlap at all — 44-80 against 62-106 — so creatinine would be the most affected, not the least."
+    hints:
+      - "Ask which variables change, and then ask which checks look at those variables."
+      - "Compare the two creatinine ranges. How much do they overlap?"
+    solution: |
+      **Nothing that is checked changes, and something that is not checked does.**
+
+      | Variable | Affected? |
+      |---|---|
+      | `LBORRES`, `LBORRESU` | No — the laboratory's report is untouched |
+      | `LBSTRESN`, `LBSTRESU` | No — standardization is a unit conversion |
+      | `LBSTNRLO`, `LBSTNRHI` | **Yes** — the wrong range was selected |
+      | `LBNRIND` | **Yes** — derived from the wrong range |
+      | `DM.SEX` | Wrong for 11 subjects, and self-consistently so |
+
+      **Why no check fires.** A conformance check asks whether `LBNRIND` is a valid `NRIND` term, whether
+      `LBSTNRLO` is numeric, whether the record has the required identifiers. All of those pass. There is
+      no check that can ask "was this the right range", because nothing in `LB` records which sex the
+      range was chosen for.
+
+      **Creatinine is where it bites hardest.** The female range is 44 to 80 µmol/L and the male range is
+      62 to 106. A male subject miscoded female is compared against a ceiling of 80 instead of 106, so
+      ordinary male creatinines start reporting `HIGH`. In the other direction a female miscoded male is
+      compared against a floor of 62 instead of 44, and ordinary female creatinines start reporting
+      `LOW`.
+
+      **The point is the chain, not the bug.** A demographics mapping decision — what to do with a `SEX`
+      field containing `1` and `2` — propagates through a reference range into a laboratory shift table
+      and a toxicity grade, in a study where 233 creatinine results are already flagged `LOW`. The only
+      defence is upstream: a non-extensible codelist like **SEX (C66731)** means every unmapped value is
+      a conformance error at the point it is created, which is the one place it is still cheap.
+    explanation:
+      objective: "Trace a demographics mapping error into a laboratory output."
+      given: "Eleven subjects with numerically coded sex and four tests with sex-specific ranges."
+      relevant: "That LBNRIND depends on DM.SEX through the range, and that nothing in LB records that dependency."
+      irrelevant: "The result values and units, which are unaffected."
+      method: "Ask which variables change, then ask which checks read those variables."
+      numbers: "11 subjects x 4 tests; CREAT ranges 44-80 (F) against 62-106 (M)."
+      assumptions: "That ranges are applied per sex from DM, which is how this study populates them."
+      interpretation: "The failure is silent by construction — the wrong range is applied consistently, so every consistency check passes."
+      changes: "In a study with no sex-specific ranges the same mapping error would be invisible in LB entirely and surface only in a demographics table."
+
+  - id: sdtm.lb.open-local-lab
+    format: open
+    modes: [interview, boss]
+    difficulty: advanced
+    skills: [sdtm.findings, qc.discrepancy, communication.documentation]
+    lesson: sdtm-lb-domain
+    title: What do you do with 130 local laboratory results?
+    prompt: |
+      An interviewer says: "Your study uses a central laboratory. 130 of your 25,450 laboratory records
+      came from three local laboratories at sites instead — different units, different reference ranges,
+      UK spelling on the test names. Walk me through what you do with them, in SDTM and then in the
+      analysis."
+    modelAnswer: |
+      "First, why they exist, because that decides everything else. A site needed a result the same day —
+      usually a neutrophil count or a haemoglobin before dosing, to decide whether to treat. They could
+      not wait for the central laboratory turnaround, so they ran it locally. That is genuine clinical
+      data collected under the protocol, and a subject's worst on-treatment value may well be one of
+      them.
+
+      **In SDTM, all 130 go in.** `LB` is a tabulation of what was collected, and dropping collected
+      results is not a mapping decision available to me. Three things have to be right about them:
+
+      **The test mapping keys on the vendor code, not the name.** The local set uses `L-HGB`,
+      `L-ANC`, `L-PLT` and so on, with names like `Haemoglobin` and `Alanine transaminase`. Fourteen
+      source codes across the two laboratories collapse to seven `LBTESTCD` values. Mapping on the name
+      would silently lose every local record, and silently is the problem — the lookup has to error on
+      an unmatched code rather than return blank.
+
+      **The units convert, and so does the reference range.** The local results arrive in mg/dL, g/dL and
+      10^3/uL; 122 of the 130 need rescaling. `LBSTNRLO` and `LBSTNRHI` get the same factor as
+      `LBSTRESN`, on adjacent lines. And the one that catches people: 10^3/uL to 10^9/L is a factor of
+      **1**, not 1,000.
+
+      **The reference range stays theirs.** This is the part I would push back on if someone asked me to
+      standardise it. A reference range is a statement about an assay, not about the analyte — two
+      laboratories with different instruments and different calibrators genuinely have different normal
+      intervals. One of these sites reports creatinine as 61.9 to 106.1 µmol/L where the central
+      laboratory says 62 to 106. Overwriting theirs with the central laboratory's would assert that their
+      results should be read against an interval their assay was never validated for.
+
+      **In the analysis it is a SAP decision, and it is not mine.** The common options are central
+      results only with local listed separately, central preferred with local filling gaps, or all
+      results pooled. Whichever one the SAP picks, `ADLB` implements it with a flag rather than by
+      excluding records, so the excluded ones are still visible and the decision is still auditable.
+      CBX417-301 keeps all 130 in `ADLB` and uses central records only for by-visit summaries, which its
+      ADRG lists as a known, intentional finding.
+
+      **What I would flag to the team without being asked:** 0.5% of the records and most of the
+      irregularity in the domain live in this set. When something looks odd in `LB` — an outlier, a
+      strange `LBNRIND`, a unit nobody recognises — `LBNAM` is the first column I look at. And I would
+      check whether any subject's baseline or worst on-treatment value is a local result, because that is
+      where the central-only rule changes an actual number rather than a listing."
+    rubric:
+      - "States that all collected results go into SDTM, and that exclusion is an analysis decision rather than a mapping one"
+      - "Explains why local results exist: a same-day result needed before dosing"
+      - "Keys the test mapping on the vendor code and requires the lookup to fail loudly on an unmatched code"
+      - "Converts the reference range with the same factor as the result"
+      - "Knows that 10^3/uL to 10^9/L is a factor of 1"
+      - "Refuses to overwrite a local laboratory's reference range, with the assay-versus-analyte reason"
+      - "Places the central-versus-local analysis choice in the SAP and implements it with a flag, not a deletion"
+      - "Raises the concrete risk: a baseline or worst on-treatment value that is a local result"
+    redFlags:
+      - "Dropping local results from LB because 'the SAP uses central only'"
+      - "Replacing local reference ranges with the central laboratory's to make the data uniform"
+      - "Mapping the local test names to LBTESTCD by string matching"
+      - "Applying a factor of 1,000 to 10^3/uL"
+      - "Treating the central-versus-local choice as a programming decision"
+    followUps:
+      - "A subject's only pre-dose haemoglobin is a local result. Does it become the baseline?"
+      - "A local laboratory sends a test code you have never seen. What happens in your program, and what should happen?"
+      - "How would you show a reviewer which records are local without adding a non-standard variable?"

@@ -1,0 +1,111 @@
+lab: cdisc
+modules:
+  - id: cdisc-adam-foundations
+    title: ADaM foundations
+    summary: What makes a dataset analysis-ready, what traceability means when a reviewer asks where a number came from, and the two structures - ADSL and BDS - that almost every analysis dataset uses.
+    level: 3
+    lessons:
+      - id: adam-purpose-and-principles
+        title: What ADaM is for - the analysis-ready principle
+        summary: Why a second set of datasets exists, the four ADaM fundamental principles, the three standard structures (ADSL, BDS, OCCDS), and the test a dataset must pass to be called analysis-ready.
+        minutes: 50
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [adam.purpose, adam.specs, regulatory.data-standards]
+        prerequisites: [sdtm-why-standards]
+        keywords: [ADaM, ADaMIG, analysis-ready, one PROC away, ADSL, BDS, OCCDS, ADAE, fundamental principles, analysis dataset, derived variable]
+      - id: adam-traceability
+        title: Traceability - what it means when someone asks "where did this number come from?"
+        summary: Metadata traceability versus data-point traceability, SRCDOM/SRCVAR/SRCSEQ, DTYPE for derived records, and how to walk a single table cell back to the CRF page it was collected on.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [adam.traceability, adam.specs, regulatory.define]
+        prerequisites: [adam-purpose-and-principles]
+        keywords: [traceability, SRCDOM, SRCVAR, SRCSEQ, DTYPE, predecessor, derived record, ADRG, define.xml, data point traceability, metadata traceability]
+      - id: adam-adsl
+        title: ADSL - the subject-level dataset and its population flags
+        summary: "One row per subject: treatment variables (TRT01P versus TRT01A), treatment dates, disposition, baseline covariates, and the population flags that decide every denominator in the study."
+        minutes: 60
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [adam.adsl, trials.populations, adam.traceability]
+        prerequisites: [adam-purpose-and-principles, trials-analysis-populations]
+        keywords: [ADSL, TRT01P, TRT01A, TRT01PN, TRT01AN, TRTSDT, TRTEDT, TRTDURD, ITTFL, SAFFL, EFFFL, PPROTFL, RANDFL, DCUTDT, EOTSTT, DCTREAS, population flag, denominator]
+      - id: adam-bds-structure
+        title: The Basic Data Structure - PARAM, PARAMCD, AVAL and AVISIT
+        summary: Why BDS stacks every measurement into one long dataset, the rules PARAM and PARAMCD must obey, AVAL versus AVALC, AVISIT versus VISIT, and how a derived parameter is added without touching SDTM.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [adam.bds, adam.purpose, adam.windows]
+        prerequisites: [adam-adsl, sdtm-lb-domain]
+        keywords: [BDS, PARAM, PARAMCD, PARAMN, PARCAT1, AVAL, AVALC, AVISIT, AVISITN, ADT, ADY, long format, derived parameter, analysis parameter, unit in PARAM]
+      - id: adam-baseline
+        title: Baseline - ABLFL, BASE, and how --LOBXFL differs
+        summary: "Turning a written baseline rule into code: which records qualify, how ties are broken, why exactly one ABLFL per subject and parameter, and why the SDTM flag --LOBXFL is a different thing with a different owner."
+        minutes: 55
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [adam.baseline, adam.bds, qc.discrepancy]
+        prerequisites: [adam-bds-structure, sdtm-lb-domain]
+        keywords: [ABLFL, BASE, BASEC, BNRIND, BTOXGR, --LOBXFL, LBLOBXFL, baseline definition, last non-missing pre-dose, never-treated subject, tie-breaker, DTYPE]
+  - id: cdisc-adam-analysis
+    title: ADaM for analysis
+    summary: The analysis datasets that feed the tables - change from baseline, record selection flags, the safety occurrence dataset, time-to-event data with its censoring rules, oncology response - and the reviewer guide that explains them all.
+    level: 4
+    lessons:
+      - id: adam-change-from-baseline
+        title: Change from baseline - CHG, PCHG and the rows they belong on
+        summary: The two derivations every BDS dataset needs, why CHG is missing on the baseline record in some conventions and zero in others, the percent-change denominator trap, and what a mean change actually summarizes.
+        minutes: 50
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [adam.baseline, adam.bds, tlf.summary-stats]
+        prerequisites: [adam-baseline]
+        keywords: [CHG, PCHG, BASE, change from baseline, percent change, denominator, completer bias, shift table, ANRIND, BNRIND, missing baseline]
+      - id: adam-analysis-flags
+        title: Analysis flags - ANL01FL and choosing one record per cell
+        summary: Why a summary table needs exactly one record per subject, parameter and visit; how ANL01FL encodes that choice; analysis visit windowing; and the difference between a population flag, a record flag and a criterion flag.
+        minutes: 50
+        difficulty: advanced
+        tracks: [programmer, biostatistician]
+        skills: [adam.windows, adam.bds, qc.discrepancy]
+        prerequisites: [adam-change-from-baseline]
+        keywords: [ANL01FL, ANLzzFL, analysis flag, record-level flag, AVISIT windowing, unscheduled visit, duplicate records, CRITy, CRITyFL, ONTRTFL, population flag]
+      - id: adam-adae
+        title: ADAE and the safety analysis
+        summary: "The occurrence data structure: TRTEMFL and the treatment-emergent window, partial-date imputation with ASTDTF, first-occurrence flags, and why an AE table counts subjects rather than events."
+        minutes: 60
+        difficulty: advanced
+        tracks: [programmer, biostatistician]
+        skills: [adam.occds, trials.safety, tlf.denominators]
+        prerequisites: [adam-adsl, sdtm-ae-domain]
+        keywords: [ADAE, OCCDS, TRTEMFL, treatment-emergent, ASTDT, ASTDTF, AENDT, ATOXGR, AREL, AOCCFL, AOCCSFL, AOCCPFL, first occurrence, safety population, denominator]
+      - id: adam-adtte
+        title: ADTTE - time to event, CNSR and the censoring rules
+        summary: "One row per subject and parameter: STARTDT, ADT, AVAL in days, the CNSR convention (0 = event), EVNTDESC and CNSDTDSC, and how the SAP censoring table becomes a chain of IF statements you can defend."
+        minutes: 65
+        difficulty: advanced
+        tracks: [programmer, biostatistician]
+        skills: [adam.adtte, stats.survival, trials.endpoints]
+        prerequisites: [adam-bds-structure, adam-adsl]
+        keywords: [ADTTE, CNSR, EVNTDESC, CNSDTDSC, STARTDT, ADT, AVAL, PFS, OS, DOR, censoring, informative censoring, time-to-event, Surv, PROC LIFETEST]
+      - id: adam-oncology-adrs-adtr
+        title: ADRS and ADTR - oncology response as analysis data
+        summary: Turning per-visit RECIST assessments into best overall response and confirmed best overall response, the AVALC/AVAL pairing for ordered categories, derived records with DTYPE, and the tumor-size parameters behind a waterfall plot.
+        minutes: 55
+        difficulty: advanced
+        tracks: [programmer, biostatistician]
+        skills: [adam.bds, trials.oncology, adam.traceability]
+        prerequisites: [adam-analysis-flags, sdtm-oncology-rs-tr]
+        keywords: [ADRS, ADTR, OVRLRESP, BOR, CBOR, best overall response, confirmed response, AVALC, AVAL, SUMDIAM, BPCHG, waterfall plot, ORR, DTYPE]
+      - id: adam-adrg
+        title: The ADRG - explaining your analysis data to a stranger
+        summary: What belongs in an Analysis Data Reviewer's Guide, how it differs from Define-XML and the SAP, the conformance findings you must explain rather than fix, and how writing one exposes weaknesses in your own derivations.
+        minutes: 45
+        difficulty: advanced
+        tracks: [programmer, biostatistician]
+        skills: [regulatory.define, adam.specs, communication.documentation]
+        prerequisites: [adam-adtte, adam-traceability]
+        keywords: [ADRG, Analysis Data Reviewer's Guide, cSDRG, Define-XML, conformance, Pinnacle 21, data issue, core variables, submission package, reviewer]

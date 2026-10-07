@@ -1,0 +1,731 @@
+items:
+  - id: sdtm.ex.interval-model
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sdtm.interventions]
+    lesson: sdtm-ex-exposure
+    title: When does an EX record end?
+    prompt: |
+      Subject `CBX417-301-1001-0002` takes CBX-417 200 mg once daily for 153 days, with one four-day
+      interruption for diarrhoea and no dose change.
+
+      How many `EX` records does the oral drug generate, and why?
+    choices:
+      - text: "Several — one per constant-dosing interval. Dosing stopped and resumed, which ends one record and starts another; the study cycle boundaries split it further."
+        correct: true
+        feedback: "Correct. This subject has nine oral records. A record ends when something changes: the dose, the frequency, the route, or dosing itself stopping."
+      - text: "One, because the dose never changed."
+        feedback: "The interruption alone ends a record — the gap has to be visible, and a single record spanning it would assert dosing on days the subject took nothing."
+      - text: "153, one per daily administration."
+        feedback: "Nobody observes each tablet. The site records intervals, which is also what the CRF is designed to capture. A two-year subject would otherwise generate 730 identical records."
+      - text: "Two — one before the interruption and one after."
+        feedback: "Closer, but this subject has nine. The cycle structure splits the intervals further, which is visible as the 21-day rhythm in the dates."
+    hints:
+      - "What has to be constant within one record?"
+      - "What does a gap between two records mean?"
+    explanation:
+      objective: "State the EX record boundary rule."
+      relevant: "That dose, frequency, route and continuity must all be constant within a record."
+      interpretation: "The gaps between records carry the interruption information; a single spanning record would erase it."
+      changes: "A dose reduction would add another boundary, which is why CBX-417 in this study takes three distinct EXDOSE values."
+
+  - id: sdtm.ex.refid-null
+    format: mcq
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [sdtm.interventions, sdtm.identifiers, trials.blinding]
+    lesson: sdtm-ex-exposure
+    title: Why docetaxel has no EXREFID
+    prompt: |
+      In CBX417-301's `EX` domain, `EXREFID` is populated on all **4,138** CBX-417 and placebo records
+      and null on all **2,932** docetaxel records.
+
+      Why?
+    choices:
+      - text: "CBX-417 and placebo are blinded and dispensed as numbered kits; docetaxel is open-label supply from site stock with no kit to identify."
+        correct: true
+        feedback: "Correct — and the kit number is not incidental. It is the only link between a blinded subject and what they actually received, which is why DM.ACTARM is derived from it."
+      - text: "`EXREFID` is only permitted on oral formulations."
+        feedback: "--REFID is an identifier from an external system; nothing restricts it by formulation. LB uses it for laboratory accession numbers."
+      - text: "The docetaxel kit numbers were not collected and should be queried."
+        feedback: "There are none to collect. Open-label supply is drawn from site stock and is not kit-numbered."
+      - text: "`EXREFID` would unblind the docetaxel records."
+        feedback: "Docetaxel is already open-label — every subject receives it. There is nothing to unblind."
+    hints:
+      - "Which of the two agents is blinded?"
+      - "What does DM.ACTARM get derived from in a double-blind study?"
+    solution: |
+      **Only the blinded agent needs a kit number.**
+
+      CBX-417 and placebo are indistinguishable tablets dispensed as numbered kits by the IxRS. The site
+      records the kit number; the kit list — which the site cannot see — says what was in it. That
+      indirection is the blind.
+
+      ```text
+      EX.EXREFID = 850669      ->  kit_list: "CBX-417 50 mg tablets"  ->  EXTRT = "CBX-417"
+      ```
+
+      3,936 distinct kit numbers across 4,138 records. Docetaxel is open-label — every subject in both
+      arms receives it — so there is no blind to maintain and no kit to number.
+
+      **Why this matters beyond EX.** `DM.ACTARM` is derived from exactly this chain, which is why:
+
+      - one subject's `ACTARM` differs from their `ARM` (randomized to CBX-417, received placebo);
+      - two subjects have a null `ACTARM` with `ARMNRS = "UNPLANNED TREATMENT"`, having received a
+        mixture that matches no planned arm.
+
+      **And why the collected drug-name field is useless.** `DRUG_NAME_ENTERED` in the raw file has six
+      spellings — `CBX-417/Placebo`, `Study drug`, `CBX417/PBO`, and the misspelling `CBX-471` — because
+      the coordinator is describing a blinded bottle. `EXTRT` cannot come from it.
+    explanation:
+      objective: "Explain a systematically null identifier."
+      relevant: "That one agent is blinded and one is not."
+      irrelevant: "The formulation difference, which is coincidental here."
+      method: "Ask what --REFID is for: identity in an external system."
+      interpretation: "The kit number is the study's only unblinded link, and it drives ACTARM as well as EXTRT."
+
+  - id: sdtm.ex.rfxstdtc-source
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [sdtm.interventions, sdtm.dm, sdtm.dates]
+    lesson: sdtm-ex-exposure
+    title: Which EX records feed RFXSTDTC?
+    prompt: |
+      A programmer derives the reference dates:
+
+      ```r
+      first_dose <- ex |>
+        filter(EXTRT != "DOCETAXEL") |>
+        group_by(USUBJID) |>
+        summarise(RFXSTDTC = min(EXSTDTC))
+      ```
+
+      What is wrong with it?
+    choices:
+      - text: "`RFXSTDTC` is the first dose of **any** study treatment. Filtering out docetaxel produces a wrong anchor for any subject whose agents started on different days."
+        correct: true
+        feedback: "Correct, and the consequence is disproportionate: RFXSTDTC feeds RFSTDTC, which anchors every --DY in every domain for that subject."
+      - text: "`min()` on a character datetime does not sort correctly."
+        feedback: "ISO 8601 was designed so that lexical order matches chronological order. min() on the character values is correct."
+      - text: "It should use `EXENDTC` rather than `EXSTDTC`."
+        feedback: "RFXSTDTC is the first dose, so EXSTDTC is right. RFXENDTC uses max(EXENDTC)."
+      - text: "Nothing — docetaxel is background therapy, not study treatment."
+        feedback: "Docetaxel is part of both planned arms and appears in TA and TS as a study treatment. It is study treatment by the protocol's own definition."
+    hints:
+      - "Read the variable's definition: first dose of *what*?"
+      - "What happens downstream if this value is one day late?"
+    solution: |
+      **`RFXSTDTC` is the datetime of the first dose of any study treatment.** Both agents count.
+
+      In this study the two are almost always the same day — the oral drug and the first infusion are
+      given together at Cycle 1 Day 1, and all 416 treated subjects have exactly two `EX` records at
+      `EXSTDY = 1`. But "almost always" is the problem: a subject whose infusion was deferred would have
+      a first dose of one agent and not the other, and the filtered derivation would pick the later one.
+
+      **The blast radius is the whole study for that subject.** `RFXSTDTC` feeds `DM.RFSTDTC`, and
+      `RFSTDTC` anchors `AESTDY`, `LBDY`, `VSDY`, `EGDY`, `EXSTDY`, `DSSTDY` — every study day they have.
+      A one-day shift moves all of them, and nothing errors.
+
+      The correct derivation, with the check that proves it:
+
+      ```r
+      first_dose <- ex |>
+        group_by(USUBJID) |>
+        summarise(RFXSTDTC = min(EXSTDTC),
+                  RFXENDTC = substr(max(EXENDTC), 1, 10))
+
+      # verify against the delivered DM
+      stopifnot(all(dm$RFXSTDTC == first_dose$RFXSTDTC, na.rm = TRUE))
+      ```
+
+      On the delivered data this holds for all 416 treated subjects, to the minute.
+    explanation:
+      objective: "Find a filter that silently narrows a derivation."
+      given: "A derivation restricted to the investigational product."
+      relevant: "That RFXSTDTC is defined over all study treatment."
+      irrelevant: "The sort behaviour of character dates, which is correct for ISO 8601."
+      method: "Read the variable definition, then ask which subjects the filter changes."
+      assumptions: "That both agents are study treatment, which TA and TS confirm."
+      interpretation: "The error is invisible in EX and appears as shifted study days in every other domain."
+      changes: "In a study where the comparator is background therapy rather than study treatment, the filter might be correct — and would then need documenting."
+
+  - id: sdtm.ex.ec-vs-ex
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [sdtm.interventions]
+    lesson: sdtm-ex-exposure
+    title: When you need EC as well as EX
+    prompt: |
+      A new study collects oral study drug as tablet counts:
+
+      ```text
+      Tablets dispensed at visit:  30
+      Tablets returned at next visit: 4
+      ```
+
+      CBX417-301 collects the dose taken directly and has no `EC` domain.
+
+      What does the new study need?
+    choices:
+      - text: "Both: `EC` holds the dispensed and returned counts as collected, and `EX` holds the exposure derived from them, with the derivation documented."
+        correct: true
+        feedback: "Correct. EC exists exactly for the case where the CRF captures something other than the amount administered."
+      - text: "Only `EX`, with the derived exposure — the counts are intermediate working."
+        feedback: "That discards the collected data and makes the derivation unverifiable. A reviewer cannot check 30 minus 4 against a number that is not there."
+      - text: "Only `EC`, since that is what was collected and SDTM stores collected data."
+        feedback: "Every downstream consumer expects exposure in EX. Submitting only EC would leave standard tools with no exposure domain."
+      - text: "`EX` with the tablet counts in `SUPPEX`."
+        feedback: "Workable-looking, but EC is the published domain for this. SUPPQUAL is for qualifiers with no standard home, and this one has a home."
+    hints:
+      - "Is a returned tablet count an administration?"
+      - "What would a reviewer need in order to check the derived exposure?"
+    solution: |
+      **`EC` holds exposure as collected; `EX` holds exposure as administered, derived from it.**
+
+      | | `EC` | `EX` |
+      |---|---|---|
+      | Content | 30 dispensed, 4 returned | 26 tablets over the interval |
+      | Origin | Collected | Derived |
+      | Who reads it | a reviewer checking the derivation | every exposure analysis |
+
+      **CBX417-301 legitimately has no `EC`** because its CRF records the dose taken directly —
+      `DOSE_MG` with start and end dates — so there is nothing collected that differs from what was
+      administered. Adding an empty `EC` would be noise.
+
+      **The general test:** does the CRF capture the administration, or does it capture something you
+      have to compute an administration from? Dispensed-and-returned counts, an infusion bag with a
+      discarded volume, a planned dose that was partially given — all of them need `EC`.
+
+      The derivation itself is where the real work is, and it is a specification decision. If a subject
+      returns 4 tablets from 30 over 21 days, were the missed doses at the start, the end, or spread
+      out? `EX` needs start and end dates for a constant-dose interval, and the tablet count alone does
+      not supply them.
+    explanation:
+      objective: "Decide whether a study needs EC in addition to EX."
+      relevant: "Whether the CRF captures the administration or an input to it."
+      method: "Ask what a reviewer would need in order to check the exposure figure."
+      interpretation: "The derivation from counts to intervals is underdetermined, which is precisely why the collected values have to be submitted."
+      interviewer: "That you know EC exists and can state the condition that triggers it, rather than treating EX as the only exposure domain."
+
+  - id: sdtm.ex.cumulative-dose
+    format: numeric
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sdtm.interventions, sdtm.dates]
+    lesson: sdtm-ex-exposure
+    title: Cumulative dose from intervals
+    prompt: |
+      Subject `CBX417-301-1001-0002`, oral records only:
+
+      | `EXSTDTC` | `EXENDTC` | `EXDOSE` |
+      |---|---|---:|
+      | 2022-07-08 | 2022-07-12 | 200 |
+      | 2022-07-17 | 2022-07-28 | 200 |
+      | 2022-07-29 | 2022-08-18 | 200 |
+      | 2022-08-19 | 2022-09-08 | 200 |
+      | 2022-09-09 | 2022-09-29 | 200 |
+      | 2022-09-30 | 2022-10-20 | 200 |
+      | 2022-10-21 | 2022-11-10 | 200 |
+      | 2022-11-11 | 2022-12-01 | 200 |
+      | 2022-12-02 | 2022-12-11 | 200 |
+
+      What is the total dose in mg?
+    answer: 30600
+    tolerance: 0
+    unit: mg
+    datasets: [oncology/sdtm/ex]
+    hints:
+      - "Interval length is end minus start **plus one** — 8 July to 12 July is five days."
+      - "Sum the days first, then multiply by the constant 200."
+    solution: |
+      **30,600 mg.**
+
+      ```text
+      5 + 12 + 21 + 21 + 21 + 21 + 21 + 21 + 10 = 153 dosing days
+      153 x 200 mg = 30,600 mg
+      ```
+
+      **Two ways to get it wrong, and both are common.**
+
+      **Forget the `+1`.** Every interval loses a day; here that is 9 days and 1,800 mg. Same arithmetic
+      as `--DY`: an interval from the 8th to the 12th is five days, not four.
+
+      **Use calendar time.** From 2022-07-08 to 2022-12-11 is **157** days. The four-day gap between
+      12 July and 17 July — the interruption for diarrhoea, recorded in `EXADJ` as *"Resumed after
+      interruption for diarrhea"* — is the difference. Multiplying 157 by 200 credits the subject with
+      800 mg they did not take.
+
+      **The check that finds every affected subject:**
+
+      ```r
+      ex |>
+        filter(EXTRT != "DOCETAXEL") |>
+        group_by(USUBJID) |>
+        summarise(dosing  = sum(as.integer(as.Date(EXENDTC) - as.Date(substr(EXSTDTC, 1, 10))) + 1),
+                  elapsed = as.integer(max(as.Date(EXENDTC)) - min(as.Date(substr(EXSTDTC, 1, 10)))) + 1) |>
+        filter(dosing != elapsed)
+      ```
+
+      It returns **220 of the 416** treated subjects — the ones with interruptions. 230 oral `EX` records
+      in this study carry an `EXADJ` recording a resumption.
+    explanation:
+      objective: "Compute cumulative exposure from constant-dose intervals."
+      given: "Nine intervals at a constant dose."
+      relevant: "The interval lengths, computed inclusively."
+      irrelevant: "Elapsed calendar time, which is the trap."
+      calculating: "Sum of (end - start + 1) x dose."
+      numbers: "153 dosing days at 200 mg = 30,600 mg; calendar time would give 157 days and 31,400 mg."
+      assumptions: "That the dose is constant within each interval, which is what the domain guarantees."
+      interpretation: "The four-day discrepancy is the interruption, and EXADJ names its cause."
+      changes: "A subject with a dose reduction would need the sum rather than a single multiplication."
+
+  - id: sdtm.ex.gap-days
+    format: numeric
+    modes: [guided, debug]
+    difficulty: foundation
+    skills: [sdtm.interventions, sdtm.dates]
+    lesson: sdtm-ex-exposure
+    title: How long was the interruption?
+    prompt: |
+      Consecutive oral `EX` records for one subject:
+
+      ```text
+      EXSEQ = 1   EXSTDTC = 2022-07-08   EXENDTC = 2022-07-12
+      EXSEQ = 3   EXSTDTC = 2022-07-17   EXENDTC = 2022-07-28
+      ```
+
+      On how many days did the subject take no study drug?
+    answer: 4
+    tolerance: 0
+    unit: days
+    datasets: [oncology/sdtm/ex]
+    hints:
+      - "The last dosed day is 12 July and the next is 17 July. Which days are in between?"
+    solution: |
+      **4** — the 13th, 14th, 15th and 16th of July.
+
+      ```text
+      2022-07-17 − 2022-07-12 = 5 days apart
+      gap days = 5 − 1 = 4
+      ```
+
+      The arithmetic differs from interval length, and the difference is worth being deliberate about:
+
+      | | Formula | Example |
+      |---|---|---|
+      | Interval **length** | end − start + 1 | 8 to 12 July = **5** days |
+      | **Gap** between intervals | next start − previous end − 1 | 12 to 17 July = **4** days |
+
+      Both come from the same "no day 0" logic and they adjust in opposite directions, which is why doing
+      them from memory produces off-by-one errors in both.
+
+      The gap is corroborated in two other domains: `EXADJ` on the resuming record says *"Resumed after
+      interruption for diarrhea"*, and the subject's `AESEQ = 1` is a grade 2 diarrhoea running from study
+      day 6 to 18 with `AEACN = "DRUG INTERRUPTED"`.
+    explanation:
+      objective: "Compute a dosing gap between consecutive intervals."
+      given: "Two consecutive EX records with a discontinuity."
+      calculating: "next start minus previous end minus one."
+      numbers: "17 July minus 12 July is 5; minus 1 gives 4 undosed days."
+      interpretation: "Interval length adds one and gap length subtracts one, from the same underlying logic."
+      changes: "A gap of zero — consecutive intervals with no undosed day — means the record split for a dose change rather than an interruption."
+
+  - id: sdtm.ex.dose-reduction-map
+    format: mapping
+    modes: [guided]
+    difficulty: intermediate
+    skills: [sdtm.interventions, sdtm.mapping]
+    lesson: sdtm-ex-exposure
+    title: Where does each EX variable come from?
+    prompt: |
+      For each `EX` variable in CBX417-301's oral records, name its origin.
+    sourceLabel: Variable
+    targetLabel: Origin
+    targets: [Collected, Derived, Protocol]
+    pairs:
+      - source: "`EXDOSE` — 200, 150 or 100"
+        target: Collected
+        note: "DOSE_MG from the dosing page."
+      - source: "`EXTRT` — CBX-417 or PLACEBO"
+        target: Derived
+        note: "From EXREFID joined to the IxRS kit list. The collected drug-name field is unusable in a blinded study."
+      - source: "`EXDOSU` — mg"
+        target: Protocol
+        note: "An assigned constant. There is no CRF field for it, which the aCRF annotation reflects."
+      - source: "`EXROUTE` — ORAL"
+        target: Protocol
+        note: "Also a constant. Codelist ROUTE (C66729)."
+      - source: "`EXREFID` — the kit number"
+        target: Collected
+        note: "KIT_NUMBER from the dosing page. 3,936 distinct values, and four that are not in the kit list."
+      - source: "`EXSTDY` — study day of the interval start"
+        target: Derived
+        note: "Against DM.RFSTDTC, with the two-branch formula. 832 records have EXSTDY = 1 — two per treated subject."
+      - source: "`EXADJ` — 'Resumed after interruption for diarrhea'"
+        target: Collected
+        note: "DOSE_CHANGE_REASON. 500 records across the domain carry one."
+      - source: "`EPOCH` — TREATMENT"
+        target: Derived
+        note: "From the date against RFXSTDTC and RFXENDTC, via the subject elements in SE."
+    hints:
+      - "Two of these have no CRF field at all — they are constants from the protocol."
+      - "One is collected as a number and used to look up something else."
+    solution: |
+      Three origins, and the distinction is what define.xml records for every variable:
+
+      **Collected** — there is a field on the CRF and a page number to annotate.
+      **Derived** — computed from other data, with the rule stated.
+      **Protocol** — an assigned constant with no CRF field.
+
+      **The `EXTRT` entry is the one that catches people.** It looks collected — there is a drug-name
+      field on the page — and it is derived, because in a blinded study the collected field records the
+      bottle rather than its contents. Six spellings across the raw file, including the misspelling
+      `CBX-471`, none of them used.
+
+      **The `Protocol` entries matter for the aCRF.** `EXDOSU`, `EXROUTE`, `EXDOSFRM` and `EXDOSFRQ` are
+      constants, and the annotated CRF marks them as assigned rather than pointing at a field. A reviewer
+      looking for where `EXROUTE` came from needs to be told "the protocol says oral", not left searching
+      the page for it.
+    explanation:
+      objective: "Assign an origin to each variable, as define.xml requires."
+      method: "Ask whether there is a CRF field, a derivation rule, or a protocol constant behind it."
+      relevant: "That EXTRT is derived despite a drug-name field existing."
+      interpretation: "Origin is what a reviewer reads first when checking whether a value is traceable."
+
+  - id: sdtm.ex.exposure-code
+    format: code
+    modes: [independent, qc]
+    difficulty: advanced
+    skills: [sdtm.interventions, qc.data-cleaning, r.dplyr]
+    lesson: sdtm-ex-exposure
+    title: Dosing days versus calendar days
+    language: r
+    prompt: |
+      Write R that, for the oral study drug only (`EXTRT` is not `DOCETAXEL`), computes per subject:
+
+      - **dosing days** — the sum of interval lengths, end minus start **plus one**;
+      - **calendar days** — last end date minus first start date plus one;
+      - **cumulative dose** in mg.
+
+      Then print how many subjects have dosing days different from calendar days, and the first few of
+      them with the difference.
+
+      Remember that `EXSTDTC` may carry a time.
+    starter: |
+      library(readr); library(dplyr)
+
+      ex <- read_csv("data/oncology/sdtm/ex.csv", show_col_types = FALSE,
+                     col_types = cols(.default = col_character()))
+      # ...
+    datasets: [oncology/sdtm/ex]
+    checks:
+      - pattern: "substr\\(EXSTDTC"
+        message: "Strip the time from EXSTDTC before converting to a date."
+      - pattern: "\\+\\s*1"
+        message: "Interval length is end minus start plus one."
+      - pattern: "EXTRT\\s*!=\\s*[\"']DOCETAXEL"
+        message: "Restrict to the oral study drug."
+      - pattern: "group_by\\(USUBJID\\)"
+        message: "Summarise per subject."
+      - pattern: "as\\.numeric\\(EXDOSE\\)|as\\.integer\\(EXDOSE\\)"
+        message: "EXDOSE is read as character here; convert it before multiplying."
+      - pattern: "cat\\(|print\\("
+        message: "Print the count of affected subjects."
+    reference: |
+      library(readr); library(dplyr)
+
+      ex <- read_csv("data/oncology/sdtm/ex.csv", show_col_types = FALSE,
+                     col_types = cols(.default = col_character()))
+
+      oral <- ex |>
+        filter(EXTRT != "DOCETAXEL") |>
+        mutate(st   = as.Date(substr(EXSTDTC, 1, 10)),
+               en   = as.Date(substr(EXENDTC, 1, 10)),
+               days = as.integer(en - st) + 1,
+               mg   = as.numeric(EXDOSE) * days)
+
+      per_subject <- oral |>
+        group_by(USUBJID) |>
+        summarise(dosing_days   = sum(days),
+                  calendar_days = as.integer(max(en) - min(st)) + 1,
+                  total_mg      = sum(mg),
+                  .groups = "drop") |>
+        mutate(gap = calendar_days - dosing_days)
+
+      cat("subjects with a dosing gap:", sum(per_subject$gap > 0), "of", nrow(per_subject), "\n")
+      print(head(per_subject |> filter(gap > 0) |> arrange(desc(gap)), 5))
+    expectedOutput: |
+      subjects with a dosing gap: 220 of 416
+      # A tibble: 5 x 5
+        USUBJID              dosing_days calendar_days total_mg   gap
+        <chr>                      <dbl>         <dbl>    <dbl> <dbl>
+      1 CBX417-301-1032-0005         341           398    51550    57
+      2 CBX417-301-1022-0003          37            86     5900    49
+      3 CBX417-301-1022-0004         688           735   104550    47
+      4 CBX417-301-1032-0012         487           530    97400    43
+      5 CBX417-301-1035-0011         547           589   109400    42
+    solution: |
+      **220 of 416 subjects — 53% — have at least one dosing gap.** Using calendar time would overstate
+      exposure for more than half the safety population.
+
+      Three details that decide whether this program is right:
+
+      **`substr(EXSTDTC, 1, 10)`.** 416 oral records carry a time (the first dose of each subject) and
+      3,722 do not. `as.Date()` on the sixteen-character value happens to work in R; relying on that is
+      the accident this avoids.
+
+      **`+ 1` on the interval length.** Nine intervals for one subject means nine lost days without it.
+      The same arithmetic as `--DY`, applied per interval rather than once.
+
+      **`as.numeric(EXDOSE)`.** Reading everything as character is the safe default for SDTM — it
+      preserves leading zeros, partial dates and `IDVARVAL` — but it means every numeric operation needs
+      an explicit conversion. `"200" * 21` is an error, not a silent 4,200.
+
+      **What the gaps mean.** A gap is an interruption, and `EXADJ` on the resuming record names its
+      cause — 230 oral records in this study carry a resumption reason, most commonly diarrhoea (37) and
+      fatigue (19). The largest single subject's total gap is 57 days, which is more than two full cycles.
+
+      **What a gap might also mean:** a missing dosing record. This check does not distinguish the two,
+      and that is the right behaviour — it produces the list, and `EXADJ` is what tells you which is
+      which. A gap with no `EXADJ` on the following record is worth a query.
+    explanation:
+      objective: "Quantify how often exposure from calendar time would be wrong."
+      given: "The EX domain with intervals and gaps."
+      method: "Compute both quantities per subject and compare."
+      computation: "Interval length as end - start + 1 summed per subject, against max(end) - min(start) + 1."
+      numbers: "220 of 416 subjects have a gap; the largest subject total is 57 days."
+      assumptions: "That EXENDTC is populated on every oral record, which it is here."
+      interpretation: "A gap is an interruption or a missing record, and EXADJ distinguishes them."
+      changes: "Including docetaxel would make every subject appear to have gaps, since infusions are three weeks apart by design."
+
+  - id: sdtm.ex.missing-pages
+    format: open
+    modes: [interview, qc, boss]
+    difficulty: advanced
+    skills: [sdtm.interventions, qc.data-cleaning, qc.mindset]
+    lesson: sdtm-ex-exposure
+    title: A randomized subject with no exposure records
+    prompt: |
+      While building `EX` you notice that subject `CBX417-301-1009-0002` is randomized in `DM` with
+      `ARMCD = "PBO+DOC"` and has **no records at all** in either raw dosing file.
+
+      The study also has four subjects who were randomized and genuinely never treated
+      (`ARMNRS = "ASSIGNED, NOT TREATED"`).
+
+      How do you tell which situation this is, and what do you do?
+    modelAnswer: |
+      **The two situations look identical in `EX` and completely different everywhere else**, so the
+      answer comes from outside the domain.
+
+      A genuinely never-treated subject was randomized and then something stopped them before the first
+      dose — they withdrew, deteriorated, failed a final eligibility check. Their footprint is: a `DM`
+      record, a randomization date, a `DS` disposition record, and **essentially nothing after
+      randomization**. No post-baseline laboratory results, no on-treatment adverse events, no visits
+      beyond the first.
+
+      A subject with missing dosing pages has the opposite footprint: the rest of the study says they
+      were treated.
+
+      **So the checks I would run, in order:**
+
+      1. **`LB`** — are there post-baseline results? Cycle 2, Cycle 4 laboratory draws only happen if the
+         subject came back for treatment.
+      2. **`AE`** — are there adverse events with a positive study day?
+      3. **`SV`** — are there visits after Cycle 1 Day 1?
+      4. **`DS`** — what does the treatment disposition record say? A never-treated subject typically has
+         `DSDECOD = "RANDOMIZED BY MISTAKE WITHOUT STUDY TREATMENT"` or similar; this study has exactly
+         one such record.
+
+      For this subject, the study's own answer key records the outcome: *"dosing pages not entered before
+      the data transfer (labs, AEs and visits show the subject was treated). Site entered the pages; SDTM
+      EX built from the resolved data."* That is the evidence chain I would have reconstructed, and the
+      resolution is a **query to the site**, not a programming decision.
+
+      **What that produces is unusual and worth understanding.** After resolution, `EX` has **more**
+      records than the raw export: 4,138 oral records against 4,131 raw, and 2,932 docetaxel against
+      2,926. All 13 extra records belong to this one subject, and the lineage file marks them
+      *"Record not in raw export (pages entered after transfer)"*. A programmer diffing raw against SDTM
+      and expecting SDTM to be a subset would flag this as a defect.
+
+      **The check I would institutionalise** rather than doing once:
+
+      ```r
+      # every randomized subject either has EX records or is flagged as never treated
+      randomized <- dm |> filter(!is.na(ARMCD))
+      stopifnot(all(randomized$USUBJID %in% ex$USUBJID |
+                    randomized$ARMNRS == "ASSIGNED, NOT TREATED"))
+      ```
+
+      On the resolved data this passes for all 420 randomized subjects. Before resolution it would have
+      failed on exactly one, which is what you want a check to do.
+
+      **And the reverse gap exists too.** Two subjects in this study were *treated* with no record in the
+      IxRS randomization export — an IxRS transfer gap, resolved by the vendor re-sending the record.
+      Missing data at system boundaries goes in both directions, and a check written in only one
+      direction finds only half of it.
+    rubric:
+      - "Recognises that EX alone cannot distinguish the two situations"
+      - "Uses cross-domain evidence — LB, AE, SV, DS — to establish whether the subject was treated"
+      - "Routes it to data management as a query rather than fixing it in code"
+      - "Notes that resolution can make SDTM larger than the raw export, and that a naive raw-versus-SDTM diff would misread it"
+      - "Proposes a standing check: every randomized subject has EX records or ARMNRS = ASSIGNED, NOT TREATED"
+      - "Mentions that gaps occur in both directions at system boundaries"
+    redFlags:
+      - "Assuming the subject was never treated and setting ARMNRS accordingly"
+      - "Deriving exposure from the visit schedule to fill the gap"
+      - "Treating the absence as a data-quality metric rather than investigating it"
+      - "Expecting SDTM always to be a subset of the raw export"
+    followUps:
+      - "What would you expect a genuinely never-treated subject's LB and SV records to look like?"
+      - "The site cannot be reached. What goes in the cSDRG?"
+      - "How would you word the check so that it fails loudly rather than producing a warning?"
+
+  - id: sdtm.ex.kit-mismatch
+    format: mcq
+    modes: [independent, debug, boss]
+    difficulty: advanced
+    skills: [sdtm.interventions, sdtm.dm, qc.discrepancy]
+    lesson: sdtm-ex-exposure
+    title: Two kinds of kit-number problem
+    prompt: |
+      Joining `raw/ex_study_drug.csv` to the IxRS kit list turns up two groups of records:
+
+      **Group A** — four records whose kit number is not in the kit list at all:
+      `8853893`, `236O09`, `48657`, `573422`.
+
+      **Group B** — three records whose kit number **is** in the list and contains CBX-417, for subjects
+      randomized to placebo: `598581`, `982483`, `302898`.
+
+      How should each group be handled?
+    choices:
+      - text: "A is a transcription problem needing a query to the site; B is a real dispensing error to be preserved, and it is why two subjects have a null `ACTARM` with `ARMNRS = \"UNPLANNED TREATMENT\"`."
+        correct: true
+        feedback: "Correct. The answer key labels group B as TRUE FINDING (NOT AN ERROR): DISPENSING ERROR. Cleaning it away would erase what actually happened to those subjects."
+      - text: "Both are data errors; correct both against the subject's other cycles."
+        feedback: "Group B is not an error. Inferring the kit from the subject's other cycles assumes consistent dispensing, which is exactly what failed."
+      - text: "Both should be left as collected; SDTM records what was collected."
+        feedback: "Group A has an unmatched kit number, so EXTRT cannot be derived at all — the record would have a null topic variable. That needs resolving."
+      - text: "A should be dropped as unusable; B should be corrected to the randomized arm."
+        feedback: "Dropping exposure records understates exposure. Correcting B to the randomized arm would fabricate the blind having been maintained when it was not."
+    hints:
+      - "Look at the character in `236O09` carefully."
+      - "One group is about the data being wrong; the other is about the trial having gone wrong."
+    solution: |
+      **Group A is a data problem. Group B is a trial event.** They look identical in a validation
+      report and require opposite handling.
+
+      **Group A — four unmatched kit numbers.** `236O09` has a letter O where a zero belongs, which is the
+      classic transcription failure. Without a match there is no `KIT_CONTENT`, so `EXTRT` cannot be
+      derived and the record would have a **null topic variable** — an Interventions record about
+      nothing.
+
+      The resolution is a query to the site. Inferring from the subject's other cycles is tempting and
+      wrong: it assumes the dispensing was consistent, which is precisely the thing in doubt.
+
+      The programming consequence is a **left join plus an assertion**, not an inner join:
+
+      ```r
+      ex_oral <- raw |> left_join(kit_list, by = "KIT_NUMBER")
+      stopifnot(!any(is.na(ex_oral$KIT_CONTENT)))
+      ```
+
+      An inner join drops the four records silently and understates exposure for those subjects.
+
+      **Group B — three dispensing errors.** These kit numbers match, and the kits contained CBX-417 for
+      subjects randomized to placebo. That is what happened, and it propagates:
+
+      | Subject | Outcome in DM |
+      |---|---|
+      | Randomized CBX-417, received placebo throughout | `ACTARM` = placebo arm, `ARM` disagrees |
+      | Received placebo with CBX-417 kits for cycles 3-4 | `ACTARM` null, `ARMNRS = "UNPLANNED TREATMENT"`, `ACTARMUD` populated |
+      | Received placebo with a CBX-417 kit for cycle 2 | same |
+
+      **Cleaning these away would erase three real protocol deviations** and put three subjects in the
+      wrong arm of the safety analysis. The answer key is explicit that entries beginning
+      `TRUE FINDING` are not errors.
+
+      **The general lesson:** a validation finding is a question, not a verdict. "This value is
+      unexpected" can mean the data is wrong or the trial was.
+    explanation:
+      objective: "Distinguish a data error from a real event with the same signature."
+      given: "Two groups of kit-number anomalies."
+      relevant: "Whether the kit number resolves in the list at all."
+      method: "Ask whether the anomaly is in the recording or in what was recorded."
+      irrelevant: "That both groups appear in the same validation output."
+      assumptions: "That the kit list is authoritative, which it is — it is the IxRS's own record of what was packed."
+      interpretation: "Group B drives ACTARM being null for two subjects and disagreeing with ARM for a third."
+      changes: "If group A's queries came back unresolved, those records would need a documented decision in the cSDRG rather than a silent drop."
+      interviewer: "That you treat validation findings as questions and know that some anomalies must be preserved."
+
+  - id: sdtm.ex.open-exposure-table
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [sdtm.interventions, trials.sap, communication.interpretation]
+    lesson: sdtm-ex-exposure
+    title: "\"Give me duration of exposure\""
+    prompt: |
+      A statistician asks for a duration-of-exposure table by treatment arm. CBX417-301's facts file
+      reports **median 23.7 weeks on CBX-417 plus docetaxel against 16.4 weeks on placebo plus
+      docetaxel**, and a median of 5 docetaxel infusions with a maximum of 50.
+
+      What do you ask before writing anything, and why does it matter?
+    modelAnswer: |
+      "I'd ask which definition, because 'duration of exposure' names at least four different numbers and
+      they come apart on exactly the subjects the table is about.
+
+      **Time from first to last dose, plus the dosing interval.** The most common, and it *includes*
+      interruptions — a subject who stopped for four weeks and restarted has that time counted. For an
+      oral daily drug you usually add one day at the end so the last dose counts as a day; for a
+      three-weekly infusion you add the cycle length, because a subject who received one infusion was
+      exposed for three weeks, not one day. That choice alone moves the median.
+
+      **Total dosing days.** The sum of interval lengths, which *excludes* interruptions. On the study
+      I've been working with, 220 of 416 subjects have at least one dosing gap, and one subject's gaps
+      total 57 days. So these two definitions differ for 53% of the safety population, and always in the
+      same direction.
+
+      **Cumulative dose in mg.** A different quantity entirely, and it captures dose reductions that
+      neither duration measure sees. That matters here because 486 CBX-417 records are at a reduced dose
+      against 146 placebo records — reductions are three times more frequent on the active arm, so a
+      duration-only table would understate the tolerability difference.
+
+      **Relative dose intensity** — cumulative received over cumulative planned. Standard in oncology,
+      not an SDTM variable, and every part of it is a SAP decision: whether delays count against the
+      denominator, whether the planned dose is recomputed after a permitted reduction, what happens after
+      discontinuation.
+
+      The second question is **which treatment**. Every subject gets two agents on different schedules —
+      daily oral against three-weekly infusion. 'Duration of exposure' for the combination is not
+      well-defined, and the conventional answer is a separate row per agent. Docetaxel is usually
+      reported as number of infusions rather than duration, which is presumably why the facts file quotes
+      a median of 5 with a maximum of 50 alongside the weeks.
+
+      The third is the **denominator and the arm variable**. It's a safety table, so the population is the
+      416 treated subjects and the arm is actual treatment — and `ACTARM` is populated for only 414 of
+      them, because two received a mixture matching no planned arm. Those two need a column assignment
+      that the SAP states rather than a silent drop.
+
+      What I'd do in practice is compute all four, show them the numbers side by side, and let the
+      difference make the case for writing the definition down. That conversation takes ten minutes now
+      and saves a revision cycle after the shells are signed off."
+    rubric:
+      - "Names at least three distinct definitions and says how they differ"
+      - "Quantifies why it matters: 220 of 416 subjects have dosing gaps, so duration and dosing days diverge for over half"
+      - "Raises the interval added at the end, and that it differs between a daily oral drug and a three-weekly infusion"
+      - "Notes that duration misses dose reductions, which are three times more frequent on the active arm here"
+      - "Raises that the two agents need separate rows and that infusions are usually counted, not timed"
+      - "Raises the safety denominator and the 414-versus-416 ACTARM problem"
+      - "Proposes computing the alternatives to make the decision concrete rather than arguing abstractly"
+    redFlags:
+      - "Picking a definition without asking"
+      - "Computing duration as last dose minus first dose with no added interval"
+      - "Reporting one combined duration for both agents"
+      - "Not noticing that interruptions make two definitions diverge"
+    followUps:
+      - "The SAP says 'last dose minus first dose plus 1'. What does that give for a subject who received one docetaxel infusion?"
+      - "How would you present the two subjects with a null ACTARM?"
+      - "Where would relative dose intensity be derived, and what does it need beyond EX?"

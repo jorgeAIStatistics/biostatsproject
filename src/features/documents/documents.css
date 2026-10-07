@@ -1,0 +1,23 @@
+.doc-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.doc-paper {
+  padding: var(--space-7) var(--space-8) !important;
+}
+.doc-paper .prose {
+  font-size: 15.5px;
+}
+.doc-paper .prose h2 {
+  margin-top: 1.8em;
+}
+@media (max-width: 720px) {
+  .doc-paper {
+    padding: var(--space-5) !important;
+  }
+}
+.doc-badge {
+  margin-top: 10px;
+}

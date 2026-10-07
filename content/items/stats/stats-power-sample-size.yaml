@@ -1,0 +1,463 @@
+items:
+  - id: stats.pw.z-for-power
+    format: mcq
+    modes: [check, speed, interview]
+    difficulty: intermediate
+    skills: [stats.power, stats.hypothesis-testing]
+    lesson: stats-power-sample-size
+    title: Which quantile goes in which slot
+    prompt: |
+      A sample-size formula contains $(z_{1-\alpha/2} + z_{1-\beta})^2$ for a **two-sided** test at α = 0.05 with **90%** power.
+
+      What are the two z values?
+    choices:
+      - text: "1.9600 and 1.2816"
+        correct: true
+        feedback: "α is split between two tails, so it takes the 0.975 quantile (1.9600). Power is one-sided, so it takes the 0.90 quantile (1.2816)."
+      - text: "1.6449 and 1.2816"
+        feedback: "1.6449 is the one-sided 5% value. For a two-sided test at α = 0.05 you need 1.9600. Using 1.6449 here gives 270 events instead of 331 for HR = 0.70 — a trial with about 83% power that claims 90%."
+      - text: "1.9600 and 1.6449"
+        feedback: "1.6449 is the 0.95 quantile. Power of 90% needs the 0.90 quantile, 1.2816. This error over-sizes the trial: 409 events instead of 331."
+      - text: "1.9600 and 1.9600"
+        feedback: "Power is not split between two tails — an effect in the wrong direction is not a success, so there is nothing to protect against on the other side."
+    solution: |
+      $z_{1-\alpha/2} = z_{0.975} = 1.9600$ and $z_{1-\beta} = z_{0.90} = 1.2816$.
+
+      **The rule:** α is two-sided so it takes the 0.975 quantile; power is one-sided so it takes the 0.90 quantile. They are never equal.
+    explanation:
+      objective: "Select the correct normal quantiles for a two-sided test at 90% power."
+      given: "Two-sided alpha of 0.05 and power of 0.90."
+      relevant: "That alpha is split between two tails and power is not."
+      calculating: "qnorm(0.975) and qnorm(0.90)."
+      method: "Alpha is two-sided because you would reject for a large effect in either direction. Power asks only that the alternative distribution clear the critical value on the side where success lies."
+      numbers: "qnorm(0.975) = 1.959964; qnorm(0.90) = 1.281552; their sum is 3.241516."
+      interpretation: "The sum is the number of standard errors the true effect must sit from the null for the design to work as specified."
+      changes: "At 80% power the second term falls to 0.8416 and the sum to 2.8016, reducing the required sample size by a factor of (3.2415/2.8016)^2 = 1.34 — the familiar 34% saving from dropping to 80%."
+      interviewer: "That you can state WHY alpha is two-sided and power is not, rather than reciting the pair of numbers."
+
+  - id: stats.pw.events-not-subjects
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [stats.power, trials.design, stats.survival]
+    lesson: stats-power-sample-size
+    title: Why the protocol counts events
+    prompt: |
+      The CBX417-301 protocol triggers the primary analysis at **331 PFS events**, not at a fixed calendar date and not at a fixed number of subjects.
+
+      Why is the sample-size requirement expressed in events?
+    choices:
+      - text: "Statistical precision in a time-to-event analysis is governed by the number of events; a subject followed without progressing contributes very little information."
+        correct: true
+        feedback: "Correct. The variance of the log hazard ratio is approximately 4/d with 1:1 allocation — it depends on the event count d, not on the number enrolled."
+      - text: "Because the number of subjects cannot be known until enrolment completes."
+        feedback: "Enrolment targets are set in advance all the time. The reason is statistical, not operational."
+      - text: "Because regulators require event-driven designs in oncology."
+        feedback: "No such requirement exists. Event-driven design is the statistically sensible choice for time-to-event endpoints, which is why it is near-universal — but it is not mandated."
+      - text: "To ensure every subject has the same length of follow-up."
+        feedback: "Event-driven designs produce *unequal* follow-up: subjects enrolled late have less. That is exactly what censoring handles."
+    solution: |
+      Because information comes from events. With 1:1 randomization,
+
+      $$\operatorname{Var}\!\left(\ln \widehat{\mathrm{HR}}\right) \approx \frac{4}{d}$$
+
+      which depends on the number of events $d$ and not on how many subjects produced them. A subject followed for two years without progressing tells you only that their event time exceeds two years.
+
+      The operational consequence: you can reach the target by enrolling more subjects (events arrive faster) or by following the same subjects longer. Statistically equivalent, commercially very different — and a better-than-expected drug delays its own read-out.
+    explanation:
+      objective: "Explain why survival trials are sized in events rather than subjects."
+      given: "An event-driven analysis trigger in an oncology protocol."
+      relevant: "How the variance of the log hazard ratio depends on the data."
+      method: "Var(log HR) is approximately 4/d at 1:1 allocation, so precision is a function of event count alone."
+      numbers: "For CBX417-301, d = 331 events from approximately 420 randomized subjects."
+      assumptions: "Proportional hazards, and that censoring is non-informative. Under informative censoring the event count no longer summarises the information."
+      interpretation: "The subject count and the accrual period are the operational plan for reaching the event count on an acceptable timeline; they are not the statistical requirement."
+      changes: "If the control arm progressed faster than assumed, 331 events would arrive earlier and the analysis would happen sooner with the same number of subjects."
+      interviewer: "That you connect it to Var(log HR) = 4/d, and that you can name the paradox: a drug that works better than expected delays its own analysis."
+
+  - id: stats.pw.quadruple
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [stats.power]
+    lesson: stats-power-sample-size
+    title: Halving the detectable effect
+    prompt: |
+      A trial is sized to detect a difference of **10 mmHg**. The team now wants to detect **5 mmHg** with the same power, α and SD.
+
+      What happens to the required sample size?
+    choices:
+      - text: "It quadruples"
+        correct: true
+        feedback: "n is proportional to σ²/δ². Halving δ multiplies n by 2² = 4."
+      - text: "It doubles"
+        feedback: "That would be true if n were proportional to 1/δ. It is proportional to 1/δ², because the test statistic scales with δ/SE and SE scales with 1/√n."
+      - text: "It increases by 50%"
+        feedback: "Neither the formula nor any approximation gives this."
+      - text: "It depends on the SD"
+        feedback: "The SD affects the absolute sample size but cancels from the ratio: n₂/n₁ = (δ₁/δ₂)² regardless of σ."
+    solution: |
+      **Quadruples.** From
+
+      $$n = \frac{2(z_{1-\alpha/2}+z_{1-\beta})^2 \sigma^2}{\delta^2}$$
+
+      halving $\delta$ multiplies $n$ by 4.
+
+      This is why the choice of detectable effect size is the most consequential number in a protocol: it enters squared, and it is the input least constrained by data.
+    explanation:
+      objective: "Apply the inverse-square relationship between effect size and sample size."
+      given: "A halving of the difference to be detected, with everything else fixed."
+      relevant: "Only the ratio of the two effect sizes."
+      irrelevant: "The SD, alpha and power all cancel from the ratio."
+      calculating: "n2/n1 = (delta1/delta2)^2 = 2^2 = 4."
+      method: "The test statistic is delta/SE and SE is proportional to 1/sqrt(n); solving for n squares the effect size."
+      interpretation: "Small effects are disproportionately expensive to detect, which is why 'what is the smallest difference worth detecting?' is a budget question as much as a clinical one."
+      changes: "A 10% error in the assumed SD changes n by 21% for the same reason — sigma also enters squared."
+      interviewer: "That you can state the squared relationship instantly and name its practical consequence for design conversations."
+
+  - id: stats.pw.post-hoc
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: advanced
+    skills: [stats.power, communication.interpretation]
+    lesson: stats-power-sample-size
+    title: The post-hoc power request
+    prompt: |
+      A trial missed significance (p = 0.21). A reviewer asks you to compute the power the trial had to detect the **observed** effect, to show it was underpowered.
+
+      What do you do?
+    choices:
+      - text: "Explain that post-hoc power computed from the observed effect is a function of the p-value and adds no information, and report the confidence interval instead."
+        correct: true
+        feedback: "Observed power is monotonically related to the p-value: p > 0.05 always implies observed power below about 50%. It cannot tell you anything the p-value did not."
+      - text: "Compute it and report it — it is a standard part of a negative trial's write-up."
+        feedback: "It appears in write-ups, but a substantial methodological literature shows it is uninformative, and reviewers increasingly flag it."
+      - text: "Compute power for the effect size the trial was designed to detect, and report that."
+        feedback: "This is better — design power is a real quantity — but it is just the protocol's own number restated, and it still does not tell the reviewer what the trial ruled out."
+      - text: "Decline and report nothing further."
+        feedback: "Refusing without offering the quantity that answers their actual question is unhelpful. They want to know whether the trial was informative; the interval answers that."
+    solution: |
+      Post-hoc ("observed") power is a deterministic function of the observed p-value, so it carries zero additional information. A non-significant result *always* corresponds to low observed power — the statement is circular.
+
+      What the reviewer actually wants to know is whether the trial was informative. The **confidence interval** answers that: a narrow interval around zero is an informative negative; a wide interval is an uninformative one. Give them that, and explain why it is the better answer.
+    explanation:
+      objective: "Respond correctly to a common but invalid analytical request."
+      given: "A non-significant trial and a request for power computed at the observed effect."
+      relevant: "The mathematical relationship between observed power and the p-value."
+      method: "Observed power is a one-to-one decreasing function of p. Anything it could tell you is already in p."
+      numbers: "At exactly p = 0.05 the observed power of a two-sided test is about 50%. Every p above 0.05 gives observed power below that."
+      interpretation: "'The trial was underpowered because observed power was low' restates 'the p-value was large' in different units."
+      changes: "Power computed for a PRE-SPECIFIED effect size at the planned n is a legitimate design quantity — the distinction is whether the effect size comes from the protocol or from the data."
+      interviewer: "That you can explain the circularity, and that you redirect to the confidence interval rather than simply refusing."
+
+  - id: stats.pw.schoenfeld-hand
+    format: numeric
+    modes: [guided, check, independent]
+    difficulty: intermediate
+    skills: [stats.power, stats.survival, trials.design]
+    lesson: stats-power-sample-size
+    title: Derive the protocol's event count
+    prompt: |
+      Using the Schoenfeld formula
+
+      $$d = \frac{4\left(z_{1-\alpha/2} + z_{1-\beta}\right)^2}{\left[\ln(\mathrm{HR})\right]^2}$$
+
+      compute the number of events required to detect **HR = 0.70** with **90% power** at **two-sided α = 0.05**, with 1:1 randomization.
+
+      Give the number of events the protocol would state.
+    answer: 331
+    tolerance: 1
+    unit: events
+    hints:
+      - "z(0.975) = 1.959964 and z(0.90) = 1.281552. Their sum is 3.241516."
+      - "ln(0.70) = −0.356675, and squaring removes the sign: 0.127217."
+      - "4 × 3.241516² = 42.0297. Divide by 0.127217, then round UP."
+    solution: |
+      $$d = \frac{4(1.959964 + 1.281552)^2}{(-0.356675)^2} = \frac{4 \times 10.507424}{0.127217} = \frac{42.029696}{0.127217} = 330.38$$
+
+      Rounding up: **331 events** — exactly the number in the CBX417-301 protocol.
+
+      The 4 in the numerator is $1/[\pi(1-\pi)]$ evaluated at $\pi = 0.5$; with unequal allocation it grows, so 1:1 randomization is the most event-efficient design.
+    explanation:
+      objective: "Reproduce a protocol's event requirement from first principles."
+      given: "A hazard ratio, a power, an alpha and 1:1 allocation."
+      relevant: "All four; nothing else enters the event calculation."
+      irrelevant: "The number of subjects, the accrual rate, the control median and the follow-up duration determine WHEN the events arrive, not how many are needed."
+      calculating: "The required total number of events across both arms."
+      method: "Var(log HR) is approximately 4/d at 1:1 allocation. Setting |log HR| / sqrt(4/d) equal to z(1-alpha/2) + z(1-beta) and solving for d gives the formula."
+      numbers: "z(0.975) = 1.959964; z(0.90) = 1.281552; sum = 3.241516; squared = 10.507424; times 4 = 42.029696. ln(0.70) = -0.356675, squared = 0.127217. Quotient = 330.38."
+      assumptions: "Proportional hazards, non-informative censoring, and a large-sample normal approximation for the log hazard ratio."
+      computation: "Round UP. 330 events would give slightly under 90% power."
+      changes: "At HR = 0.75 the requirement rises to 508 events, a 54% increase for a 5-point change in the assumed hazard ratio."
+      interviewer: "That you log the hazard ratio, use the one-sided quantile for power, and round up — and that you can say where the 4 comes from."
+
+  - id: stats.pw.continuous-n
+    format: numeric
+    modes: [check, independent]
+    difficulty: intermediate
+    skills: [stats.power, stats.t-tests]
+    lesson: stats-power-sample-size
+    title: Sample size for a continuous endpoint
+    prompt: |
+      Design a two-arm trial to detect a **5 mmHg** difference in mean change from baseline, with a within-group SD of **11.55 mmHg**, at 90% power and two-sided α = 0.05.
+
+      Using the normal-approximation formula
+
+      $$n_{\text{per arm}} = \frac{2(z_{1-\alpha/2}+z_{1-\beta})^2\sigma^2}{\delta^2}$$
+
+      what is $n$ per arm, before rounding?
+
+      Give your answer to one decimal place.
+    answer: 112.1
+    tolerance: 0.3
+    unit: subjects per arm
+    hints:
+      - "(1.959964 + 1.281552)² = 10.507424."
+      - "σ² = 11.55² = 133.4025 and δ² = 25."
+      - "2 × 10.507424 × 133.4025 / 25."
+    solution: |
+      $$n = \frac{2 \times 10.507424 \times 133.4025}{25} = \frac{2803.43}{25} = 112.14$$
+
+      So **113 per arm** after rounding up, 226 total.
+
+      The exact $t$-based calculation gives 113.11 → **114 per arm**, because the $t$ critical value exceeds the normal one. Use the software number in a protocol and the formula to understand it.
+    explanation:
+      objective: "Compute a two-sample sample size from the closed-form normal approximation."
+      given: "A target difference, a within-group SD, alpha and power."
+      relevant: "All four inputs."
+      calculating: "Subjects per arm, before rounding and before dropout inflation."
+      method: "Set the non-centrality of the test equal to z(1-alpha/2) + z(1-beta) and solve for n."
+      numbers: "(1.959964 + 1.281552)^2 = 10.507424. 11.55^2 = 133.4025. 5^2 = 25. 2 x 10.507424 x 133.4025 / 25 = 112.14."
+      assumptions: "Equal allocation, equal variances, a common SD of 11.55 that applies to the new trial, and a continuous approximately normal outcome."
+      computation: "The 2 in the numerator is because both arms contribute sampling variability; it is not a correction factor."
+      changes: "The exact t-based figure is 113.11 because the t critical value exceeds the normal. Inflating for 10% dropout raises the enrolment target to 126 per arm."
+      interviewer: "That you know the sd argument is the WITHIN-group SD, not the SD of the difference — passing the latter understates n by about half."
+
+  - id: stats.pw.dropout-inflate
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [stats.power, trials.design]
+    lesson: stats-power-sample-size
+    title: Inflating for dropout
+    prompt: |
+      Your calculation says you need **113** evaluable subjects per arm at Week 12. You expect **10%** of randomized subjects to have no Week 12 measurement.
+
+      How many subjects must you randomize per arm?
+    answer: 126
+    tolerance: 1
+    unit: subjects per arm
+    hints:
+      - "You need 113 subjects WITH data, not 113 randomized."
+      - "If 90% of those randomized are evaluable, then 0.90 × (randomized) = 113."
+      - "Divide by 0.90 — do not multiply by 1.10 — then round up."
+    solution: |
+      $$n_{\text{randomized}} = \frac{113}{1 - 0.10} = \frac{113}{0.90} = 125.6 \;\rightarrow\; \mathbf{126}$$
+
+      **The common error** is $113 \times 1.10 = 124$. It is small at 10% and large at 30%: dividing gives 162, multiplying gives 147 — a 15-subject shortfall per arm that surfaces as an underpowered trial two years later.
+    explanation:
+      objective: "Convert an evaluable-subject requirement into a randomization target."
+      given: "An evaluable n per arm and an expected dropout rate."
+      relevant: "That the requirement is on subjects WITH data."
+      calculating: "Randomized n such that (1 - dropout) x randomized equals the evaluable requirement."
+      method: "Divide by the complement of the dropout rate; the multiplication shortcut is a different and wrong operation."
+      numbers: "113 / 0.90 = 125.56, rounded up to 126."
+      assumptions: "That dropout is unrelated to treatment and outcome. If it is not — which is usual — the estimand and the missing-data strategy matter more than the inflation factor, and an MMRM or multiple imputation analysis uses partial data rather than discarding those subjects."
+      interpretation: "The inflation factor protects the power of a complete-case analysis. It does not address the bias that informative dropout introduces."
+      changes: "At 30% dropout the correct figure is 162 and the multiplicative shortcut gives 147 — a 9% shortfall in evaluable subjects."
+      interviewer: "That you divide rather than multiply, and that you distinguish the power problem from the bias problem."
+
+  - id: stats.pw.r-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [stats.power, stats.survival, r.models]
+    lesson: stats-power-sample-size
+    title: A reusable Schoenfeld function
+    minutes: 12
+    prompt: |
+      Write `schoenfeld_events(hr, alpha = 0.05, power = 0.90, ratio = 1)` returning the **integer** number of events required for a log-rank test.
+
+      Requirements:
+
+      - `alpha` is the **two-sided** level, so the critical value uses `1 - alpha/2`.
+      - `ratio` is the allocation ratio (experimental : control). With `ratio = 1` the result must reproduce the standard $4(z_a+z_b)^2/\ln(\mathrm{HR})^2$ form.
+      - Round **up** to a whole number of events.
+
+      Verify that `schoenfeld_events(0.70)` returns **331**.
+    starter: |
+      schoenfeld_events <- function(hr, alpha = 0.05, power = 0.90, ratio = 1) {
+        za <- ___
+        zb <- ___
+        pi1 <- ___          # proportion allocated to the experimental arm
+        ___
+      }
+
+      schoenfeld_events(0.70)
+    reference: |
+      schoenfeld_events <- function(hr, alpha = 0.05, power = 0.90, ratio = 1) {
+        za  <- qnorm(1 - alpha / 2)
+        zb  <- qnorm(power)
+        pi1 <- ratio / (1 + ratio)
+        ceiling((za + zb)^2 / (pi1 * (1 - pi1) * log(hr)^2))
+      }
+
+      schoenfeld_events(0.70)
+    hints:
+      - "`qnorm(1 - alpha/2)` for the two-sided critical value; `qnorm(power)` for the power term — power is one-sided."
+      - "`pi1 <- ratio / (1 + ratio)`: at ratio = 1 this is 0.5, and `pi1 * (1 - pi1)` is 0.25. Dividing by 0.25 is the same as multiplying by 4."
+      - "`ceiling()` rounds up. `round()` would round to nearest, which can leave the trial marginally underpowered."
+    checks:
+      - pattern: "qnorm\\s*\\(\\s*1\\s*-\\s*alpha\\s*/\\s*2\\s*\\)"
+        message: "Uses the two-sided critical value qnorm(1 - alpha/2)"
+      - pattern: "qnorm\\s*\\(\\s*power\\s*\\)"
+        message: "Uses the one-sided quantile for power"
+      - pattern: "ratio\\s*/\\s*\\(\\s*1\\s*\\+\\s*ratio\\s*\\)"
+        message: "Converts the allocation ratio into a proportion"
+      - pattern: "log\\s*\\(\\s*hr\\s*\\)"
+        message: "Works on the log hazard ratio"
+      - pattern: "ceiling\\s*\\("
+        message: "Rounds the event count up"
+    expectedOutput: |
+      ```text
+      [1] 331
+      ```
+    solution: |
+      ```r
+      schoenfeld_events <- function(hr, alpha = 0.05, power = 0.90, ratio = 1) {
+        za  <- qnorm(1 - alpha / 2)
+        zb  <- qnorm(power)
+        pi1 <- ratio / (1 + ratio)
+        ceiling((za + zb)^2 / (pi1 * (1 - pi1) * log(hr)^2))
+      }
+      ```
+
+      Checks worth running once you have it:
+
+      | Call | Result | Reading |
+      |---|---:|---|
+      | `schoenfeld_events(0.70)` | 331 | the protocol number |
+      | `schoenfeld_events(0.75)` | 508 | a 5-point change in HR costs 54% more events |
+      | `schoenfeld_events(0.70, power = 0.80)` | 247 | dropping to 80% power saves 25% |
+      | `schoenfeld_events(0.70, ratio = 2)` | 372 | 2:1 allocation needs 12% more events |
+    explanation:
+      objective: "Implement the Schoenfeld event calculation as a reusable, correctly parameterized function."
+      given: "A hazard ratio and design parameters with sensible defaults."
+      relevant: "Which quantile is two-sided, which is one-sided, and how the allocation ratio enters."
+      method: "Var(log HR) = 1/[d x pi1 x (1 - pi1)]. Setting |log HR| divided by its standard error equal to za + zb and solving for d."
+      numbers: "At ratio = 1, pi1(1-pi1) = 0.25 and dividing by it is multiplying by 4, recovering the familiar form. schoenfeld_events(0.70) = 331."
+      assumptions: "Proportional hazards and non-informative censoring. The formula says nothing about how long it takes to observe the events."
+      computation: "ceiling() rather than round() — a sample size is never rounded down."
+      changes: "Unequal allocation always costs events: 2:1 needs 372 instead of 331, because pi1(1-pi1) = 0.222 < 0.25."
+      interviewer: "That you handle the allocation ratio correctly rather than hard-coding 4, and that you default alpha to the two-sided convention and say so."
+
+  - id: stats.pw.sd-sensitivity
+    format: numeric
+    modes: [qc, independent, check]
+    difficulty: advanced
+    skills: [stats.power, qc.mindset]
+    lesson: stats-power-sample-size
+    title: How wrong can the SD assumption be?
+    prompt: |
+      A protocol assumed a within-group SD of **11.55 mmHg** and computed 113 subjects per arm. The trial completes and the observed SD is **12.71 mmHg** — 10% higher than assumed.
+
+      Holding everything else fixed, what sample size per arm would have been needed for the planned 90% power?
+
+      Give the number of subjects per arm.
+    answer: 136
+    tolerance: 2
+    unit: subjects per arm
+    hints:
+      - "n is proportional to σ², so a 10% larger SD means a factor of 1.10² in n."
+      - "1.10² = 1.21."
+      - "113 × 1.21, rounded up."
+    solution: |
+      $$n_{\text{needed}} = 112.14 \times 1.10^2 = 112.14 \times 1.21 = 135.7 \;\rightarrow\; \mathbf{136}$$
+
+      A **10% error in the SD costs 21% more subjects.** The trial as run has about 86% power rather than 90%.
+
+      This is why protocols should present a sensitivity table across a plausible SD range, or use an upper confidence bound on the SD rather than a point estimate — especially when the estimate comes from a small pilot, where the SD's own confidence interval can be ±30%.
+    explanation:
+      objective: "Quantify the sensitivity of a sample size to its most fragile input."
+      given: "A planned SD, the resulting n, and an observed SD 10% higher."
+      relevant: "Only the ratio of the two SDs, because n is proportional to sigma-squared."
+      calculating: "The n that would have been needed at the true SD."
+      method: "n scales with sigma^2, so multiply by (12.71/11.55)^2 = 1.21."
+      numbers: "112.14 x 1.21 = 135.7, rounded up to 136."
+      assumptions: "That the effect size, alpha and power targets are unchanged — only the nuisance parameter was wrong."
+      interpretation: "Under-estimating variability is the quiet way trials end up underpowered, and it is not detectable until the data arrive."
+      changes: "A blinded sample-size re-estimation, pre-specified in the protocol, can correct this mid-trial using pooled data without unblinding and without inflating alpha."
+      interviewer: "That you name the squared relationship, and that you know blinded re-estimation exists as the pre-specified remedy."
+
+  - id: stats.pw.hr-from-events
+    format: numeric
+    modes: [check, independent]
+    difficulty: advanced
+    skills: [stats.power, stats.survival]
+    lesson: stats-power-sample-size
+    title: Working the formula backwards
+    prompt: |
+      A team can realistically observe only **200 events** before the programme's decision point.
+
+      With 90% power and two-sided α = 0.05 at 1:1 allocation, what is the **largest** hazard ratio (i.e. the smallest effect) this trial could detect?
+
+      Give the hazard ratio to two decimal places.
+    answer: 0.63
+    tolerance: 0.015
+    hints:
+      - "Rearrange d = 4(z_a + z_b)²/ln(HR)² to solve for |ln(HR)|."
+      - "|ln(HR)| = 2(z_a + z_b)/√d = 2 × 3.241516 / √200."
+      - "√200 = 14.1421. Then exponentiate the negative of that."
+    solution: |
+      $$|\ln(\mathrm{HR})| = \frac{2(z_{1-\alpha/2}+z_{1-\beta})}{\sqrt{d}} = \frac{2 \times 3.241516}{14.1421} = 0.45843$$
+
+      $$\mathrm{HR} = e^{-0.45843} = 0.632$$
+
+      With 200 events the trial can detect **HR ≈ 0.63** — a 37% reduction in hazard. It would have only about 71% power against the HR of 0.70 the team originally hoped for.
+
+      The honest conversation this enables: "200 events buys you a trial that is well powered only if the drug is considerably better than our planning assumption. Either we accept a higher risk of a false negative, or we find more events."
+    explanation:
+      objective: "Invert the Schoenfeld formula to find the detectable effect for a fixed number of events."
+      given: "An achievable event count, plus alpha, power and allocation."
+      relevant: "All of them; the subject count and timeline do not enter."
+      calculating: "The hazard ratio furthest from 1 that the design can detect at the stated power."
+      method: "Solve d = 4(za+zb)^2/log(HR)^2 for |log HR|, then exponentiate. The negative root is taken because a beneficial HR is below 1."
+      numbers: "2 x 3.241516 = 6.483032; divided by sqrt(200) = 14.1421 gives 0.45843; exp(-0.45843) = 0.6323."
+      assumptions: "Proportional hazards throughout, and that 200 events is genuinely the ceiling."
+      interpretation: "This is the form of the calculation that makes a design conversation concrete: not 'is 200 enough?' but 'here is exactly what 200 buys you'."
+      changes: "Accepting 80% power instead of 90% would let the same 200 events detect HR = 0.67 — a modest improvement bought with a higher false-negative risk."
+      interviewer: "That you can run the formula in both directions, and that you frame the result as a trade-off rather than a verdict."
+
+  - id: stats.pw.design-open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [stats.power, trials.design, communication.interviewing, communication.audiences]
+    lesson: stats-power-sample-size
+    title: The sample size came back too big
+    prompt: |
+      **Interviewer:** "You present a sample size of 850 subjects. The team says the budget supports 500 and asks you to 'find a way'. How do you handle that?"
+    modelAnswer: |
+      I'd start by being clear about what is negotiable and what isn't, because the worst outcome is quietly producing a smaller number with no one understanding what was given up.
+
+      The inputs are α, power, the effect size and the variability. α isn't ours to move — it's 0.05 two-sided for a pivotal trial. Variability isn't ours to move either; it's a property of the outcome, though it *can* be reduced by design, which is the productive place to look. So the real levers are power, effect size, and the design itself.
+
+      Then I'd put the trade-offs in front of them as numbers rather than opinions. Dropping from 90% to 80% power cuts the sample size by about 25% — that gets 850 to roughly 640, at the cost of a one-in-five chance of missing a real effect. Raising the assumed effect size gets there faster but is the dangerous lever: if we assume a bigger effect than the drug has, we've bought a smaller trial that probably fails. I'd say plainly that this is the mechanism behind a lot of phase III failures.
+
+      The lever I'd actually push is design efficiency, because it buys power without buying risk. Adjusting for a strong baseline covariate in an ANCOVA reduces residual variance directly — in the VTX-221 data, adjusting for baseline cut the standard error of the treatment difference by about 11% versus the unadjusted change-score analysis, which is real sample size for free. Other candidates: a more sensitive or less variable endpoint, a repeated-measures analysis that uses all visits rather than Week 12 alone, better measurement protocols to cut noise, or stratifying on a strong prognostic factor.
+
+      If none of that closes a 350-subject gap, I'd say so directly: a 500-subject trial powered at 90% can detect an effect of about this size, and if the team doesn't believe the drug is that good, the honest options are to fund the larger trial, run a smaller one and accept it is a go/no-go rather than a pivotal study, or not run it. What I wouldn't do is retro-fit the assumptions to land on 500 and write it up as though the number came out that way — that's the version that wastes 500 patients' participation.
+    rubric:
+      - Separates negotiable from non-negotiable inputs and explains why alpha is fixed
+      - Quantifies the power trade-off rather than describing it qualitatively
+      - Identifies inflating the assumed effect size as the dangerous lever and says why
+      - Proposes concrete design efficiencies (covariate adjustment, endpoint choice, repeated measures) as the productive path
+      - Is willing to say the trial should not run as proposed, and frames the alternatives honestly
+      - Treats it as a collaborative decision rather than a defence of a number
+    redFlags:
+      - "Simply adjusts assumptions until the answer is 500"
+      - "Refuses to engage and restates the original number"
+      - "Offers a one-sided test as the way to save subjects"
+      - "Cannot quantify what dropping to 80% power actually costs"
+      - "Does not mention covariate adjustment or any design-side efficiency"

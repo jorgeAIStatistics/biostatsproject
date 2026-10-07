@@ -1,0 +1,434 @@
+items:
+  - id: sas.sort-freq-means.nodupkey-vs-noduprecs-mcq
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.sort]
+    lesson: sas-sort-freq-means
+    title: NODUPKEY versus NODUPRECS
+    prompt: |
+      Which statement correctly describes the two PROC SORT options?
+    choices:
+      - text: "NODUPKEY keeps the first observation of each distinct BY-value combination; NODUPRECS deletes an observation identical in every variable to the one just before it"
+        correct: true
+        feedback: "NODUPKEY looks only at the BY variables; NODUPRECS compares entire records, and only with the adjacent previous record."
+      - text: "Both remove records that are identical in every variable; NODUPKEY is just faster"
+        feedback: "NODUPKEY removes records that share BY values even if every other variable differs — potentially real data."
+      - text: "NODUPRECS keeps the last observation of each BY group; NODUPKEY keeps the first"
+        feedback: "NODUPRECS is about identical records, not BY groups."
+      - text: "NODUPKEY removes all copies of a duplicated key, keeping none"
+        feedback: "It keeps the first one in sort order and deletes the others (which DUPOUT= can capture)."
+    solution: |
+      NODUPKEY: uniqueness of the **key** (BY variables), first record kept. NODUPRECS: removal of **exact** duplicate records, but only when they are adjacent after sorting — sort by all variables to be safe. Always add `DUPOUT=` and look at what was removed.
+
+  - id: sas.sort-freq-means.descending-mcq
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.sort]
+    lesson: sas-sort-freq-means
+    title: What does DESCENDING apply to?
+    prompt: |
+      `proc sort data=adlb out=adlb_s; by USUBJID PARAMCD descending AVAL; run;`
+
+      How is the output ordered?
+    choices:
+      - text: "USUBJID ascending, PARAMCD ascending, and AVAL from highest to lowest within each subject and parameter"
+        correct: true
+        feedback: "DESCENDING applies only to the variable that immediately follows it."
+      - text: "All three variables descending"
+        feedback: "Each variable needs its own DESCENDING keyword."
+      - text: "USUBJID and PARAMCD descending, AVAL ascending"
+        feedback: "DESCENDING affects the variable after it, not the ones before it."
+      - text: "The statement is invalid: DESCENDING must come first"
+        feedback: "DESCENDING can precede any BY variable."
+    solution: |
+      Only `AVAL` is descending. A common use: the highest value per subject and parameter is then the first record of each `USUBJID PARAMCD` group (`if first.PARAMCD;`).
+
+  - id: sas.sort-freq-means.colpct-numeric
+    format: numeric
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.freq, tlf.denominators]
+    lesson: sas-sort-freq-means
+    title: Column percentage
+    prompt: |
+      Counts of sex by arm among 12 safety subjects:
+
+      | SEX | CBX-417 + Docetaxel | Placebo + Docetaxel |
+      |---|---:|---:|
+      | F | 2 | 3 |
+      | M | 4 | 3 |
+
+      `tables SEX*TRT01P / norow nopercent;` — what **Col Pct** does PROC FREQ print for men in the CBX-417 arm? (Two decimals.)
+    answer: 66.67
+    tolerance: 0.01
+    hints:
+      - "TRT01P is the column variable, so Col Pct divides by the column total."
+      - "The CBX-417 column total is 2 + 4."
+    solution: |
+      4/6 = 66.67%. This is the percentage a demographics table needs (denominator = subjects in the arm). The overall Percent would be 4/12 = 33.33% and the Row Pct 4/7 = 57.14%.
+
+  - id: sas.sort-freq-means.freq-vs-n-mcq
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.means, sas.missing-values]
+    lesson: sas-sort-freq-means
+    title: _FREQ_ = 6 but N = 5
+    prompt: |
+      In the output dataset from
+
+      ```sas
+      proc means data=adsl noprint nway;
+        class TRT01P;
+        var AGE;
+        output out=agestats n=AGE_N mean=AGE_MEAN;
+      run;
+      ```
+
+      the placebo row has `_FREQ_ = 6` and `AGE_N = 5`. Why?
+    choices:
+      - text: "Six placebo subjects are in the data, but one has a missing AGE"
+        correct: true
+        feedback: "_FREQ_ counts observations in the group; N counts non-missing values of the analysis variable."
+      - text: "One placebo subject is a duplicate and was removed from N"
+        feedback: "PROC MEANS never removes duplicates; duplicates would inflate both numbers."
+      - text: "_FREQ_ includes the overall row"
+        feedback: "With NWAY there is no overall row, and _FREQ_ is computed per row anyway."
+      - text: "N excludes the subject with the highest age as an outlier"
+        feedback: "PROC MEANS does not exclude outliers."
+    solution: |
+      `_FREQ_` = observations in the group (6); `N` = non-missing AGE values (5). For a table, "n" is 5, and the header N (6) comes from the population count.
+
+  - id: sas.sort-freq-means.type-mcq
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.means]
+    lesson: sas-sort-freq-means
+    title: Reading _TYPE_
+    prompt: |
+      ```sas
+      proc summary data=adsl;
+        class TRT01A SEX;
+        var AGE;
+        output out=s mean=AGE_MEAN;
+      run;
+      ```
+
+      Which rows of `WORK.S` have `_TYPE_ = 1`?
+    choices:
+      - text: "One row per SEX, summarising both arms together"
+        correct: true
+        feedback: "_TYPE_ is a binary code over the CLASS variables, with the last one (SEX) as the lowest bit: 1 = SEX alone, 2 = TRT01A alone, 3 = TRT01A × SEX, 0 = overall."
+      - text: "One row per treatment arm, both sexes together"
+        feedback: "That is _TYPE_ = 2 — TRT01A is the higher bit because it is listed first."
+      - text: "One row per arm-by-sex combination"
+        feedback: "That is _TYPE_ = 3, the highest type, which NWAY would keep."
+      - text: "The single overall row"
+        feedback: "The overall row is _TYPE_ = 0."
+    solution: |
+      With `class TRT01A SEX;`: 0 = overall, 1 = by SEX, 2 = by TRT01A, 3 = by TRT01A × SEX. `NWAY` keeps only type 3. A "Total" column by sex would use type 1; arm columns by sex use type 3.
+
+  - id: sas.sort-freq-means.demog-code
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sas.freq, sas.means, tlf.summary-stats, tlf.demographics]
+    lesson: sas-sort-freq-means
+    title: Numbers for the demographics table
+    minutes: 15
+    prompt: |
+      For the **safety population** of `ADAM.ADSL` (`SAFFL = 'Y'`), by actual treatment `TRT01A`:
+
+      1. write the counts of `SEX` by `TRT01A`, with percentages within each arm available as a variable, to `WORK.SEX_CNT` (no printed output needed);
+      2. write n, mean, SD, median, min and max of `AGE` to `WORK.AGE_STATS`, **one row per arm** (no overall row).
+    starter: |
+      proc freq data=adam.adsl noprint;
+        /* population and table */
+      run;
+
+      proc means data=adam.adsl noprint;
+        /* population, class, statistics */
+      run;
+    hints:
+      - "Both procedures accept a WHERE statement for the population."
+      - "In PROC FREQ, `OUT=` writes COUNT and PERCENT; `OUTPCT` adds PCT_ROW and PCT_COL (percentages within rows or columns)."
+      - "In PROC MEANS, `CLASS TRT01A` plus `NWAY` gives one row per arm; name each statistic in `OUTPUT OUT=`."
+    checks:
+      - pattern: 'where\s+saffl\s*=\s*[''"]y[''"]'
+        message: "Restricts to the safety population with WHERE"
+      - pattern: 'tables\s+(sex\s*\*\s*trt01a|trt01a\s*\*\s*sex)'
+        message: "Crosses SEX with TRT01A"
+      - pattern: 'out\s*=\s*sex_cnt'
+        message: "Writes the counts to WORK.SEX_CNT"
+      - pattern: '\boutpct\b'
+        message: "Adds within-row/column percentages with OUTPCT"
+      - pattern: 'class\s+trt01a\s*;'
+        message: "Summarises by TRT01A with CLASS"
+      - pattern: '\bnway\b'
+        message: "Keeps only the per-arm rows with NWAY"
+      - pattern: 'output\s+out\s*=\s*age_stats'
+        message: "Writes the statistics to WORK.AGE_STATS"
+      - pattern: '\bstd\s*=\s*\w+'
+        message: "Outputs the standard deviation"
+      - pattern: '\bmedian\s*=\s*\w+'
+        message: "Outputs the median"
+    reference: |
+      proc freq data=adam.adsl noprint;
+        where SAFFL = 'Y';
+        tables SEX*TRT01A / out=sex_cnt outpct;
+      run;
+
+      proc means data=adam.adsl noprint nway;
+        where SAFFL = 'Y';
+        class TRT01A;
+        var AGE;
+        output out=age_stats n=n mean=mean std=sd median=median min=min max=max;
+      run;
+    solution: |
+      With `tables SEX*TRT01A`, the arm is the column variable, so the within-arm percentage is `PCT_COL`. `NWAY` removes the `_TYPE_ = 0` overall row (keep it, or rerun without CLASS, if you need a Total column). Check: the sum of `COUNT` per arm equals the arm's N, and `n` in `AGE_STATS` is at most `_FREQ_` (less if some ages are missing).
+
+  - id: sas.sort-freq-means.dupout-code
+    format: code
+    language: sas
+    modes: [independent, qc]
+    difficulty: foundation
+    skills: [sas.sort, qc.data-cleaning]
+    lesson: sas-sort-freq-means
+    title: Prove one row per subject
+    minutes: 5
+    prompt: |
+      Write a PROC SORT step that checks `WORK.ADSL` has one row per `USUBJID`: write one record per subject to `WORK.ADSL_U` and every removed duplicate-key record to `WORK.ADSL_DUPS`, **without modifying** `WORK.ADSL`.
+    starter: |
+      proc sort /* options */;
+        by /* key */;
+      run;
+    hints:
+      - "`OUT=` protects the input dataset."
+      - "`NODUPKEY` removes duplicate keys; `DUPOUT=` keeps what was removed."
+    checks:
+      - pattern: 'proc\s+sort\s+[^;]*data\s*=\s*(work\.)?adsl\b'
+        message: "Sorts WORK.ADSL"
+      - pattern: 'out\s*=\s*(work\.)?adsl_u\b'
+        message: "Writes the result to WORK.ADSL_U (input untouched)"
+      - pattern: '\bnodupkey\b'
+        message: "Uses NODUPKEY"
+      - pattern: 'dupout\s*=\s*(work\.)?adsl_dups\b'
+        message: "Captures removed records with DUPOUT="
+      - pattern: 'by\s+usubjid\s*;'
+        message: "Uses USUBJID as the key"
+    reference: |
+      proc sort data=adsl out=adsl_u nodupkey dupout=adsl_dups;
+        by USUBJID;
+      run;
+    solution: |
+      The log line `NOTE: 0 observations with duplicate key values were deleted.` (and an empty `ADSL_DUPS`) proves uniqueness. If records were deleted, investigate `ADSL_DUPS` — do not simply continue with `ADSL_U`. To see *all* copies of each duplicated key (not just the extra ones), use the FIRST./LAST. check from the BY-group lesson.
+    explanation:
+      objective: "Verify the one-row-per-subject structure of ADSL before any counting."
+      given: "A subject-level dataset whose key should be USUBJID."
+      relevant: "NODUPKEY on the key, DUPOUT= to capture removals, OUT= to protect the input."
+      method: "A sort with NODUPKEY is a cheap uniqueness test: the number of deleted records is the number of extra copies."
+      interpretation: "Zero deletions confirms the key; any deletion is a data issue to explain, not a clean-up step."
+      interviewer: "That you check keys before summarising and never let NODUPKEY silently decide which record survives."
+
+  - id: sas.sort-freq-means.class-missing-mcq
+    format: mcq
+    modes: [check, independent]
+    difficulty: intermediate
+    skills: [sas.means, sas.missing-values]
+    lesson: sas-sort-freq-means
+    title: Where did two subjects go?
+    prompt: |
+      `WORK.ADSL` has 12 randomized subjects. Two were never treated, so their actual treatment `TRT01A` is blank.
+
+      ```sas
+      proc means data=adsl n mean;
+        class TRT01A;
+        var AGE;
+      run;
+      ```
+
+      The N Obs column adds up to 10. What happened?
+    choices:
+      - text: "Observations with a missing CLASS value are excluded unless the MISSING option is used"
+        correct: true
+        feedback: "PROC MEANS drops observations whose class variable is missing. Add MISSING to see them as their own level — or decide that they do not belong in a by-actual-treatment summary."
+      - text: "PROC MEANS excludes subjects with a missing AGE from N Obs"
+        feedback: "N Obs counts observations regardless of AGE; missing AGE lowers N, not N Obs."
+      - text: "The data must be sorted by TRT01A first"
+        feedback: "CLASS does not require sorted data (BY does)."
+      - text: "The two subjects were merged into the first treatment level"
+        feedback: "Missing class values are dropped, not reassigned."
+    solution: |
+      Missing class values are excluded by default. Whether that is right depends on the table: safety summaries by actual treatment usually exclude never-treated subjects on purpose (via `SAFFL`), but the exclusion should come from an explicit population filter, not from an accident of CLASS processing.
+
+  - id: sas.sort-freq-means.noduprecs-diff
+    format: diff
+    modes: [qc]
+    difficulty: advanced
+    skills: [sas.sort, qc.compare, qc.data-cleaning]
+    lesson: sas-sort-freq-means
+    title: De-duplication counts disagree
+    minutes: 8
+    prompt: |
+      The raw AE extract (`WORK.RAW_AE`, 12 records) contains exact duplicate records caused by a repeated transfer. Production and QC both remove exact duplicates but get different results. Which explanation fits?
+    left:
+      title: Production
+      columns: [Step, Records]
+      rows:
+        - ["Read from RAW_AE", 12]
+        - ["Deleted as duplicates", 2]
+        - ["Kept", 10]
+    right:
+      title: QC
+      columns: [Step, Records]
+      rows:
+        - ["Read from RAW_AE", 12]
+        - ["Deleted as duplicates", 3]
+        - ["Kept", 9]
+    leftCode: |
+      proc sort data=raw_ae out=ae noduprecs;
+        by USUBJID;
+      run;
+    rightCode: |
+      proc sort data=raw_ae out=ae_qc noduprecs dupout=ae_dups;
+        by _all_;
+      run;
+    codeLanguage: sas
+    choices:
+      - text: "Production sorted by USUBJID only, so one pair of identical records was not adjacent after sorting and NODUPRECS kept both"
+        correct: true
+        feedback: "NODUPRECS compares each record only with the previous one. With `by USUBJID`, records of the same subject keep their input order, so identical records separated by a different AE of that subject are never compared."
+      - text: "QC removed a record that is not an exact duplicate"
+        feedback: "Sorting by _all_ with NODUPRECS removes only records identical in every variable."
+      - text: "NODUPRECS compares only the BY variables"
+        feedback: "That describes NODUPKEY. With `by USUBJID` and NODUPKEY, production would have kept one AE per subject — a far bigger loss."
+      - text: "Production should have used NODUPKEY with BY USUBJID"
+        feedback: "That would delete every AE except the first for each subject."
+    hints:
+      - "Both programs use NODUPRECS, so neither one has confused it with NODUPKEY. The BY statements are what differ."
+      - "NODUPRECS compares each record only with the record immediately before it — so the answer depends entirely on what the sort placed next to what."
+      - "`by USUBJID` orders only by subject; within a subject, records keep their input order. Two identical records separated by a different AE of the same subject are therefore never adjacent, and never compared."
+    solution: |
+      Production missed one duplicate pair because it was not adjacent. Sorting by all variables (`by _all_;`) makes identical records adjacent, so NODUPRECS catches every exact duplicate; `DUPOUT=` documents what was removed. Report the duplicates to data management as well — the answer key of a real study expects them to be queried, not silently dropped.
+    explanation:
+      objective: "Explain a discrepancy in de-duplication counts between two programs."
+      given: "Both programs and their record counts."
+      relevant: "How NODUPRECS decides that a record is a duplicate (comparison with the preceding record) and what the BY statement does to adjacency."
+      irrelevant: "The number of subjects."
+      numbers: "12 read; production deleted 2 (two adjacent duplicate pairs); QC deleted 3 (the same two plus one non-adjacent pair)."
+      computation: "After `by USUBJID`, a subject's records stay in input order: A1, B, A1-copy — A1-copy is compared with B, not A1, and survives."
+      interpretation: "QC's count is the correct number of exact duplicates."
+      changes: "Sorting production by every variable, or by the full natural key followed by the remaining variables, would make the counts agree."
+      interviewer: "That you know NODUPRECS only compares adjacent records and that NODUPKEY is about keys, not identical records."
+
+  - id: sas.sort-freq-means.by-unsorted-log
+    format: log
+    modes: [debug, speed]
+    difficulty: foundation
+    skills: [sas.means, sas.sort, sas.log]
+    lesson: sas-sort-freq-means
+    title: BY group processing in a procedure
+    minutes: 4
+    prompt: |
+      Click the line that identifies the problem (representative log).
+    program: |
+      proc means data=adsl n mean;
+        by TRT01P;
+        var AGE;
+      run;
+    log: |
+      51   proc means data=adsl n mean;
+      52     by TRT01P;
+      53     var AGE;
+      54   run;
+
+      ERROR: Data set WORK.ADSL is not sorted in ascending sequence. The current BY group has TRT01P = Placebo + Docetaxel and the next BY group has TRT01P = CBX-417 + Docetaxel.
+      NOTE: The SAS System stopped processing this step because of errors.
+      NOTE: There were 3 observations read from the data set WORK.ADSL.
+    issues: [6]
+    lineNotes:
+      - line: 6
+        note: "The data are in subject order, so the arms alternate. A procedure with BY needs the data sorted by the BY variables."
+      - line: 7
+        note: "A consequence: the procedure stopped. Any output printed before the error is incomplete."
+      - line: 8
+        note: "SAS read only 3 observations before finding the order problem."
+    hints:
+      - "What does BY require that CLASS does not?"
+      - "Read the ERROR text literally: it names a dataset and states a condition that dataset is in, not a syntax problem in the procedure."
+      - "There are two different fixes and they are not equivalent. `proc sort` first and keep `by TRT01P;` (one table per arm), or switch to `class TRT01P;` (no sorting, one table with a row per arm)."
+    solution: |
+      Sort first (`proc sort data=adsl out=adsl_s; by TRT01P; run;`) or, better for a summary table, replace `by TRT01P;` with `class TRT01P;`, which needs no sorting and puts both arms in one table.
+    explanation:
+      objective: "Recognise the unsorted-BY error in a procedure."
+      given: "A PROC MEANS with BY and its log."
+      relevant: "The ERROR line naming the two BY groups out of order."
+      irrelevant: "Timing and the program echo."
+      interpretation: "The procedure only processed the first few observations; the output is not usable."
+      interviewer: "That you know the difference between BY (sorted, separate analyses) and CLASS (unsorted, one table)."
+
+  - id: sas.sort-freq-means.interview-demog
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [sas.freq, sas.means, tlf.demographics, communication.interviewing]
+    lesson: sas-sort-freq-means
+    title: Producing a demographics table
+    prompt: |
+      **Interviewer:** "You're given ADSL and a demographics table shell. Walk me through how you'd produce the numbers in SAS and how you'd check them."
+    modelAnswer: |
+      I'd read the shell first: the population (usually safety or ITT), the treatment variable (actual for safety, planned for efficacy), whether there's a Total column, the statistics, decimals and how missing values are shown.
+
+      Then: confirm ADSL has one row per subject (a NODUPKEY with DUPOUT, or FIRST./LAST.), restrict to the population with a WHERE on the flag, and compute the header Ns. For continuous variables, PROC MEANS or SUMMARY with CLASS on treatment into an output dataset (n, mean, SD, median, min, max), handling `_TYPE_` or NWAY for the total. For categorical variables, PROC FREQ with OUT= and OUTPCT, using the arm N as denominator and adding missing categories as the shell requires. A reporting step rounds the numbers once, formats them (`xx.x (xx.xx)`) and lays them out with PROC REPORT.
+
+      To check: the Ns match the population counts, categories add up to N, n is never larger than N, and an independent QC program — often SQL or R — agrees, with definitions (quartiles, denominators, missing handling) agreed in advance.
+    rubric:
+      - Starts from the shell (population, treatment variable, statistics, missing handling)
+      - Confirms one record per subject before counting
+      - Uses PROC MEANS/SUMMARY and PROC FREQ output datasets (not printed output)
+      - Uses the arm N as the percentage denominator
+      - Rounds once, at the reporting step
+      - Describes concrete checks and independent QC
+    redFlags:
+      - "Copies numbers from printed output by hand"
+      - "Uses the total N as the denominator for every column"
+      - "Ignores missing values"
+    followUps:
+      - "Your QC programmer's Q1 differs from yours in the second decimal. What might explain it?"
+      - "How would you add a Total column?"
+
+  - id: sas.sort-freq-means.speed-means-default
+    format: multi
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.means]
+    lesson: sas-sort-freq-means
+    title: PROC MEANS default statistics
+    prompt: |
+      Which statistics does PROC MEANS print when you request none? Select all that apply.
+    choices:
+      - text: "N"
+        correct: true
+        feedback: "Default."
+      - text: "Mean"
+        correct: true
+        feedback: "Default."
+      - text: "Std Dev"
+        correct: true
+        feedback: "Default."
+      - text: "Minimum"
+        correct: true
+        feedback: "Default."
+      - text: "Maximum"
+        correct: true
+        feedback: "Default."
+      - text: "Median"
+        feedback: "Must be requested (MEDIAN or P50)."
+      - text: "N Miss"
+        feedback: "Must be requested (NMISS)."
+    solution: |
+      N, Mean, Std Dev, Minimum and Maximum. A demographics table also needs the median (and often NMISS), so request statistics explicitly.

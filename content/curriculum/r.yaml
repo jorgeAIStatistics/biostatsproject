@@ -1,0 +1,126 @@
+lab: r
+modules:
+  - id: r-foundations
+    title: R foundations for clinical data
+    summary: Base R and tidyverse fundamentals taught from a SAS programmer's point of view — types, NA, factors, importing study CSVs, dplyr verbs, joins with key checks, reshaping and dates — with the semantic differences from SAS made explicit.
+    level: 1
+    lessons:
+      - id: r-basics-for-sas-users
+        title: R basics for SAS users
+        summary: Vectors, types, NA and NULL, factors, lists, data frames and tibbles, indexing, functions and packages — and exactly where R's rules differ from the SAS DATA step.
+        minutes: 65
+        difficulty: foundation
+        tracks: [programmer, biostatistician, computing]
+        skills: [r.basics, r.sas-translation]
+        keywords: [vector, NA, "NULL", factor, levels, tibble, data.frame, indexing, copy-on-modify, na.rm, package, library]
+      - id: r-importing-data
+        title: Importing clinical CSVs with readr
+        summary: Reading the CBX-417 SDTM and ADaM CSVs with readr, declaring column types, keeping identifiers as text, parsing ISO 8601 dates on import, handling encodings and blank strings, and proving that what you read is what was written.
+        minutes: 50
+        difficulty: foundation
+        tracks: [programmer, biostatistician, computing]
+        skills: [r.import, r.basics, r.dates]
+        prerequisites: [r-basics-for-sas-users]
+        keywords: [read_csv, col_types, cols, problems, na argument, locale, encoding, spec, write_csv, PROC IMPORT]
+      - id: r-dplyr-verbs
+        title: The dplyr verbs for clinical derivations
+        summary: filter, select, mutate, arrange, group_by and summarise; case_when, across, if_else versus ifelse, and grouped versus ungrouped results — applied to subject-level and BDS data.
+        minutes: 65
+        difficulty: foundation
+        tracks: [programmer, biostatistician, computing]
+        skills: [r.dplyr, r.basics]
+        prerequisites: [r-importing-data]
+        keywords: [filter, select, mutate, arrange, summarise, group_by, .by, case_when, if_else, ifelse, across, count, n_distinct, pipe]
+      - id: r-joins-and-keys
+        title: Joins, keys and reconciliation in R
+        summary: left_join, inner_join and anti_join; proving key uniqueness before joining; the relationship argument and many-to-many warnings in dplyr 1.1+; merging ADSL variables onto BDS data; reconciling two datasets with anti_join.
+        minutes: 60
+        difficulty: intermediate
+        tracks: [programmer, biostatistician, computing]
+        skills: [r.joins, r.dplyr, qc.compare, adam.bds]
+        prerequisites: [r-dplyr-verbs]
+        keywords: [left_join, inner_join, anti_join, semi_join, relationship, many-to-many, unmatched, key, MERGE, IN=, reconciliation]
+      - id: r-reshaping-tidyr
+        title: Reshaping with tidyr
+        summary: pivot_longer and pivot_wider for clinical data — turning a wide vital-signs form into one row per subject, visit and test, building wide listings back, and how this compares with PROC TRANSPOSE.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [programmer, biostatistician, computing]
+        skills: [r.tidyr, r.dplyr, sdtm.findings, sas.transpose]
+        prerequisites: [r-dplyr-verbs]
+        keywords: [pivot_longer, pivot_wider, names_to, values_to, names_sep, values_fn, complete, PROC TRANSPOSE, long, wide]
+      - id: r-dates-and-times
+        title: Dates and times in R
+        summary: The Date and POSIXct classes, parsing formats with as.Date, differences in days, ISO 8601 text, partial dates, study day with no day 0, and what lubridate adds.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [programmer, biostatistician, computing]
+        skills: [r.dates, sdtm.dates, r.dplyr]
+        prerequisites: [r-importing-data]
+        keywords: [Date, as.Date, format, difftime, POSIXct, ISO 8601, partial date, study day, ADY, lubridate, SAS date origin]
+
+  - id: r-analysis
+    title: Analysis and figures in R
+    summary: Publication-quality clinical figures with ggplot2, linear and logistic models with tidy outputs, and survival analysis with the survival package — including the defaults that differ from SAS.
+    level: 2
+    lessons:
+      - id: r-ggplot2-clinical-figures
+        title: Clinical figures with ggplot2
+        summary: The grammar of graphics applied to clinical figures — mean change from baseline by visit with error bars, a Kaplan-Meier plot built from survfit data with a number-at-risk table, a waterfall plot, and publication labeling.
+        minutes: 65
+        difficulty: intermediate
+        tracks: [biostatistician, programmer, computing]
+        skills: [r.ggplot, tlf.figures, communication.visualization]
+        prerequisites: [r-dplyr-verbs, r-reshaping-tidyr]
+        keywords: [ggplot, aes, geom_line, geom_errorbar, geom_step, geom_col, facet_wrap, labs, theme, ggsave, KM plot, waterfall, number at risk]
+      - id: r-models-lm-glm-broom
+        title: Linear and logistic models with broom
+        summary: The formula interface, factor contrasts and reference levels, lm and glm fits, tidy/glance/augment, predictions on the right scale, and the diagnostics a reviewer expects to see.
+        minutes: 65
+        difficulty: intermediate
+        tracks: [biostatistician, computing]
+        skills: [r.models, stats.linear-regression, stats.logistic, stats.ancova]
+        prerequisites: [r-dplyr-verbs]
+        keywords: [lm, glm, formula, factor, relevel, contrasts, contr.treatment, tidy, glance, augment, predict, odds ratio, confint, ANCOVA]
+      - id: r-survival-package
+        title: Survival analysis with the survival package
+        summary: Surv objects, survfit (and why its default confidence interval differs from SAS), survdiff, coxph with efron versus breslow ties, strata(), cox.zph, and reading the output line by line on CBX-417 PFS data.
+        minutes: 75
+        difficulty: advanced
+        tracks: [biostatistician, programmer]
+        skills: [r.survival, stats.survival, stats.cox, stats.ph-assumption]
+        prerequisites: [r-models-lm-glm-broom]
+        keywords: [Surv, survfit, conf.type, log-log, survdiff, log-rank, coxph, ties, efron, breslow, strata, cox.zph, ADTTE, CNSR]
+
+  - id: r-in-industry
+    title: R in clinical industry practice
+    summary: Writing reusable, tested functions and reproducible projects, translating SAS programs to R faithfully, and an accurate map of the pharmaverse and R-based submissions.
+    level: 3
+    lessons:
+      - id: r-functions-and-reproducible-code
+        title: Functions and reproducible R code
+        summary: Writing functions instead of copy/paste, argument checking, testing with testthat concepts and base-R stopifnot equivalents, Quarto/R Markdown, renv and a project structure a validator can follow.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [computing, biostatistician, programmer]
+        skills: [r.functions, r.reporting, repro.testing, repro.project-structure]
+        prerequisites: [r-dplyr-verbs]
+        keywords: [function, arguments, defaults, stopifnot, testthat, embracing, Quarto, R Markdown, renv, lockfile, sessionInfo, project structure]
+      - id: r-translate-sas
+        title: Translating SAS to R
+        summary: DATA step, MERGE, FIRST./LAST., RETAIN, PROC FREQ, MEANS, SORT NODUPKEY, TRANSPOSE, LIFETEST, PHREG, LOGISTIC and MIXED translated into R — with the semantic differences (missing values, quantiles, rounding, ties, reference levels) that make naive translations wrong.
+        minutes: 80
+        difficulty: advanced
+        tracks: [programmer, biostatistician]
+        skills: [r.sas-translation, r.dplyr, r.models, r.survival]
+        prerequisites: [r-joins-and-keys, r-survival-package]
+        keywords: [DATA step, MERGE, FIRST., LAST., RETAIN, PROC FREQ, PROC MEANS, QNTLDEF, NODUPKEY, PROC TRANSPOSE, LIFETEST, PHREG, LOGISTIC, MIXED, nlme, lme4, round half even]
+      - id: r-pharmaverse-overview
+        title: The pharmaverse and R in submissions
+        summary: What admiral, metacore/metatools, xportr, rtables, Tplyr and tfrmt are for, how some sponsors use R for ADaM and TLFs, what the R Consortium submission pilots demonstrated, and how to talk about it accurately.
+        minutes: 40
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [r.reporting, regulatory.submission, r.sas-translation]
+        prerequisites: [r-functions-and-reproducible-code]
+        keywords: [pharmaverse, admiral, metacore, metatools, xportr, rtables, Tplyr, tfrmt, R Consortium, submission pilot, validation, riskmetric]

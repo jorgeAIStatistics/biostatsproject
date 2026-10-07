@@ -1,0 +1,64 @@
+domain: r
+title: R
+description: Modern R for clinical and biostatistical work, from base R to the tidyverse, survival analysis and reporting.
+skills:
+  - id: r.basics
+    name: R fundamentals
+    description: Vectors, types, NA, factors, lists, data frames, indexing and functions.
+    weight: 3
+    tracks: [biostatistician, computing, programmer]
+  - id: r.import
+    name: Importing and exporting data
+    description: readr/read.csv, column types, encodings, dates on import, writing CSV.
+    weight: 2
+    tracks: [biostatistician, computing, programmer]
+  - id: r.dplyr
+    name: dplyr data manipulation
+    description: filter, select, mutate, arrange, group_by/summarise, case_when, across.
+    weight: 3
+    tracks: [biostatistician, computing, programmer]
+  - id: r.joins
+    name: Joins in R
+    description: left_join/inner_join/anti_join, relationship checks, many-to-many warnings.
+    weight: 3
+    tracks: [biostatistician, computing, programmer]
+  - id: r.tidyr
+    name: Reshaping with tidyr
+    description: pivot_longer and pivot_wider, separate/unite, complete.
+    weight: 2
+    tracks: [biostatistician, computing, programmer]
+  - id: r.dates
+    name: Dates in R
+    description: Date class, as.Date formats, difftime, partial dates, lubridate concepts.
+    weight: 2
+    tracks: [biostatistician, computing, programmer]
+  - id: r.ggplot
+    name: ggplot2 graphics
+    description: Grammar of graphics, clinical figures, facets, themes, labeling for publication.
+    weight: 2
+    tracks: [biostatistician, computing]
+  - id: r.models
+    name: Modeling in R
+    description: lm, glm, formula syntax, factor contrasts, broom tidiers, predictions and diagnostics.
+    weight: 3
+    tracks: [biostatistician, computing]
+  - id: r.survival
+    name: survival package
+    description: Surv objects, survfit, survdiff, coxph, cox.zph, stratification and ties handling.
+    weight: 3
+    tracks: [biostatistician, programmer]
+  - id: r.functions
+    name: Writing R functions
+    description: Arguments, defaults, return values, vectorization, avoiding copy/paste code.
+    weight: 2
+    tracks: [computing, biostatistician]
+  - id: r.reporting
+    name: Reproducible reporting in R
+    description: Quarto/R Markdown concepts, table packages, the pharmaverse ecosystem at a conceptual level.
+    weight: 1
+    tracks: [biostatistician, programmer]
+  - id: r.sas-translation
+    name: Translating SAS to R
+    description: Mapping DATA step, PROC FREQ/MEANS/LIFETEST/PHREG logic to R, including default differences.
+    weight: 2
+    tracks: [programmer, biostatistician]

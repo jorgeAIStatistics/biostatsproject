@@ -1,0 +1,940 @@
+items:
+  - id: r.sas2r.missing-direction
+    format: mcq
+    modes: [check, qc, debug]
+    difficulty: advanced
+    skills: [r.sas-translation, sas.missing-values, qc.discrepancy]
+    lesson: r-translate-sas
+    title: Which branch does the missing value land in?
+    prompt: |
+      Four derivations, each translated character-for-character from SAS to R. In each case `x` is missing
+      for some records.
+
+      ```sas
+      A:  if x >  3   then f = 'Y'; else f = 'N';
+      B:  if x <= -30 then f = 'Y'; else f = 'N';
+      C:  if x >= 20  then f = 'Y'; else f = 'N';
+      D:  if x <  0   then f = 'Y'; else f = 'N';
+      ```
+
+      In which of these does SAS assign `'Y'` to the records where `x` is missing?
+    choices:
+      - text: "B and D — a SAS missing numeric sorts below every number, so `<` and `<=` comparisons against it are true."
+        correct: true
+        feedback: "Correct. The rule of thumb that 'missing falls into the else branch' only holds for `>` and `>=`. With `<` and `<=` it takes the then branch, which is the case that inflates a numerator."
+      - text: "A and C, because a missing value is treated as zero."
+        feedback: "SAS does not treat a missing numeric as zero. It is represented below every real number, so `x > 3` and `x >= 20` are both false for it."
+      - text: "None — SAS excludes records with a missing value from an IF statement."
+        feedback: "A DATA step evaluates the comparison for every observation. Nothing is excluded; the comparison simply has a definite answer."
+      - text: "All four, since a missing value satisfies any comparison."
+        feedback: "The ordering is total, not universal. A missing value is below every number, so it fails `>` and `>=` and passes `<` and `<=`."
+    solution: |
+      **B and D.** A SAS missing numeric is represented **below every real number**, so the comparison has
+      a definite answer and the direction of the operator decides which one:
+
+      | Comparison | Missing `x` | Which branch |
+      |---|---|---|
+      | `x > 3` | false | `else` — understates |
+      | `x >= 20` | false | `else` — understates |
+      | `x <= -30` | **true** | **`then`** — overstates |
+      | `x < 0` | **true** | **`then`** — overstates |
+
+      **The widely-repeated version of this rule is only half right.** "A missing value falls into the
+      `else` branch" is true for `>` and `>=`, which is how most thresholds are written — upper limits of
+      normal, grade cut-offs, age groups. It is false for the reduction thresholds that appear all over
+      oncology, where a response is defined as a value *at most* some negative number.
+
+      On CBX417-301's target-lesion data, `if pchg <= -30 then resp = 'PR'` classifies the 14 records with
+      a missing percentage change as **partial responses**. Those records belong to 2 subjects with no
+      baseline tumour assessment.
+
+      In R every one of the four gives `NA` for a missing `x`, because `NA` propagates. That is not safe
+      either — a later `filter()` drops the row silently — but it is at least uniform.
+
+      **Write the missing branch in both languages:**
+
+      ```sas
+      if missing(x)   then f = '';
+      else if x <= -30 then f = 'Y';
+      else                  f = 'N';
+      ```
+    explanation:
+      objective: "Predict where a SAS missing value lands for each comparison direction."
+      given: "Four threshold derivations differing only in the comparison operator."
+      relevant: "That a SAS missing numeric is ordered below every real number."
+      method: "Evaluate the comparison treating missing as minus infinity."
+      numbers: "On CBX417-301, `pchg <= -30` classifies 14 records from 2 subjects as partial responses."
+      assumptions: "Plain missing (.); the special missings .A to .Z and ._ also sort below all numbers."
+      interpretation: "The direction of the operator decides whether the error inflates or understates."
+      changes: "In R all four give NA, which propagates rather than taking a branch."
+      interviewer: "That you know the common rule of thumb is only true for > and >=, and can say which case is dangerous."
+
+  - id: r.sas2r.proc-means-n
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [r.sas-translation, sas.means, tlf.summary-stats]
+    lesson: r-translate-sas
+    title: What PROC MEANS calls N
+    prompt: |
+      A demographics shell has a row "Treatment duration (days), N / mean (SD)" by planned arm.
+
+      In CBX417-301, each arm has **210** randomized subjects. Two subjects per arm were randomized but
+      never treated, so their `TRTDURD` is missing.
+
+      What number does `PROC MEANS` print in the `N` column for the CBX-417 arm?
+    answer: 208
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "`PROC MEANS` reports two different counts: `N` and `NMISS`."
+      - "Which of the two counts observations rather than values?"
+      - "210 randomized, 2 with a missing duration."
+    solution: |
+      **208.** `PROC MEANS`'s `N` is the count of **non-missing values of the analysis variable**, not the
+      number of observations. The 2 never-treated subjects appear in `NMISS`.
+
+      ```r
+      adsl |>
+        summarise(n     = sum(!is.na(TRTDURD)),   # PROC MEANS N     -> 208
+                  nmiss = sum(is.na(TRTDURD)),    # PROC MEANS NMISS -> 2
+                  mean  = mean(TRTDURD, na.rm = TRUE),
+                  sd    = sd(TRTDURD,  na.rm = TRUE),
+                  .by   = TRT01P)
+      ```
+
+      ```text
+                     TRT01P   n nmiss     mean       sd
+      1 CBX-417 + Docetaxel 208     2 220.1250 216.7833
+      2 Placebo + Docetaxel 208     2 166.4712 160.0869
+      ```
+
+      **`n()` would give 210** — it counts rows. Using it where the shell says `N` overstates the
+      denominator for every subject with a missing value.
+
+      **Two further differences in the same translation:**
+
+      `mean(TRTDURD)` without `na.rm = TRUE` returns `NA` for the whole arm. `PROC MEANS` drops missing
+      values from each statistic by default and prints a number, so the R version fails loudly where the
+      SAS version is silent. That is the better of the two behaviours, and it is still a difference you
+      have to write around.
+
+      And the 4 subjects are the gap between the ITT population (420) and the safety population (416) —
+      so 208 is not an anomaly, it is the safety population per arm.
+    explanation:
+      objective: "Translate PROC MEANS's N correctly into R."
+      given: "An arm size of 210 with two missing durations."
+      relevant: "That PROC MEANS's N counts non-missing values of the analysis variable."
+      calculating: "210 randomized minus 2 with a missing value."
+      numbers: "N = 208, NMISS = 2, mean 220.125, SD 216.783 for the CBX-417 arm."
+      assumptions: "The shell's N refers to the statistic's denominator, which the row label should make explicit."
+      interpretation: "208 per arm is the safety population; 416 of the 420 randomized were treated."
+      changes: "`n()` gives 210 because it counts rows; `mean()` without na.rm gives NA for the whole arm."
+      interviewer: "That you distinguish the row denominator from the column header denominator."
+
+  - id: r.sas2r.class-missing
+    format: mcq
+    modes: [check, qc, debug]
+    difficulty: intermediate
+    skills: [r.sas-translation, sas.freq, tlf.denominators]
+    lesson: r-translate-sas
+    title: The disposition table that lost 53 subjects
+    prompt: |
+      A disposition table counts subjects by discontinuation reason. CBX417-301 has 420 randomized
+      subjects; 53 were still in follow-up at the data cut-off and therefore have no reason recorded.
+
+      Two implementations:
+
+      ```r
+      # A
+      table(adsl$DCSREAS)
+
+      # B
+      adsl |> summarise(n = n(), .by = DCSREAS)
+      ```
+
+      A gives three rows summing to **367**. B gives four rows summing to **420**.
+
+      Which matches `PROC FREQ`, and what should the programmer do?
+    choices:
+      - text: "A matches `PROC FREQ`'s default, which excludes observations with a missing TABLES variable. Whichever is used, the rows must be reconciled against the population — 367 means the percentages have the wrong denominator."
+        correct: true
+        feedback: "Correct. `PROC FREQ … / MISSING` adds the missing row and gives 420, matching B. The decision belongs in the shell, and the check is that the rows add up."
+      - text: "B matches `PROC FREQ`, because SAS always reports every level including missing."
+        feedback: "The opposite: `PROC FREQ` excludes observations with a missing TABLES variable unless `/ MISSING` is specified. That is what makes A's total 367."
+      - text: "Neither — `PROC FREQ` would report 420 rows across four levels with a warning."
+        feedback: "There is no warning. The missing observations are simply not tabulated, and the total in the output is 367."
+      - text: "A is wrong in R and should never be used; `count()` is the only correct translation."
+        feedback: "`table()` is not wrong, it just behaves like PROC FREQ's default. Which behaviour is correct depends on the shell."
+    solution: |
+      **A matches `PROC FREQ`'s default.**
+
+      | Tool | Rows | Total |
+      |---|---|---|
+      | `table()` | 3 | **367** |
+      | `PROC FREQ` (default) | 3 | **367** |
+      | `PROC FREQ / MISSING` | 4 | **420** |
+      | `summarise(.by = DCSREAS)` / `count()` | 4 | **420** |
+
+      `PROC FREQ` and `PROC MEANS` exclude observations with a missing `TABLES` or `CLASS` variable
+      unless you ask for them. Base R's `table()` does the same; dplyr's `.by` and `count()` keep the
+      missing level as a group.
+
+      **This is not a bug in either — it is a shell decision.** For a disposition table the 53 subjects
+      still in follow-up are a *category*, usually labelled "Ongoing", and they belong in the table. For a
+      demographics subgroup they might legitimately be excluded.
+
+      **The check that catches it regardless:**
+
+      ```r
+      stopifnot(sum(counts$n) == nrow(adsl))
+      ```
+
+      A frequency table whose rows do not add up to the population has hidden some subjects somewhere,
+      and every percentage in it has the wrong denominator. Here that would be $n/367$ instead of
+      $n/420$ — an overstatement of about 14% relative, on every row.
+    explanation:
+      objective: "Match R's frequency-table behaviour to SAS's and decide what the output should show."
+      given: "Two R implementations giving totals of 367 and 420 on a 420-subject study."
+      relevant: "That PROC FREQ drops observations with a missing TABLES variable by default."
+      method: "Compare each tool's total against the population count."
+      numbers: "367 versus 420; the 53 difference is subjects still in follow-up at the cut-off."
+      assumptions: "The blanks were read as NA — base read.csv needs na.strings = c('', 'NA') for that."
+      interpretation: "A missing discontinuation reason is a meaningful category here, not absent data."
+      changes: "`PROC FREQ / MISSING` gives 420 and matches dplyr; the choice belongs in the shell."
+      interviewer: "That you check the total against the population rather than trusting either default."
+
+  - id: r.sas2r.logistic-event
+    format: mcq
+    modes: [check, qc, debug]
+    difficulty: advanced
+    skills: [r.sas-translation, stats.logistic, r.models]
+    lesson: r-translate-sas
+    title: The odds ratio that came out inverted
+    prompt: |
+      Confirmed overall response on CBX417-301: **58 of 210** on CBX-417 + docetaxel and **31 of 210** on
+      placebo + docetaxel.
+
+      R's `glm(RESP ~ TRTP, family = binomial)` with placebo as the reference reports an odds ratio of
+      **2.2033**. The SAS program, using `proc logistic; class trtp (ref='Placebo + Docetaxel'); model
+      resp = trtp;`, reports **0.4539**.
+
+      What happened?
+    choices:
+      - text: "`PROC LOGISTIC` models the probability of the lower ordered response level by default — here `P(RESP = 0)`, non-response — so it estimated the odds of *not* responding. `MODEL resp(event='1')` fixes it."
+        correct: true
+        feedback: "Correct, and 1/2.2033 = 0.4539 exactly, which is the tell: an exact reciprocal is a level-ordering problem, never an estimation difference."
+      - text: "The reference level for treatment differs between the programs."
+        feedback: "Both set placebo as the reference — the SAS program does so explicitly with `ref=`. And a treatment-reference flip would also give the reciprocal, so the exact reciprocal alone does not distinguish them; the response coding is what differs here."
+      - text: "SAS used a Firth penalised likelihood by default."
+        feedback: "`PROC LOGISTIC` does not apply Firth's correction unless `FIRTH` is specified, and a penalised estimate would not be the exact reciprocal of the unpenalised one."
+      - text: "The two programs used different link functions."
+        feedback: "Both default to the logit link. A different link would not produce an exact reciprocal."
+    solution: |
+      **`PROC LOGISTIC` models the probability of the lower ordered response level** — `P(RESP = 0)` for a
+      0/1 variable — unless you specify `(event='1')` or `DESCENDING`. R's `glm` models the probability of
+      the **second** level, which for a 0/1 numeric is `P(RESP = 1)`.
+
+      $$\frac{1}{2.2033} = 0.4539$$
+
+      **An exact reciprocal is the diagnostic.** Estimation differences — different optimisers, different
+      convergence criteria, a penalty — move a number slightly. A reciprocal means something was modelled
+      the other way round.
+
+      **Two independent things can invert an odds ratio:**
+
+      | | SAS default | R default |
+      |---|---|---|
+      | Modelled outcome level | **lower** ordered value | **second** factor level |
+      | Class-variable reference | **last** level in sort order | **first** factor level |
+
+      Getting both wrong gives you the right answer for the wrong reason, which is worse than getting one
+      wrong.
+
+      **Fix both explicitly:**
+
+      ```sas
+      proc logistic data=cbor;
+        class trtp (ref='Placebo + Docetaxel') / param=ref;
+        model resp(event='1') = trtp / clodds=wald;
+      run;
+      ```
+
+      ```r
+      cbor$TRTP <- relevel(factor(cbor$TRTP), ref = "Placebo + Docetaxel")
+      glm(RESP ~ TRTP, data = cbor, family = binomial)
+      ```
+
+      **And check the direction against a cross-tabulation.** 27.6% versus 14.8% means the experimental
+      arm must have an odds ratio above 1. A model output contradicting a simple two-by-two table should
+      stop you before it reaches a report.
+    explanation:
+      objective: "Diagnose an inverted odds ratio between two implementations."
+      given: "Two odds ratios that are exact reciprocals, from the same data with the same treatment reference."
+      relevant: "That PROC LOGISTIC models the lower ordered response level by default."
+      irrelevant: "The link function and any penalisation, neither of which would give an exact reciprocal."
+      method: "An exact reciprocal points to a level-ordering decision, not to estimation."
+      numbers: "2.2033 versus 0.4539; 1/2.2033 = 0.4539. Response rates 58/210 = 27.6% and 31/210 = 14.8%."
+      assumptions: "RESP is coded 0/1 with 1 meaning response."
+      interpretation: "One program estimated the odds of responding, the other the odds of not responding."
+      changes: "`MODEL resp(event='1')` in SAS, or reversing the factor levels, makes the two agree."
+      interviewer: "That you use the exact reciprocal as the signal, and that you name both level decisions rather than only the treatment reference."
+
+  - id: r.sas2r.response-count
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [r.sas-translation, sas.missing-values, qc.discrepancy]
+    lesson: r-translate-sas
+    title: How many extra responders?
+    prompt: |
+      On 1,914 post-baseline `SUMDIAM` records of CBX417-301:
+
+      - **620** have `PCHG <= -30`
+      - **1,280** have `PCHG > -30`
+      - **14** have `PCHG` missing (the subject has no baseline assessment)
+
+      A SAS program derives response with no missing-value branch:
+
+      ```sas
+      if pchg <= -30 then resp = 'PR';
+      else                 resp = 'NON-PR';
+      ```
+
+      How many records does this SAS program classify as `'PR'`?
+    answer: 634
+    tolerance: 0
+    unit: records
+    hints:
+      - "Where does a SAS missing numeric sit relative to −30?"
+      - "A SAS missing numeric is below every real number, so `. <= -30` is true."
+      - "620 + 14."
+    solution: |
+      **634.** $620 + 14 = 634$.
+
+      A SAS missing numeric compares as **smaller than every number**, so `. <= -30` is true and all 14
+      records with a missing percentage change take the `'PR'` branch.
+
+      | | `PR` | `NON-PR` | `NA` |
+      |---|---:|---:|---:|
+      | R, `if_else(PCHG <= -30, ...)` | 620 | 1,280 | 14 |
+      | SAS, no missing branch | **634** | 1,280 | — |
+
+      **At the subject level the difference is 2 subjects** — 112 with a best percentage change of at most
+      −30 against 114 — because the 14 records belong to only two subjects.
+
+      **Those two subjects have no baseline tumour assessment.** Under RECIST 1.1 a response cannot be
+      assessed without one, so "not evaluable" is the correct classification and "partial response" is not.
+      CBX417-301's time-to-event dataset already has a censoring code for exactly this situation —
+      `CNSR = 2`, "no baseline or adequate post-baseline assessment" — which is a strong hint that the SAP
+      intended these subjects to be handled and the derivation simply did not implement it.
+
+      **The direction is what makes this one serious.** The error adds responders, in the arm and endpoint
+      where a response rate may be the approval basis.
+    explanation:
+      objective: "Quantify the effect of an omitted missing-value branch in a SAS derivation."
+      given: "Record counts above, at and missing the response threshold."
+      relevant: "That the threshold is a negative number and the operator is <=."
+      calculating: "Records already below the threshold plus records with a missing value."
+      numbers: "620 + 14 = 634 records; at subject level 112 versus 114."
+      assumptions: "Plain missing values; no special missings are involved."
+      interpretation: "Two subjects with no baseline scan classified as partial responders."
+      changes: "With a `>` threshold the missing records would fall in the else branch and the error would understate instead."
+      interviewer: "That you translate the record difference into the subject count that actually appears in a table."
+
+  - id: r.sas2r.n-underscore
+    format: mapping
+    modes: [check, guided]
+    difficulty: advanced
+    skills: [r.sas-translation, sas.data-step, r.dplyr]
+    lesson: r-translate-sas
+    title: What is this SAS construct actually doing?
+    prompt: |
+      Match each SAS construct to the R expression that reproduces **what it is used for**, not what it
+      superficially resembles.
+    sourceLabel: SAS
+    targetLabel: R
+    pairs:
+      - source: "`_N_` used as a record counter within a BY group (with `FIRST.` and `RETAIN`)"
+        target: "`mutate(seq = row_number(), .by = USUBJID)`"
+        note: "The counter restarts at each subject. `.by` gives row_number() the same grouped behaviour."
+      - source: "`if _N_ = 1 then set params;` — load a lookup once"
+        target: "Code outside the pipeline entirely, run once before it"
+        note: "This is a setup step, not a row operation. In R there is nothing to translate — you assign the object before the pipeline."
+      - source: "`if last.usubjid then output;`"
+        target: "`slice_tail(n = 1, by = USUBJID)`"
+        note: "Both depend entirely on the preceding sort. `slice_max()` is the safer variant because it returns all ties rather than silently picking one."
+      - source: "`proc sort nodupkey; by usubjid;`"
+        target: "`distinct(d, USUBJID, .keep_all = TRUE)`"
+        note: "Deduplicates on the key and keeps the whole first record. Bare `distinct(d)` compares every column and usually removes nothing."
+      - source: "`proc means; class trtp; var age;` reporting `N`"
+        target: "`summarise(n = sum(!is.na(AGE)), .by = TRTP)`"
+        note: "PROC MEANS's N counts non-missing values of the analysis variable, not observations."
+      - source: "`proc freq; tables dcsreas;` — the default, no options"
+        target: "`table(d$DCSREAS)`"
+        note: "Both exclude observations with a missing value of the tabulated variable. `count()` and `.by` keep them."
+    targets:
+      - "`mutate(seq = row_number(), .by = USUBJID)`"
+      - "Code outside the pipeline entirely, run once before it"
+      - "`slice_tail(n = 1, by = USUBJID)`"
+      - "`distinct(d, USUBJID, .keep_all = TRUE)`"
+      - "`summarise(n = sum(!is.na(AGE)), .by = TRTP)`"
+      - "`table(d$DCSREAS)`"
+      - "`mutate(seq = row_number())`"
+      - "`distinct(d)`"
+      - "`summarise(n = n(), .by = TRTP)`"
+    solution: |
+      **`_N_` is not a row number.** It counts **iterations of the DATA step**, which equals the output row
+      number only when nothing subsets, merges or outputs more than once.
+
+      | DATA step contains | `_N_` on the first output row |
+      |---|---|
+      | `SET` only | 1 |
+      | `WHERE` — applied as the observation is read | 1; non-matching rows never start an iteration |
+      | subsetting `IF` — runs inside the iteration | the position of the first row that passes |
+      | `MERGE … BY` | the BY-group iteration counter |
+
+      So translating `_N_` means working out **what it was being used for**:
+
+      - a record counter within a group → `row_number()` with `.by`
+      - a "do this once" guard → code outside the pipeline
+      - a genuine input-row identifier → it should never have been `_N_`; the data needs a sequence variable
+
+      **The three distractors are each a real mistake:**
+
+      `mutate(seq = row_number())` without `.by` numbers the whole frame continuously instead of
+      restarting per subject.
+
+      `distinct(d)` compares **every column** and removes only exact duplicate rows — on a vital-signs
+      dataset that is usually none, so the row count looks plausible and nothing was deduplicated.
+
+      `summarise(n = n(), .by = TRTP)` counts rows rather than non-missing values, so it reports 210 where
+      `PROC MEANS` reports 208.
+    explanation:
+      objective: "Translate SAS DATA step idioms by intent rather than by appearance."
+      given: "Six SAS constructs and a set of candidate R expressions including three near-misses."
+      relevant: "What each construct is used for in a real program."
+      method: "Identify the intent — counter, setup, selection, deduplication, statistic — then pick the R idiom for that intent."
+      numbers: "PROC MEANS N = 208 versus n() = 210 on a 210-subject arm with two missing values."
+      assumptions: "The SAS programs are sorted appropriately, since LAST. and NODUPKEY both depend on the sort."
+      interpretation: "Three of the distractors produce plausible row counts while doing something different."
+      changes: "A subsetting IF changes what _N_ means; a WHERE does not."
+      interviewer: "That you say _N_ counts iterations rather than rows, and translate the purpose rather than the token."
+
+  - id: r.sas2r.nodupkey
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [r.sas-translation, r.dplyr, sas.sort]
+    lesson: r-translate-sas
+    title: Translating PROC SORT NODUPKEY
+    minutes: 10
+    prompt: |
+      Translate this faithfully:
+
+      ```sas
+      proc sort data=advs out=first_rec nodupkey;
+        by usubjid paramcd avisitn;
+      run;
+      ```
+
+      Write `nodupkey(d, keys, order_by = keys)` that sorts by `order_by`, keeps the **first whole record**
+      for each distinct combination of `keys`, and asserts that the result has exactly one row per key
+      combination.
+
+      Note that `PROC SORT` deduplicates on the `BY` variables only — `AVISITN` here is part of the sort
+      *and* part of the key, so think about what the two arguments are for when they differ.
+    starter: |
+      library(dplyr)
+
+      nodupkey <- function(d, keys, order_by = keys) {
+        out <- d |>
+          arrange(___) |>
+          distinct(___, .keep_all = TRUE)
+
+        stopifnot(___)
+        out
+      }
+    reference: |
+      library(dplyr)
+
+      nodupkey <- function(d, keys, order_by = keys) {
+        out <- d |>
+          arrange(across(all_of(order_by))) |>
+          distinct(across(all_of(keys)), .keep_all = TRUE)
+
+        stopifnot(nrow(out) == nrow(distinct(d, across(all_of(keys)))))
+        out
+      }
+    hints:
+      - "`across(all_of(x))` turns a character vector of column names into a tidyselect selection."
+      - "`.keep_all = TRUE` is what makes it NODUPKEY rather than a projection onto the keys."
+      - "The assertion compares the result's row count against the number of distinct key combinations in the input."
+    checks:
+      - pattern: "distinct\\s*\\("
+        message: "Deduplicates with distinct()"
+      - pattern: "\\.keep_all\\s*=\\s*TRUE"
+        message: "Keeps the whole record, as NODUPKEY does"
+      - pattern: "all_of\\s*\\(\\s*keys\\s*\\)"
+        message: "Deduplicates on the supplied key columns"
+      - pattern: "arrange\\s*\\("
+        message: "Sorts before deduplicating, since the sort decides which record survives"
+      - pattern: "all_of\\s*\\(\\s*order_by\\s*\\)"
+        message: "Sorts by the supplied ordering columns"
+      - pattern: "stopifnot\\s*\\("
+        message: "Asserts one row per key combination"
+    expectedOutput: |
+      ```text
+      > first_vs <- nodupkey(advs,
+      +                      keys     = c("USUBJID", "PARAMCD"),
+      +                      order_by = c("USUBJID", "PARAMCD", "AVISITN"))
+      > nrow(first_vs); ncol(first_vs)
+      [1] 540
+      [1] 21
+
+      > table(first_vs$AVISITN)
+
+       -1
+      540
+      ```
+    solution: |
+      **540 rows = 270 subjects × 2 parameters**, all at `AVISITN = -1`, which is the screening visit —
+      the earliest, so the first record after the sort.
+
+      **`.keep_all = TRUE` is the whole translation.** Without it, `distinct()` returns only the key
+      columns, which is a projection rather than a deduplication:
+
+      ```r
+      distinct(advs, USUBJID, PARAMCD)                  # 540 rows, 2 columns
+      distinct(advs, USUBJID, PARAMCD, .keep_all = TRUE) # 540 rows, 21 columns  <- NODUPKEY
+      distinct(advs)                                     # 3082 rows — nothing removed
+      ```
+
+      **Bare `distinct(d)` is the dangerous distractor.** It compares every column and removes only exact
+      duplicate rows, which on this dataset is none. The row count looks plausible and nothing was
+      deduplicated.
+
+      **Separating `keys` from `order_by` is not pedantry.** `PROC SORT NODUPKEY` deduplicates on the `BY`
+      variables, which means the sort and the key are forced to be the same list. When you actually want
+      "first record per subject, ordered by date", SAS makes you write a second step with `FIRST.`. In R
+      the two are separate arguments, which is clearer — and it makes visible that **the sort is what
+      decides which record survives**.
+
+      That is why the tie-breaker matters. `PROC SORT` does not guarantee that tied records keep their
+      input order unless `EQUALS` is in force, and `distinct()` keeps whichever row the `arrange()` put
+      first. Sort by enough keys that ties are impossible, then assert.
+    explanation:
+      objective: "Translate NODUPKEY into dplyr without changing what is deduplicated."
+      given: "A PROC SORT NODUPKEY step and a dataset with 3,082 rows and 270 subjects."
+      relevant: "That NODUPKEY dedupes on the BY variables and keeps the whole first record."
+      method: "Sort, then distinct on the keys with .keep_all, then assert one row per key."
+      numbers: "540 rows and 21 columns; distinct(advs) would give 3,082 rows."
+      assumptions: "The sort fully determines the order; otherwise which record survives is arbitrary in both languages."
+      computation: "across(all_of(x)) converts a character vector of names into a tidyselect selection."
+      interpretation: "All surviving records are at AVISITN = -1, the earliest visit."
+      changes: "Omitting .keep_all returns only the key columns; bare distinct() removes nothing."
+      interviewer: "That you name the sort as the thing that decides the survivor, and mention ties."
+
+  - id: r.sas2r.derive-code
+    format: code
+    language: r
+    modes: [independent, qc]
+    difficulty: advanced
+    skills: [r.sas-translation, sas.missing-values, adam.bds]
+    lesson: r-translate-sas
+    title: The response derivation, translated faithfully
+    minutes: 20
+    prompt: |
+      Translate this SAS derivation into R, keeping the missing-value branch and adding the assertions R
+      makes cheap.
+
+      ```sas
+      data tr;
+        set adam.adtr;
+        where paramcd = 'SUMDIAM' and ablfl ne 'Y';
+        length resp $6;
+        if missing(pchg)     then resp = '';
+        else if pchg <= -30  then resp = 'PR';
+        else                      resp = 'NON-PR';
+      run;
+      ```
+
+      Write `derive_target_response(adtr, pchg_cut = -30)` returning **one row per subject and planned
+      arm** with:
+
+      - `n_eval` — records with a non-missing `PCHG`
+      - `n_missing` — records with a missing `PCHG`
+      - `best_pchg` — the minimum non-missing `PCHG`, or `NA_real_` if there is none
+      - `responder` — `TRUE` if any record is `"PR"`, `FALSE` if none is, `NA` if nothing is evaluable
+
+      Assert that a record's `RESP` is missing **exactly** when its `PCHG` is.
+    starter: |
+      library(dplyr)
+
+      derive_target_response <- function(adtr, pchg_cut = -30) {
+        tr <- adtr |>
+          filter(PARAMCD == "SUMDIAM", ___) |>
+          mutate(RESP = case_when(
+            ___
+          ))
+
+        stopifnot(___)
+
+        tr |>
+          summarise(
+            n_eval    = ___,
+            n_missing = ___,
+            best_pchg = ___,
+            responder = ___,
+            .by = c(USUBJID, TRTP)
+          )
+      }
+    reference: |
+      library(dplyr)
+
+      derive_target_response <- function(adtr, pchg_cut = -30) {
+        tr <- adtr |>
+          filter(PARAMCD == "SUMDIAM", is.na(ABLFL) | ABLFL != "Y") |>
+          mutate(RESP = case_when(
+            is.na(PCHG)      ~ NA_character_,
+            PCHG <= pchg_cut ~ "PR",
+            .default         = "NON-PR"
+          ))
+
+        stopifnot(all(is.na(tr$RESP) == is.na(tr$PCHG)))
+
+        tr |>
+          summarise(
+            n_eval    = sum(!is.na(PCHG)),
+            n_missing = sum(is.na(PCHG)),
+            best_pchg = if (any(!is.na(PCHG))) min(PCHG, na.rm = TRUE) else NA_real_,
+            responder = if (any(!is.na(PCHG))) any(RESP == "PR", na.rm = TRUE) else NA,
+            .by = c(USUBJID, TRTP)
+          )
+      }
+    hints:
+      - "`ABLFL != \"Y\"` alone drops the rows where ABLFL is missing, because filter() keeps only TRUE. SAS's `ne` on a blank is true, so the R version needs `is.na(ABLFL) | ABLFL != \"Y\"`."
+      - "`case_when` needs the missing branch first and a typed `NA_character_`, not a bare NA."
+      - "`min(numeric(0))` is `Inf`, so the minimum has to be guarded the same way a max would be."
+      - "`responder` has three states, so it cannot be a plain `any()` — guard it and return NA where nothing is evaluable."
+    checks:
+      - pattern: "is\\.na\\s*\\(\\s*ABLFL\\s*\\)\\s*\\|"
+        message: "Keeps rows where the baseline flag is missing, matching SAS's `ne` on a blank"
+      - pattern: "is\\.na\\s*\\(\\s*PCHG\\s*\\)\\s*~\\s*NA_character_"
+        message: "Handles the missing percentage change explicitly, as the SAS missing() branch does"
+      - pattern: "PCHG\\s*<=\\s*pchg_cut"
+        message: "Applies the response threshold as a parameter"
+      - pattern: "stopifnot\\s*\\("
+        message: "Asserts the missing pattern carried through the derivation"
+      - pattern: "sum\\s*\\(\\s*!\\s*is\\.na\\s*\\(\\s*PCHG\\s*\\)\\s*\\)"
+        message: "Counts evaluable records"
+      - pattern: "any\\s*\\(\\s*!\\s*is\\.na\\s*\\(\\s*PCHG\\s*\\)\\s*\\)"
+        message: "Guards the minimum and the responder flag against an all-missing subject"
+      - pattern: "NA_real_"
+        message: "Returns a typed missing value for an unevaluable best change"
+      - pattern: "if_else\\s*\\(\\s*PCHG\\s*<=\\s*-?30\\s*,"
+        absent: true
+        message: "Does not use a two-branch if_else that would silently produce NA without saying so"
+    expectedOutput: |
+      ```text
+      > r <- derive_target_response(adtr)
+      > nrow(r)
+      [1] 409
+
+      > table(r$responder, r$TRTP, useNA = "ifany")
+
+              CBX-417 + Docetaxel Placebo + Docetaxel
+        FALSE                 128                 167
+        TRUE                   74                  38
+        <NA>                    2                   0
+
+      > sum(r$best_pchg <= -30, na.rm = TRUE)
+      [1] 112
+      ```
+    solution: |
+      **112 responders — 74 on CBX-417 and 38 on placebo — with 2 subjects not evaluable.**
+
+      The SAS program without the `missing()` branch would classify those 2 subjects as responders,
+      giving 114. They have no baseline tumour assessment, so under RECIST 1.1 a response cannot be
+      assessed for them at all.
+
+      **Four places the translation is not word-for-word:**
+
+      | SAS | R | Why |
+      |---|---|---|
+      | `ablfl ne 'Y'` | `is.na(ABLFL) \| ABLFL != "Y"` | `ne` on a blank is true in SAS; `filter()` drops NA rows in R |
+      | `resp = ''` | `NA_character_` | R has no blank-as-missing; a bare `NA` is logical and fails the type check |
+      | `min(pchg)` in PROC SQL | guarded `min()` | `min(numeric(0))` is `Inf`, not missing |
+      | (implicit) | `stopifnot(...)` | The assertion R makes cheap and SAS does not |
+
+      **`responder` is deliberately three-state.** A subject with no evaluable record is not a
+      non-responder — they are not evaluable, and collapsing the two is the same error the SAS program
+      makes in the other direction. The `if (any(!is.na(PCHG)))` guard is what keeps them distinct.
+
+      **`pchg_cut` as a parameter** documents the threshold instead of burying it. RECIST 1.1 uses −30%
+      for a partial response in target lesions; making it an argument means a sensitivity analysis at a
+      different cut-off is a call, not a copy.
+    explanation:
+      objective: "Translate a SAS derivation into R without changing which subjects land where."
+      given: "A SAS DATA step with an explicit missing branch and a tumour-measurement BDS dataset."
+      relevant: "The missing branch, the direction of the threshold, and how filter() treats NA."
+      method: "Reproduce each SAS statement's meaning rather than its text, then assert the missing pattern."
+      numbers: "409 subjects; 112 responders (74 CBX-417, 38 placebo); 2 not evaluable."
+      assumptions: "A subject with no evaluable record is not evaluable rather than a non-responder — a SAP decision the function makes visible."
+      computation: "case_when evaluates top to bottom, so the is.na branch has to come first."
+      interpretation: "The two not-evaluable subjects are the ones SAS would have counted as partial responders."
+      changes: "Without the guard on min(), a subject with no evaluable record would get Inf rather than NA."
+      interviewer: "That you handle `ne` on a blank and the three-state responder flag, not just the missing branch."
+
+  - id: r.sas2r.two-subjects
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [r.sas-translation, sas.missing-values, qc.discrepancy]
+    lesson: r-translate-sas
+    title: Where the two extra responders came from
+    minutes: 10
+    prompt: |
+      A QC programmer is porting a SAS response derivation to R. Their version gives **112** responders;
+      production's SAS gives **114**.
+
+      Both programs read the same ADTR extract. The two extra subjects in production have no baseline
+      tumour assessment.
+
+      Click the line in the SAS program that produces the difference.
+    code: |
+      data tr;
+        set adam.adtr;
+        where paramcd = 'SUMDIAM' and ablfl ne 'Y';
+        length resp $6;
+        if pchg <= -30 then resp = 'PR';
+        else                resp = 'NON-PR';
+      run;
+
+      proc sql;
+        create table subj as
+        select usubjid, trtp, max(resp = 'PR') as responder
+        from tr group by usubjid, trtp;
+      quit;
+    answerLines: [5]
+    lineNotes:
+      - line: 5
+        note: "There is no `missing(pchg)` branch, and a SAS missing numeric compares as smaller than every number — so `. <= -30` is **true** and the 14 records with a missing percentage change are classified as `'PR'`. Those records belong to the 2 subjects with no baseline assessment. Add `if missing(pchg) then resp = ''; else if pchg <= -30 ...`."
+      - line: 3
+        note: "The WHERE is correct. `ablfl ne 'Y'` is true for a blank in SAS, which keeps the post-baseline records including those with a missing PCHG — and those records are exactly the ones line 5 then misclassifies."
+      - line: 6
+        note: "The else branch is fine. The problem is that a missing value never reaches it: it satisfies the condition on line 5 first."
+      - line: 11
+        note: "`MAX(resp = 'PR')` gives 1 if any record is a PR, which is the intended any-responder logic. It faithfully propagates whatever line 5 assigned."
+    fixed: |
+      data tr;
+        set adam.adtr;
+        where paramcd = 'SUMDIAM' and ablfl ne 'Y';
+        length resp $6;
+        if missing(pchg)     then resp = '';
+        else if pchg <= -30  then resp = 'PR';
+        else                      resp = 'NON-PR';
+      run;
+
+      proc sql;
+        create table subj as
+        select usubjid, trtp,
+               sum(not missing(pchg))                as n_eval,
+               case when sum(not missing(pchg)) = 0 then .
+                    else max(resp = 'PR') end        as responder
+        from tr group by usubjid, trtp;
+      quit;
+    hints:
+      - "114 - 112 = 2 subjects, and they have no baseline assessment — so what is their PCHG?"
+      - "Where does a SAS missing numeric sit relative to -30?"
+      - "Which line evaluates a comparison against a value that might be missing?"
+    solution: |
+      **Line 5.** There is no `missing()` branch, and in SAS a missing numeric is ordered **below every
+      real number** — including −30. So `. <= -30` is true and the 14 records with a missing `PCHG` are
+      classified as partial responses.
+
+      Those 14 records belong to **2 subjects**, which is exactly the 114 − 112 difference.
+
+      | | Records `PR` | Subjects responding |
+      |---|---:|---:|
+      | SAS, no missing branch | 634 | **114** |
+      | R, `NA` propagates | 620 | **112** |
+
+      **The direction of the comparison is what makes this dangerous.** The familiar rule — "a missing
+      value falls into the `else` branch" — holds for `>` and `>=`, which is how most clinical thresholds
+      are written. A response threshold is a *reduction*, so the operator is `<=` against a negative
+      number, and the missing value takes the `then` branch instead. **The error adds responders.**
+
+      **It is not only line 5.** The fix has a second half in the SQL: a subject with no evaluable record
+      is **not evaluable**, not a non-responder, and `MAX(resp = 'PR')` would give them 0 once line 5 is
+      corrected. Collapsing "cannot assess" into "did not respond" is the same error in the other
+      direction, and under RECIST 1.1 a response genuinely cannot be assessed without a baseline.
+
+      **This is a specification finding, not a programming finding.** Both programs did what their author
+      wrote; the SAP did not say what happens to a subject with no baseline assessment. That CBX417-301's
+      ADTTE already carries a censoring code for the same situation — `CNSR = 2`, "no baseline or adequate
+      post-baseline assessment" — suggests the intent existed and was not carried into this derivation.
+    explanation:
+      objective: "Locate the line responsible for two extra responders in a cross-language comparison."
+      given: "A two-subject difference, a SAS derivation, and the fact that the subjects have no baseline assessment."
+      relevant: "That the threshold is negative and the operator is <=, so a SAS missing value satisfies it."
+      irrelevant: "The WHERE clause and the SQL aggregation, both of which faithfully carry whatever line 5 assigned."
+      method: "No baseline means a missing PCHG; trace where a missing PCHG goes in each branch."
+      numbers: "14 records from 2 subjects; 634 versus 620 records, 114 versus 112 subjects."
+      assumptions: "Plain missing values; the ADTR extract is identical for both programs."
+      interpretation: "Two subjects who cannot be assessed were counted as partial responders."
+      changes: "With a `>=` threshold the same omission would understate rather than inflate."
+      interviewer: "That you also spot the second half of the fix — not evaluable is not the same as non-responder."
+
+  - id: r.sas2r.qc-triage
+    format: classify
+    modes: [qc, check, interview]
+    difficulty: advanced
+    skills: [r.sas-translation, qc.compare, qc.discrepancy]
+    lesson: r-translate-sas
+    title: Triaging a cross-language discrepancy
+    prompt: |
+      Production is SAS, QC is R, and the outputs disagree. Before reading either program, classify each
+      symptom by the kind of cause it points to.
+    categories:
+      - "A different set of subjects reached the calculation"
+      - "A tool default changed a value"
+      - "A level or reference was ordered differently"
+    entries:
+      - text: "The medians match exactly but Q1 and Q3 differ in a handful of cells."
+        category: "A tool default changed a value"
+        note: "SAS's default QNTLDEF=5 against R's type 7. The median is identical under every quantile definition, which is exactly why this hides until late."
+      - text: "A responder count differs by 2, and both subjects have no baseline assessment."
+        category: "A different set of subjects reached the calculation"
+        note: "A missing-value comparison. `pchg <= -30` is true for a SAS missing value and NA in R."
+      - text: "The hazard ratios are 0.6806 and 0.6846."
+        category: "A tool default changed a value"
+        note: "Efron against Breslow tie handling — R's coxph default against PROC PHREG's. Neither is wrong; the SAP should name one."
+      - text: "The two odds ratios are 2.2033 and 0.4539."
+        category: "A level or reference was ordered differently"
+        note: "An exact reciprocal. PROC LOGISTIC models the lower response level by default; glm models the second factor level."
+      - text: "A disposition table's rows sum to 367 in one output and 420 in the other."
+        category: "A different set of subjects reached the calculation"
+        note: "PROC FREQ excludes observations with a missing TABLES variable unless `/ MISSING` is given; dplyr's .by keeps them."
+      - text: "Scattered cells differ by one in the last printed digit, clustered in particular columns."
+        category: "A tool default changed a value"
+        note: "Rounding. SAS rounds half away from zero, R half to even, and exact halves cluster in columns derived from counts and simple averages."
+      - text: "A treatment mean is reported over 208 subjects in one output and 210 in the other."
+        category: "A different set of subjects reached the calculation"
+        note: "PROC MEANS's N counts non-missing values; n() counts rows. Two subjects per arm were never treated."
+      - text: "A hazard ratio is 1.4693 in one output and 0.6806 in the other."
+        category: "A level or reference was ordered differently"
+        note: "Another exact reciprocal. coxph takes the first factor level as reference — alphabetical for a character column — while PROC PHREG takes the last."
+    solution: |
+      **Classify before you read code.** The three kinds have almost disjoint causes, and knowing which
+      one you have cuts the search enormously.
+
+      | Symptom shape | Kind | Where to look |
+      |---|---|---|
+      | Different **N** or different row counts | Different subjects | Population filters, missing-value comparisons, missing class levels, joins |
+      | Same N, small differences in many cells | A default | Quantile definition, rounding, tie handling, degrees-of-freedom method |
+      | An **exact reciprocal** or a sign flip | Level ordering | Modelled event, reference level, factor level order |
+
+      **An exact reciprocal is the most diagnostic of the three.** Estimation differences move a number
+      slightly; a reciprocal means something was modelled the other way round. There are only two
+      candidates — the outcome level and the reference level — and checking the direction against a
+      cross-tabulation settles it in a minute.
+
+      **The other useful signal is the *shape* of the difference.** A discrepancy that lands on a clean
+      subset — one arm, one site, everyone missing the same variable, one whole panel of parameters — is
+      a specification or missing-value difference and goes to the statistician. A discrepancy scattered in
+      the last digit across many cells is a default and is usually settled by making one program explicit.
+
+      **Differences of the first kind are the serious ones.** They change which subjects are in a cell,
+      which is a different analysis rather than a differently-rounded one. Differences of the second kind
+      are usually specification gaps: the SAP did not name a method that the two languages default
+      differently on, and neither programmer is at fault.
+    explanation:
+      objective: "Triage a cross-language discrepancy by symptom before reading any code."
+      given: "Eight discrepancy symptoms from a double-programmed study."
+      relevant: "Whether the counts differ, a value differs slightly, or a result is an exact reciprocal."
+      method: "Different N means different subjects; small differences across many cells mean a default; an exact reciprocal means a level ordering."
+      numbers: "0.6806 vs 0.6846 (ties); 2.2033 vs 0.4539 and 1.4693 vs 0.6806 (reciprocals); 367 vs 420 and 208 vs 210 (subjects)."
+      assumptions: "Both programs read the same data extract, which has to be confirmed first."
+      interpretation: "Count differences are a different analysis; value differences are usually a specification gap."
+      changes: "A single cell differing is usually a typo rather than any of these three."
+      interviewer: "That you classify before you read code, and that you name the exact reciprocal as the highest-information signal."
+
+  - id: r.sas2r.open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [r.sas-translation, qc.compare, communication.interviewing]
+    lesson: r-translate-sas
+    title: Porting a SAS macro library to R
+    prompt: |
+      **Interviewer:** "We're moving a SAS macro library for standard safety tables over to R. How would
+      you approach it, and what would worry you?"
+    modelAnswer: |
+      The thing I'd want to establish first is **what the acceptance criterion is**, because that changes
+      the whole shape of the work.
+
+      If it is "reproduce the existing outputs exactly", then the old outputs are the specification and
+      every difference is a defect I have to explain — including the ones where the SAS version was
+      arguably wrong. If it is "implement the shells correctly in R", then differences are expected and
+      each one is a decision to document. **Those are different projects**, and teams routinely start one
+      and are judged on the other.
+
+      Then I would not port the macros. I'd work from the **shells and the SAP**, and use the macros as a
+      source of questions rather than as a specification. A macro library that has been maintained for
+      years encodes decisions nobody remembers making, and porting it line by line carries all of them
+      across invisibly. Reading it to find out *what decisions exist* is valuable; transcribing it is not.
+
+      **What would worry me, in order.**
+
+      **Missing-value semantics**, because that is where the two languages genuinely disagree rather than
+      merely defaulting differently. A SAS missing numeric sorts below every number, so `if x <= -30` is
+      true for it while `NA <= -30` in R is `NA`. The rule most people carry — "missing falls into the
+      else branch" — is only true for `>` and `>=`. On the study I've been working with, a response
+      derivation with a `<=` threshold classified 14 records from 2 subjects as partial responders because
+      they had no baseline assessment. I'd grep every derivation for a comparison against a variable that
+      can be missing and check the direction of each one.
+
+      **Denominators**, because that is where safety tables go wrong even within one language. `PROC FREQ`
+      and `PROC MEANS` drop observations with a missing classification variable unless you ask for them,
+      and dplyr's `.by` keeps them as a group. `PROC MEANS`'s `N` is a non-missing count and `n()` is a row
+      count. Both of those silently change a denominator. The check is that every table's denominators
+      match the column headers, which match disposition, which match ADSL.
+
+      **Procedure defaults** — quantile definitions, rounding, tie handling in a Cox model, the modelled
+      event in a logistic regression. These give small differences across many cells, and they are
+      usually specification gaps rather than anyone's bug. I'd want each one named in the SAP or in a
+      standards document so it is settled once rather than per table.
+
+      **What I'd build.** A function library, not a macro library — functions that take data and return
+      data, with argument checks and assertions inside them, so a failure is an error rather than an odd
+      number. I'd make every decision that differs between the languages an explicit argument with a
+      default: tie handling, quantile type, the denominator source. That way a reviewer can check each one
+      against the SAP without knowing which language's convention applies.
+
+      And a **comparison harness** early, not at the end: a program that reads both sets of outputs and
+      diffs them cell by cell, run on every data refresh. Most of the value of a migration like this comes
+      from finding the differences early and cheaply, and by hand it is unaffordable.
+
+      **One thing I'd push back on.** I would not promise that the R outputs will match the SAS ones to
+      the last digit, because on quartiles and rounding they cannot without deliberately reproducing SAS's
+      conventions — which is possible, `quantile(type = 2)` and a half-away-from-zero rounding function,
+      but it should be a decision rather than a surprise in the last week.
+    rubric:
+      - Establishes whether the acceptance criterion is the old outputs or the shells
+      - Works from the specification rather than porting macro code line by line
+      - Names missing-value semantics as the first risk and knows the comparison direction matters
+      - Names denominator differences (PROC FREQ/MEANS missing handling, N versus n())
+      - Names procedure defaults as a separate, lower-severity class
+      - Proposes functions with argument checks rather than a macro translation
+      - Makes language-differing decisions explicit arguments
+      - Builds an automated cell-by-cell comparison early
+      - Warns that exact digit-for-digit agreement requires deliberately matching SAS conventions
+    redFlags:
+      - "Starts by translating macros statement by statement"
+      - "Assumes the outputs will match if the code is correct"
+      - "Treats missing-value handling as an edge case"
+      - "Promises digit-for-digit agreement without qualification"
+      - "Claims R is or is not 'accepted' by regulators"

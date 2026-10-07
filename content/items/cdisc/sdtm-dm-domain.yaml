@@ -1,0 +1,668 @@
+items:
+  - id: sdtm.dm.rfstdtc-vs-rfxstdtc
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [sdtm.dm, sdtm.dates]
+    lesson: sdtm-dm-domain
+    title: 420 versus 416
+    prompt: |
+      In CBX417-301's DM domain:
+
+      | Variable | Populated | Null |
+      |---|---:|---:|
+      | `RFSTDTC` | 420 | 48 |
+      | `RFXSTDTC` | 416 | 52 |
+
+      Why do these two counts differ by four?
+    choices:
+      - text: "Four subjects were randomized but never dosed. `RFXSTDTC` is a fact (first dose) so it is null; `RFSTDTC` is a sponsor-defined anchor and this study falls back to the randomization date."
+        correct: true
+        feedback: "Correct — and you can see it in the data: those four RFSTDTC values are 10 characters (a date) while the other 416 are 16 (a datetime with a dose time)."
+      - text: "Four subjects have a missing first-dose date that should be queried."
+        feedback: "Nothing is missing. These subjects were randomized and then never dosed, which is a real trial outcome recorded in DS and reflected in SAFFL = N in ADSL."
+      - text: "`RFXSTDTC` excludes docetaxel, so subjects who received only docetaxel are null."
+        feedback: "RFXSTDTC is the first dose of *any* study treatment. Every treated subject in this study received both agents, and all 416 have it populated."
+      - text: "Four screen failures were given treatment in error."
+        feedback: "Screen failures account for the 48 null in both columns, not the extra four. The four extra nulls are randomized subjects."
+    hints:
+      - "One of these variables is defined by the IG; the other is defined by the sponsor."
+      - "Which trial outcome produces a randomized subject with no dose?"
+    explanation:
+      objective: "Explain a four-row difference between two reference-date variables."
+      given: "Two populated counts from the same 468-row domain."
+      relevant: "That RFXSTDTC is first dose and RFSTDTC is a sponsor-chosen anchor."
+      numbers: "468 - 48 screen failures = 420 randomized; 420 - 4 never treated = 416 treated."
+      interpretation: "The fallback matters because every --DY in every domain is computed from RFSTDTC."
+      changes: "A study that left RFSTDTC null for never-treated subjects would have 416 in both columns and null study days for those four subjects everywhere."
+
+  - id: sdtm.dm.armnrs-when
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sdtm.dm, sdtm.ct]
+    lesson: sdtm-dm-domain
+    title: When is ARMNRS populated?
+    prompt: |
+      CBX417-301's `ARMNRS` values:
+
+      | `ARMNRS` | n |
+      |---|---:|
+      | `SCREEN FAILURE` | 48 |
+      | `ASSIGNED, NOT TREATED` | 4 |
+      | `UNPLANNED TREATMENT` | 2 |
+      | *(null)* | 414 |
+
+      One subject in the study was randomized to CBX-417 and received placebo throughout. Their
+      `ARMNRS` is null. Why?
+    choices:
+      - text: "Because both `ARM` and `ACTARM` are populated for them — placebo is a planned arm, so `ACTARM` can carry it. `ARMNRS` explains nulls, and there is no null to explain."
+        correct: true
+        feedback: "Correct. ARMNRS is populated only when ARM or ACTARM is null. A planned-versus-actual mismatch is recorded by the two variables disagreeing, not by ARMNRS."
+      - text: "Because `UNPLANNED TREATMENT` only applies when the subject received the wrong dose, not the wrong drug."
+        feedback: "The distinction is not dose versus drug. It is whether what they received corresponds to a planned arm — placebo plus docetaxel does, so ACTARM is populated."
+      - text: "Because dispensing errors are recorded in DV rather than DM."
+        feedback: "The deviation is also in DV, but that does not determine ARMNRS. ARMNRS is governed by whether ARM/ACTARM are null."
+      - text: "It is an omission and should be populated with `UNPLANNED TREATMENT`."
+        feedback: "That would be the error. ARMNRS on a row where both arm variables are populated is a conformance finding."
+    hints:
+      - "Read the variable's label: 'Reason Arm and/or Actual Arm is Null'."
+    solution: |
+      **`ARMNRS` explains a null. No null, no `ARMNRS`.**
+
+      Three situations in this study, and they are genuinely different:
+
+      | Situation | `ARM` | `ACTARM` | `ARMNRS` |
+      |---|---|---|---|
+      | 48 screen failures | null | null | `SCREEN FAILURE` |
+      | 4 randomized, never dosed | populated | null | `ASSIGNED, NOT TREATED` |
+      | 2 received a mixture matching no planned arm | populated | null | `UNPLANNED TREATMENT`, plus `ACTARMUD` |
+      | 1 randomized to CBX, received placebo | `CBX+DOC` | `PBO+DOC` | **null** |
+
+      The last row is the interesting one. The subject got the wrong treatment, and SDTM records that by
+      `ARM` and `ACTARM` simply disagreeing. That disagreement is the whole point of having two
+      variables, and it is what drives the difference between the intent-to-treat and safety populations
+      downstream.
+
+      `ARMNRS` values come from **ARMNULRS (C142179)**, extensible, five published terms. This study uses
+      three.
+    explanation:
+      objective: "Decide whether ARMNRS applies to a planned-versus-actual mismatch."
+      relevant: "That ARMNRS exists to explain nulls, and that placebo plus docetaxel is a planned arm."
+      irrelevant: "That a protocol deviation was also raised — DV and DM are independent records of it."
+      interviewer: "That you read variable labels. 'Reason Arm and/or Actual Arm is Null' answers the question by itself."
+
+  - id: sdtm.dm.actarm-source
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [sdtm.dm, sdtm.mapping]
+    lesson: sdtm-dm-domain
+    title: A programmer's ACTARM never disagrees with ARM
+    prompt: |
+      You are reviewing a colleague's DM program. Their `ACTARM` and `ACTARMCD` match `ARM` and `ARMCD`
+      for every one of the 420 randomized subjects, and `ARMNRS` is never populated except for screen
+      failures.
+
+      What is the most likely defect?
+    choices:
+      - text: "They assigned `ACTARM = ARM` instead of deriving it from what was actually dispensed."
+        correct: true
+        feedback: "Correct. In CBX417-301 ACTARM is derived from the kit content recorded in EX. Correctly derived, it is populated for 414 subjects, is null for 4 never-treated and 2 unplanned-treatment subjects, and disagrees with ARM for 1."
+      - text: "They used the wrong codelist for `ACTARMCD`."
+        feedback: "ARMCD and ACTARMCD are sponsor-defined in this study, and using the same values for both is correct. The defect is the source of the values, not the codelist."
+      - text: "They forgot to populate `ACTARMUD`."
+        feedback: "A symptom rather than the cause. ACTARMUD would be needed only once ACTARM is correctly derived and comes out null for the two unplanned-treatment subjects."
+      - text: "Nothing — in a double-blind study planned and actual arm are the same by construction."
+        feedback: "Blinding prevents the *site* from knowing which arm a subject is in. It does not prevent the wrong kit being handed over, and this study has three such events."
+    hints:
+      - "Where would the information about what a subject actually received come from, in a blinded study?"
+      - "How many of the 416 treated subjects should have ACTARM populated?"
+    solution: |
+      **`ACTARM` has to come from dispensing, not from randomization.**
+
+      In CBX417-301 the chain is: the kit number recorded on the dosing page, joined to the IxRS kit list,
+      which says what was in the kit. That is the only link between a subject and their actual treatment
+      in a blinded study, and it is why `EX.EXREFID` carries the kit number for all 4,138 CBX-417 and
+      placebo records (and is null for the 2,932 docetaxel infusions, which are open-label supply).
+
+      Correctly derived, `ACTARM` gives:
+
+      ```text
+      414  populated  (207 CBX+DOC / 207 PBO+DOC)
+        4  null       ASSIGNED, NOT TREATED
+        2  null       UNPLANNED TREATMENT, ACTARMUD populated
+       48  null       SCREEN FAILURE
+      ```
+
+      and one of the 414 disagrees with `ARM`.
+
+      **Why this matters more than it looks:** the safety population is analysed as treated. A study where
+      `ACTARM` was copied from `ARM` will analyse three subjects in the wrong arm and nobody downstream
+      will be able to tell, because the datasets are internally consistent.
+    explanation:
+      objective: "Diagnose a DM defect from an absence of disagreement."
+      given: "Perfect agreement between planned and actual arm across 420 subjects."
+      relevant: "That ACTARM's source is dispensing records, not the randomization system."
+      method: "Treat suspicious cleanliness as a symptom: real trials have dispensing errors."
+      assumptions: "That the kit list is available to the SDTM programmer, which requires unblinded data access or a post-lock build."
+      interpretation: "The downstream consequence is a mis-assigned safety population, which is invisible in the data."
+      interviewer: "That you know the kit list is the only unblinded link, and that you would expect ACTARM to disagree occasionally."
+
+  - id: sdtm.dm.dm-rowcount
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sdtm.dm]
+    lesson: sdtm-dm-domain
+    title: How many rows should DM have?
+    prompt: |
+      CBX417-301: **468** subjects signed informed consent, **48** failed screening, **420** were
+      randomized, **416** were treated.
+
+      How many records should the DM domain contain?
+    answer: 468
+    tolerance: 0
+    unit: records
+    datasets: [oncology/sdtm/dm]
+    hints:
+      - "DM is one record per subject. Which subjects count as subjects?"
+    solution: |
+      **468** — one record per subject who gave informed consent.
+
+      A screen failure is a trial subject. They consented, they underwent trial procedures, and the
+      reviewer needs them in order to reconstruct the disposition flow: screened, failed, reason,
+      randomized. Excluding them would force the sponsor to assert those numbers in prose.
+
+      The 48 screen-failure rows are populated with `SUBJID`, `SITEID`, `RFICDTC`, `AGE`, `SEX`, `RACE`,
+      `ETHNIC`, `COUNTRY`, `DMDTC` and `ARMNRS = "SCREEN FAILURE"`, and are null for `ARM`, `ACTARM`,
+      `RFSTDTC`, `RFXSTDTC`, `RFXENDTC`, `RFENDTC` and `DMDY`.
+
+      **A note on the other domains.** CBX417-301 submits DM and DS for screen failures but not their
+      other data — `raw/vitals.csv` has 3,441 rows and `VS` has 3,393 mapped visit rows, the 48
+      difference being exactly those screening visits. That is a sponsor convention, it must be stated in
+      the cSDRG, and it is a different decision from the DM row count.
+    explanation:
+      objective: "Set the DM population correctly."
+      relevant: "That informed consent, not randomization, defines a trial subject."
+      interpretation: "The disposition flow a reviewer builds first depends on these rows existing."
+      changes: "Some studies also submit pre-screening or re-screened subjects; the definition belongs in the SDTM specification."
+
+  - id: sdtm.dm.count-populations
+    format: numeric
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [sdtm.dm, qc.data-cleaning]
+    lesson: sdtm-dm-domain
+    title: How many subjects have ACTARM populated?
+    prompt: |
+      CBX417-301 treated **416** subjects. Two of them received a mixture of kits that corresponds to no
+      planned arm and carry `ARMNRS = "UNPLANNED TREATMENT"` with a description in `ACTARMUD`.
+
+      How many DM records have `ACTARM` populated?
+    answer: 414
+    tolerance: 0
+    unit: records
+    datasets: [oncology/sdtm/dm]
+    hints:
+      - "ACTARM can only hold a *planned* arm description."
+      - "What happens to a subject whose actual treatment matches no planned arm?"
+    solution: |
+      **414.**
+
+      ```text
+      416  treated
+       -2  ACTARM null, ARMNRS = UNPLANNED TREATMENT, ACTARMUD populated
+      ----
+      414  ACTARM populated  (207 CBX+DOC / 207 PBO+DOC)
+      ```
+
+      The two excluded subjects received placebo plus docetaxel with CBX-417 kits dispensed in error for
+      part of their treatment:
+
+      > *"Placebo + Docetaxel 75 mg/m2; CBX-417 200 mg kits dispensed in error for Cycles 3-4"*
+
+      That is not a planned arm, so `ACTARM` cannot hold it. `ACTARMUD` — Description of Unplanned Actual
+      Arm — exists for exactly this.
+
+      **The number worth remembering is that 414 does not equal 416 and does not equal 420.** Three
+      different denominators live in this one domain, and choosing the wrong one produces a safety table
+      with a wrong N. The subject who was randomized to CBX-417 and received placebo throughout *is*
+      inside the 414, in the placebo column.
+    explanation:
+      objective: "Compute a denominator that three plausible numbers compete for."
+      given: "416 treated, 2 with unplanned treatment."
+      relevant: "That ACTARM holds a planned arm description and nothing else."
+      calculating: "416 - 2."
+      numbers: "414 populated: 207 CBX+DOC and 207 PBO+DOC."
+      interpretation: "420 (randomized), 416 (treated) and 414 (ACTARM populated) are three different denominators in one domain."
+      changes: "If the sponsor had defined a third planned arm for the mixture, ACTARM would be populated for 416 — but then TA would need that arm too, which it does not have."
+
+  - id: sdtm.dm.race-mapping
+    format: mapping
+    modes: [guided]
+    difficulty: intermediate
+    skills: [sdtm.dm, sdtm.ct, sdtm.mapping]
+    lesson: sdtm-dm-domain
+    title: Seven checkboxes into one variable
+    prompt: |
+      CBX417-301's demographics page has seven race checkboxes plus a free-text "other, specify" field.
+      `DM.RACE` is a single variable.
+
+      For each raw situation, say what the mapping produces.
+    sourceLabel: Raw situation
+    targetLabel: Result
+    targets:
+      - "RACE = the single selected category"
+      - "RACE = MULTIPLE, selections to SUPPDM RACE1/RACE2"
+      - "RACE = OTHER, free text to SUPPDM RACEOTH"
+      - "RACE = NOT REPORTED"
+    pairs:
+      - source: "`RACE_WHITE = \"Y\"`, all other boxes blank (444 subjects have exactly one box ticked)"
+        target: "RACE = the single selected category"
+        note: "303 of them are WHITE, 116 ASIAN, 20 BLACK OR AFRICAN AMERICAN, 3 AMERICAN INDIAN OR ALASKA NATIVE, 1 NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER."
+      - source: "`RACE_WHITE = \"Y\"` and `RACE_ASIAN = \"Y\"` (8 subjects have two boxes ticked)"
+        target: "RACE = MULTIPLE, selections to SUPPDM RACE1/RACE2"
+        note: "SUPPDM gains 8 RACE1 records and 8 RACE2 records — the arithmetic check that nothing was lost."
+      - source: "`RACE_OTHER = \"Y\"` with `RACE_OTHER_SP = \"Aboriginal Australian\"` (1 subject)"
+        target: "RACE = OTHER, free text to SUPPDM RACEOTH"
+        note: "Exactly one RACEOTH record exists in SUPPDM."
+      - source: "`RACE_NOT_REPORTED = \"Y\"` (16 subjects)"
+        target: "RACE = NOT REPORTED"
+        note: "A recorded refusal or omission, not a missing value."
+    hints:
+      - "444 + 8 + 16 = 468. Every subject falls into exactly one of these situations."
+      - "Where does information go when it cannot fit in the standard variable?"
+    solution: |
+      The whole point of the mapping is that **nothing is lost**, and the arithmetic proves it:
+
+      ```text
+      444  one box ticked    -> RACE = that category
+        8  two boxes ticked  -> RACE = MULTIPLE  + 8 RACE1 + 8 RACE2 in SUPPDM
+       16  not reported      -> RACE = NOT REPORTED
+      ---
+      468
+      ```
+
+      The resulting `DM.RACE` distribution:
+
+      | Value | n |
+      |---|---:|
+      | `WHITE` | 303 |
+      | `ASIAN` | 116 |
+      | `BLACK OR AFRICAN AMERICAN` | 20 |
+      | `NOT REPORTED` | 16 |
+      | `MULTIPLE` | 8 |
+      | `AMERICAN INDIAN OR ALASKA NATIVE` | 3 |
+      | `NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER` | 1 |
+      | `OTHER` | 1 |
+
+      **A caution.** This study uses the race values that appear in SDTMIG's own DM examples, but race and
+      ethnicity terminology has moved across CT releases. The CT package shipping with this project
+      publishes collected race as **RACEC (C128689)** and collected ethnicity as **ETHNICC (C128690)**,
+      and `MULTIPLE` is not among their submission values. Confirm the codelist and CT version named in
+      your study's define.xml rather than reusing a previous study's mapping.
+    explanation:
+      objective: "Collapse a multi-select CRF field into a single coded variable without losing data."
+      relevant: "The count of ticked boxes, and the existence of SUPPDM as the destination for the detail."
+      computation: "444 + 8 + 16 = 468 subjects; 8 + 8 + 1 = 17 SUPPDM race records."
+      assumptions: "That the CT version in use publishes MULTIPLE — which the version shipping here does not, for RACEC."
+      changes: "A study collecting race as a single-select radio button needs none of this, and a study submitting each selection as its own record would use a different structure entirely."
+
+  - id: sdtm.dm.sex-code
+    format: code
+    modes: [independent, debug]
+    difficulty: intermediate
+    skills: [sdtm.dm, sdtm.ct, qc.data-cleaning]
+    lesson: sdtm-dm-domain
+    title: Standardize SEX to its non-extensible codelist
+    language: r
+    prompt: |
+      The raw demographics page collected `SEX` as free text. Across CBX417-301's 468 rows there are
+      nine distinct values:
+
+      | Value | n | Value | n |
+      |---|---:|---|---:|
+      | `M` | 262 | `F` | 176 |
+      | `Male` | 9 | `Female` | 6 |
+      | `MALE` | 2 | `female` | 1 |
+      | `1` | 7 | `f` | 1 |
+      | | | `2` | 4 |
+
+      `DM.SEX` uses the **non-extensible** codelist SEX (C66731), so every value must become `M` or `F`.
+
+      Write R that reads `data/oncology/raw/demographics.csv`, derives a standardized `SEX`, **stops with
+      an error if any value fails to map**, and prints the resulting counts.
+
+      The study's convention is `1 = male`, `2 = female`.
+    starter: |
+      library(readr); library(dplyr)
+
+      raw <- read_csv("data/oncology/raw/demographics.csv", show_col_types = FALSE,
+                      col_types = cols(.default = col_character()))
+      # ...
+    datasets: [oncology/raw/demographics, oncology/sdtm/dm]
+    checks:
+      - pattern: "toupper\\(|str_to_upper\\("
+        message: "Case-fold before comparing, so that 'female' and 'Female' map together."
+      - pattern: "trimws\\(|str_trim\\("
+        message: "Trim whitespace — a trailing space is invisible and breaks an exact match."
+      - pattern: "stopifnot\\(|stop\\("
+        message: "Fail loudly if any value does not map. A silent NA is the failure mode this guards against."
+      - pattern: "table\\(|count\\("
+        message: "Print the resulting counts so the mapping can be checked."
+      - pattern: "ifelse\\(SEX\\s*==\\s*[\"']M"
+        absent: true
+        message: "Do not test the raw value directly; normalise first, then map."
+    reference: |
+      library(readr); library(dplyr)
+
+      raw <- read_csv("data/oncology/raw/demographics.csv", show_col_types = FALSE,
+                      col_types = cols(.default = col_character()))
+
+      map_sex <- c("M" = "M", "MALE" = "M", "1" = "M",
+                   "F" = "F", "FEMALE" = "F", "2" = "F")
+
+      dm <- raw |>
+        mutate(
+          .norm = toupper(trimws(SEX)),
+          SEX_STD = unname(map_sex[.norm])
+        )
+
+      bad <- dm |> filter(is.na(SEX_STD)) |> distinct(SEX)
+      stopifnot(nrow(bad) == 0)
+
+      print(table(dm$SEX_STD, useNA = "ifany"))
+    expectedOutput: |
+      > print(table(dm$SEX_STD, useNA = "ifany"))
+
+        F   M
+      188 280
+    solution: |
+      Three things make this correct rather than merely working.
+
+      **Normalise before mapping.** `toupper(trimws(SEX))` turns nine raw values into six lookup keys.
+      Writing nine `ifelse` branches against the raw values works today and breaks the moment a site
+      types `"M "` with a trailing space — which is invisible in every viewer you would use to check.
+
+      **Fail loudly.** The dangerous outcome is not a wrong value, it is a silent `NA`. `SEX` is
+      non-extensible, so an unmapped value is a conformance error on that row, and a program that lets it
+      through produces a domain that passes your eyeball check and fails Pinnacle 21. `stopifnot` on an
+      empty unmapped set costs one line and converts a silent defect into a stopped program.
+
+      **Check the totals.** `M = 280`, `F = 188`, summing to 468 — which matches the delivered DM domain
+      exactly. If the numeric codes had been mapped the other way round, the totals would have been
+      `M = 273` and `F = 195` and nothing else in the program would have complained.
+
+      The numeric codes are the part to be careful with. `1 = male, 2 = female` is this study's convention
+      and it comes from the EDC build specification, not from anywhere in CDISC. A different study can use
+      the opposite convention, and there is nothing in the data to tell you which.
+    explanation:
+      objective: "Map a free-text collected field onto a non-extensible codelist safely."
+      given: "Nine raw spellings and a two-value target codelist."
+      method: "Normalise, look up, assert, then count."
+      computation: "toupper + trimws collapses nine values to six keys; a named vector maps them to two."
+      numbers: "280 M and 188 F, totalling 468 and matching the delivered DM domain."
+      assumptions: "That 1 = male and 2 = female, which comes from the EDC build specification rather than from CDISC."
+      interpretation: "The assertion is the part that makes this a production program rather than a script."
+      changes: "If a tenth spelling appeared in a later extract, the program would stop rather than silently produce a null."
+
+  - id: sdtm.dm.dmdy-calc
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [sdtm.dates, sdtm.dm]
+    lesson: sdtm-dm-domain
+    title: The day before day 1
+    prompt: |
+      Subject `CBX417-301-1001-0004`:
+
+      | Variable | Value |
+      |---|---|
+      | `RFSTDTC` | `2022-11-07T09:51` |
+      | `DMDTC` | `2022-11-06` |
+
+      What is `DMDY`?
+    answer: -1
+    tolerance: 0
+    unit: days
+    datasets: [oncology/sdtm/dm]
+    hints:
+      - "Compare the dates only; ignore the time."
+      - "There is no day 0 in SDTM."
+    solution: |
+      **−1.**
+
+      ```text
+      DMDY = DMDTC − RFSTDTC + 1   when DMDTC >= RFSTDTC
+      DMDY = DMDTC − RFSTDTC       when DMDTC <  RFSTDTC
+      ```
+
+      Here `2022-11-06` is before `2022-11-07`, so the second branch applies:
+      `−1 + 0 = −1`. Reference day is day 1; the day before it is day −1. **Day 0 does not exist.**
+
+      Verified across all 420 randomized subjects: every `DMDY` matches the two-branch formula, none is
+      0, and exactly one subject — this one — has `DMDY = −1`. The rest completed demographics earlier in
+      screening; the values run from **−31 to −1** with a median of **−15**.
+
+      The 48 screen failures have `DMDY` null, because they have no `RFSTDTC` to count from.
+    explanation:
+      objective: "Apply the --DY formula on the negative side of the anchor."
+      given: "A reference datetime and a form-completion date one day earlier."
+      relevant: "Only the date portion of RFSTDTC; the time is irrelevant to --DY."
+      calculating: "The signed day offset with no zero."
+      numbers: "2022-11-06 minus 2022-11-07 = -1 day; the pre-anchor branch adds nothing."
+      interpretation: "The +1 on the forward branch is what removes day 0, and it is why -1 and 1 are adjacent."
+      changes: "If the form had been completed on the dosing day, DMDY would be 1, not 0."
+
+  - id: sdtm.dm.never-treated-trace
+    format: hotspot
+    modes: [debug, qc, boss]
+    difficulty: advanced
+    skills: [sdtm.dm, sdtm.dates, qc.code-review]
+    lesson: sdtm-dm-domain
+    title: Find the line that nulls four subjects' study days
+    prompt: |
+      This DM program passes review and produces a domain that looks correct. Four subjects end up with a
+      null `RFSTDTC`, and every `--DY` in every other domain is null for them.
+
+      Click the line responsible. (Line 1 is `dm <- enrollment |>`.)
+    language: r
+    code: |
+      dm <- enrollment |>
+        left_join(demographics, by = c("SITE_ID", "SUBJECT_ID")) |>
+        left_join(randomization, by = "SUBJECT_ID")
+
+      first_dose <- ex |>
+        group_by(USUBJID) |>
+        summarise(RFXSTDTC = min(EXSTDTC), RFXENDTC = max(EXENDTC))
+
+      dm <- dm |>
+        left_join(first_dose, by = "USUBJID") |>
+        mutate(
+          RFSTDTC  = RFXSTDTC,
+          ARMNRS   = case_when(
+            is.na(RAND_DATE)   ~ "SCREEN FAILURE",
+            is.na(RFXSTDTC)    ~ "ASSIGNED, NOT TREATED",
+            TRUE               ~ NA_character_
+          )
+        )
+    answerLines: [12]
+    lineNotes:
+      - line: 12
+        note: "`RFSTDTC = RFXSTDTC` is the defect. It is true for the 416 treated subjects, which is why it survives review, and it leaves the 4 randomized-but-never-treated subjects with no anchor at all."
+      - line: 7
+        note: "Correct: RFXSTDTC is the first dose and is legitimately null for anyone never dosed."
+      - line: 15
+        note: "Correct, and note that it depends on the same is.na(RFXSTDTC) test — so the program already knows those four subjects exist."
+    fixed: |
+      dm <- dm |>
+        left_join(first_dose, by = "USUBJID") |>
+        mutate(
+          # Sponsor convention (SDTM spec s.3, cSDRG): first dose, falling back to
+          # the randomization date for randomized-but-never-treated subjects.
+          RFSTDTC  = coalesce(RFXSTDTC, RAND_DATE),
+          ARMNRS   = case_when(
+            is.na(RAND_DATE)   ~ "SCREEN FAILURE",
+            is.na(RFXSTDTC)    ~ "ASSIGNED, NOT TREATED",
+            TRUE               ~ NA_character_
+          )
+        )
+    hints:
+      - "Which assignment is correct for 416 subjects and wrong for 4?"
+      - "The program already tests for the four subjects two lines later."
+    solution: |
+      **Line 13.** `RFSTDTC = RFXSTDTC` conflates a sponsor decision with a fact.
+
+      `RFXSTDTC` is the datetime of first dose and is correctly null for the four randomized-but-never-treated
+      subjects. `RFSTDTC` is the **subject reference start date**, which SDTMIG leaves to the sponsor, and
+      CBX417-301 defines as the first dose *falling back to the randomization date*.
+
+      The fix is one `coalesce`:
+
+      ```r
+      RFSTDTC = coalesce(RFXSTDTC, RAND_DATE)
+      ```
+
+      **Why it survives review.** It is right for 416 of 420 subjects, and the four it breaks are
+      exactly the four nobody looks at — they have no exposure, no efficacy assessments and few adverse
+      events. The damage appears somewhere else entirely: every `AESTDY`, `LBDY`, `VSDY` and `EXSTDY` for
+      those subjects is null, and the person who eventually notices is a listing programmer three months
+      later.
+
+      **The visible signature of a correct build:** `RFSTDTC` should be 16 characters for treated subjects
+      (`2022-07-08T10:41`) and 10 for the never-treated (`2023-10-09`), because a randomization date has
+      no time. A study where every `RFSTDTC` is the same length has either no never-treated subjects or
+      this bug.
+
+      ```r
+      table(nchar(dm$RFSTDTC))
+      #  10  16
+      #   4 416
+      ```
+    explanation:
+      objective: "Locate a defect that is correct for 99% of subjects."
+      given: "A program that produces a plausible domain and four null anchors."
+      relevant: "The distinction between a fact (RFXSTDTC) and a sponsor-defined anchor (RFSTDTC)."
+      irrelevant: "The join logic, which is correct."
+      method: "Ask which subjects a line is wrong for, not whether it is wrong in general."
+      assumptions: "That the study's specification defines the randomization-date fallback — a different study might legitimately leave RFSTDTC null."
+      interpretation: "The failure surfaces in other domains, which is what makes it expensive to trace."
+      changes: "A study with no randomized-but-never-treated subjects would never expose this line."
+      interviewer: "That you check the boundary population rather than the modal one."
+
+  - id: sdtm.dm.unplanned-arm
+    format: mcq
+    modes: [independent, boss]
+    difficulty: advanced
+    skills: [sdtm.dm, sdtm.ct, trials.populations]
+    lesson: sdtm-dm-domain
+    title: Three dispensing errors, three different DM outcomes
+    prompt: |
+      CBX417-301 has three subjects whose actual treatment did not match their randomization:
+
+      | Subject | What happened |
+      |---|---|
+      | **A** | Randomized to CBX-417 + docetaxel; received placebo + docetaxel for the whole study |
+      | **B** | Randomized to placebo + docetaxel; CBX-417 kits dispensed in error for Cycles 3-4 |
+      | **C** | Randomized to placebo + docetaxel; a CBX-417 kit dispensed in error for Cycle 2 |
+
+      Which DM representation is correct?
+    choices:
+      - text: "A: `ACTARM` = placebo arm, `ARMNRS` null. B and C: `ACTARM` null, `ARMNRS = \"UNPLANNED TREATMENT\"`, `ACTARMUD` describing the mixture."
+        correct: true
+        feedback: "Correct, and it is what the study does. A received a treatment that corresponds to a planned arm, so ACTARM can hold it. B and C received a mixture matching no planned arm, so ACTARM is null and ACTARMUD carries free text."
+      - text: "All three: `ACTARM` null with `ARMNRS = \"UNPLANNED TREATMENT\"`, since none received their randomized treatment."
+        feedback: "ARMNRS describes whether ACTARM can be populated, not whether the subject got what they were randomized to. Subject A received a planned arm — just not theirs."
+      - text: "All three: `ACTARM` set to the arm they actually received, `ARMNRS` null throughout."
+        feedback: "B and C received CBX-417 for part of their treatment and placebo for the rest. No planned arm describes that, so ACTARM has nothing valid to hold."
+      - text: "All three: `ACTARM` = `ARM`, with the errors recorded only in DV."
+        feedback: "That would put three subjects in the wrong arm of every safety analysis. The deviation records in DV are additional, not a substitute."
+    hints:
+      - "Ask for each subject: does what they actually received correspond to a planned arm, yes or no?"
+      - "ARMNRS explains a null. Which of the three has no null to explain?"
+    solution: |
+      The question to ask each subject is **"does what they received correspond to a planned arm?"**
+
+      | | Received | Matches a planned arm? | `ACTARM` | `ARMNRS` | `ACTARMUD` |
+      |---|---|---|---|---|---|
+      | A | Placebo + docetaxel throughout | **Yes** | `Placebo + Docetaxel 75 mg/m2` | null | null |
+      | B | Placebo, then CBX-417 for 2 cycles, then placebo | No | null | `UNPLANNED TREATMENT` | populated |
+      | C | Placebo with one CBX-417 cycle | No | null | `UNPLANNED TREATMENT` | populated |
+
+      Subject A's error is recorded by `ARM` and `ACTARM` **disagreeing** — that disagreement is the
+      entire reason two variables exist. `ARMNRS` is null because there is no null to explain.
+
+      B and C get free text:
+
+      > *"Placebo + Docetaxel 75 mg/m2; CBX-417 200 mg kits dispensed in error for Cycles 3-4"*
+
+      **Downstream this is three different problems.** In ADSL, `TRT01P` is the planned arm for all three
+      and `TRT01A` is the actual. For A, `TRT01A` is unambiguous. For B and C the SAP has to say what
+      "as treated" means when a subject received both — commonly "the treatment received for the longest
+      time" or "any exposure to active", and the two rules give different answers here. That decision is
+      not a DM decision, but DM is where its inputs are carried, and `ACTARMUD` is where the analyst reads
+      what actually happened.
+    explanation:
+      objective: "Represent three dispensing errors correctly in DM."
+      given: "Three subjects with different mismatch patterns."
+      relevant: "Whether the actual treatment corresponds to a planned arm."
+      irrelevant: "The severity or duration of the error — that is a DV and a SAP question."
+      method: "Test each subject against the planned arm list rather than against their own randomization."
+      assumptions: "That the planned arm list has exactly two entries, which TA confirms with six records across two arms."
+      interpretation: "Subject A is representable in the standard variables; B and C need the free-text escape hatch."
+      changes: "If the protocol had defined a crossover arm, subject A's situation would be planned and not an error at all."
+      interviewer: "That you distinguish 'got the wrong planned arm' from 'got something that is not a planned arm'."
+
+  - id: sdtm.dm.open-first-domain
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [sdtm.dm, sdtm.dates, communication.documentation]
+    lesson: sdtm-dm-domain
+    title: Why is DM programmed first and finished last?
+    prompt: |
+      You are asked in an interview: "You said DM is the first domain you program. But you also said it
+      is the last one you finish. Explain that."
+    modelAnswer: |
+      "It's a circularity, and every study handles it the same way.
+
+      DM is first because everything depends on it. `USUBJID` is constructed there, and every other domain
+      keys on it. `RFSTDTC` lives there, and every `--DY` in the study — `AESTDY`, `LBDY`, `VSDY`,
+      `EXSTDY` — is computed against it. You can't program AE before you know what a subject is called and
+      when their day 1 was.
+
+      But DM is last because half its columns come from other domains. `RFXSTDTC` and `RFXENDTC` are the
+      first and last dose, which means they come from EX. `RFENDTC` and `RFPENDTC` come from DS. `DTHDTC`
+      and `DTHFL` come from the death form. And `ACTARM` comes from what was actually dispensed, which in
+      a blinded study means joining the kit number in EX to the IxRS kit list.
+
+      So the build is two passes. First a skeleton DM with the identifiers and the collected demographics,
+      enough to key the other domains. Then EX, DS and the rest. Then a real DM with the reference dates
+      derived. Then — and this is the step people forget — you re-run every `--DY` in the study, because
+      they were computed against a placeholder.
+
+      Getting the passes in the wrong order produces a study that is internally consistent and wrong:
+      every domain has study days, they all look plausible, and they're all measured from a stale anchor.
+      There's no error message for that.
+
+      The practical checks I'd run at the end of the second pass are that `RFXSTDTC` equals the minimum
+      `EXSTDTC` per subject and `RFXENDTC` the maximum `EXENDTC` — on the study I've been working with
+      that holds for all 416 treated subjects — and that the never-treated subjects have whatever fallback
+      anchor the specification says. Their `RFSTDTC` is ten characters rather than sixteen, because a
+      randomization date has no time, and that length difference is a surprisingly good one-line check
+      that the fallback fired."
+    rubric:
+      - "Names what DM supplies to other domains: USUBJID and RFSTDTC for every --DY"
+      - "Names what DM takes from other domains: RFXSTDTC/RFXENDTC from EX, RFENDTC from DS, DTHDTC from the death form, ACTARM from dispensing"
+      - "Describes a two-pass build explicitly"
+      - "Identifies that --DY must be recomputed after the anchor is finalised, and that failure to do so is silent"
+      - "Offers at least one concrete verification check"
+    redFlags:
+      - "Claiming DM can be built entirely from the demographics CRF page"
+      - "Not recognising that --DY recomputation is needed after the second pass"
+      - "Saying the order does not matter because the joins are deterministic"
+    followUps:
+      - "How would you detect study days computed against a stale anchor?"
+      - "The kit list is unblinded. How does that constrain when ACTARM can be derived?"
+      - "Which DM variables could you finalise in the first pass?"

@@ -1,0 +1,5 @@
+STUDYID,DOMAIN,ETCD,ELEMENT,TESTRL,TEENRL,TEDUR
+CBX417-301,TE,SCRN,Screening,Informed consent,First dose of study treatment (or randomization if never treated),P28D
+CBX417-301,TE,CBXDOC,CBX-417 + Docetaxel,First dose of CBX-417 or docetaxel,End-of-treatment visit (or last dose),
+CBX417-301,TE,PBODOC,Placebo + Docetaxel,First dose of placebo or docetaxel,End-of-treatment visit (or last dose),
+CBX417-301,TE,FU,Follow-up,End of treatment element,"Death, withdrawal, loss to follow-up or end of study",

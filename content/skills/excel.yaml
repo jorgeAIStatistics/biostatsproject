@@ -1,0 +1,54 @@
+domain: excel
+title: Excel for Scientists
+description: Using spreadsheets deliberately — clean structure, lookups, summaries and QC — and knowing when code should replace them.
+skills:
+  - id: excel.layout
+    name: Clean data layout
+    description: One header row, one record per row, no merged cells, tidy structure, data dictionaries.
+    weight: 2
+    tracks: [excel, analytics]
+  - id: excel.import
+    name: CSV import/export pitfalls
+    description: Leading zeros, automatic date conversion, encodings, delimiter issues, Power Query import.
+    weight: 2
+    tracks: [excel, analytics]
+  - id: excel.tables
+    name: Excel tables, sorting and filtering
+    description: Structured references, filters, sorting safely without breaking rows.
+    weight: 1
+    tracks: [excel]
+  - id: excel.lookups
+    name: Lookups
+    description: XLOOKUP, INDEX/MATCH, exact vs approximate matching, not-found handling.
+    weight: 2
+    tracks: [excel, analytics]
+  - id: excel.conditional-aggregation
+    name: SUMIFS / COUNTIFS / AVERAGEIFS
+    description: Criteria-based summaries and their relationship to GROUP BY.
+    weight: 2
+    tracks: [excel, analytics]
+  - id: excel.logic
+    name: Logical, text and date functions
+    description: IF/IFS, AND/OR, TEXT, LEFT/MID/RIGHT, TRIM, DATE, DATEDIF, EDATE.
+    weight: 2
+    tracks: [excel]
+  - id: excel.pivots
+    name: PivotTables and PivotCharts
+    description: Summaries by group, counting distinct subjects, filters, refresh discipline.
+    weight: 2
+    tracks: [excel, analytics]
+  - id: excel.power-query
+    name: Power Query concepts
+    description: Recorded, repeatable transformations; merge/append; why it beats manual edits.
+    weight: 1
+    tracks: [excel, analytics]
+  - id: excel.qc
+    name: Spreadsheet QC and reconciliation
+    description: Duplicate detection, conditional formatting for checks, reconciliation between sources.
+    weight: 2
+    tracks: [excel, programmer]
+  - id: excel.risk
+    name: Spreadsheet risk and when to use code
+    description: Uncontrolled databases, silent errors, auditability; deciding when Excel is appropriate.
+    weight: 2
+    tracks: [excel, analytics, computing]

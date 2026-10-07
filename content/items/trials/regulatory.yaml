@@ -1,0 +1,239 @@
+items:
+  - id: trials.regulatory.module5
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [regulatory.submission, regulatory.data-standards]
+    lesson: trials-regulatory-deliverables
+    title: Where do study datasets go?
+    prompt: |
+      In an eCTD submission, in which module do the CBX417-301 SDTM and ADaM datasets, define.xml files and reviewer's guides belong?
+    choices:
+      - text: "Module 5 (clinical study reports), with the study's CSR"
+        correct: true
+        feedback: "Study data for clinical studies are placed in Module 5; the TCG describes the dataset folder structure."
+      - text: "Module 2 (summaries)"
+        feedback: "Module 2 holds the clinical overview and clinical summary, not datasets."
+      - text: "Module 3 (quality)"
+        feedback: "Module 3 covers chemistry, manufacturing and controls."
+      - text: "Module 1 (regional information)"
+        feedback: "Module 1 holds regional administrative documents."
+    solution: |
+      Module 5, in the study's datasets folders (tabulations for SDTM, analysis for ADaM and programs).
+
+  - id: trials.regulatory.define-purpose
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [regulatory.define]
+    lesson: trials-regulatory-deliverables
+    title: What define.xml is for
+    prompt: |
+      What does a define.xml provide that the datasets alone do not?
+    choices:
+      - text: "Machine-readable metadata: variable definitions, controlled terminology, value-level metadata, origins and derivation methods"
+        correct: true
+        feedback: "It is the data dictionary a reviewer (and tools) use to understand each dataset and variable."
+      - text: "The analysis results for each table"
+        feedback: "Results live in the CSR and TLFs, not in define.xml."
+      - text: "A certificate that the datasets are CDISC-compliant"
+        feedback: "No such certificate exists; conformance is checked with validation tools and explained in reviewer's guides."
+      - text: "The SAS programs used to create the datasets"
+        feedback: "Programs are submitted separately as text files; define.xml describes methods, it does not contain code."
+    solution: |
+      Define-XML describes datasets and variables — labels, types, lengths, codelists, value-level metadata, origins (Collected, Derived, Assigned, Protocol, Predecessor) and derivation methods — and is rendered for humans by a stylesheet.
+
+  - id: trials.regulatory.fr-date
+    format: text
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [regulatory.data-standards]
+    lesson: trials-regulatory-deliverables
+    title: SDTMIG v3.4 requirement date
+    prompt: |
+      Per the Federal Register notice of December 13, 2023, from what date does the requirement to use SDTM v2.0 / SDTMIG v3.4 begin (YYYY-MM-DD)?
+    accept: ["2025-03-15"]
+    placeholder: YYYY-MM-DD
+    monospace: true
+    solution: |
+      2025-03-15 — for NDAs, ANDAs, certain BLAs and certain INDs. Support began 2023-12-13; the transition date was 2024-03-15. Under the eStudy Data guidance, the requirement applies based on the study start date.
+
+  - id: trials.regulatory.acrf-name
+    format: text
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [regulatory.submission, sdtm.acrf-define]
+    lesson: trials-regulatory-deliverables
+    title: The annotated CRF file name
+    prompt: |
+      What file name does the FDA Technical Conformance Guide use for the annotated CRF in the SDTM folder?
+    accept: ["acrf.pdf"]
+    monospace: true
+    solution: |
+      `acrf.pdf` (previously `blankcrf.pdf`). The reviewer's guides are `csdrg.pdf` and `adrg.pdf`.
+
+  - id: trials.regulatory.kind-classify
+    format: classify
+    modes: [guided]
+    difficulty: intermediate
+    skills: [regulatory.data-standards, regulatory.define]
+    lesson: trials-regulatory-deliverables
+    title: Requirement, recommendation or convention?
+    prompt: |
+      Classify each statement.
+    categories: ["Specified by FDA standards documents", "Recommended or preferred by FDA", "Industry convention"]
+    entries:
+      - { text: "Datasets are submitted as SAS XPORT Version 5 transport files", category: "Specified by FDA standards documents" }
+      - { text: "SDTMIG v3.4 for studies starting after 2025-03-15 (NDA, ANDA, certain BLA/IND)", category: "Specified by FDA standards documents" }
+      - { text: "Prepare an Analysis Data Reviewer's Guide", category: "Recommended or preferred by FDA" }
+      - { text: "Use the PHUSE cSDRG template", category: "Recommended or preferred by FDA" }
+      - { text: "Number efficacy tables 14.2.x following ICH E3 Section 14 grouping", category: "Industry convention" }
+      - { text: "Unscheduled visits numbered previous VISITNUM + 0.01", category: "Industry convention" }
+    hints:
+      - "FDA's 'prefers but does not require' and 'is recommended' are not requirements."
+      - "Numbering schemes and visit-number tricks are sponsor choices."
+    solution: |
+      XPORT v5 and the SDTMIG v3.4 date are specified in the TCG/Federal Register/Catalog; the ADRG is recommended and the PHUSE templates preferred; numbering and VISITNUM decimals are conventions. Saying this precisely is a professional habit interviewers notice.
+
+  - id: trials.regulatory.study-start
+    format: mcq
+    modes: [guided]
+    difficulty: intermediate
+    skills: [regulatory.data-standards]
+    lesson: trials-regulatory-deliverables
+    title: Does CBX417-301 need SDTMIG v3.4?
+    prompt: |
+      CBX417-301 randomized its first subject on 2022-04-11 (screening up to 28 days before). Suppose it supports an NDA submitted in 2026. Is SDTMIG v3.4 required?
+    choices:
+      - text: "No — the requirement depends on the Catalog at study start (early 2022), when v3.4 was not yet supported; using v3.4 is allowed and encouraged"
+        correct: true
+        feedback: "Study start = earliest informed consent. The v3.4 requirement applies to studies starting after 2025-03-15."
+      - text: "Yes — the submission date is after 2025-03-15"
+        feedback: "The requirement is tied to the study start date, not the submission date."
+      - text: "No — and v3.4 cannot be used because it was not supported at study start"
+        feedback: "Sponsors can use a later supported version; the guidance encourages the latest listed."
+      - text: "Yes — all studies in an NDA must use the same SDTMIG version"
+        feedback: "Different studies may use different supported versions; integrated datasets are a separate topic."
+    hints:
+      - "How does the eStudy Data guidance define the study start date?"
+      - "When did FDA support for SDTMIG v3.4 begin?"
+    solution: |
+      Not required, but permitted. The cSDRG and define.xml record the versions actually used.
+
+  - id: trials.regulatory.e3-map
+    format: mapping
+    modes: [guided]
+    difficulty: intermediate
+    skills: [regulatory.ich, regulatory.submission]
+    lesson: trials-regulatory-deliverables
+    title: ICH E3 sections
+    prompt: |
+      Map each CSR content item to its ICH E3 section.
+    sourceLabel: Content
+    targetLabel: ICH E3 section
+    pairs:
+      - { source: "Two- to three-page summary of the whole study", target: "2 Synopsis" }
+      - { source: "Efficacy results and their interpretation", target: "11 Efficacy evaluation" }
+      - { source: "Adverse events, labs and deaths discussed in text", target: "12 Safety evaluation" }
+      - { source: "Tables and figures referred to but not included in the text", target: "14 Tables, figures and graphs" }
+      - { source: "Adverse event listings by patient", target: "16.2 Patient data listings" }
+      - { source: "Documentation of statistical methods", target: "16.1 Study information" }
+    targets: ["2 Synopsis", "9 Investigational plan", "11 Efficacy evaluation", "12 Safety evaluation", "14 Tables, figures and graphs", "16.1 Study information", "16.2 Patient data listings"]
+    solution: |
+      Section 14 holds the TLFs; Appendix 16.1 holds study information (including 16.1.9 documentation of statistical methods); 16.2 holds patient data listings (16.2.7 AE listings).
+
+  - id: trials.regulatory.folder-map
+    format: mapping
+    modes: [independent]
+    difficulty: intermediate
+    skills: [regulatory.submission, regulatory.define]
+    lesson: trials-regulatory-deliverables
+    title: Place the files in the package
+    prompt: |
+      Using the typical Module 5 layout described in the lesson, map each file to its folder.
+    sourceLabel: File
+    targetLabel: Folder
+    pairs:
+      - { source: "dm.xpt", target: "tabulations/sdtm" }
+      - { source: "acrf.pdf", target: "tabulations/sdtm" }
+      - { source: "csdrg.pdf", target: "tabulations/sdtm" }
+      - { source: "adtte.xpt", target: "analysis/adam/datasets" }
+      - { source: "adrg.pdf", target: "analysis/adam/datasets" }
+      - { source: "t_pfs.txt (program for Table 14.2.1.1)", target: "analysis/adam/programs" }
+    targets: ["tabulations/sdtm", "analysis/adam/datasets", "analysis/adam/programs", "Module 2"]
+    solution: |
+      SDTM datasets, their define.xml, the aCRF and the cSDRG sit together; ADaM datasets, their define.xml and the ADRG sit together; programs have their own folder and are submitted as text.
+
+  - id: trials.regulatory.slide-review
+    format: hotspot
+    language: text
+    modes: [debug]
+    difficulty: advanced
+    skills: [regulatory.data-standards, regulatory.define]
+    lesson: trials-regulatory-deliverables
+    title: Fix the training slide
+    prompt: |
+      A colleague's onboarding slide lists "regulatory facts". Click every line that is incorrect or misleading.
+    code: |
+      1. Study datasets are submitted as SAS XPORT Version 5 transport files.
+      2. The ADRG is a PHUSE requirement for every submission.
+      3. SDTMIG v3.4 is required for all submissions sent to FDA after March 15, 2025.
+      4. Define-XML describes datasets, variables, codelists, origins and derivation methods.
+      5. The aCRF shows the SDTM destination of each CRF field, or that it is not submitted.
+      6. Datasets larger than 5 GB should be split into smaller datasets.
+      7. CDISC certifies SDTM datasets as compliant before they can be submitted.
+    answerLines: [2, 3, 7]
+    lineNotes:
+      - line: 2
+        note: "PHUSE is a community organization, not a regulator. The FDA TCG recommends an ADRG and prefers (but does not require) the PHUSE template."
+      - line: 3
+        note: "The requirement depends on the study start date (earliest informed consent) and applies to NDAs, ANDAs, certain BLAs and certain INDs: studies starting after 2025-03-15."
+      - line: 7
+        note: "There is no CDISC certification of datasets. Conformance is checked with validation tools (for example CDISC and FDA validator rules), and findings are explained in reviewer's guides."
+    fixed: |
+      1. Study datasets are submitted as SAS XPORT Version 5 transport files.
+      2. FDA's Technical Conformance Guide recommends an ADRG; FDA prefers, but does not require, the PHUSE template.
+      3. SDTMIG v3.4 is required for studies starting after March 15, 2025 (NDA, ANDA, certain BLA and IND submissions).
+      4. Define-XML describes datasets, variables, codelists, origins and derivation methods.
+      5. The aCRF shows the SDTM destination of each CRF field, or that it is not submitted.
+      6. Datasets larger than 5 GB should be split into smaller datasets.
+      7. Conformance is checked with validation tools; findings are explained in the reviewer's guides.
+    hints:
+      - "Who issues requirements, and who publishes templates?"
+      - "Is the SDTMIG v3.4 requirement tied to the submission date or the study start date?"
+    solution: |
+      Lines 2, 3 and 7 are wrong. Lines 1, 4, 5 and 6 are correct paraphrases of the TCG and CDISC standards.
+    explanation:
+      objective: "Distinguish accurate regulatory statements from common misconceptions."
+      given: "Seven statements on a training slide."
+      relevant: "Who issues each requirement (FDA vs PHUSE vs CDISC) and how the SDTMIG v3.4 requirement is triggered."
+      irrelevant: "The slide's formatting."
+      method: "Check each statement against its source: Federal Register notice, eStudy Data guidance, TCG."
+      interpretation: "Misstatements spread quickly through onboarding materials; precise wording prevents costly misunderstandings."
+      changes: "If the slide said 'FDA recommends an ADRG', line 2 would be correct."
+      interviewer: "That you can cite sources and separate requirement, recommendation and convention."
+
+  - id: trials.regulatory.interview-package
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [regulatory.submission, regulatory.define, communication.interviewing]
+    lesson: trials-regulatory-deliverables
+    title: The study data package
+    prompt: |
+      **Interviewer:** "What is a reviewer's guide, and why is it needed when you already provide define.xml?"
+    modelAnswer: |
+      Define-XML is structured metadata: it lists datasets and variables with labels, types, codelists, value-level metadata, origins and derivation methods. A reviewer's guide is a human-readable document that explains what metadata can't: the study design in brief, which standards and versions were used, sponsor-specific conventions, special derivations such as partial-date imputation or PFS censoring, data dependencies between datasets, how to reproduce key results, and explanations for any conformance findings the validation tools flag.
+
+      There are two: the clinical Study Data Reviewer's Guide for SDTM (csdrg.pdf) and the Analysis Data Reviewer's Guide for ADaM (adrg.pdf). FDA's Technical Conformance Guide recommends them, and PHUSE publishes templates that FDA prefers but doesn't require.
+    rubric:
+      - Contrasts machine-readable metadata with human-readable explanation
+      - Names cSDRG and ADRG and what each covers
+      - Mentions conformance findings and special derivations
+      - States the regulatory status accurately (recommended; PHUSE template preferred)
+    redFlags:
+      - "Says the reviewer's guide duplicates define.xml"
+      - "Claims PHUSE templates are mandatory"
+    followUps:
+      - "What would you include in the ADRG about PFS censoring?"
+      - "How do you document a validation finding you cannot fix?"

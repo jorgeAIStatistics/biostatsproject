@@ -1,0 +1,119 @@
+lab: trials
+modules:
+  - id: trials-foundations
+    title: Clinical trial foundations
+    summary: How a trial is designed, randomized, blinded and analyzed — and what each design decision means for the data you will program and the analyses you will run.
+    level: 1
+    lessons:
+      - id: trials-drug-development-lifecycle
+        title: Drug development and the clinical data lifecycle
+        summary: Phases of development, who does what at a sponsor and a CRO, and how data flows from protocol to CSR and ad hoc requests.
+        minutes: 45
+        difficulty: foundation
+        tracks: [programmer, biostatistician, computing]
+        skills: [trials.lifecycle, trials.documents]
+        keywords: [phase I, phase II, phase III, sponsor, CRO, statistical programmer, data manager, medical writer, SDTM, ADaM, TLF, CSR, database lock]
+      - id: trials-reading-a-protocol
+        title: Reading a protocol like a biometrics professional
+        summary: Objectives, endpoints, design, eligibility and the schedule of assessments of CBX417-301 — and what each implies for data collection and analysis.
+        minutes: 50
+        difficulty: foundation
+        tracks: [programmer, biostatistician]
+        skills: [trials.protocol, trials.design, trials.documents]
+        prerequisites: [trials-drug-development-lifecycle]
+        keywords: [protocol synopsis, schedule of assessments, eligibility, inclusion criteria, exclusion criteria, visit schedule, objectives]
+      - id: trials-randomization-stratification
+        title: Randomization, stratification and allocation concealment
+        summary: Simple, permuted-block and stratified randomization, IxRS, allocation concealment, and why stratification factors reappear in the analysis model.
+        minutes: 50
+        difficulty: intermediate
+        tracks: [biostatistician, programmer]
+        skills: [trials.randomization, trials.design]
+        prerequisites: [trials-reading-a-protocol]
+        keywords: [permuted block, block size, stratification, IxRS, IWRS, IRT, allocation concealment, stratified log-rank, mis-stratification]
+      - id: trials-blinding-bias
+        title: Blinding and bias
+        summary: Sources of bias in trials, levels of blinding, how blinding is protected in data and programming, and what happens at unblinding.
+        minutes: 40
+        difficulty: foundation
+        tracks: [biostatistician, programmer]
+        skills: [trials.blinding, trials.design]
+        prerequisites: [trials-randomization-stratification]
+        keywords: [double-blind, open-label, placebo, dummy randomization, blinded data review, unblinding, IDMC, firewall, BICR]
+      - id: trials-endpoints
+        title: Endpoints — primary, secondary, surrogate and oncology
+        summary: Endpoint hierarchy, surrogate endpoints, the oncology endpoints PFS, OS, ORR and DoR, and patient-reported outcomes.
+        minutes: 50
+        difficulty: intermediate
+        tracks: [biostatistician, programmer]
+        skills: [trials.endpoints, trials.oncology]
+        prerequisites: [trials-reading-a-protocol]
+        keywords: [primary endpoint, key secondary, exploratory, surrogate, PFS, OS, ORR, DoR, PRO, time-to-event]
+      - id: trials-estimands
+        title: Estimands (ICH E9(R1))
+        summary: The five attributes of an estimand, the five intercurrent-event strategies, and worked estimands for CBX-417 PFS and a blood-pressure trial.
+        minutes: 60
+        difficulty: advanced
+        tracks: [biostatistician]
+        skills: [trials.estimands, regulatory.ich, stats.sensitivity]
+        prerequisites: [trials-endpoints]
+        keywords: [ICH E9(R1), intercurrent event, treatment policy, hypothetical, composite, while on treatment, principal stratum, sensitivity analysis]
+      - id: trials-analysis-populations
+        title: Analysis populations
+        summary: ITT/FAS, per-protocol and safety populations; deriving the CBX417-301 subject flow and planned vs actual treatment.
+        minutes: 50
+        difficulty: intermediate
+        tracks: [biostatistician, programmer]
+        skills: [trials.populations, adam.adsl]
+        prerequisites: [trials-randomization-stratification]
+        keywords: [ITT, FAS, per-protocol, safety population, ITTFL, SAFFL, PPROTFL, EFFFL, TRT01P, TRT01A, dispensing error]
+  - id: trials-operations
+    title: Trial operations and study documents
+    summary: How data are collected, cleaned, coded and locked; how safety and tumor-response data work; and how the SAP, shells and regulatory deliverables drive programming.
+    level: 2
+    lessons:
+      - id: trials-crf-to-database
+        title: From CRF to locked database
+        summary: eCRF/EDC design, edit checks, queries, coding with licensed dictionaries, reconciliation, the data management plan and database lock.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [programmer, biostatistician, computing]
+        skills: [trials.data-management, trials.documents, sdtm.acrf-define]
+        prerequisites: [trials-drug-development-lifecycle]
+        keywords: [eCRF, EDC, edit check, query, MedDRA, WHODrug, SAE reconciliation, IxRS reconciliation, lab reconciliation, DMP, database lock]
+      - id: trials-safety-data
+        title: Safety data — AEs, SAEs, TEAEs, grading and labs
+        summary: AE vs SAE vs TEAE, seriousness criteria, CTCAE grading, the MedDRA hierarchy, lab safety summaries and Hy's law.
+        minutes: 60
+        difficulty: intermediate
+        tracks: [biostatistician, programmer]
+        skills: [trials.safety, adam.occds, tlf.safety-tables]
+        prerequisites: [trials-analysis-populations]
+        keywords: [adverse event, SAE, TEAE, CTCAE, MedDRA, SOC, PT, seriousness, Hy's law, eDISH, shift table]
+      - id: trials-oncology-response-recist
+        title: Tumor response (RECIST 1.1) and oncology time-to-event endpoints
+        summary: Target, non-target and new lesions, response categories and confirmation, and how PFS, OS, ORR and DoR are defined and censored.
+        minutes: 60
+        difficulty: intermediate
+        tracks: [biostatistician, programmer]
+        skills: [trials.oncology, trials.endpoints, adam.adtte]
+        prerequisites: [trials-endpoints]
+        keywords: [RECIST 1.1, target lesion, sum of diameters, nadir, CR, PR, SD, PD, confirmation, best overall response, censoring, CNSR]
+      - id: trials-sap-and-shells
+        title: The statistical analysis plan and TLF shells
+        summary: SAP anatomy, how mock shells drive programming, and how to map SAP text to ADaM variables and analysis code.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [biostatistician, programmer]
+        skills: [trials.sap, tlf.shells, adam.specs]
+        prerequisites: [trials-analysis-populations, trials-oncology-response-recist]
+        keywords: [SAP, mock shells, TLF, table of contents, footnotes, decimal places, programming specifications, stratified Cox, TIES]
+      - id: trials-regulatory-deliverables
+        title: Regulatory deliverables — CSR, eCTD and study data standards
+        summary: ICH E3 CSR structure, eCTD Module 5, SDTM/ADaM/Define-XML and reviewer guides, the FDA Technical Conformance Guide and Data Standards Catalog.
+        minutes: 50
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [regulatory.submission, regulatory.data-standards, regulatory.define, regulatory.ich]
+        prerequisites: [trials-sap-and-shells]
+        keywords: [ICH E3, CSR, eCTD, Module 5, Define-XML, cSDRG, ADRG, Technical Conformance Guide, Data Standards Catalog, SDTMIG v3.4, PHUSE, XPORT]

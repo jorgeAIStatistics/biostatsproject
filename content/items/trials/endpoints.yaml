@@ -1,0 +1,248 @@
+items:
+  - id: trials.endpoints.hierarchy-classify
+    format: classify
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.endpoints]
+    lesson: trials-endpoints
+    title: Place each CBX417-301 endpoint in the hierarchy
+    prompt: |
+      Classify each CBX417-301 endpoint by its level in the endpoint hierarchy.
+    categories: [Primary, Key secondary, Other secondary, Exploratory]
+    entries:
+      - { text: "Progression-free survival per investigator (RECIST 1.1)", category: Primary }
+      - { text: "Overall survival", category: Key secondary }
+      - { text: "Confirmed objective response rate", category: Other secondary }
+      - { text: "Duration of response", category: Other secondary }
+      - { text: "Incidence of treatment-emergent adverse events", category: Other secondary }
+      - { text: "Relationship between PD-L1 category and PFS benefit", category: Exploratory }
+    hints:
+      - "The primary endpoint drives the sample size (331 PFS events)."
+      - "Only one endpoint is tested in the fixed sequence after the primary."
+    solution: |
+      PFS is primary; OS is the key secondary endpoint tested hierarchically after PFS; ORR, DoR and safety are other secondary endpoints; biomarker relationships are exploratory.
+
+  - id: trials.endpoints.surrogate
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.endpoints]
+    lesson: trials-endpoints
+    title: What makes an endpoint a surrogate?
+    prompt: |
+      Which is the best example of a **surrogate** endpoint?
+    choices:
+      - text: "Tumor shrinkage (objective response) used in place of survival"
+        correct: true
+        feedback: "Response is measured earlier and is expected to predict clinical benefit, but it is not itself the outcome patients care most about."
+      - text: "Overall survival"
+        feedback: "OS is a direct clinical outcome, not a substitute for one."
+      - text: "Grade 3 or higher neutropenia"
+        feedback: "This is a safety outcome measured for its own sake, not a stand-in for efficacy."
+      - text: "Patient-reported pain severity"
+        feedback: "How a patient feels is a direct measure of clinical benefit, not a surrogate."
+    solution: |
+      A surrogate substitutes for a clinical outcome because it arrives sooner or is easier to measure. Its value depends on how well treatment effects on the surrogate predict effects on the real outcome in that setting.
+
+  - id: trials.endpoints.summary-measure
+    format: mapping
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.endpoints, stats.survival]
+    lesson: trials-endpoints
+    title: Endpoint to summary measure
+    prompt: |
+      Map each endpoint to the population-level summary most commonly used to compare arms.
+    sourceLabel: Endpoint
+    targetLabel: Comparison
+    pairs:
+      - { source: "PFS", target: "Hazard ratio from a stratified Cox model" }
+      - { source: "Confirmed ORR", target: "Difference in proportions" }
+      - { source: "Change from baseline in systolic blood pressure at week 12", target: "Difference in means (ANCOVA or MMRM)" }
+      - { source: "Number of COPD exacerbations per year", target: "Rate ratio (negative binomial)" }
+    targets:
+      - "Hazard ratio from a stratified Cox model"
+      - "Difference in proportions"
+      - "Difference in means (ANCOVA or MMRM)"
+      - "Rate ratio (negative binomial)"
+      - "Median of the observed event times"
+    solution: |
+      The distractor "median of the observed event times" is wrong for time-to-event data: censoring makes the naive median biased. Kaplan–Meier medians are descriptive summaries; the HR is the usual comparison.
+
+  - id: trials.endpoints.why-pfs-primary
+    format: mcq
+    modes: [check, speed]
+    difficulty: intermediate
+    skills: [trials.endpoints, trials.oncology]
+    lesson: trials-endpoints
+    title: Why PFS rather than OS?
+    prompt: |
+      Which is the strongest reason for choosing PFS rather than OS as the primary endpoint of a second-line NSCLC trial?
+    choices:
+      - text: "PFS is observed earlier and is not diluted by the therapies patients receive after progression"
+        correct: true
+        feedback: "Both advantages are real: fewer events/less time are needed, and post-progression therapy does not affect PFS."
+      - text: "PFS is more objective than OS"
+        feedback: "The opposite: OS is unambiguous, while PFS depends on scan timing and interpretation."
+      - text: "Regulators never accept OS as a primary endpoint"
+        feedback: "OS is the most reliable endpoint and is used as primary in many trials."
+      - text: "PFS does not require censoring"
+        feedback: "PFS is a time-to-event endpoint with detailed censoring rules."
+    solution: |
+      Speed and freedom from post-progression confounding. The trade-off is assessment dependence, managed with calendar scans, censoring rules and sometimes independent review.
+
+  - id: trials.endpoints.orr-calc
+    format: numeric
+    modes: [guided]
+    difficulty: foundation
+    skills: [trials.endpoints]
+    lesson: trials-endpoints
+    title: Confirmed ORR
+    prompt: |
+      A single-arm study treats 60 patients with measurable disease. 12 have a confirmed CR or PR; 7 more had an unconfirmed PR; 5 never had a post-baseline scan. What is the confirmed ORR (%) using all 60 patients as the denominator?
+    answer: 20.0
+    tolerance: 0.05
+    unit: "%"
+    hints:
+      - "Only confirmed responses count in the numerator."
+      - "Patients without post-baseline scans stay in the denominator as non-responders."
+    solution: |
+      12 / 60 = 20.0%. Clopper–Pearson 95% CI (R `binom.test(12, 60)`): 10.8% to 32.3%. Counting the 7 unconfirmed responses would give 31.7%; dropping the 5 unscanned patients would give 12 / 55 = 21.8%.
+
+  - id: trials.endpoints.dor-caveat
+    format: mcq
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.endpoints, trials.oncology]
+    lesson: trials-endpoints
+    title: Interpreting DoR by arm
+    prompt: |
+      Arm A has 55 confirmed responders with a KM median DoR of 5.1 months; arm B has 28 responders with a median DoR of 6.3 months (hypothetical numbers). A colleague concludes "arm B's responses are more durable, so arm B is better." What is the main flaw?
+    choices:
+      - text: "DoR is computed only in responders, a post-randomization subgroup, so the arms are not comparable as randomized groups"
+        correct: true
+        feedback: "Arm A converted more patients into responders; its extra responders may have shorter responses. Comparing conditional durations breaks randomization."
+      - text: "The medians should be compared with a t-test"
+        feedback: "Medians of censored data are not compared with t-tests, and the conditioning problem would remain."
+      - text: "DoR should be measured from randomization"
+        feedback: "Time from randomization to progression is PFS; DoR starts at first response by definition."
+      - text: "The number of responders is too small for a KM estimate"
+        feedback: "KM medians can be estimated with these numbers; the problem is interpretive, not computational."
+    hints:
+      - "Who is included in a DoR analysis, and was that group created by randomization?"
+      - "Could the treatment itself change who becomes a responder?"
+    solution: |
+      DoR conditions on a post-randomization outcome. Present it descriptively per arm alongside ORR; claims of superiority need methods that account for the selection (or endpoints defined on all randomized subjects).
+
+  - id: trials.endpoints.pfs-statements
+    format: multi
+    modes: [independent]
+    difficulty: intermediate
+    skills: [trials.endpoints, trials.oncology]
+    lesson: trials-endpoints
+    title: True statements about PFS in CBX417-301
+    prompt: |
+      Select **all** statements that are true for the CBX417-301 PFS endpoint.
+    choices:
+      - text: "Death from any cause without documented progression counts as a PFS event"
+        correct: true
+        feedback: "PFS is progression or death, whichever occurs first."
+      - text: "PFS starts at randomization, including for the 4 subjects who were never treated"
+        correct: true
+        feedback: "ITT analysis includes every randomized subject from RANDDT."
+      - text: "Progression can only be dated at a tumor assessment (scheduled or unscheduled)"
+        correct: true
+        feedback: "Progression is interval-censored: it is observed at scans, and the PD date is the date of the assessment that documents it."
+      - text: "Subjects without progression are censored at the data cutoff date"
+        feedback: "They are censored at their last adequate tumor assessment, not at the cutoff — censoring at the cutoff would count unobserved time as progression-free."
+      - text: "Subjects who stop study treatment are censored at their last dose"
+        feedback: "Scans continue after treatment discontinuation for reasons other than PD; PFS keeps counting (a treatment-policy approach)."
+    solution: |
+      True: death counts; start at randomization for all ITT subjects; PD is dated by scans. False: censoring at DCO (use the last adequate assessment) and censoring at treatment discontinuation (follow-up continues).
+
+  - id: trials.endpoints.orr-denominator-bug
+    format: diff
+    modes: [qc]
+    difficulty: advanced
+    skills: [trials.endpoints, qc.discrepancy, tlf.denominators]
+    lesson: trials-endpoints
+    title: Production and QC ORR disagree
+    prompt: |
+      A hypothetical single-arm study with 60 treated patients. Production and QC tables report different confirmed ORRs. The counts are illustrative. What is the most likely root cause?
+    left:
+      title: "Production — Confirmed objective response"
+      columns: ["Statistic", "Drug X (N=52)"]
+      rows:
+        - ["Confirmed ORR, n (%)", "18 (34.6)"]
+        - ["95% CI (Clopper-Pearson)", "(22.0, 49.1)"]
+      footnote: "Population: subjects with >= 1 post-baseline tumor assessment."
+    right:
+      title: "QC — Confirmed objective response"
+      columns: ["Statistic", "Drug X (N=60)"]
+      rows:
+        - ["Confirmed ORR, n (%)", "18 (30.0)"]
+        - ["95% CI (Clopper-Pearson)", "(18.9, 43.2)"]
+      footnote: "Population: all treated subjects with measurable disease at baseline."
+    choices:
+      - text: "Production restricted the denominator to subjects with a post-baseline scan, dropping 8 subjects who should count as non-responders"
+        correct: true
+        feedback: "Same numerator, different N. Unless the SAP defines an evaluable population for this table, subjects without post-baseline scans stay in the denominator."
+      - text: "Production counted unconfirmed responses"
+        feedback: "Both tables have 18 responders; the numerator is not the issue."
+      - text: "QC used the wrong CI method"
+        feedback: "Both CIs are Clopper–Pearson for their own n/N; they differ because N differs."
+      - text: "Rounding of percentages"
+        feedback: "34.6 vs 30.0 is a real difference, not rounding."
+    solution: |
+      The denominator differs (52 vs 60). Check the shell's population line and the SAP: confirmed ORR is normally a proportion of all subjects in the analysis population. The 8 subjects without post-baseline assessments count as non-responders (best overall response NE).
+    explanation:
+      objective: "Explain why two ORR outputs differ."
+      given: "Same numerator (18), different denominators (52 vs 60), and population footnotes."
+      relevant: "The population footnote and N in the column header."
+      irrelevant: "The CI method — it is the same in both."
+      calculating: "18/52 = 34.6%; 18/60 = 30.0%. Clopper–Pearson limits recomputed for each: (22.0, 49.1) and (18.9, 43.2)."
+      method: "Compare numerators and denominators separately; a denominator difference points to a population definition."
+      interpretation: "Restricting to evaluable subjects inflates ORR by treating unassessed patients as if they did not exist."
+      changes: "If the SAP defined an efficacy-evaluable population for ORR, production could be right — the shell and SAP decide."
+      interviewer: "That you check denominators first and know the ITT convention for response rates."
+
+  - id: trials.endpoints.interview-pfs-os
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [trials.endpoints, communication.interviewing]
+    lesson: trials-endpoints
+    title: PFS vs OS
+    prompt: |
+      **Interviewer:** "Explain the difference between PFS and OS as endpoints, and what could explain a trial showing a PFS benefit but no OS benefit."
+    modelAnswer: |
+      OS is time from randomization to death from any cause; PFS is time from randomization to documented progression or death, whichever comes first. OS is unambiguous but slow and affected by everything that happens after progression; PFS is earlier and measures the effect on the disease itself, but depends on scan timing and interpretation.
+
+      A PFS benefit without an OS benefit can happen when patients in the control arm receive effective therapies after progression (including crossover to the experimental drug), when the effect on progression is real but short-lived, when OS is immature at the analysis, or when PFS is simply not a good surrogate for OS in that setting. It can also reflect assessment bias if PFS was investigator-assessed in an open-label trial, which is why independent review and sensitivity analyses matter.
+    rubric:
+      - Defines both endpoints precisely (start at randomization, event definitions)
+      - Names advantages and weaknesses of each
+      - Lists subsequent therapy/crossover as a dilution mechanism
+      - Mentions immaturity of OS data
+      - Mentions surrogacy and assessment bias
+    redFlags:
+      - "Says PFS starts at first dose"
+      - "Claims a PFS benefit always implies an OS benefit"
+    followUps:
+      - "How would you check whether subsequent therapy differed between arms?"
+      - "What sensitivity analyses would you propose for investigator-assessed PFS?"
+
+  - id: trials.endpoints.speed-months
+    format: numeric
+    modes: [speed]
+    difficulty: foundation
+    skills: [trials.endpoints]
+    lesson: trials-endpoints
+    title: Days to months
+    prompt: |
+      `AVAL = 183` days. Using the SAP convention months = days / 30.4375, what is the value in months (two decimals)?
+    answer: 6.01
+    tolerance: 0.01
+    unit: months
+    solution: |
+      183 / 30.4375 = 6.012 → 6.01 months.

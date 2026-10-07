@@ -1,0 +1,14 @@
+node_modules
+dist
+*.local
+.DS_Store
+.vite
+coverage
+__pycache__/
+*.pyc
+.venv/
+.Rhistory
+.RData
+*.log
+!data/**/*.log
+.cache/

@@ -1,0 +1,552 @@
+items:
+  - id: sdtm.class.topic-suffix
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sdtm.roles, sdtm.purpose]
+    lesson: sdtm-observation-classes
+    title: Read the class off the topic variable
+    prompt: |
+      You open an unfamiliar SDTM domain and the only thing you recognise is that one of its columns is
+      called `XXTESTCD`.
+
+      What do you already know about the domain?
+    choices:
+      - text: "It is a Findings domain: each record asks a question, and the answer is in a separate result qualifier such as `XXORRES` / `XXSTRESC`."
+        correct: true
+        feedback: "Correct. --TESTCD is the Findings topic variable, and the question/answer split is what defines the class. LB, VS, EG, RS, TR, DD and SS in CBX417-301 all follow it."
+      - text: "It is an Interventions domain, because a test is something administered to the subject."
+        feedback: "Interventions use --TRT. A test is something asked, not something given."
+      - text: "It is an Events domain, because a test result is something that happened."
+        feedback: "Events use --TERM and have no separate result variable — the term is the whole content of the record."
+      - text: "Nothing — `--TESTCD` appears in all three general observation classes."
+        feedback: "It does not. Each general observation class has exactly one topic variable, and --TESTCD belongs to Findings alone."
+    hints:
+      - "Each general observation class has exactly one topic variable. Three classes, three suffixes."
+    explanation:
+      objective: "Infer a domain's class from a single variable name."
+      relevant: "The topic-variable suffix: --TRT, --TERM, --TESTCD."
+      interpretation: "This is how you read an unfamiliar domain in seconds rather than opening the IG."
+      interviewer: "That you think in classes rather than memorising a domain list."
+
+  - id: sdtm.class.ecog-placement
+    format: mcq
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [sdtm.mapping, sdtm.roles]
+    lesson: sdtm-observation-classes
+    title: ECOG is on the vital-signs page
+    prompt: |
+      In CBX417-301, ECOG performance status is collected as the last field on the vital-signs CRF page,
+      next to systolic BP, pulse, temperature, weight and height.
+
+      Where does it belong in SDTM, and why?
+    choices:
+      - text: "`RS`, because it is an assessment with a result (Findings) and `VSTESTCD` covers physiological measurements, not performance status."
+        correct: true
+        feedback: "Correct. The study submits 3,075 ECOG records in RS with RSCAT = \"ECOG\" and RSTESTCD = \"ECOG101\", sharing the domain with 1,928 RECIST overall-response records."
+      - text: "`VS`, because SDTM maps CRF pages to domains and this field is on the vital-signs page."
+        feedback: "SDTM does not map pages to domains. The page is where the site was asked to record it; the class is a property of the observation."
+      - text: "`QS`, because performance status is a questionnaire."
+        feedback: "Defensible-sounding, but ECOG here is a single investigator-assigned score, not an instrument with items to score. This study puts it in RS, and that choice is documented."
+      - text: "`SUPPVS`, because there is no standard variable for it."
+        feedback: "There is: it is a Findings result, and a Findings domain exists for it. SUPPQUAL is the destination when no standard variable exists anywhere, not when the obvious domain is inconvenient."
+    hints:
+      - "Run the class question first: was something given, did something happen, or was something assessed?"
+      - "Then ask which Findings domain has a --TESTCD that covers performance status."
+    explanation:
+      objective: "Apply the class-first decision procedure to a field whose CRF location is misleading."
+      given: "A field's position on a CRF page."
+      irrelevant: "The CRF page. It reflects site workflow, not observation class."
+      relevant: "That ECOG is an assessment with a result, so it is Findings."
+      assumptions: "That the sponsor documented the choice; the aCRF annotates ECOG to RS explicitly."
+      changes: "A study collecting a full multi-item instrument such as EORTC QLQ-C30 would use QS, with one record per item."
+
+  - id: sdtm.class.dm-not-findings
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sdtm.roles, sdtm.dm]
+    lesson: sdtm-observation-classes
+    title: Why DM is not a Findings domain
+    prompt: |
+      `DM` contains age, sex, race and ethnicity — all of which look like things that were measured or
+      recorded about the subject.
+
+      What actually disqualifies `DM` from being a general observation class domain?
+    choices:
+      - text: "It has one record per subject and no topic variable, so there is nothing for qualifiers to qualify."
+        correct: true
+        feedback: "Correct. DM is Special Purpose. In CBX417-301's manifest, 14 of the 21 SDTM datasets have a Topic-role column and DM is not one of them."
+      - text: "Its variables are collected rather than derived."
+        feedback: "Origin has nothing to do with class. AE variables are mostly collected and AE is a general observation class domain."
+      - text: "It contains no dates."
+        feedback: "It contains several — RFSTDTC, RFXSTDTC, RFICDTC, DTHDTC, DMDTC. Timing variables are present in Special Purpose domains too."
+      - text: "It is smaller than the other domains."
+        feedback: "Size is irrelevant. TA has six records and is Trial Design for structural reasons, not for being small."
+    hints:
+      - "What would `DMTESTCD` even contain?"
+    solution: |
+      **`DM` is Special Purpose**, along with `SE` (subject elements), `SV` (subject visits) and `CO`
+      (comments).
+
+      The structural test is the topic variable. A general observation class record says *what it is
+      about* in one variable and then qualifies it. `DM` says nothing of the sort: it is one row per
+      subject, and every column is a property of that subject.
+
+      This has a practical consequence. Because there is no `DMTESTCD`, you cannot add a new demographic
+      "test" the way you would add a new lab test — anything extra has to go elsewhere. CBX417-301 puts
+      histology, disease stage, PD-L1 score, prior lines of therapy, prior immunotherapy, brain
+      metastases and smoking status in **`SUPPDM`**, 4,553 records across 13 `QNAM` values.
+
+      Counted from the manifest: 14 topic variables across 21 SDTM datasets. The seven without one are
+      `DM`, `SE`, `SV`, `TA`, `TE`, `SUPPDM` and `SUPPAE` — exactly the Special Purpose, Trial Design and
+      Relationship datasets.
+    explanation:
+      objective: "Identify the structural property that defines a general observation class."
+      method: "Look for a topic variable rather than judging by the content."
+      computation: "Counting Topic-role columns in the manifest separates the two groups cleanly."
+      interpretation: "The absence of a topic variable is why SUPPDM is unusually large in this study."
+
+  - id: sdtm.class.role-of-unit
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sdtm.roles]
+    lesson: sdtm-observation-classes
+    title: What kind of qualifier is LBORRESU?
+    prompt: |
+      In `LB`, `LBORRES` holds the result as the laboratory reported it and `LBORRESU` holds its unit.
+
+      What role does `LBORRESU` have?
+    choices:
+      - text: "Variable qualifier — it describes one specific other variable, `LBORRES`."
+        correct: true
+        feedback: "Correct. That is the definition of a variable qualifier, and it is why LBSTRESU exists separately to describe LBSTRESC/LBSTRESN."
+      - text: "Record qualifier — it describes the record as a whole."
+        feedback: "A record qualifier describes the whole observation, like LBNRIND or LBSTAT. A unit describes exactly one value."
+      - text: "Result qualifier — it is part of the result."
+        feedback: "Result qualifiers are LBORRES, LBSTRESC and LBSTRESN. The unit describes one of them rather than being one."
+      - text: "Grouping qualifier — it groups records with the same unit."
+        feedback: "Grouping qualifiers are LBCAT/LBSCAT. A unit is not a grouping mechanism even though you could group by it."
+    hints:
+      - "Does it describe the record, or exactly one column in the record?"
+    explanation:
+      objective: "Assign a qualifier subtype correctly."
+      relevant: "That a variable qualifier attaches to one named variable."
+      interpretation: "The existence of two units in LB — LBORRESU and LBSTRESU — is the clearest evidence of the subtype: each describes its own result variable, and in this study 4 bilirubin records have LBORRESU = mg/dL with LBSTRESU = umol/L."
+
+  - id: sdtm.class.classify-fields
+    format: classify
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sdtm.mapping, sdtm.roles]
+    lesson: sdtm-observation-classes
+    title: Class each collected field
+    prompt: |
+      These are real fields from CBX417-301's CRF and vendor exports. Assign each to the SDTM class it
+      belongs to — not the domain, the class.
+    categories: [Interventions, Events, Findings, Special Purpose, Trial Design]
+    entries:
+      - text: "`DRUG_NAME_ENTERED` and `DOSE_MG` on the study-drug dosing page"
+        category: Interventions
+        note: "Given to the subject. Becomes EX.EXTRT and EX.EXDOSE."
+      - text: "`AE_TERM` on the adverse-event page"
+        category: Events
+        note: "Happened to the subject. Becomes AE.AETERM."
+      - text: "`TARGET_SLD_MM` — sum of target lesion diameters on the imaging form"
+        category: Findings
+        note: "Measured. Becomes TR.TRORRES with TRTESTCD = SUMDIAM, 2,346 records."
+      - text: "`MH_TERM` — a pre-existing condition on the medical-history page"
+        category: Events
+        note: "Something that happened to the subject, before the study. MH.MHTERM, 1,292 records."
+      - text: "`EOT_REASON` — reason study treatment stopped"
+        category: Events
+        note: "DS is an Events domain: DSTERM is its topic variable. Disposition is something that happened."
+      - text: "`STRAT_ECOG` and `ARM_ASSIGNED` from the IxRS randomization file"
+        category: Special Purpose
+        note: "One row per subject. ARM/ARMCD go to DM; the stratum values go to SUPPDM."
+      - text: "`CONTACT_DATE` and `STATUS` from the survival follow-up form"
+        category: Findings
+        note: "SS, Subject Status: SSTESTCD = SURVSTAT with ALIVE/DEAD/UNKNOWN in SSORRES. 960 records."
+      - text: "The planned sequence of screening, treatment and follow-up periods for each arm"
+        category: Trial Design
+        note: "TA — six records, one per planned element per arm. It describes the trial, not any subject."
+      - text: "`CM_TERM` on the prior-and-concomitant-medications page"
+        category: Interventions
+        note: "Taken by the subject. CM.CMTRT, split by CMCAT into concomitant, prior cancer therapy and subsequent anticancer therapy."
+      - text: "`QTCF_MS` on the 12-lead ECG form"
+        category: Findings
+        note: "Measured. EG.EGORRES with EGTESTCD = QTCFAG."
+    hints:
+      - "Given or taken? Happened? Measured or assessed?"
+      - "Two of these are not about a subject's observations at all."
+    solution: |
+      The three general observation classes cover eight of the ten. The two that do not fit are the
+      giveaway cases:
+
+      - **Randomization and arm assignment** is one row per subject with no topic — Special Purpose
+        (`DM`), with the stratum values going to `SUPPDM` because `DM` has nowhere to put them.
+      - **The planned element sequence** describes the *trial*. `TA` has six rows for a study with 468
+        subjects, because it has nothing to do with subjects at all.
+
+      Two entries are worth a second look:
+
+      - **Disposition** feels like an administrative fact rather than an event, but `DS` is an Events
+        domain with `DSTERM` as its topic. CBX417-301 has 1,696 `DS` records covering both disposition
+        events and protocol milestones (`DSCAT = "PROTOCOL MILESTONE"` for the 468 informed consents and
+        420 randomizations).
+      - **Survival status** is a Findings record, not an Event. The *death* is an event and is recorded
+        elsewhere; a follow-up phone call establishing that the subject is alive is an assessment with a
+        result, and `SS` holds 960 of them.
+    explanation:
+      objective: "Apply the class decision to a mixed list of real fields."
+      method: "Ask the three class questions in order, with the trial-level and one-row-per-subject checks first."
+      interpretation: "Getting the class right narrows the domain question to a short list; getting it wrong makes the domain question unanswerable."
+      changes: "A study that collected symptoms about a specific adverse event would add a sixth category, Findings About."
+
+  - id: sdtm.class.order-procedure
+    format: order
+    modes: [guided]
+    difficulty: foundation
+    skills: [sdtm.mapping]
+    lesson: sdtm-observation-classes
+    title: The decision procedure, in order
+    prompt: |
+      Put the mapping decision steps in the order you should actually ask them. Stopping at the first
+      "yes" should give you the right answer.
+    steps:
+      - "Is this about the trial rather than about any subject? -> Trial Design (TA, TE, TS, TI, TV)"
+      - "Is it one record per subject, or the subject's own timeline? -> Special Purpose (DM, SE, SV, CO)"
+      - "Was something given to or taken by the subject? -> Interventions, topic variable --TRT"
+      - "Did something happen to the subject? -> Events, topic variable --TERM"
+      - "Was something measured, assessed or evaluated? -> Findings, topic variable --TESTCD"
+      - "Is the finding about an event or intervention rather than about the subject? -> Findings About, FAOBJ"
+      - "Is there no standard variable for it anywhere? -> a supplemental qualifier in SUPP--"
+    hints:
+      - "The two broad structural questions come before the three class questions."
+      - "SUPPQUAL is the last resort, not an early option."
+    solution: |
+      The order matters more than the content, for two reasons.
+
+      **The structural questions come first.** If you start with "given, happened or measured?" you will
+      try to force `DM` and `TA` into a class they do not have. Asking "is this trial-level?" and "is
+      this one row per subject?" first removes them.
+
+      **SUPPQUAL comes last.** It is genuinely the right answer sometimes — CBX417-301 has 9,485
+      supplemental qualifier records across `SUPPDM` and `SUPPAE` — but reaching for it early is how
+      studies end up with a thin SDTM and a SUPPQUAL containing the actual data. The question before it
+      is always "is there a standard variable, in this domain or another one, that means this?"
+
+      **Findings About sits between Findings and SUPPQUAL** because it is easy to miss: a finding about
+      an adverse event is still a finding, but it belongs in `FA` with `FAOBJ` naming the event, not as a
+      qualifier on the AE record.
+    explanation:
+      objective: "Internalise a repeatable order of questions."
+      method: "Structural checks, then the three class questions, then the two escape hatches."
+      interpretation: "The order is what makes the procedure fast; any order gets the easy cases right."
+
+  - id: sdtm.class.vs-row-count
+    format: numeric
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [sdtm.findings, sdtm.mapping]
+    lesson: sdtm-observation-classes
+    title: How many VS records should the transposition produce?
+    prompt: |
+      CBX417-301's vital-signs CRF is a **wide** form: one row per subject visit, with several
+      measurements across the row.
+
+      - `raw/vitals.csv` has **3,441** rows, of which **3,393** belong to randomized subjects (the other
+        48 are screening visits for screen failures, which this study does not map to SDTM).
+      - Each mapped visit row contributes records for `SYSBP`, `DIABP`, `PULSE`, `TEMP` and `WEIGHT`.
+      - `HEIGHT` is collected **once per subject**, at screening: **420** records.
+
+      How many records should `VS` contain?
+    answer: 17385
+    tolerance: 0
+    unit: records
+    datasets: [oncology/raw/vitals, oncology/sdtm/vs]
+    hints:
+      - "Five measurements per mapped visit row, plus the one-per-subject height."
+      - "3,393 x 5, then add 420."
+    solution: |
+      **17,385** — and that is exactly what `data/oncology/sdtm/vs.csv` contains.
+
+      ```text
+      3,393 visit rows x 5 measurements  = 16,965
+      +  420 height records              =    420
+                                           ------
+                                           17,385
+      ```
+
+      Verify it per test:
+
+      | `VSTESTCD` | Records |
+      |---|---:|
+      | `SYSBP` | 3,393 |
+      | `DIABP` | 3,393 |
+      | `PULSE` | 3,393 |
+      | `TEMP` | 3,393 |
+      | `WEIGHT` | 3,393 |
+      | `HEIGHT` | 420 |
+
+      **This arithmetic is the single most useful check on a Findings mapping.** A wide-to-long
+      transposition that silently drops a measurement, or that fails to exclude screen failures, shows up
+      immediately in the row count and nowhere else — every individual value still looks correct.
+
+      Note what the count does *not* include: the `ECOG` column on the same CRF page. Its 3,075 records
+      went to `RS`, and if you had expected 3,393 x 6 you would have been counting a field that belongs
+      to a different domain.
+    explanation:
+      objective: "Predict a Findings domain's row count from the CRF structure."
+      given: "Raw row counts, the number of measurements per row, and the one-per-subject height."
+      relevant: "That screen-failure visits are not mapped in this study, and that ECOG leaves for RS."
+      calculating: "3,393 x 5 + 420."
+      numbers: "16,965 + 420 = 17,385, matching the delivered domain exactly."
+      assumptions: "That no measurement is missing on any mapped row; SDTM here keeps a record even when the value is null, which is what makes the arithmetic exact."
+      interpretation: "Row-count arithmetic catches transposition errors that value-level checks cannot."
+      changes: "If the study submitted screen-failure vital signs, the count would be 3,441 x 5 + 468."
+
+  - id: sdtm.class.cmcat-map
+    format: mapping
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sdtm.roles, sdtm.interventions]
+    lesson: sdtm-observation-classes
+    title: Which qualifier subtype?
+    prompt: |
+      All of these are qualifiers in CBX417-301's `CM` and `AE` domains. Name the subtype of each.
+    sourceLabel: Variable
+    targetLabel: Qualifier subtype
+    targets: [Grouping, Result, Synonym, Variable, Record]
+    pairs:
+      - source: "`CMCAT` — CONCOMITANT / PRIOR CANCER THERAPY / SUBSEQUENT ANTICANCER THERAPY"
+        target: Grouping
+        note: "Splits the 3,540 CM records into 2,111 / 1,241 / 188 for three different analyses."
+      - source: "`CMDECOD` — the coded medication name for `CMTRT`"
+        target: Synonym
+        note: "An alternative name for the topic. AEDECOD does the same job for AETERM."
+      - source: "`CMDOSU` — the unit of `CMDOSE`"
+        target: Variable
+        note: "Describes exactly one other variable."
+      - source: "`AESER` — serious event flag"
+        target: Record
+        note: "Describes the whole observation, not any single variable in it."
+      - source: "`LBSTRESN` — the standardized numeric result"
+        target: Result
+        note: "Carries the finding's value. Only Findings domains have result qualifiers."
+      - source: "`CMCLAS` — the ATC-like class of `CMDECOD`"
+        target: Variable
+        note: "Describes CMDECOD specifically, in the same way CMDOSU describes CMDOSE."
+    hints:
+      - "Ask whether it describes the record, one named variable, the topic under another name, a group of records, or the value itself."
+    solution: |
+      The subtypes are not trivia — they explain the variable names you are about to write.
+
+      | Subtype | Test | Consequence |
+      |---|---|---|
+      | **Grouping** | Would you subset on it? | `--CAT`, `--SCAT` |
+      | **Result** | Is it the answer to the topic's question? | Only in Findings: `--ORRES`, `--STRESC`, `--STRESN` |
+      | **Synonym** | Is it the topic under another name? | `--DECOD`, `--TEST` |
+      | **Variable** | Does it describe one named variable? | `--ORRESU` describes `--ORRES`; `--DOSU` describes `--DOSE` |
+      | **Record** | Does it describe the whole observation? | `AESER`, `AETOXGR`, `--NRIND`, `--STAT` |
+
+      The pair worth remembering is **Variable versus Record**. `LBORRESU` is a variable qualifier
+      because it describes `LBORRES` and nothing else — which is why `LB` needs a *second* unit,
+      `LBSTRESU`, for the standardized result. In CBX417-301 four bilirubin records have
+      `LBORRESU = "mg/dL"` and `LBSTRESU = "umol/L"` on the same row, which would be impossible if the
+      unit were a record qualifier.
+    explanation:
+      objective: "Classify qualifiers into their five subtypes."
+      method: "Ask what the qualifier attaches to: the record, one variable, the topic, a group, or the result."
+      interpretation: "The subtype predicts the variable naming pattern, which is how you guess a variable name correctly before looking it up."
+
+  - id: sdtm.class.fa-or-supp
+    format: mcq
+    modes: [independent, boss]
+    difficulty: advanced
+    skills: [sdtm.mapping, sdtm.supp, sdtm.findings]
+    lesson: sdtm-observation-classes
+    title: A finding about an event
+    prompt: |
+      A protocol amendment adds a field to the adverse-event page for a specific event type:
+
+      > **For each rash, record the body surface area involved (%) and whether the rash was pruritic.**
+
+      These are measurements, but they are measurements *about a particular adverse event* rather than
+      about the subject.
+
+      What is the correct SDTM home?
+    choices:
+      - text: "The Findings About class — `FA` records with `FAOBJ` naming the event, linked to AE through RELREC."
+        correct: true
+        feedback: "Correct. FAOBJ, \"Object of the Observation\", is what distinguishes the Findings About class: the finding's subject is the event, not the person."
+      - text: "New qualifier variables on the AE record, `AEBSA` and `AEPRURIT`."
+        feedback: "Neither is a published SDTMIG variable, and inventing --variables in a standard domain is not permitted. Non-standard qualifiers go to SUPPAE, which is the next-best answer here but not the best one."
+      - text: "`SUPPAE` with `QNAM = \"BSA\"` and `QNAM = \"PRURITUS\"`."
+        feedback: "Workable and common, and it is what many sponsors do. But these are findings with results collected repeatedly, and SUPPQUAL has no result/unit structure — FA exists precisely so findings about an event keep the Findings shape."
+      - text: "`VS`, because body surface area is a body measurement."
+        feedback: "VS records are about the subject. This measurement is about one rash on one occasion; putting it in VS loses the link to the event entirely."
+    hints:
+      - "Whose property is 'body surface area involved'? The subject's, or the event's?"
+      - "There is a fourth class, and its distinguishing variable names the object of the observation."
+    solution: |
+      **Findings About**, implemented as the `FA` domain.
+
+      The test is whose property the value is. A platelet count is a property of the subject. "Body
+      surface area involved" is a property of *this rash* — the subject could have two rashes with
+      different values at the same visit, and a subject-level Findings domain has no way to say that.
+
+      ```text
+      FA:  FAOBJ = "RASH"   FATESTCD = "BSA"   FAORRES = "12"  FAORRESU = "%"
+           FAOBJ = "RASH"   FATESTCD = "PRURITS"  FAORRES = "Y"
+      RELREC: relates the FA records to the AE record they describe
+      ```
+
+      **Why not SUPPAE?** It would work and sponsors do it. But supplemental qualifiers are a flat
+      name/value structure — `QNAM`, `QVAL` — with no unit, no result-qualifier pair, no `--STAT` for a
+      measurement not done, and `QVAL` is always character. A repeated measurement with a unit loses all
+      of that. Findings About keeps the Findings shape while recording what the finding is about.
+
+      **Why not new AE variables?** Because `AEBSA` is not a variable anyone else has. A standard domain's
+      variable list is fixed; the escape hatches are SUPPQUAL, a Findings About record or a custom domain,
+      and inventing a variable inside a published domain is none of them.
+
+      CBX417-301 has no `FA` domain, because nothing it collects is a finding about an event. Recognising
+      when a study crosses that line is the skill.
+    explanation:
+      objective: "Choose between FA, SUPPQUAL and inventing a variable."
+      given: "A repeated measurement with a unit, collected per adverse event."
+      relevant: "That the object of the observation is the event, and that the value has a unit and can be not done."
+      irrelevant: "That the field appears on the AE page — page location never decides the class."
+      method: "Ask whose property the value is, then ask whether the destination structure can carry a result and a unit."
+      assumptions: "That the rash can occur more than once per subject, which is what makes a subject-level Findings domain unworkable."
+      changes: "If the field were a single yes/no recorded once per event with no unit, SUPPAE would be a reasonable and much cheaper choice."
+      interviewer: "That you know the Findings About class exists and can say what FAOBJ does, rather than defaulting to SUPPQUAL for everything awkward."
+
+  - id: sdtm.class.topic-count
+    format: numeric
+    modes: [independent, qc]
+    difficulty: advanced
+    skills: [sdtm.roles, qc.data-cleaning]
+    lesson: sdtm-observation-classes
+    title: Count the general observation class datasets
+    prompt: |
+      CBX417-301 ships **21** SDTM datasets: `dm`, `suppdm`, `ae`, `suppae`, `cm`, `mh`, `ex`, `lb`,
+      `vs`, `eg`, `rs`, `tr`, `ds`, `dv`, `dd`, `ss`, `sv`, `se`, `ta`, `te`, `ts`.
+
+      A general observation class dataset has exactly one **Topic**-role variable. Special Purpose, Trial
+      Design and Relationship datasets have none.
+
+      Using that rule alone, how many of the 21 are general observation class datasets?
+    answer: 14
+    tolerance: 0
+    unit: datasets
+    datasets: [oncology/sdtm/dm, oncology/sdtm/ts]
+    hints:
+      - "List the ones you are confident have no topic variable first."
+      - "`TS` is Trial Design — but check whether it has a Topic-role column anyway."
+    solution: |
+      **14.**
+
+      The seven without a Topic-role variable are `dm`, `sv`, `se`, `ta`, `te`, `suppdm` and `suppae` —
+      exactly the Special Purpose, Trial Design and Relationship datasets.
+
+      ```r
+      library(jsonlite)
+      m <- fromJSON("data/oncology/manifest.json", simplifyVector = FALSE)
+      sdtm <- Filter(function(d) d$layer == "sdtm", m$datasets)
+      sum(sapply(sdtm, function(d) any(sapply(d$columns, function(c) identical(c$role, "Topic")))))
+      ```
+
+      **The instructive case is `TS`.** It *does* have a Topic-role column — `TSPARMCD` — and a Result
+      qualifier, `TSVAL`. Structurally it looks exactly like a Findings domain. It is nevertheless Trial
+      Design, because its records are about the trial and not about any subject: there is no `USUBJID`
+      column at all.
+
+      That is the honest complication in this exercise. The topic-variable test is an excellent
+      **heuristic** and it is not the definition. The definition is what the observation is about, and
+      the structural check that separates Trial Design from everything else is the absence of `USUBJID`.
+    explanation:
+      objective: "Use a structural property to partition a domain list, and find where the heuristic breaks."
+      given: "21 dataset names and the rule that general observation classes have a topic variable."
+      relevant: "Which datasets have a Topic-role column in the manifest."
+      calculating: "21 minus the 7 without one."
+      numbers: "14 with a Topic role; 7 without (dm, sv, se, ta, te, suppdm, suppae)."
+      assumptions: "That the manifest's role assignments are correct — they are the study's own metadata, which is what define.xml would carry."
+      interpretation: "TS satisfies the heuristic but is Trial Design; the presence of USUBJID is the cleaner structural discriminator."
+      changes: "A study with TI (inclusion/exclusion criteria) or TV (trial visits) would add more Trial Design datasets, none with USUBJID."
+
+  - id: sdtm.class.open-new-field
+    format: open
+    modes: [interview, boss]
+    difficulty: advanced
+    skills: [sdtm.mapping, sdtm.roles, communication.documentation]
+    lesson: sdtm-observation-classes
+    title: A new field arrives mid-study
+    prompt: |
+      Three months into database lock preparation, the medical monitor asks to add a field to
+      CBX417-301's tumour assessment form:
+
+      > **Scan quality: ADEQUATE / SUBOPTIMAL / NOT INTERPRETABLE**, recorded once per imaging
+      > assessment by the radiologist.
+
+      Walk through how you would decide where it goes, and what else has to change once you decide.
+    modelAnswer: |
+      **Class first.** Was something given to the subject? No. Did something happen to them? No. Was
+      something assessed? Yes — a radiologist looked at an image and made a judgement with a result. So
+      it is Findings, topic variable `--TESTCD`.
+
+      **Then: a finding about what?** This is the branch that matters. If the judgement is about the
+      *scan* — an assessment characteristic — it is a qualifier of the tumour-result record rather than
+      an independent finding. And `TR` already has variables for the case where the assessment could not
+      be used: `TRSTAT = "NOT DONE"` with `TRREASND` giving the reason. CBX417-301 already uses exactly
+      that for 14 records, with `TRREASND = "NOT EVALUABLE (IMAGE QUALITY)"`.
+
+      So my first proposal would be that `NOT INTERPRETABLE` is already representable, and the genuinely
+      new information is the three-level distinction — specifically the `SUBOPTIMAL` middle category,
+      which `TRSTAT` cannot express because the assessment *was* done.
+
+      **The realistic options, in order of preference:**
+
+      1. A record qualifier already in `TR` that means this. There is not one for scan quality, so no.
+      2. A `SUPPTR` record, `QNAM = "SCANQUAL"`, `IDVAR = "TRSEQ"`, one per assessment. This is where I
+         would land: it is a single categorical value per existing record, with no unit and no repeat
+         structure, which is precisely what supplemental qualifiers are for.
+      3. A separate `FA` record with `FAOBJ` naming the assessment. Over-engineered for one categorical
+         field with no unit.
+
+      **What else has to change** — and this is the part that makes people reluctant to accept late
+      fields:
+
+      - The SDTM specification gains a `SUPPTR` section with the `QNAM`, `QLABEL`, `QORIG` and `QEVAL`.
+        `QEVAL` matters here: the assessment is made by the radiologist, not the investigator.
+      - The annotated CRF gains the annotation `SUPPTR.QVAL when QNAM = "SCANQUAL"` on that page.
+      - define.xml gains the value-level metadata for the new `QNAM` and its codelist, which has to be
+        defined as a sponsor extension because there is no published codelist for scan quality.
+      - The cSDRG explains why it is a supplemental qualifier.
+      - Downstream: if the analysis is going to use it — for example to censor PFS at an uninterpretable
+        scan — then ADRS or ADTTE needs it too, and that is a SAP question, not a mapping question.
+      - And the operational one: the field is being added now, so it will be null for every assessment
+        already collected. That has to be stated somewhere, because a reviewer seeing 60% missingness
+        will otherwise read it as a data-quality problem.
+
+      The last point is usually the decisive one in the conversation. The mapping is easy; the
+      retrospective gap is not.
+    rubric:
+      - "Runs the class decision explicitly rather than jumping to a domain"
+      - "Checks whether an existing standard variable already covers part of it — TRSTAT/TRREASND, which this study already uses for 14 records"
+      - "Chooses SUPPTR with a reason (single categorical value per existing record, no unit, no repeats) rather than by default"
+      - "Names at least three downstream artifacts that must change: spec, aCRF, define.xml, cSDRG"
+      - "Raises QEVAL, because the evaluator is the radiologist rather than the investigator"
+      - "Raises the retrospective missingness created by adding a field mid-study"
+    redFlags:
+      - "Adding a new variable such as TRQUAL to the TR domain"
+      - "Creating a new custom domain for one categorical field"
+      - "Deciding the destination without checking what TR already has"
+      - "Treating it as a pure mapping question with no documentation consequences"
+    followUps:
+      - "The monitor says SUBOPTIMAL scans should be excluded from the efficacy analysis. Does that change your SDTM answer?"
+      - "What codelist would you define, and would it be extensible?"
+      - "How would you describe the pre-amendment missingness in the cSDRG?"

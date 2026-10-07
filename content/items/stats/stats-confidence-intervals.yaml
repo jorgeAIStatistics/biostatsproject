@@ -1,0 +1,529 @@
+items:
+  - id: stats.ci.interpretation
+    format: mcq
+    modes: [check, interview, speed]
+    difficulty: intermediate
+    skills: [stats.confidence-intervals, communication.interpretation]
+    lesson: stats-confidence-intervals
+    title: What "95% confidence" actually means
+    prompt: |
+      A table reports the difference in mean change from baseline as **−8.98 mmHg (95% CI: −12.62, −5.33)**.
+
+      Which statement is a correct interpretation?
+    choices:
+      - text: "If the trial were repeated many times, 95% of the intervals constructed this way would contain the true difference."
+        correct: true
+        feedback: "This is the frequentist definition. The 95% is a property of the procedure across repeated trials, not of this one interval."
+      - text: "There is a 95% probability that the true difference lies between −12.62 and −5.33."
+        feedback: "This treats the true difference as a random variable. In the frequentist framework it is a fixed unknown constant — this interval either contains it or it does not. The probability statement is a *credible* interval, which requires a Bayesian model and a prior."
+      - text: "95% of subjects had a change between −12.62 and −5.33 mmHg."
+        feedback: "That would be a prediction interval for individuals, and it would be far wider. Individual changes in this trial ranged from large increases to reductions over 30 mmHg."
+      - text: "There is a 5% probability that the treatment has no effect."
+        feedback: "Neither a confidence interval nor a p-value gives the probability that a hypothesis is true. That quantity requires a prior."
+    solution: |
+      The coverage statement. The parameter is fixed; the **interval** is random, because it is built from a random sample. "95% confidence" describes the long-run performance of the procedure.
+
+      The phrasing to use in a CSR: "the estimated difference was −8.98 mmHg (95% CI −12.62 to −5.33)" — state the interval and let it speak, rather than attaching a probability to the parameter.
+    explanation:
+      objective: "Distinguish the correct frequentist interpretation of a confidence interval from three plausible-sounding alternatives."
+      given: "A point estimate and a 95% confidence interval from a two-arm comparison."
+      relevant: "Which quantity in the setup is random and which is fixed."
+      method: "Under frequentist inference the parameter is a fixed unknown; randomness lives in the sampling, hence in the interval. Coverage is therefore a property of the procedure."
+      assumptions: "That the model assumptions behind the interval hold. A 95% interval from a misspecified model does not have 95% coverage, whatever it is called."
+      interpretation: "Values inside the interval are compatible with the data at this confidence level; values outside are less so. It is a compatibility statement, not a probability distribution over the parameter."
+      changes: "Under a Bayesian analysis the corresponding credible interval CAN be read as a probability statement about the parameter. Say which one you computed."
+      interviewer: "That you give the repeated-sampling definition without prompting, and that you know why the probability phrasing is wrong rather than merely knowing that it is."
+
+  - id: stats.ci.multiplier
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [stats.confidence-intervals, stats.sampling]
+    lesson: stats-confidence-intervals
+    title: The t multiplier for a small sample
+    prompt: |
+      A single-arm pilot enrolled **12** subjects. You are building a 95% confidence interval for the mean change from baseline.
+
+      What multiplier do you use?
+
+      Give your answer to three decimal places.
+    answer: 2.201
+    tolerance: 0.003
+    hints:
+      - "The multiplier comes from the t distribution, not the normal."
+      - "The degrees of freedom are n − 1, not n."
+      - "You want the quantile leaving 2.5% in each tail: qt(0.975, df)."
+    solution: |
+      $t_{0.975,\,11} = 2.201$.
+
+      Degrees of freedom are $n - 1 = 11$, and the 95% two-sided interval needs the 97.5th percentile so that 2.5% is left in each tail.
+
+      - R: `qt(0.975, 11)`
+      - SAS: `tinv(0.975, 11)`
+      - Excel: `T.INV.2T(0.05, 11)` (note this one takes the *total* tail area)
+
+      Using 1.96 instead would make the interval about 11% too narrow.
+    explanation:
+      objective: "Select the correct interval multiplier for a small sample."
+      given: "A sample size of 12 and a 95% two-sided confidence level."
+      relevant: "n = 12 gives df = 11; the two-sided 95% level gives the 0.975 quantile."
+      irrelevant: "The observed mean and SD do not affect the multiplier."
+      calculating: "The 97.5th percentile of the t distribution with 11 degrees of freedom."
+      method: "Because sigma is estimated from the data, the reference distribution is t, not normal. The t multiplier exceeds 1.96 and the gap grows as df shrink."
+      numbers: "df = 12 − 1 = 11; qt(0.975, 11) = 2.2010."
+      changes: "At n = 77 the multiplier falls to 1.992 and at n = 1000 to 1.962. Below about n = 20 the difference from 1.96 is large enough to change conclusions near the boundary."
+      interviewer: "That you reach for t automatically at small n, and that you can name the function in at least two languages."
+
+  - id: stats.ci.wald-failure
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [stats.confidence-intervals, stats.categorical]
+    lesson: stats-confidence-intervals
+    title: A "95%" interval that covers 81% of the time
+    prompt: |
+      Simulation with a true rate of **p = 0.10** and **n = 30**, 100,000 samples:
+
+      | Method | Actual coverage of the nominal 95% interval |
+      |---|---:|
+      | Wald | 80.8% |
+      | Wilson | 97.4% |
+      | Clopper–Pearson | 99.2% |
+
+      Why does the Wald interval perform so badly here?
+    choices:
+      - text: "It estimates the variance at p̂, so unlucky samples give a small p̂, a small variance and therefore a narrow interval — exactly when the estimate is furthest from the truth."
+        correct: true
+        feedback: "The errors compound. A sample with x = 1 gives p̂ = 0.033, a tiny estimated variance and a narrow interval sitting far from p = 0.10."
+      - text: "The sample size of 30 is too small for any interval method to work."
+        feedback: "Wilson achieves 97.4% and Clopper–Pearson 99.2% at exactly the same n. The sample size is not the problem; the method is."
+      - text: "The simulation used too few replicates to estimate coverage."
+        feedback: "With 100,000 replicates the Monte Carlo standard error on a coverage near 0.81 is about 0.001 — nowhere near enough to explain a 14-point shortfall."
+      - text: "Wald intervals are always anti-conservative regardless of p and n."
+        feedback: "Wald coverage oscillates with n and p and can occasionally exceed the nominal level. The reliable statement is that it is erratic and often badly anti-conservative near the boundaries."
+    solution: |
+      The Wald interval plugs the **estimate** into the variance: $\sqrt{\hat p (1-\hat p)/n}$. When the truth is near a boundary, unlucky samples produce a small $\hat p$, hence a small estimated variance, hence a narrow interval — placed far from the truth. The two errors reinforce each other.
+
+      Wilson and Clopper–Pearson both avoid this by solving for the set of $p$ values consistent with the observed data rather than assuming the variance at $\hat p$.
+    explanation:
+      objective: "Explain a specific, quantified failure of a widely taught interval formula."
+      given: "Simulated coverage for three interval methods at p = 0.10, n = 30."
+      relevant: "That the Wald variance is evaluated at the estimate rather than at the hypothesized value."
+      method: "Trace what happens in an unlucky sample: x small -> p-hat small -> estimated variance small -> interval narrow -> misses."
+      numbers: "At x = 1, p-hat = 0.0333 and the Wald half-width is 1.96 x sqrt(0.0333 x 0.9667/30) = 0.0642, giving (-0.031, 0.098) — an interval that excludes the true 0.10 and also includes impossible negative values."
+      assumptions: "The normal approximation to the binomial requires np and n(1-p) to be reasonably large; at p = 0.10, n = 30 the expected count is 3."
+      interpretation: "A nominal level is a promise. An 80.8% interval labelled 95% is not conservative-but-safe; it is wrong in the direction that matters."
+      changes: "At p = 0.5 with n = 30 the Wald interval performs acceptably, which is why the problem hides in ordinary examples and appears in rare-event safety data."
+      interviewer: "That you can name a better method AND explain the mechanism, rather than reciting 'Wald is bad for small n'."
+
+  - id: stats.ci.overlap
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: intermediate
+    skills: [stats.confidence-intervals, communication.visualization]
+    lesson: stats-confidence-intervals
+    title: Overlapping intervals and the difference
+    prompt: |
+      A figure shows each arm's mean change with its own 95% confidence interval:
+
+      - Placebo: −3.30 (−5.94, −0.66)
+      - VTX-221 10 mg: −8.83 (−11.37, −6.29)
+
+      The two intervals do **not** overlap. A colleague concludes the arms differ significantly, then asks whether overlapping intervals would have proved the opposite.
+
+      What is the correct statement about the relationship?
+    choices:
+      - text: "Non-overlap implies a significant difference, but overlap does not imply non-significance — you must compute the interval for the difference."
+        correct: true
+        feedback: "Correct, and the asymmetry is the useful part. Non-overlapping intervals are sufficient but not necessary for significance at roughly the same level."
+      - text: "Overlap and non-overlap map exactly onto non-significance and significance."
+        feedback: "Only the non-overlap direction is reliable. Two intervals can overlap substantially while the interval for their difference excludes zero."
+      - text: "Neither direction tells you anything; per-arm intervals are unrelated to the comparison."
+        feedback: "Too strong. Non-overlap does imply a significant difference at approximately the same level."
+      - text: "It depends only on whether the sample sizes are equal."
+        feedback: "Equal sample sizes do not repair the logic; the issue is how standard errors combine, not whether they are equal."
+    solution: |
+      The relationship is **one-directional**. If two 95% intervals do not overlap, the difference is significant at (approximately) the 5% level. But intervals can overlap by a considerable margin while the difference is still significant, because
+
+      $$\mathrm{SE}(\bar x_1 - \bar x_2) = \sqrt{s_1^2/n_1 + s_2^2/n_2}$$
+
+      is smaller than the sum of the two individual half-widths. Always compute the interval for the contrast you care about.
+    explanation:
+      objective: "Get the logical direction right between per-arm intervals and a between-arm comparison."
+      given: "Two non-overlapping per-arm confidence intervals."
+      relevant: "How standard errors combine for a difference."
+      calculating: "SE of the difference versus the sum of the two individual half-widths."
+      method: "Variances add, so the SE of a difference is sqrt(SE1^2 + SE2^2), which is less than SE1 + SE2 whenever both are positive."
+      numbers: "With SE1 = 1.32 and SE2 = 1.29, the SE of the difference is sqrt(1.32^2 + 1.29^2) = 1.85, while the sum is 2.61 — so intervals can overlap by up to roughly the difference between those before the contrast loses significance."
+      interpretation: "The figure is not the analysis. The efficacy table's difference row is."
+      changes: "If the two arms were not independent (a crossover, or paired measurements), the SE of the difference would also involve the covariance and could be much smaller still."
+      interviewer: "That you state the asymmetry explicitly rather than giving a blanket 'overlap means nothing'."
+
+  - id: stats.ci.hand-ci
+    format: numeric
+    modes: [guided, check]
+    difficulty: foundation
+    skills: [stats.confidence-intervals, stats.descriptive]
+    lesson: stats-confidence-intervals
+    title: Build a confidence interval by hand
+    prompt: |
+      Twelve subjects, change from baseline in systolic BP (mmHg):
+
+      `-14, -6, -18, 2, -11, -9, -22, -4, -13, -7, -16, -2`
+
+      Build the 95% confidence interval and report the **lower** bound, to two decimal places.
+    answer: -14.45
+    tolerance: 0.03
+    unit: mmHg
+    hints:
+      - "The twelve values sum to −120, so the mean is a whole number."
+      - "The deviations from the mean are −4, 4, −8, 12, −1, 1, −12, 6, −3, 3, −6, 8; their squares sum to 540."
+      - "s = √(540/11) = 7.0065, SE = s/√12 = 2.0226, and t(0.975, 11) = 2.2010."
+    solution: |
+      **Mean:** $-120/12 = -10.00$ mmHg.
+
+      **Sum of squared deviations:** 540, so $s = \sqrt{540/11} = \sqrt{49.0909} = 7.0065$.
+
+      **SE:** $7.0065/\sqrt{12} = 2.0226$.
+
+      **Multiplier:** $t_{0.975,11} = 2.2010$.
+
+      **Half-width:** $2.2010 \times 2.0226 = 4.4517$.
+
+      **Interval:** $-10.00 \pm 4.45 = (-14.45,\; -5.55)$ mmHg.
+
+      The lower bound is **−14.45 mmHg**.
+    explanation:
+      objective: "Assemble a one-sample t confidence interval from raw data without software."
+      given: "Twelve change-from-baseline values."
+      relevant: "All twelve values, and the sample size."
+      calculating: "Mean, SD, SE, multiplier and half-width, in that order."
+      method: "x-bar +/- t(0.975, n-1) x s/sqrt(n). The t multiplier rather than 1.96 because sigma was estimated."
+      numbers: "Sum = -120 so mean = -10. Sum of squared deviations = 540, so s^2 = 540/11 = 49.0909 and s = 7.0065. SE = 7.0065/3.4641 = 2.0226. t(0.975, 11) = 2.2010. Half-width = 4.4517."
+      computation: "Note the interval is symmetric about the mean, so once you have the half-width you have both bounds."
+      interpretation: "The interval excludes zero, so a null mean change is not among the compatible values at this level."
+      changes: "Using 1.96 instead of 2.2010 gives (-13.96, -6.04): about 11% too narrow. Dividing the sum of squares by 12 instead of 11 shrinks it further."
+      interviewer: "That you can do it on paper, and that you name n − 1 for both the SD divisor and the degrees of freedom without hesitating."
+
+  - id: stats.ci.width-halving
+    format: numeric
+    modes: [check, independent]
+    difficulty: intermediate
+    skills: [stats.confidence-intervals, stats.power]
+    lesson: stats-confidence-intervals
+    title: Sample size for a target interval width
+    prompt: |
+      A pilot of **12** subjects gave a 95% confidence interval with a half-width of **4.45 mmHg**.
+
+      Ignoring the small change in the t multiplier, roughly how many subjects would you need for a half-width of about **2.2 mmHg** — half the current width?
+
+      Give the number of subjects.
+    answer: 48
+    tolerance: 1
+    unit: subjects
+    hints:
+      - "The half-width is proportional to 1/√n."
+      - "Halving it means doubling √n."
+      - "Doubling √n means multiplying n by 4."
+    solution: |
+      The half-width is $t \cdot s/\sqrt{n}$, proportional to $1/\sqrt{n}$. Halving it requires $\sqrt{n}$ to double, so $n$ must quadruple: $12 \times 4 = 48$ subjects.
+
+      In reality you would gain a little extra because the multiplier also shrinks ($t_{0.975,11} = 2.201$ falls to $t_{0.975,47} = 2.012$), so 48 subjects would give a half-width nearer 2.03 mmHg — slightly better than the target.
+    explanation:
+      objective: "Translate a precision target into a sample size, using the 1/sqrt(n) relationship."
+      given: "A pilot half-width at n = 12 and a target half-width."
+      relevant: "The ratio of the two half-widths; the SD cancels."
+      calculating: "The factor by which n must grow."
+      method: "Half-width proportional to 1/sqrt(n), so a factor-of-2 reduction requires a factor-of-4 increase in n."
+      numbers: "4.45 / 2.2 is approximately 2, so n goes from 12 to 12 x 2^2 = 48."
+      assumptions: "That the SD observed in the pilot applies to the larger study. Pilot SDs are themselves imprecise with n = 12, so a real sample-size calculation would use a conservative value or explore a range."
+      interpretation: "This is the same sqrt(n) law that governs standard errors, applied to the width of an interval."
+      changes: "Accounting for the smaller t multiplier at larger n makes the requirement slightly less than 4x; ignoring it is the conservative direction, which is the right way to be wrong here."
+      interviewer: "That you flag the pilot SD as the uncertain input, rather than treating 4.45 as a fixed fact."
+
+  - id: stats.ci.rule-of-three
+    format: numeric
+    modes: [check, speed, interview]
+    difficulty: intermediate
+    skills: [stats.confidence-intervals, stats.categorical, trials.safety]
+    lesson: stats-confidence-intervals
+    title: Zero events — how high could the rate be?
+    prompt: |
+      In a safety cohort of **100** treated subjects, **zero** cases of a specific serious event were observed.
+
+      Using the rule of three, what is the approximate upper bound of a 95% confidence interval for the true event rate?
+
+      Give your answer as a percentage.
+    answer: 3
+    tolerance: 0.3
+    unit: "%"
+    hints:
+      - "With zero events the point estimate is 0, but the upper bound is not."
+      - "The rule of three says the upper bound is about 3/n."
+      - "3/100 = 0.03."
+    solution: |
+      The rule of three gives an upper bound of about $3/n = 3/100 = 0.03$, i.e. **3%**.
+
+      The exact Clopper–Pearson upper bound is 3.62%, so the rule of three is a good mental approximation and slightly optimistic.
+
+      **Where it comes from:** if the true rate were $p$, the probability of seeing zero events in $n$ subjects is $(1-p)^n$. Setting that equal to 0.05 and solving gives $p = 1 - 0.05^{1/n} \approx -\ln(0.05)/n = 2.996/n$.
+    explanation:
+      objective: "Quantify what 'no events observed' does and does not rule out."
+      given: "Zero events among 100 treated subjects."
+      relevant: "Only the sample size; the zero count fixes the form of the answer."
+      calculating: "The upper limit of a one-sided 95% interval for a binomial proportion with x = 0."
+      method: "Solve (1-p)^n = 0.05 for p. The log approximation gives 3/n."
+      numbers: "-ln(0.05) = 2.996, so the bound is 2.996/100 = 0.03. Exact Clopper-Pearson: 1 - 0.05^(1/100) = 0.0295 one-sided; the two-sided 97.5% version that binom.test reports is 0.0362."
+      assumptions: "Independent subjects with a constant event probability, and complete follow-up. With time-varying risk or censoring you would need an exposure-adjusted (person-time) bound instead."
+      interpretation: "A 100-subject safety database cannot rule out a 1-in-30 serious event rate. This is the arithmetic behind post-marketing surveillance requirements."
+      changes: "To rule out a 1-in-1000 rate at the same confidence you would need about 3000 subjects."
+      interviewer: "That you produce the bound instantly and can derive it, and that you connect it to why rare adverse events are not detectable in phase III."
+
+  - id: stats.ci.r-proportions
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [stats.confidence-intervals, stats.categorical, r.models]
+    lesson: stats-confidence-intervals
+    title: Three binomial intervals, side by side
+    minutes: 12
+    prompt: |
+      You have `x` events out of `n` subjects.
+
+      Write a function `three_cis(x, n)` that returns a data frame with one row per method and columns `method`, `lower`, `upper`, for:
+
+      - **Wald** — `p̂ ± 1.96 √(p̂(1−p̂)/n)`, computed directly
+      - **Wilson** — from `prop.test()`, without the continuity correction
+      - **Clopper–Pearson** — from `binom.test()`
+
+      Then call it with `x = 2, n = 12` and look at what the Wald lower bound does.
+    starter: |
+      three_cis <- function(x, n) {
+        phat <- x / n
+        # Wald
+
+        # Wilson
+
+        # Clopper-Pearson
+
+        data.frame(method = ..., lower = ..., upper = ...)
+      }
+
+      three_cis(2, 12)
+    reference: |
+      three_cis <- function(x, n) {
+        phat <- x / n
+        z <- qnorm(0.975)
+
+        wald_hw <- z * sqrt(phat * (1 - phat) / n)
+        wald <- c(phat - wald_hw, phat + wald_hw)
+
+        wilson <- prop.test(x, n, correct = FALSE)$conf.int
+
+        cp <- binom.test(x, n)$conf.int
+
+        data.frame(
+          method = c("Wald", "Wilson", "Clopper-Pearson"),
+          lower  = c(wald[1], wilson[1], cp[1]),
+          upper  = c(wald[2], wilson[2], cp[2])
+        )
+      }
+
+      three_cis(2, 12)
+    hints:
+      - "`qnorm(0.975)` is the 1.96 multiplier; using the function rather than the literal makes the confidence level changeable."
+      - "`prop.test()` defaults to `correct = TRUE`. You must pass `correct = FALSE` to get the plain Wilson interval."
+      - "`binom.test(x, n)$conf.int` is Clopper–Pearson; no extra arguments needed for the 95% level."
+    checks:
+      - pattern: "qnorm\\s*\\(\\s*0?\\.975\\s*\\)|1\\.96"
+        message: "Uses the normal quantile for the Wald interval"
+      - pattern: "sqrt\\s*\\(\\s*phat\\s*\\*\\s*\\(\\s*1\\s*-\\s*phat\\s*\\)\\s*/\\s*n\\s*\\)"
+        message: "Computes the Wald standard error as sqrt(p(1-p)/n)"
+      - pattern: "prop\\.test\\s*\\([^)]*correct\\s*=\\s*FALSE"
+        message: "Requests Wilson without the continuity correction"
+      - pattern: "binom\\.test\\s*\\("
+        message: "Uses binom.test() for the Clopper-Pearson interval"
+      - pattern: "data\\.frame\\s*\\("
+        message: "Returns a data frame of the three intervals"
+    expectedOutput: |
+      ```text
+                 method       lower     upper
+      1            Wald -0.04419189 0.3775252
+      2          Wilson  0.04696514 0.4480309
+      3 Clopper-Pearson  0.02086253 0.4841377
+      ```
+    solution: |
+      ```r
+      three_cis <- function(x, n) {
+        phat <- x / n
+        z <- qnorm(0.975)
+        wald_hw <- z * sqrt(phat * (1 - phat) / n)
+        wald   <- c(phat - wald_hw, phat + wald_hw)
+        wilson <- prop.test(x, n, correct = FALSE)$conf.int
+        cp     <- binom.test(x, n)$conf.int
+        data.frame(
+          method = c("Wald", "Wilson", "Clopper-Pearson"),
+          lower  = c(wald[1], wilson[1], cp[1]),
+          upper  = c(wald[2], wilson[2], cp[2])
+        )
+      }
+      ```
+
+      With `x = 2, n = 12` the Wald lower bound is **−0.044** — a negative response rate. Wilson gives 0.047 and Clopper–Pearson 0.021, both inside [0, 1] as any interval for a proportion must be.
+    explanation:
+      objective: "Implement three binomial interval methods and see the Wald interval fail on real inputs."
+      given: "A count and a sample size; three interval definitions."
+      relevant: "Which R function implements which method, and which arguments change the answer."
+      method: "Wald from the closed form; Wilson by inverting the score test (prop.test); Clopper-Pearson by inverting the exact binomial test (binom.test)."
+      numbers: "At x = 2, n = 12: p-hat = 0.1667, Wald half-width = 1.96 x sqrt(0.1667 x 0.8333/12) = 0.2109, giving (-0.0442, 0.3776)."
+      assumptions: "All three assume independent Bernoulli trials with a constant probability. None of them repairs a violation of that."
+      interpretation: "A negative lower bound is not a rounding artefact — it is the formula telling you it does not apply here."
+      changes: "Passing correct = TRUE to prop.test gives the continuity-corrected Wilson interval, which is wider and closer to Clopper-Pearson."
+      interviewer: "That you know R's default for prop.test is correct = TRUE and say so, since silently accepting a default is how QC discrepancies begin."
+
+  - id: stats.ci.sign-direction
+    format: hotspot
+    language: sas
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [stats.confidence-intervals, qc.discrepancy, tlf.efficacy-tables]
+    lesson: stats-confidence-intervals
+    title: The efficacy table says the drug is worse
+    minutes: 10
+    prompt: |
+      The draft efficacy table reports the Week 12 difference as **+8.98 mmHg (5.33, 12.62)** in favour of placebo — but the drug clearly lowered blood pressure more than placebo did.
+
+      Click the line that determines the direction of the difference.
+    code: |
+      proc ttest data=advs alpha=0.05;
+        where paramcd = 'SYSBP' and anl01fl = 'Y' and avisitn = 12;
+        class trtp;
+        var chg;
+        ods output ConfLimits = cl;
+      run;
+
+      data diff;
+        set cl;
+        where method = 'Satterthwaite';
+        difference = mean;
+        lower = lowerclmean;
+        upper = upperclmean;
+      run;
+    answerLines: [3]
+    lineNotes:
+      - line: 3
+        note: "`CLASS TRTP` with no ordering statement makes SAS use the class levels in sorted order. 'Placebo' sorts before 'VTX-221 20 mg', so `Diff (1-2)` is placebo minus drug — the opposite of the clinically meaningful direction. Fix it with a numeric treatment variable, or a format plus ORDER=FORMATTED / ORDER=INTERNAL, so the active arm is level 1."
+      - line: 11
+        note: "Subsetting to the Satterthwaite row is a legitimate choice, but it must match what the SAP specifies. It is not the cause of the sign."
+      - line: 12
+        note: "Copying the value through is correct; the value it copies already has the wrong sign."
+    fixed: |
+      proc format;
+        value $trtord 'VTX-221 20 mg' = '1: VTX-221 20 mg'
+                      'Placebo'       = '2: Placebo';
+      run;
+
+      proc ttest data=advs alpha=0.05 order=formatted;
+        where paramcd = 'SYSBP' and anl01fl = 'Y' and avisitn = 12;
+        class trtp;
+        format trtp $trtord.;
+        var chg;
+        ods output ConfLimits = cl;
+      run;
+
+      data diff;
+        set cl;
+        where method = 'Satterthwaite';
+        difference = mean;
+        lower = lowerclmean;
+        upper = upperclmean;
+      run;
+    hints:
+      - "The numbers are right in magnitude and wrong in sign — so ask what determines which arm is subtracted from which."
+      - "What order does SAS put class levels in when you do not tell it?"
+      - "'P' comes before 'V'."
+    solution: |
+      Line 3. With `CLASS TRTP` and no ordering control, SAS orders levels alphabetically, so `Diff (1-2)` = Placebo − VTX-221.
+
+      **Never fix this by flipping the sign in a downstream DATA step without documenting it.** The maintainable fix is to control the level order — a numeric `TRTPN` with `CLASS TRTPN`, or a format plus `ORDER=FORMATTED` — so the program states the intended direction rather than relying on the alphabet.
+
+      Then verify: the corrected difference should be **−8.98 (−12.62, −5.33)**, favouring the drug.
+    explanation:
+      objective: "Locate the cause of a sign error in a primary efficacy table."
+      given: "A difference whose magnitude is right and whose direction is wrong."
+      relevant: "How PROC TTEST orders CLASS levels when no order is specified."
+      irrelevant: "The alpha value and the choice of Satterthwaite versus pooled do not affect the sign."
+      method: "Magnitude correct + sign wrong points at level ordering, not at the computation."
+      assumptions: "That the table shell specifies 'active minus placebo', which is the near-universal convention and should be checked in the shell rather than assumed."
+      interpretation: "A sign error in a primary efficacy table reverses the conclusion of the trial. It is among the most serious defects a programmer can ship, and it is invisible unless someone deliberately checks direction."
+      changes: "Using CLASS TRTPN (numeric, 1 = active) removes the dependence on the alphabet entirely, which is why most sponsors' standards require a numeric treatment variable in analysis code."
+      interviewer: "That direction is something you verify on every comparison as a matter of routine, not something you notice when a number looks odd."
+
+  - id: stats.ci.ni-margin
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [stats.confidence-intervals, trials.design, communication.interpretation]
+    lesson: stats-confidence-intervals
+    title: Reading a non-inferiority result
+    prompt: |
+      A non-inferiority trial pre-specifies a margin of **δ = 5 mmHg**: the new drug is non-inferior if it is no more than 5 mmHg worse than the active comparator.
+
+      The observed difference (new − comparator) is **+1.2 mmHg**, 95% CI **(−1.8, +4.2)**, with positive values favouring the comparator.
+
+      What can you conclude?
+    choices:
+      - text: "Non-inferiority is demonstrated: the whole interval lies below the 5 mmHg margin. Superiority is not — the interval includes zero."
+        correct: true
+        feedback: "Both halves matter. The NI conclusion comes from the upper bound (4.2 < 5); the absence of a superiority claim comes from the interval containing 0."
+      - text: "Non-inferiority is demonstrated and the new drug is also superior, since the point estimate favours it."
+        feedback: "The point estimate of +1.2 actually favours the *comparator* under the stated sign convention — and in any case an interval containing zero does not support a superiority claim."
+      - text: "Nothing can be concluded, because the difference is not statistically significant."
+        feedback: "This is the classic error. In an NI trial a non-significant difference is not the question; the question is whether the interval excludes the margin, and it does."
+      - text: "Non-inferiority fails, because the confidence interval includes zero."
+        feedback: "Including zero is irrelevant to the NI conclusion. The NI decision rule is about the margin, not about zero."
+    solution: |
+      **Non-inferiority: demonstrated.** The upper limit of the interval (4.2) is below the margin (5), so the data rule out the new drug being more than 5 mmHg worse.
+
+      **Superiority: not demonstrated.** The interval includes zero, so the data are compatible with no difference.
+
+      This ordering — test NI first, and only then test superiority at the same alpha — is a standard pre-specified hierarchy and does not require a multiplicity adjustment, because the tests are nested.
+    explanation:
+      objective: "Apply a non-inferiority decision rule correctly, and separate it from the superiority question."
+      given: "A pre-specified margin, a point estimate and a 95% confidence interval, with a stated sign convention."
+      relevant: "The upper limit of the interval relative to the margin; separately, whether the interval contains zero."
+      irrelevant: "Whether the difference is 'statistically significant' against zero is not the NI question."
+      method: "Non-inferiority is concluded when the confidence interval lies entirely on the favourable side of the margin."
+      numbers: "Upper limit 4.2 < margin 5.0, so NI holds. The interval (-1.8, 4.2) contains 0, so superiority does not."
+      assumptions: "That the margin was justified and fixed before unblinding, that assay sensitivity holds (the comparator would have beaten placebo in this setting), and that the analysis population is appropriate — NI trials usually require both ITT and per-protocol analyses to agree, because sloppiness biases toward no difference and therefore toward NI."
+      interpretation: "Reading the sign convention is essential: 'positive favours the comparator' changes which end of the interval you check."
+      changes: "If the margin had been 4 mmHg, NI would fail — the upper limit 4.2 exceeds it. The margin is the entire decision."
+      interviewer: "That you check the margin rather than zero, that you mention per-protocol as well as ITT, and that you can say why sloppy conduct biases an NI trial toward a positive conclusion."
+
+  - id: stats.ci.coverage-open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [stats.confidence-intervals, communication.interviewing]
+    lesson: stats-confidence-intervals
+    title: Explaining coverage to a non-statistician
+    prompt: |
+      **Interviewer:** "A clinician on your team says: 'I don't see the difference — 95% confident, 95% probability, it's the same thing.' How do you explain it, without lecturing them?"
+    modelAnswer: |
+      I'd make it concrete rather than philosophical. Something like: "Think of the interval as a net I throw at a fish I can't see. The fish isn't moving — it's in one fixed spot. What varies is where my net lands, because it depends on which patients happened to enrol. My procedure catches the fish 95 times out of 100. For this one throw, I either caught it or I didn't, and I can't tell which."
+
+      Then I'd say why it matters practically, because otherwise it sounds like pedantry. Two reasons. First, it stops people reading a single interval as a probability distribution over the effect — treating the middle as "most likely" and the edges as "unlikely" isn't supported by the frequentist construction. Second, if what they actually want is a probability statement about the effect — and often clinicians genuinely do — that's available, it's just a different analysis: a Bayesian model gives a credible interval which *can* be read that way, at the cost of specifying a prior. Framing it as "here's how to get the thing you want" rather than "you're wrong" usually lands better.
+
+      I'd also concede the practical point honestly: with a vague prior the two intervals are often numerically almost identical, so the clinician's instinct rarely leads them astray in practice. The distinction matters most at the extremes — small samples, boundary estimates, strong external information — which is exactly where clinical questions tend to get interesting.
+    rubric:
+      - Uses a concrete analogy rather than restating the definition
+      - Identifies what is random (the interval) and what is fixed (the parameter)
+      - Explains why the distinction has practical consequences, not just formal ones
+      - Offers the Bayesian credible interval as the tool that answers the clinician's actual question
+      - Adapts register to a non-statistical audience without condescension
+    redFlags:
+      - "Recites the textbook definition without translating it"
+      - "Says the clinician is simply wrong and stops there"
+      - "Claims the two interpretations are interchangeable in practice with no caveats"
+      - "Cannot say what a credible interval is when they raise Bayes"

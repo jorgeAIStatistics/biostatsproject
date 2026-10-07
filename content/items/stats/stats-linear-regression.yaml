@@ -1,0 +1,529 @@
+items:
+  - id: stats.lr.df-count
+    format: numeric
+    modes: [check, speed, guided]
+    difficulty: foundation
+    skills: [stats.linear-regression]
+    lesson: stats-linear-regression
+    title: Residual degrees of freedom
+    prompt: |
+      A simple linear regression is fitted to **238** observations with one predictor and an intercept.
+
+      How many residual degrees of freedom does it have?
+    answer: 236
+    tolerance: 0
+    hints:
+      - "Each estimated parameter costs one degree of freedom."
+      - "Count the parameters: an intercept and a slope."
+    solution: |
+      $n - 2 = 238 - 2 = 236$ — one degree of freedom for the intercept, one for the slope.
+
+      The general rule is $n - p$, where $p$ counts **all** estimated parameters including the intercept. A model with three predictors plus an intercept on the same data would have $238 - 4 = 234$.
+
+      This is the same accounting as the $n-1$ in a sample SD (one mean estimated) and the $N-k$ in ANOVA ($k$ group means estimated).
+    explanation:
+      objective: "Count residual degrees of freedom from the number of estimated parameters."
+      given: "238 observations, one predictor, an intercept."
+      relevant: "The sample size and the parameter count."
+      calculating: "n minus the number of parameters."
+      method: "Every parameter estimated from the data removes one independent piece of information available for estimating the residual variance."
+      numbers: "238 - 2 = 236."
+      interpretation: "The residual df is the divisor in the residual variance estimate and the df of every t test in the output."
+      changes: "Adding a two-level categorical predictor costs one more df; a four-level one costs three, because it contributes three dummy columns."
+      interviewer: "That you count parameters rather than recalling a formula, so the rule generalises to multiple regression and ANCOVA."
+
+  - id: stats.lr.intercept-meaning
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [stats.linear-regression, communication.interpretation]
+    lesson: stats-linear-regression
+    title: A highly significant meaningless intercept
+    prompt: |
+      A regression of Week 12 systolic BP on baseline systolic BP gives an intercept of **84.90 (p < 0.0001)**.
+
+      How should the intercept be interpreted?
+    choices:
+      - text: "It is the predicted Week 12 pressure for a subject with a baseline of 0 mmHg — outside any possible range, so it has no clinical meaning here."
+        correct: true
+        feedback: "Correct. Its p-value tests whether that impossible quantity differs from zero, which is not a question anyone asked. Centring the predictor gives an interpretable intercept."
+      - text: "It is the average Week 12 pressure across all subjects."
+        feedback: "That is 141.63 mmHg, the mean of the outcome. The intercept is a conditional prediction at x = 0, not a marginal mean."
+      - text: "It shows the model fits well, since it is highly significant."
+        feedback: "An intercept's significance says nothing about fit. A meaningless quantity can be estimated very precisely."
+      - text: "It is the Week 12 pressure expected under placebo."
+        feedback: "Treatment is not in this model at all. The intercept is a value of the outcome at a predictor value of zero."
+    solution: |
+      The intercept is $E[y \mid x = 0]$ — the predicted Week 12 pressure for someone with a baseline blood pressure of **zero**. Nobody has that, and the model was fitted on baselines from 130 to 173 mmHg, so the intercept is a mathematical extrapolation far outside the data.
+
+      **The fix is centring.** Fitting `AVAL ~ I(BASE - 150)` gives an intercept of **141.69**: the predicted Week 12 value for a subject with a baseline of 150 mmHg, which is interpretable and inside the data. The slope, its standard error and $R^2$ are all unchanged — only the intercept's meaning moves.
+    explanation:
+      objective: "Interpret an intercept correctly and recognise when it is meaningless."
+      given: "An intercept estimate with a very small p-value, from a model on a predictor that cannot be zero."
+      relevant: "The range of the predictor in the data."
+      irrelevant: "The intercept's p-value, which tests a hypothesis about an impossible state."
+      method: "The intercept is always the predicted outcome when every predictor equals zero. Ask whether that state exists."
+      numbers: "Baseline ranged from 130 to 173 mmHg; x = 0 is far outside. Centring at 150 gives an intercept of 141.69."
+      interpretation: "Centring changes the intercept's meaning, not the model's fit — fitted values and residuals are identical."
+      changes: "In multiple regression with several predictors, the intercept requires ALL of them to be zero simultaneously, which is even less likely to be a real state — another argument for centring."
+      interviewer: "That you offer centring as the constructive fix rather than only noting the problem."
+
+  - id: stats.lr.r2-vs-p
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [stats.linear-regression, communication.interpretation]
+    lesson: stats-linear-regression
+    title: Tiny p, tiny R²
+    prompt: |
+      A regression gives a slope with **p = 1.7 × 10⁻⁶** and an **R² of 0.093**.
+
+      Is that a contradiction?
+    choices:
+      - text: "No — they answer different questions. The p-value asks whether the slope differs from zero; R² asks how much variance is explained."
+        correct: true
+        feedback: "With n = 238, even a modest relationship is easily distinguishable from zero. Explaining 9% of the variance is a separate fact and both are true."
+      - text: "Yes — a significant predictor must explain a substantial share of the variance."
+        feedback: "Significance depends on the effect size AND the sample size. A weak relationship measured precisely is highly significant."
+      - text: "Yes — R² below 0.10 means the model is misspecified."
+        feedback: "Low R² is normal in clinical data, where most between-patient variation is unexplained by anything measured."
+      - text: "No, but only because n is large; with n = 30 they would have to agree."
+        feedback: "The two quantities never have to agree. At n = 30 the same R² would give p ≈ 0.09 — still no contradiction, just less precision."
+    solution: |
+      No contradiction. The p-value reflects the slope **and** the sample size; $R^2$ reflects only how much variation the predictor accounts for.
+
+      Both statements are useful and both are honest:
+
+      - Baseline is a **useful covariate** — significant, and knowing baseline reduces the SD of Week 12 pressure from 11.21 (unconditional) to a residual SD of 10.70.
+      - Baseline is a **weak predictor of an individual** — 91% of the variation in Week 12 pressure is something else.
+
+      Low $R^2$ with a useful coefficient is the normal state of clinical data. Report the coefficient, its interval and the residual SD; $R^2$ is the least informative of the four.
+    explanation:
+      objective: "Hold a small p-value and a small R-squared together without treating either as an error."
+      given: "A highly significant slope in a model explaining under 10% of the variance."
+      relevant: "That significance depends on sample size and R-squared does not."
+      method: "The t statistic is the slope divided by its standard error, and the standard error shrinks with n. R-squared is a ratio of sums of squares and is unaffected by n in expectation."
+      numbers: "n = 238; slope 0.3786 with SE 0.07715 gives t = 4.91; R-squared = 0.0926 = the squared correlation 0.3043^2."
+      interpretation: "A predictor can be reliably non-zero and practically weak at the same time. Both facts belong in the write-up."
+      changes: "With n = 30 and the same relationship, the slope would be about the same but p would be near 0.09 — the evidence changes, the strength does not."
+      interviewer: "That you can say what each quantity is for, and that you name the residual SD as the number that speaks to individual prediction."
+
+  - id: stats.lr.slope-precision
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [stats.linear-regression, trials.design]
+    lesson: stats-linear-regression
+    title: Designing for a precise slope
+    prompt: |
+      You are designing a dose–response study and want the dose slope estimated as precisely as possible.
+
+      Given $\operatorname{SE}(\hat{\beta}_1) = \hat{\sigma}/\sqrt{S_{xx}}$, which design change helps most, holding the number of subjects fixed?
+    choices:
+      - text: "Spread the doses over a wider range, which increases S_xx."
+        correct: true
+        feedback: "S_xx is the total squared spread of the predictor and sits in the denominator. A longer lever arm makes the slope more stable."
+      - text: "Cluster the doses near the middle of the range, where most subjects will be treated."
+        feedback: "That shrinks S_xx and inflates the standard error. It can be justified if the goal is precise *prediction* at the centre, but not if the goal is a precise slope."
+      - text: "Use more dose levels, keeping the same range."
+        feedback: "Adding levels within the same range changes S_xx only slightly. Allocation to the extremes matters far more than the number of distinct levels."
+      - text: "Nothing helps without more subjects; the standard error depends only on n."
+        feedback: "It depends on the residual SD and on S_xx, both of which are design-sensitive at fixed n."
+    solution: |
+      **Widen the dose range.** $S_{xx} = \sum(x_i - \bar{x})^2$ is the denominator, so spreading the predictor out directly reduces the standard error.
+
+      The intuition: estimating a line's slope from two points an inch apart means a small vertical wobble swings the slope wildly; the same wobble barely moves a slope estimated from points a yard apart.
+
+      **The real design tension**, which is worth stating: putting everyone at the two extremes minimises $\operatorname{SE}(\hat\beta_1)$ but leaves nothing in the middle to detect curvature, and gives poor prediction there. If you are not certain the relationship is linear, extreme-only allocation is a trap — you will estimate the slope of a straight line very precisely without ever discovering it was the wrong model. Pre-specifying a test for non-linearity requires interior points.
+    explanation:
+      objective: "Use the standard-error formula as a design lever."
+      given: "The SE formula and a fixed number of subjects."
+      relevant: "That S_xx is the squared spread of the predictor and sits in the denominator."
+      method: "Increasing the spread of x increases S_xx and therefore reduces the SE of the slope, with no additional subjects."
+      assumptions: "That the relationship really is linear over the wider range. Widening the range beyond where linearity holds trades a precision gain for a bias."
+      interpretation: "Design affects precision as much as sample size does, which is where a statistician adds value before enrolment rather than after."
+      changes: "If the goal is precise prediction at a specific dose rather than a precise slope, concentrating observations near that dose is the better design — the objective determines the allocation."
+      interviewer: "That you name the tension with detecting curvature, rather than simply recommending the extremes."
+
+  - id: stats.lr.slope-hand
+    format: numeric
+    modes: [guided, check]
+    difficulty: foundation
+    skills: [stats.linear-regression]
+    lesson: stats-linear-regression
+    title: Least-squares slope by hand
+    prompt: |
+      Eight subjects, baseline SBP ($x$) and Week 12 SBP ($y$):
+
+      | $x$ | 142 | 155 | 148 | 161 | 139 | 167 | 151 | 145 |
+      |---|---:|---:|---:|---:|---:|---:|---:|---:|
+      | $y$ | 128 | 146 | 133 | 152 | 131 | 149 | 140 | 137 |
+
+      You are given $S_{xx} = 642$ and $S_{xy} = 543$.
+
+      Compute the least-squares slope, to four decimal places.
+    answer: 0.8458
+    tolerance: 0.002
+    hints:
+      - "The slope is the cross-product sum divided by the x sum of squares."
+      - "543 / 642."
+    solution: |
+      $$\hat{\beta}_1 = \frac{S_{xy}}{S_{xx}} = \frac{543}{642} = 0.8458$$
+
+      The intercept follows: $\bar{x} = 1208/8 = 151.0$ and $\bar{y} = 1116/8 = 139.5$, so
+
+      $$\hat{\beta}_0 = 139.5 - 0.8458 \times 151.0 = 11.785$$
+
+      **Check:** the fitted line must pass through $(\bar{x}, \bar{y})$. $11.785 + 0.8458 \times 151.0 = 139.5$ ✓ — worth doing on every hand calculation.
+    explanation:
+      objective: "Compute a least-squares slope from summary quantities."
+      given: "Sxx and Sxy, plus the raw data for checking."
+      relevant: "The two sums; the individual values are needed only to verify them."
+      calculating: "Sxy divided by Sxx."
+      method: "Minimising the sum of squared vertical deviations leads to the normal equations, whose solution for the slope is Sxy/Sxx."
+      numbers: "543/642 = 0.8458. Means 151.0 and 139.5 give an intercept of 139.5 - 0.8458 x 151.0 = 11.785."
+      assumptions: "None yet — the least-squares estimate is a geometric construction. The LINE assumptions are needed for inference, not for the point estimate."
+      computation: "The deviations x - 151 are -9, 4, -3, 10, -12, 16, 0, -6, which sum to zero — a useful check before squaring."
+      interpretation: "Each 1 mmHg higher baseline is associated with 0.85 mmHg higher Week 12 pressure in these eight subjects."
+      changes: "Equivalently the slope is r x sy/sx, so it can be recovered from the correlation and the two SDs."
+      interviewer: "That you verify the line passes through the means, which catches most arithmetic slips instantly."
+
+  - id: stats.lr.se-slope
+    format: numeric
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [stats.linear-regression]
+    lesson: stats-linear-regression
+    title: Standard error of the slope
+    prompt: |
+      From the same eight-subject fit: $SSE = 82.734$, $n = 8$, $S_{xx} = 642$.
+
+      Compute the standard error of the slope, to five decimal places.
+    answer: 0.14655
+    tolerance: 0.0005
+    hints:
+      - "First the residual SD: σ̂ = √(SSE/(n − 2)), with n − 2 = 6."
+      - "82.734/6 = 13.789, so σ̂ = 3.7133."
+      - "SE = σ̂/√S_xx, and √642 = 25.338."
+    solution: |
+      $$\hat{\sigma} = \sqrt{\frac{82.734}{6}} = \sqrt{13.789} = 3.7133 \text{ mmHg}$$
+
+      $$\operatorname{SE}(\hat{\beta}_1) = \frac{3.7133}{\sqrt{642}} = \frac{3.7133}{25.338} = 0.14655$$
+
+      Then $t = 0.8458/0.14655 = 5.771$ on 6 df, $p = 0.0012$, and the 95% interval is $0.8458 \pm 2.4469 \times 0.14655 = (0.487, 1.204)$.
+
+      Note how wide that interval is: the slope is significant, and the data are compatible with anything from 0.49 to 1.20. Eight subjects buy very little precision.
+    explanation:
+      objective: "Compute the standard error of a slope from the residual sum of squares."
+      given: "SSE, n and Sxx."
+      relevant: "All three."
+      calculating: "The residual SD, then the slope's standard error."
+      method: "Divide SSE by n-2 for the residual variance, square-root it, then divide by the square root of Sxx."
+      numbers: "82.734/6 = 13.789; sqrt = 3.7133. sqrt(642) = 25.338. 3.7133/25.338 = 0.14655."
+      assumptions: "Independent, equal-variance errors. The formula is unchanged if normality fails, but the t reference distribution is only approximate then."
+      computation: "The divisor is n - 2, not n - 1 — two parameters were estimated."
+      interpretation: "The 95% interval (0.487, 1.204) is wide: significance does not imply precision."
+      changes: "Increasing the spread of x raises Sxx and shrinks the SE without any additional subjects."
+      interviewer: "That you go through the residual SD rather than trying to recall a single combined formula."
+
+  - id: stats.lr.residual-sd
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [stats.linear-regression, qc.compare]
+    lesson: stats-linear-regression
+    title: Root MSE from the ANOVA table
+    prompt: |
+      A SAS `PROC REG` ANOVA table shows:
+
+      ```text
+      Source                   DF     Sum of Squares     Mean Square
+      Model                     1            2757.11         2757.11
+      Error                   236           27019.04        114.4875
+      Corrected Total         237           29776.16
+      ```
+
+      What is the Root MSE? Give your answer to four decimal places.
+    answer: 10.6999
+    tolerance: 0.002
+    hints:
+      - "Root MSE is the square root of the Error mean square."
+      - "√114.4875."
+    solution: |
+      $$\text{Root MSE} = \sqrt{114.4875} = 10.6999 \text{ mmHg}$$
+
+      where $114.4875 = 27019.04/236 = SSE/(n-p)$.
+
+      **Three names, one quantity.** SAS prints "Root MSE"; R prints "Residual standard error"; ANOVA calls it $\sqrt{MS_{\text{within}}}$. It is the estimated SD of the errors, in the units of the outcome.
+
+      It is also the most useful single number for judging a model: even knowing a subject's baseline, your prediction of their Week 12 pressure is typically off by about 11 mmHg.
+
+      Cross-check with $R^2$: $1 - 27019.04/29776.16 = 0.0926$ ✓.
+    explanation:
+      objective: "Extract the residual standard deviation from an ANOVA table and recognise its aliases."
+      given: "A regression ANOVA table with sums of squares and degrees of freedom."
+      relevant: "The Error line."
+      calculating: "The square root of the error mean square."
+      method: "Mean square is sum of squares over degrees of freedom; its square root is the residual SD."
+      numbers: "27019.04/236 = 114.4875; sqrt = 10.6999. R-squared check: 1 - 27019.04/29776.16 = 0.0926."
+      interpretation: "In the units of the outcome, so directly comparable to the outcome's own SD — here 11.21 unadjusted versus 10.70 after adjusting for baseline."
+      changes: "Adding useful predictors reduces the residual SD; adding useless ones leaves it roughly unchanged while consuming degrees of freedom."
+      interviewer: "That you recognise Root MSE and residual standard error as the same number, since QC work crosses between SAS and R constantly."
+
+  - id: stats.lr.r-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [stats.linear-regression, r.models, qc.compare]
+    lesson: stats-linear-regression
+    title: Reproduce lm() from first principles
+    minutes: 15
+    prompt: |
+      Write `ols_by_hand(x, y)` that reproduces the key outputs of `lm(y ~ x)` **without calling `lm()`**.
+
+      Return a named vector with `b0`, `b1`, `sigma`, `se_b1`, `t`, `p` and `r2`.
+
+      Use `Sxx` and `Sxy` rather than matrix algebra, so every step is visible.
+    starter: |
+      ols_by_hand <- function(x, y) {
+        n   <- length(x)
+        Sxx <- ___
+        Sxy <- ___
+
+        b1 <- ___
+        b0 <- ___
+
+        # fitted, residuals, SSE, sigma, se_b1, t, p, r2
+      }
+    reference: |
+      ols_by_hand <- function(x, y) {
+        n   <- length(x)
+        mx  <- mean(x)
+        my  <- mean(y)
+        Sxx <- sum((x - mx)^2)
+        Sxy <- sum((x - mx) * (y - my))
+        Syy <- sum((y - my)^2)
+
+        b1 <- Sxy / Sxx
+        b0 <- my - b1 * mx
+
+        fitted <- b0 + b1 * x
+        resid  <- y - fitted
+        sse    <- sum(resid^2)
+        sigma  <- sqrt(sse / (n - 2))
+        se_b1  <- sigma / sqrt(Sxx)
+        tv     <- b1 / se_b1
+
+        c(b0 = b0, b1 = b1, sigma = sigma, se_b1 = se_b1,
+          t = tv, p = 2 * pt(-abs(tv), n - 2), r2 = 1 - sse / Syy)
+      }
+    hints:
+      - "`Sxx <- sum((x - mean(x))^2)` and `Sxy <- sum((x - mean(x)) * (y - mean(y)))`."
+      - "σ̂ = √(SSE/(n − 2)) — the divisor is n − 2, not n − 1."
+      - "R² = 1 − SSE/Syy, where Syy is the total sum of squares of y about its mean."
+    checks:
+      - pattern: "sum\\s*\\(\\s*\\(\\s*x\\s*-\\s*m?x?e?a?n?"
+        message: "Computes Sxx as a sum of squared deviations of x"
+      - pattern: "Sxy\\s*/\\s*Sxx|Sxy/Sxx"
+        message: "Computes the slope as Sxy/Sxx"
+      - pattern: "sqrt\\s*\\(\\s*sse\\s*/\\s*\\(\\s*n\\s*-\\s*2\\s*\\)\\s*\\)"
+        message: "Uses n - 2 as the divisor for the residual variance"
+      - pattern: "sigma\\s*/\\s*sqrt\\s*\\(\\s*Sxx\\s*\\)"
+        message: "Computes SE(b1) as sigma/sqrt(Sxx)"
+      - pattern: "2\\s*\\*\\s*pt\\s*\\("
+        message: "Returns a two-sided p-value on n - 2 degrees of freedom"
+    expectedOutput: |
+      ```text
+                b0           b1        sigma        se_b1            t            p
+      8.490260e+01 3.785951e-01 1.069988e+01 7.714819e-02 4.907375e+00 1.721556e-06
+                r2
+      9.259502e-02
+      ```
+    solution: |
+      ```r
+      ols_by_hand <- function(x, y) {
+        n <- length(x); mx <- mean(x); my <- mean(y)
+        Sxx <- sum((x - mx)^2)
+        Sxy <- sum((x - mx) * (y - my))
+        Syy <- sum((y - my)^2)
+
+        b1 <- Sxy / Sxx
+        b0 <- my - b1 * mx
+
+        resid <- y - (b0 + b1 * x)
+        sse   <- sum(resid^2)
+        sigma <- sqrt(sse / (n - 2))
+        se_b1 <- sigma / sqrt(Sxx)
+        tv    <- b1 / se_b1
+
+        c(b0 = b0, b1 = b1, sigma = sigma, se_b1 = se_b1,
+          t = tv, p = 2 * pt(-abs(tv), n - 2), r2 = 1 - sse / Syy)
+      }
+      ```
+
+      Run it on the trial data and compare with `summary(lm(AVAL ~ BASE, data = w12))` — every number matches to machine precision, because `lm()` is doing exactly this (via QR decomposition rather than these formulas, which is more numerically stable but algebraically identical).
+
+      Worth doing once. Afterwards, no regression output is opaque.
+    explanation:
+      objective: "Reproduce a regression fit from summary statistics, so no number in the output is a black box."
+      given: "Two numeric vectors."
+      relevant: "The two means, Sxx, Sxy, Syy and n — everything else derives from them."
+      method: "Solve the normal equations directly; compute residuals, then the residual SD, then the slope's SE."
+      numbers: "On the trial data: b0 = 84.9026, b1 = 0.37860, sigma = 10.6999, se_b1 = 0.077148, t = 4.9074, p = 1.72e-06, R-squared = 0.09260."
+      assumptions: "None for the point estimates. The p-value assumes independent, equal-variance, approximately normal errors."
+      computation: "lm() uses QR decomposition rather than these formulas — more numerically stable with many correlated predictors, but algebraically the same answer."
+      interpretation: "Every quantity in a regression table comes from five summary numbers plus n."
+      changes: "With multiple predictors the closed forms give way to matrix algebra: beta-hat = (X'X)^-1 X'y, and the SEs come from the diagonal of sigma-squared times (X'X)^-1."
+      interviewer: "That you have done this at least once, which is what makes you able to debug a regression rather than only run one."
+
+  - id: stats.lr.regression-to-mean
+    format: numeric
+    modes: [check, interview, independent]
+    difficulty: advanced
+    skills: [stats.linear-regression, stats.correlation, trials.design]
+    lesson: stats-linear-regression
+    title: The slope that is not 1
+    prompt: |
+      Regressing Week 12 SBP on baseline SBP gives a slope of **0.3786**, not 1.
+
+      Given $r = 0.3043$, $s_y = 11.209$ and $s_x = 9.009$, verify the slope using $\hat{\beta}_1 = r \cdot s_y/s_x$.
+
+      Give your answer to four decimal places.
+    answer: 0.3786
+    tolerance: 0.002
+    hints:
+      - "The slope is the correlation rescaled by the ratio of the two standard deviations."
+      - "11.209 / 9.009 = 1.2442."
+      - "0.3043 × 1.2442."
+    solution: |
+      $$\hat{\beta}_1 = 0.3043 \times \frac{11.209}{9.009} = 0.3043 \times 1.2442 = 0.3786$$
+
+      **Why this matters.** A slope of 1 would mean Week 12 tracks baseline exactly. A slope of 0.379 means that for each 1 mmHg higher at baseline, Week 12 is only 0.379 mmHg higher on average — subjects who started high drift down toward the mean and subjects who started low drift up.
+
+      Because $\hat{\beta}_1 = r \cdot s_y/s_x$, **whenever $|r| < 1$ the fitted line pulls predictions toward the mean.** That is not a modelling artefact; it is what regression to the mean *is*, and it is the name Galton gave the phenomenon before it became the name of the method.
+
+      It is also why the placebo arm in this trial appeared to improve by 3.3 mmHg: subjects were enrolled on a high screening reading, so their next readings were expected to be lower regardless of treatment.
+    explanation:
+      objective: "Connect the regression slope to the correlation and explain regression to the mean."
+      given: "The correlation and both standard deviations."
+      relevant: "All three."
+      calculating: "The slope via r times the SD ratio."
+      method: "Slope = Sxy/Sxx = r x sy/sx, so the slope is the correlation rescaled by the two SDs."
+      numbers: "11.209/9.009 = 1.2442; 0.3043 x 1.2442 = 0.3786."
+      assumptions: "Nothing beyond the algebra; the identity is exact."
+      interpretation: "A slope well below 1 means predictions shrink toward the mean — high starters are predicted lower and low starters higher."
+      changes: "If sy equalled sx, the slope would equal r exactly. The SD ratio is why a slope can exceed 1 even when the correlation is modest."
+      interviewer: "That you connect the algebra to the phenomenon, and that you can explain why the placebo arm 'improved' without any treatment effect."
+
+  - id: stats.lr.centring
+    format: code
+    language: r
+    modes: [independent, guided]
+    difficulty: intermediate
+    skills: [stats.linear-regression, r.models]
+    lesson: stats-linear-regression
+    title: Centring a predictor
+    minutes: 10
+    prompt: |
+      Fit two models on `w12` and show that centring the predictor changes only the intercept:
+
+      1. `AVAL ~ BASE`
+      2. `AVAL ~ I(BASE - 150)` — baseline centred at 150 mmHg
+
+      Return a data frame comparing `intercept`, `slope`, `se_slope` and `sigma` for the two fits.
+
+      The `I()` matters: without it, `-` is formula syntax for removing a term rather than arithmetic.
+    starter: |
+      compare_centring <- function(data) {
+        f1 <- lm(AVAL ~ BASE, data = data)
+        f2 <- lm(___, data = data)
+
+        # extract and compare
+      }
+    reference: |
+      compare_centring <- function(data) {
+        f1 <- lm(AVAL ~ BASE, data = data)
+        f2 <- lm(AVAL ~ I(BASE - 150), data = data)
+
+        grab <- function(f) {
+          s <- summary(f)
+          c(intercept = unname(coef(f)[1]),
+            slope     = unname(coef(f)[2]),
+            se_slope  = unname(s$coefficients[2, 2]),
+            sigma     = s$sigma)
+        }
+
+        out <- rbind(raw = grab(f1), centred = grab(f2))
+        as.data.frame(out)
+      }
+    hints:
+      - "`I(BASE - 150)` forces arithmetic inside a formula; `BASE - 150` would be parsed as formula syntax."
+      - "`summary(f)$coefficients[2, 2]` is the slope's standard error; `summary(f)$sigma` is the residual SD."
+      - "Build a small helper that extracts the four numbers from a fit, then apply it to both."
+    checks:
+      - pattern: "I\\s*\\(\\s*BASE\\s*-\\s*150\\s*\\)"
+        message: "Centres the predictor using I() so the subtraction is arithmetic"
+      - pattern: "lm\\s*\\(\\s*AVAL\\s*~\\s*BASE"
+        message: "Fits the uncentred model for comparison"
+      - pattern: "\\$sigma"
+        message: "Extracts the residual standard deviation"
+      - pattern: "coefficients\\s*\\[\\s*2\\s*,\\s*2\\s*\\]|coef\\s*\\(\\s*summary"
+        message: "Extracts the slope's standard error"
+    expectedOutput: |
+      ```text
+              intercept     slope   se_slope    sigma
+      raw       84.9026 0.3785951 0.07714819 10.69988
+      centred  141.6919 0.3785951 0.07714819 10.69988
+      ```
+    solution: |
+      The slope, its standard error and the residual SD are **identical**. Only the intercept moves — from 84.90 (predicted value at a baseline of 0, meaningless) to 141.69 (predicted value at a baseline of 150 mmHg, interpretable and inside the data).
+
+      Centring changes nothing about the fit: fitted values, residuals and $R^2$ are all unchanged. It changes only what the intercept *means*.
+
+      Where this matters most is **interactions**. In a model with `TRT * BASE`, the treatment coefficient is the treatment effect at `BASE = 0` — meaningless uncentred, and the reason interaction models are almost always fitted on centred covariates.
+    explanation:
+      objective: "Demonstrate that centring relocates the intercept without altering the fit."
+      given: "A dataset and two model specifications differing only by a shift in the predictor."
+      relevant: "The intercept, which is the only quantity that changes."
+      method: "Shifting x by a constant reparameterises the intercept as the fitted value at the new origin; the slope and all residuals are invariant."
+      numbers: "Intercept moves from 84.9026 to 141.6919; slope stays 0.3785951; SE stays 0.0771482; sigma stays 10.69988."
+      assumptions: "None — this is an algebraic identity, not an approximation."
+      computation: "I() is required inside a formula; BASE - 150 without it is parsed as formula syntax for removing a term."
+      interpretation: "Centring is a presentation choice for the intercept, not a modelling decision."
+      changes: "In a model with an interaction, centring is NOT cosmetic — it changes what the main-effect coefficients mean, because each is evaluated where the other predictor is zero."
+      interviewer: "That you know centring is cosmetic in a main-effects model and consequential in an interaction model."
+
+  - id: stats.lr.extrapolation-open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [stats.linear-regression, communication.interviewing, communication.audiences]
+    lesson: stats-linear-regression
+    title: A prediction outside the data
+    prompt: |
+      **Interviewer:** "Your model predicts Week 12 blood pressure from baseline. A clinician asks what it predicts for a patient with a baseline of 210 mmHg. The model was fitted on baselines from 130 to 173. What do you say?"
+    modelAnswer: |
+      I'd give them the number, and then be clear about what it is and isn't worth — refusing outright is unhelpful and usually just means they compute it themselves without the caveats.
+
+      The arithmetic is straightforward: 84.90 + 0.379 × 210 ≈ 164 mmHg. What that number actually means is "if the straight-line relationship we observed between 130 and 173 continued unchanged to 210, this is what it would give." Nothing in the data supports that continuation. The model has never seen a patient above 173, so the slope out there is an assumption, not an estimate.
+
+      Two separate problems, and they compound. The first is **model uncertainty**: the relationship may not be linear at extreme values. Severe hypertension may respond differently, may be a different underlying condition, and may involve different treatment intensity — none of which the model knows about. The second is **statistical uncertainty**: even if linearity held, a prediction interval widens as you move away from the mean of x, because the fitted line pivots around the centroid. At 210 the interval would be much wider than anything the model produces in its observed range, and the interval itself is computed under the same linearity assumption that is in doubt.
+
+      And I'd flag the practical point: with a residual SD of 10.7 mmHg, even a well-supported prediction for an individual patient is typically off by 10 mmHg or more. This model is useful for adjusting a group-level treatment comparison, which is what it was built for. It was never a tool for predicting individual patients, and at 210 it is doing neither job.
+
+      What I'd offer instead: if predicting severe patients matters clinically, that is a data question rather than a modelling one — we need patients in that range, either from this programme or from an external source. If they just want a rough expectation, I'd say "we'd expect a substantial fall, larger in absolute terms than for a typical patient because of regression to the mean, but we cannot quantify it from this trial."
+
+      The habit underneath this: regression interpolates. Extrapolation is an assertion about a region where you have no evidence, and it should always be labelled as one.
+    rubric:
+      - Gives the number rather than refusing, then qualifies it
+      - Distinguishes model uncertainty (linearity may fail) from statistical uncertainty (wider prediction interval)
+      - Notes that prediction intervals widen away from the mean of x
+      - Raises the residual SD as the limit on any individual prediction
+      - Distinguishes what the model was built for (group-level adjustment) from what is being asked
+      - Offers a constructive alternative rather than only a warning
+    redFlags:
+      - "Gives the prediction with no caveat"
+      - "Refuses to answer without offering anything useful"
+      - "Mentions only the confidence interval and not the linearity assumption"
+      - "Treats a regression fitted for covariate adjustment as an individual prediction tool"

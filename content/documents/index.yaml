@@ -1,0 +1,111 @@
+documents:
+  - id: protocol-synopsis
+    title: CBX417-301 Protocol Synopsis
+    type: protocol
+    summary: Objectives, endpoints, design, eligibility, treatment, schedule of assessments and statistical considerations for the synthetic oncology study CBX417-301.
+    file: protocol-synopsis.md
+    version: "3.0 (Amendment 2)"
+    items:
+      - trials.documents.prot-primary-endpoint
+      - trials.documents.prot-strata
+      - trials.documents.prot-scan-anchor
+      - trials.documents.prot-ecg-baseline
+      - trials.documents.prot-events
+
+  - id: crf
+    title: CBX417-301 Case Report Form
+    type: crf
+    summary: eCRF pages (demographics, baseline disease, vital signs, adverse events, concomitant medications, tumor assessment, end of treatment, death) with the EDC field names used in the raw data.
+    file: crf.md
+    items:
+      - trials.documents.crf-partial-date
+      - trials.documents.crf-units
+      - trials.documents.crf-ae-serious
+      - trials.documents.crf-last-dose
+
+  - id: acrf
+    title: CBX417-301 Annotated CRF
+    type: acrf
+    summary: The CRF pages annotated with their SDTM targets, including value-level annotations, supplemental qualifiers and fields that are not submitted.
+    file: acrf.md
+    items:
+      - trials.documents.acrf-sysbp
+      - trials.documents.acrf-aereldoc
+      - trials.documents.acrf-not-submitted
+      - trials.documents.acrf-race
+      - trials.documents.acrf-death-cause
+
+  - id: dmp-excerpt
+    title: CBX417-301 Data Management Plan (excerpt)
+    type: dmp
+    summary: Edit check specification, query process, medical coding, external data reconciliation and the database lock checklist.
+    file: dmp-excerpt.md
+    version: "4.0"
+    items:
+      - trials.documents.dmp-hard-vs-query
+      - trials.documents.dmp-reconciliation
+      - trials.documents.dmp-confirmed-value
+      - trials.documents.dmp-unlock
+
+  - id: sap
+    title: CBX417-301 Statistical Analysis Plan
+    type: sap
+    summary: Estimands, populations, sample size, statistical methods (stratified log-rank and Cox, ORR, DoR, OS), PFS censoring rules, multiplicity, sensitivity and subgroup analyses, and safety analysis conventions.
+    file: sap.md
+    version: "2.0"
+    items:
+      - trials.documents.sap-primary-population
+      - trials.documents.sap-model
+      - trials.documents.sap-ci-method
+      - trials.documents.sap-teae-window
+      - trials.documents.sap-partial-date
+      - trials.documents.sap-censor-rule
+      - trials.documents.sap-multiplicity
+      - trials.documents.sap-interim-boundary
+
+  - id: tlf-shells
+    title: CBX417-301 Mock TLF Shells
+    type: shells
+    summary: Mock shells for the disposition, demographics, PFS, KM, forest, ORR, adverse event, laboratory and SAE listing outputs, with footnotes, population lines and program paths.
+    file: tlf-shells.md
+    items:
+      - trials.documents.shells-cox
+      - trials.documents.shells-population-line
+      - trials.documents.shells-orr-denominator
+      - trials.documents.shells-km-number
+      - trials.documents.shells-sae-listing
+
+  - id: sdtm-spec
+    title: CBX417-301 SDTM Specification (DM, AE, LB)
+    type: sdtm-spec
+    summary: Dataset-level and variable-level SDTM mapping specifications for DM, AE and LB, with sources, mapping rules, controlled terminology and origins.
+    file: sdtm-spec.md
+    items:
+      - trials.documents.sdtm-origin
+      - trials.documents.sdtm-partial-date
+      - trials.documents.sdtm-unit-conversion
+      - trials.documents.sdtm-armnrs
+
+  - id: adam-spec
+    title: CBX417-301 ADaM Specification (ADSL, ADAE, ADLB, ADTTE)
+    type: adam-spec
+    summary: Variable-level derivations for ADSL, ADAE, ADLB and ADTTE, including population flags, treatment-emergence, baseline and analysis flags, change from baseline and the PFS censoring rules.
+    file: adam-spec.md
+    items:
+      - trials.documents.adam-ablfl
+      - trials.documents.adam-anl01fl
+      - trials.documents.adam-chg
+      - trials.documents.adam-cnsr-order
+      - trials.documents.adam-trtemfl
+      - trials.documents.adam-ontrtfl
+
+  - id: adrg-excerpt
+    title: CBX417-301 Analysis Data Reviewer's Guide (excerpt)
+    type: adrg
+    summary: Purpose, analysis dataset overview, cross-dataset conventions, special derivations, data dependencies, traceability and known conformance findings.
+    file: adrg-excerpt.md
+    items:
+      - trials.documents.adrg-purpose
+      - trials.documents.adrg-dependency
+      - trials.documents.adrg-strat-discordance
+      - trials.documents.adrg-traceability

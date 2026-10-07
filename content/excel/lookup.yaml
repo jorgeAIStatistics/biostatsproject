@@ -1,0 +1,91 @@
+sheets:
+  - id: ae-lookup
+    title: Looking a subject up in the adverse-event table
+    description: >-
+      Ten adverse-event rows for three subjects of CBX417-301, taken from `oncology/sdtm/ae.csv` with
+      the verbatim term the site typed and the MedDRA preferred term it was coded to.
+
+      The whole point of this sheet is that the key is **not unique**. Subject 1001-0002 has five rows,
+      1001-0003 has one and 1001-0004 has four. A lookup does not mind: it finds the first match and
+      returns it, with no indication that four more rows existed.
+
+      Column E carries a helper that marks the first appearance of each subject, because counting
+      distinct subjects is the one thing none of the lookup or `COUNTIF` family can do on its own.
+    columns: [Subject, Verbatim term, Coded term, AE start, First row for this subject?]
+    formats:
+      D: 'yyyy-mm-dd'
+      E: '0'
+    rows:
+      - ['1001-0002', 'Diarrhea', 'Diarrhea', '2022-07-13', '=IF(COUNTIF($A$2:A2,A2)=1,1,0)']
+      - ['1001-0002', 'Stomatitis', 'Stomatitis', '2022-07-14', '=IF(COUNTIF($A$2:A3,A3)=1,1,0)']
+      - ['1001-0002', 'Stomatitis', 'Stomatitis', '2022-08-04', '=IF(COUNTIF($A$2:A4,A4)=1,1,0)']
+      - ['1001-0002', 'Tiredness', 'Fatigue', '2022-08-11', '=IF(COUNTIF($A$2:A5,A5)=1,1,0)']
+      - ['1001-0002', 'nausea', 'Nausea', '2022-11-13', '=IF(COUNTIF($A$2:A6,A6)=1,1,0)']
+      - ['1001-0003', 'hair loss', 'Alopecia', '2022-10-16', '=IF(COUNTIF($A$2:A7,A7)=1,1,0)']
+      - ['1001-0004', 'Back pain', 'Back pain', '2022-11-04', '=IF(COUNTIF($A$2:A8,A8)=1,1,0)']
+      - ['1001-0004', 'Emesis', 'Vomiting', '2022-11-07', '=IF(COUNTIF($A$2:A9,A9)=1,1,0)']
+      - ['1001-0004', 'fatigue', 'Fatigue', '2022-11-08', '=IF(COUNTIF($A$2:A10,A10)=1,1,0)']
+      - ['1001-0004', 'Nausea', 'Nausea', '2022-11-12', '=IF(COUNTIF($A$2:A11,A11)=1,1,0)']
+    tasks:
+      - prompt: >-
+          Look up the adverse event for subject 1001-0002.
+        cell: F2
+        expected: Diarrhea
+        hint: '`XLOOKUP(what_to_find, where_to_look, what_to_return)`.'
+        solution: '=XLOOKUP("1001-0002",A2:A11,B2:B11)'
+      - prompt: >-
+          Now ask how many rows that subject actually has. This is the number the lookup did not
+          mention.
+        cell: F3
+        expected: 5
+        hint: >-
+          Running this `COUNTIF` beside every lookup is the cheapest possible guard against a silent
+          one-of-many answer.
+        solution: '=COUNTIF(A2:A11,"1001-0002")'
+      - prompt: >-
+          Do the same lookup for subject 1001-0004 with `INDEX` and `MATCH` instead of `XLOOKUP`, to see
+          that they are the same operation written differently.
+        cell: F4
+        expected: Back pain
+        hint: '`MATCH` returns a position; `INDEX` turns a position into a value.'
+        solution: '=INDEX(B2:B11,MATCH("1001-0004",A2:A11,0))'
+      - prompt: >-
+          Subject 1001-0001 is a screen failure — in the study, but never dosed and with no adverse
+          events. Look the subject up and return `No AE recorded` rather than `#N/A`.
+        cell: F5
+        expected: No AE recorded
+        hint: >-
+          `IFNA` replaces the `#N/A`. Note carefully what it does **not** tell you: whether the subject
+          is absent from this table or absent from the study.
+        solution: '=IFNA(XLOOKUP("1001-0001",A2:A11,B2:B11),"No AE recorded")'
+      - prompt: >-
+          How many **subjects** are in these ten rows? Total the helper column.
+        cell: F6
+        expected: 3
+        hint: >-
+          `=IF(COUNTIF($A$2:A2,A2)=1,1,0)` marks a row when the subject has not been seen above it. The
+          first `$A$2` is anchored and the second end of the range grows as the formula fills down.
+        solution: '=SUM(E2:E11)'
+      - prompt: >-
+          Count rows whose **coded** term is `Fatigue`.
+        cell: F7
+        expected: 2
+        hint: 'Two different verbatim terms in this sheet code to the same preferred term.'
+        solution: '=COUNTIF(C2:C11,"Fatigue")'
+      - prompt: >-
+          Now count rows whose **verbatim** term is `Fatigue`. The difference is why safety tables are
+          built on the coded term.
+        cell: F8
+        expected: 1
+        hint: >-
+          `COUNTIF` matches text case-insensitively, so this catches `fatigue` as well as `Fatigue` —
+          but it cannot know that `Tiredness` is the same event.
+        solution: '=COUNTIF(B2:B11,"Fatigue")'
+      - prompt: >-
+          Run the lookup backwards: which subject had `Nausea`?
+        cell: F9
+        expected: '1001-0002'
+        hint: >-
+          You will get one subject. Count the matches with `COUNTIF(C2:C11,"Nausea")` before you believe
+          the answer is the whole answer.
+        solution: '=XLOOKUP("Nausea",C2:C11,A2:A11)'

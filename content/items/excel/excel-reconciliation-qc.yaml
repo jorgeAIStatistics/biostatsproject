@@ -1,0 +1,690 @@
+items:
+  - id: excel.recon.sum-skips-text
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [excel.qc, excel.logic]
+    lesson: excel-reconciliation-qc
+    title: Three totals from fourteen cells
+    prompt: |
+      A vendor lab extract holds fourteen ALT values in `D2:D15`. You total them two ways:
+
+      ```excel
+      =SUM(D2:D15)                                          → 236.6
+      25+22+9+21+16+32+7+4.6+15+12+28+18+19+24              → 252.6
+      ```
+
+      `=COUNT(D2:D15)` returns **13** and `=COUNTA(D2:D15)` returns 14.
+
+      What is the 16 U/L between the two totals?
+    choices:
+      - text: "One cell holds the text `\"16\"` rather than the number 16. `SUM` silently skips cells containing text, so that cell contributed nothing."
+        correct: true
+        feedback: "Correct — and it is not a disagreement with the laboratory. Both files hold 16; what differs is what `SUM` can add."
+      - text: "`SUM` rounded the 4.6 to 5 and lost the rest across the column."
+        feedback: "`SUM` does not round. 4.6 is included in the 236.6 exactly as it stands."
+      - text: "One cell is blank, and `SUM` treats blanks as zero."
+        feedback: "`COUNTA` returns 14, so no cell is empty. The gap is between `COUNT` and `COUNTA`: fourteen non-empty cells, thirteen of them numbers."
+      - text: "The vendor reported that value in different units, so it was excluded."
+        feedback: "Nothing in a spreadsheet knows about units. `SUM` excluded the cell because of its type, not its meaning."
+    solution: |
+      **`SUM` silently skips cells containing text.** No error, no warning, no marker — the cell simply
+      does not participate.
+
+      The diagnostic is the pair of counting functions:
+
+      ```excel
+      =COUNT(D2:D15)     → 13     numbers
+      =COUNTA(D2:D15)    → 14     anything non-empty
+      =ISTEXT(D6)        → TRUE
+      ```
+
+      `COUNT` counts numbers; `COUNTA` counts everything that is not empty. **The gap between them is the
+      number of cells that look like data and are not.**
+
+      The related surprise is that `=D6=B6` returns `FALSE` even though both cells display `16`. Excel's
+      comparison operators are type-aware and never coerce: a number is never equal to a text string,
+      whatever number format is applied.
+
+      This finding belongs in a different category from the rest of the reconciliation. The lab reported
+      16 and EDC holds 16 — there is nothing to query. What is defective is the file, or how it was
+      opened.
+    explanation:
+      objective: "Attribute a missing 16 U/L to a cell type rather than to a data difference."
+      given: "SUM returns 236.6 where the column adds to 252.6; COUNT 13 against COUNTA 14."
+      relevant: "That SUM ignores text, and that COUNT and COUNTA differ by exactly the number of text cells."
+      irrelevant: "Rounding and units, neither of which SUM knows anything about."
+      numbers: "252.6 − 236.6 = 16, which is the one text cell."
+      interpretation: "A difference between the file and Excel's arithmetic, not between two files."
+      changes: "Retyping the cell as a number makes SUM agree; the underlying question is why the transfer produced text."
+      interviewer: "That you separate file artefacts from data discrepancies before anything is queried."
+
+  - id: excel.recon.trailing-space
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [excel.qc, qc.compare]
+    lesson: excel-reconciliation-qc
+    title: Present in both files, matched by neither
+    prompt: |
+      Subject `1001-0004` is visible in the EDC column `A4` and in the vendor column `C4`, with the same
+      ALT value of 9 in both. Yet:
+
+      ```excel
+      =COUNTIF(C2:C15,A4)     → 0
+      =EXACT(A4,C4)           → FALSE
+      =EXACT(A4,TRIM(C4))     → TRUE
+      ```
+
+      What has happened, and what does it mean for the reconciliation?
+    choices:
+      - text: "`C4` has a trailing space. `COUNTIF` does not trim, so the match fails with no error — and the finding is about the key, not the data: the two values agree and nothing should be queried."
+        correct: true
+        feedback: "Correct. Report it as a transfer-format finding. Any reconciliation that skipped key normalisation would have reported this subject as missing from the vendor file."
+      - text: "`C4` is stored as text and `A4` as a number, so `COUNTIF` cannot compare them."
+        feedback: "Both are text — a subject id with a hyphen cannot be numeric. And `COUNTIF` criteria do coerce across types anyway, so that would not have caused a zero."
+      - text: "`COUNTIF` is case-sensitive and the two ids differ in case."
+        feedback: "`COUNTIF` matches text case-insensitively. `EXACT` is the case-sensitive one, and here it is space that differs, not case."
+      - text: "The subject really is absent from the vendor extract and the value of 9 is a coincidence."
+        feedback: "`EXACT(A4,TRIM(C4))` is `TRUE`, which proves the two ids are the same string once the space is removed."
+    solution: |
+      **`C4` is `"1001-0004 "`.** Nothing on screen shows it, and none of the tools that should catch it
+      do:
+
+      | | Behaviour on a trailing space |
+      |---|---|
+      | `COUNTIF(range, key)` | No match — and returns 0, not an error |
+      | `XLOOKUP(key, range, …)` | `#N/A` |
+      | `=A4=C4` | `FALSE` |
+      | `=EXACT(A4,C4)` | `FALSE` |
+      | `=EXACT(A4,TRIM(C4))` | `TRUE` — which is the proof |
+
+      The fix is a **normalised key in a helper column on each side**, with the raw key kept beside it:
+      `=TRIM(A2)` and `=TRIM(C2)`. Match on the normalised column; quote the raw one in the report,
+      because "your file has a trailing space on subject 1001-0004" is the actual finding.
+
+      **This contributes nothing to the numeric difference between the two files.** Both hold 9. A
+      reconciliation that reports it as a missing subject has generated a query to a laboratory that sent
+      the result correctly, and has still not found the real discrepancy.
+
+      `TRIM` will not save you from everything. It does not remove a non-breaking space, which is what
+      arrives when data has passed through a web page or a PDF — you find that one by discovering that
+      `TRIM` did not work.
+    explanation:
+      objective: "Diagnose a silent key mismatch and classify it correctly."
+      given: "A subject present in both columns with the same value, matched by nothing."
+      relevant: "That COUNTIF does not trim, and that EXACT against TRIM isolates the cause."
+      irrelevant: "Case, which COUNTIF ignores, and numeric type, which a hyphenated id cannot have."
+      method: "Test the raw pair and the trimmed pair separately; the difference names the defect."
+      interpretation: "A defect in the key, not in the data — a transfer finding rather than a query."
+      changes: "Normalised helper keys on both sides make the match succeed and keep the raw id for the report."
+      interviewer: "That you check the key before you compare any values."
+
+  - id: excel.recon.three-comparisons
+    format: mcq
+    modes: [check, speed]
+    difficulty: intermediate
+    skills: [excel.qc, excel.logic]
+    lesson: excel-reconciliation-qc
+    title: Equals, EXACT and a criterion
+    prompt: |
+      Cell `B6` holds the **number** 16. Cell `D6` holds the **text** `"16"`. Both display `16`.
+
+      ```excel
+      =D6=B6                    → ?
+      =EXACT(D6,B6)             → ?
+      =COUNTIF(D2:D15,B6)       → ?
+      ```
+
+      Which row of behaviour is right?
+    choices:
+      - text: "`FALSE`, `TRUE`, and at least 1 — the comparison operator is type-aware and never coerces, while `EXACT` converts both to text and a `COUNTIF` criterion coerces too."
+        correct: true
+        feedback: "Correct, and the disagreement is the point: three ways of asking \"are these the same\" that answer differently on the same pair of cells."
+      - text: "`FALSE`, `FALSE`, `0` — once the types differ, nothing in Excel will match them."
+        feedback: "That would at least be consistent, and Excel is not. Criteria arguments coerce, so the COUNTIF finds it."
+      - text: "`TRUE`, `TRUE`, and at least 1 — Excel converts text that looks numeric wherever it can."
+        feedback: "Not for comparison operators. `=\"16\"=16` is FALSE and the ordering places every number before every piece of text."
+      - text: "`#VALUE!`, `TRUE`, and at least 1 — comparing a number with text raises an error."
+        feedback: "Comparing across types is legal and well defined. It simply never returns equal."
+    solution: |
+      Three comparisons, three rules:
+
+      | | Case | Spaces | Type |
+      |---|---|---|---|
+      | `=D6=B6` | Insensitive | **Sensitive** | Type-aware — a number never equals text |
+      | `=EXACT(D6,B6)` | **Sensitive** | **Sensitive** | Converts both to text first |
+      | `=COUNTIF(range,"16")` | Insensitive | **Sensitive** | Criteria coerce — matches the number 16 |
+
+      **Excel's comparison operators do not coerce across types.** `="16"=16` is `FALSE`, and the ordering
+      is number, then text, then boolean. No number format changes it.
+
+      **Criteria arguments do coerce.** `COUNTIF(range,"16")` matches a cell holding the number 16, and
+      `COUNTIF(range,B6)` with `B6` numeric matches a cell holding the text `"16"`.
+
+      Both behaviours are documented and neither follows from the other. They have to be known separately.
+
+      The practical consequence in a reconciliation is that the right function for each job is different:
+      **`EXACT` for keys**, where case and spaces matter and the content is text; **`ABS(a-b)<=tolerance`
+      for values**, because `EXACT` on two numbers really asks whether they print the same way.
+    explanation:
+      objective: "State the three comparison rules and which job each belongs to."
+      given: "A numeric cell and a text cell that display identically."
+      relevant: "That operators are type-aware and criteria are not."
+      method: "Evaluate each under its own rule rather than hunting for one consistent rule."
+      interpretation: "Apparent inconsistency that is two documented behaviours side by side."
+      changes: "EXACT belongs on keys; a tolerance comparison belongs on values."
+      interviewer: "That you can state both rules without trying to reconcile them into one."
+
+  - id: excel.recon.one-direction
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [excel.qc, qc.discrepancy, excel.lookups]
+    lesson: excel-reconciliation-qc
+    title: What one lookup cannot see
+    prompt: |
+      A lab reconciliation is built as a single column filled down beside the EDC extract:
+
+      ```excel
+      =IFNA(XLOOKUP(A2,$C$2:$C$15,$D$2:$D$15),"Not in vendor file")
+      ```
+
+      The vendor file contains a result for subject `1002-0007`, who is not in EDC at all.
+
+      What does this reconciliation report about that subject?
+    choices:
+      - text: "Nothing. The lookup only ever asks about EDC subjects, so a subject that exists only in the vendor file is never looked for — and a second lookup in the opposite direction is the only thing that finds it."
+        correct: true
+        feedback: "Correct. `XLOOKUP` is a left join; a reconciliation is a full outer join, which in Excel means two lookups."
+      - text: "It reports `Not in vendor file` for that subject, because the lookup fails."
+        feedback: "There is no row for that subject on the EDC side, so no formula was ever filled down for it. Nothing failed, because nothing was attempted."
+      - text: "It reports `#N/A`, which `IFNA` then hides."
+        feedback: "Same problem: `#N/A` would require a formula to have been evaluated for that subject, and none was."
+      - text: "It reports the vendor value with no EDC counterpart, which is enough to spot the problem."
+        feedback: "The output column has one cell per EDC row. A vendor row with no EDC row has nowhere to appear."
+    solution: |
+      **A lookup answers questions about the rows you filled it down beside.** There is no EDC row for
+      subject 1002-0007, so there is no cell in which anything about it could be reported.
+
+      A reconciliation is a **full outer join**: rows only on the left, rows only on the right, and rows
+      on both sides whose values differ. Excel has no full outer join, so it takes two formulas pointing
+      in opposite directions:
+
+      ```excel
+      H2: =IFNA(XLOOKUP($F2,$G$2:$G$15,$D$2:$D$15),"Not in vendor file")
+      I2: =IF(COUNTIF($F$2:$F$15,$G2)=0,"Not in EDC","Matched")
+      ```
+
+      Column H is EDC looking into the vendor file. Column I is the vendor file looking back. **Neither
+      implies the other.**
+
+      The direction that gets forgotten is usually the more serious one. A subject in EDC and not in the
+      vendor file is a missing sample. A subject in the vendor file and not in EDC means a laboratory has
+      run a sample for someone the study does not know about — a mis-keyed accession, or a sample from a
+      different study.
+
+      On the lesson's file this omission loses 24 U/L of a 67.4 U/L difference, and the reconciliation
+      would still have looked like it ran.
+    explanation:
+      objective: "Recognise that a single lookup cannot report right-only rows."
+      given: "A one-directional reconciliation column and a vendor-only subject."
+      relevant: "That the output has exactly one cell per EDC row."
+      irrelevant: "The IFNA wrapper, which only affects rows that exist."
+      method: "Ask which rows the formula was ever evaluated for."
+      interpretation: "Half a reconciliation that produces a complete-looking column."
+      changes: "A second COUNTIF-based flag beside the vendor extract finds the missing direction."
+      interviewer: "That you name both directions unprompted."
+
+  - id: excel.recon.close-the-gap
+    format: numeric
+    modes: [guided, qc]
+    difficulty: intermediate
+    skills: [excel.qc, qc.compare, qc.discrepancy]
+    lesson: excel-reconciliation-qc
+    title: Close the reconciliation exactly
+    prompt: |
+      An EDC extract of fourteen baseline ALT values totals **304** U/L. `=SUM` over the vendor extract
+      returns **236.6**. Four findings explain the difference:
+
+      - subject 1001-0016, 34 U/L, is in EDC and absent from the vendor file;
+      - subject 1002-0007, 24 U/L, is in the vendor file and absent from EDC;
+      - subject 1001-0011 is 46 in EDC and 4.6 in the vendor file;
+      - subject 1001-0006's vendor cell holds the text `"16"`, so `SUM` skipped it.
+
+      Start from 304 and apply all four. What do you get?
+    answer: 236.6
+    tolerance: 0.001
+    unit: U/L
+    hints:
+      - "Remove what EDC has and the vendor does not; add what the vendor has and EDC does not."
+      - "The decimal-point error makes the vendor value 41.4 lower."
+      - "304 − 34 + 24 − 41.4 − 16."
+    solution: |
+      $$304 - 34 + 24 - 41.4 - 16 = 236.6$$
+
+      It lands on the vendor total to the last decimal, and **that is the result**, not the 236.6 itself.
+      A residual of zero means there is no room in the arithmetic for a fifth finding you have not noticed.
+
+      Watch the order the quantities arrive in:
+
+      | Step | Running total | Kind of finding |
+      |---|---:|---|
+      | EDC total | 304 | — |
+      | − 34, subject only in EDC | 270 | Transfer |
+      | + 24, subject only in the vendor file | 294 | Transfer |
+      | − 41.4, decimal-point error | **252.6** | **Data discrepancy** |
+      | − 16, text cell skipped by `SUM` | 236.6 | File artefact |
+
+      **252.6 is exactly what the vendor column adds to by hand.** After the three findings about the
+      data, the reconciliation has already closed against the vendor's actual numbers. The last 16 is not
+      a difference between the two files at all — it is a difference between the vendor file and what
+      `SUM` reports about it.
+
+      Report those two kinds of finding separately, or the laboratory receives a query about a value they
+      sent correctly.
+    explanation:
+      objective: "Decompose a total difference into named findings that close exactly."
+      given: "Two totals and four findings with their values and directions."
+      relevant: "The direction of each finding — which side the value sits on."
+      calculating: "Left total, minus left-only, plus right-only, minus the value difference, minus the skipped cell."
+      numbers: "304 − 34 + 24 − 41.4 − 16 = 236.6."
+      assumptions: "That the four findings are all of them — which is exactly what a zero residual establishes."
+      interpretation: "A closed reconciliation: every unit of 67.4 U/L has a name and an owner."
+      changes: "Any residual, however small, is a fifth finding or an unstated rounding rule."
+      interviewer: "That you treat the residual as the check rather than the leftover."
+
+  - id: excel.recon.classify-findings
+    format: classify
+    modes: [guided, qc]
+    difficulty: advanced
+    skills: [excel.qc, qc.discrepancy, communication.documentation]
+    lesson: excel-reconciliation-qc
+    title: Who owns each finding
+    prompt: |
+      Five findings from a central-lab reconciliation of fourteen subjects. Sort them by what should
+      actually happen next, because "five discrepancies" sent as one number is not a usable report.
+    categories:
+      - "Value discrepancy — query the owner of the field"
+      - "Transfer finding — a subject present on one side only"
+      - "File artefact — not a discrepancy at all"
+    entries:
+      - text: "Subject 1001-0011: EDC holds 46 U/L, the vendor file holds 4.6 U/L."
+        category: "Value discrepancy — query the owner of the field"
+        note: "The only genuine disagreement about a number. 4.6 is also below this subject's lower limit of normal of 10 U/L and below the lowest ALT value anywhere in the study, which is 6 — so a range check would have caught it independently."
+      - text: "Subject 1001-0016: in EDC at 34 U/L, no row at all in the vendor file."
+        category: "Transfer finding — a subject present on one side only"
+        note: "A missing sample or a failed transfer. The laboratory has to be asked."
+      - text: "Subject 1002-0007: a result of 24 U/L in the vendor file, no row in EDC."
+        category: "Transfer finding — a subject present on one side only"
+        note: "The more serious direction: a sample run for someone the study does not know about. Invisible unless the second lookup was written."
+      - text: "Subject 1001-0006: both files show 16, `=D6=B6` returns FALSE and `COUNT` finds only 13 numbers in 14 cells."
+        category: "File artefact — not a discrepancy at all"
+        note: "The vendor cell holds the text \"16\". The lab reported 16 and EDC holds 16; what is defective is the file or the import."
+      - text: "Subject 1001-0004: both files show 9, and `COUNTIF(C2:C15,A4)` returns 0."
+        category: "File artefact — not a discrepancy at all"
+        note: "A trailing space on the vendor id. It contributes nothing to the numeric difference and would be reported as a missing subject by any reconciliation that skipped key normalisation."
+    solution: |
+      **One data discrepancy, two transfer findings, two file artefacts.**
+
+      Sent as "five discrepancies", this report generates two unnecessary queries to a laboratory that
+      reported both values correctly, and buries the one value — 46 against 4.6 — that a medical monitor
+      needs to see.
+
+      The categories also decide where the fix goes:
+
+      | Category | Fix belongs to | Recurs next month? |
+      |---|---|---|
+      | Value discrepancy | A query on the field | Only if the source is wrong |
+      | Transfer finding | The lab or the site | Possibly |
+      | File artefact | The transfer specification, or how the file is imported | **Yes, every month, until the spec changes** |
+
+      The last row is why the distinction is worth making twice. A trailing space and a numeric column
+      arriving as text are not one-off incidents; they are properties of how that vendor builds the file,
+      and they will be there again in the next extract. Querying them as data problems fixes nothing.
+    explanation:
+      objective: "Sort reconciliation findings by cause and owner rather than counting them."
+      given: "Five findings, two of which are defects in the file rather than in the data."
+      relevant: "Whether the two files disagree about a value, about a subject, or not at all."
+      irrelevant: "The size of each numeric gap, which does not determine who owns the finding."
+      method: "For each finding, ask what a correct fix would change — the data, the transfer, or nothing."
+      interpretation: "A count of five hides a report that has three different destinations."
+      changes: "File artefacts recur in every extract until the transfer specification changes."
+      interviewer: "That you would not send all five as data queries."
+
+  - id: excel.recon.anti-join
+    format: sql
+    db: oncology
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [excel.qc, qc.compare, sql.joins]
+    lesson: excel-reconciliation-qc
+    minutes: 8
+    title: Subjects with no laboratory record
+    prompt: |
+      The spreadsheet version of this is a column of `#N/A` that somebody wraps and forgets. As a query it
+      is the deliverable.
+
+      List the `USUBJID` of every subject in `dm` with **no** record at all in `lb`, sorted by subject.
+
+      There are 48, and predicting the number before you run it is the point of the exercise.
+    starter: |
+      SELECT dm.USUBJID
+      FROM   dm
+      ___ JOIN lb ON ___
+      WHERE  ___
+      ORDER BY dm.USUBJID;
+    reference: |
+      SELECT dm.USUBJID
+      FROM   dm
+      LEFT JOIN lb ON lb.USUBJID = dm.USUBJID
+      WHERE  lb.USUBJID IS NULL
+      ORDER BY dm.USUBJID;
+    orderMatters: true
+    hints:
+      - "Keep every DM row whether it matched or not — that is a LEFT JOIN."
+      - "After a left join, an unmatched row has NULL in every column from the right-hand table."
+      - "`WHERE lb.USUBJID IS NULL` keeps exactly the rows that found no match."
+    solution: |
+      **This is the anti-join** — the one join whose entire purpose is the rows that did not match.
+
+      ```sql
+      SELECT dm.USUBJID
+      FROM   dm
+      LEFT JOIN lb ON lb.USUBJID = dm.USUBJID
+      WHERE  lb.USUBJID IS NULL
+      ORDER BY dm.USUBJID;
+      ```
+
+      DM has 468 subjects and LB has records for 420. The 48 with no laboratory record at all carry
+      `ARMNRS = 'SCREEN FAILURE'` in DM — they were never randomized, so no on-study samples were drawn.
+
+      **The value of the check is that it agreed with the prediction.** 48 screened-and-failed subjects,
+      48 subjects without labs. The same query returning 51 would be a finding, and you would not know
+      that unless you had said 48 first.
+
+      The Excel equivalent is `=IF(COUNTIF(lb_subjects,A2)=0,"No lab record","")` filled down beside DM and
+      counted — which works, and depends on two choices people routinely get wrong: `IFNA` rather than
+      `IFERROR`, and a **visible marker** rather than `""`, because an empty string cannot be counted or
+      filtered into a listing.
+    explanation:
+      objective: "Express an anti-join and connect it to the spreadsheet form of the same check."
+      given: "DM with 468 subjects and LB with records for 420."
+      relevant: "That a left join gives NULL on the right for unmatched left rows."
+      method: "LEFT JOIN, then filter on the right-hand key being NULL."
+      numbers: "468 − 420 = 48, all of them screen failures."
+      interpretation: "A check that passed, and could have failed — which is what makes it worth running."
+      changes: "An inner join would silently drop the 48 and report nothing."
+      interviewer: "That you predict the number before running the query."
+
+  - id: excel.recon.step-order
+    format: order
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [excel.qc, qc.compare, communication.documentation]
+    lesson: excel-reconciliation-qc
+    title: The order the steps have to go in
+    prompt: |
+      Put the steps of a two-file reconciliation into the order that makes each one meaningful. Several of
+      them produce nonsense if run before the step above.
+    steps:
+      - "Normalise the key on both sides into helper columns with `TRIM`, keeping the raw key beside it."
+      - "Check the key is unique on each side with `COUNTIF`, because a lookup into a repeated key returns the first of several."
+      - "Flag rows present in one extract and not the other, in **both** directions, using a visible marker rather than `\"\"`."
+      - "Compare values on the rows that matched, with `ABS(a-b)<=tolerance` and a tolerance you can justify."
+      - "Reconcile the two totals: left total, minus left-only, plus right-only, plus the value differences, and check the residual is zero."
+      - "Write the discrepancy log — one row per finding with both raw ids, both values, the direction, the category and the owner."
+    solution: |
+      **The order is not a style preference. Each step is meaningless if the one above it has not been
+      done.**
+
+      | If you skip | You get |
+      |---|---|
+      | Key normalisation | Present subjects reported as missing, with no error anywhere |
+      | The uniqueness check | A value comparison against the first of several rows |
+      | The second direction | A reconciliation that cannot report vendor-only subjects at all |
+      | The tolerance | Floating-point noise reported as discrepancies |
+      | The totals check | No way to know whether the finding list is complete |
+      | The log | A number instead of something somebody can act on |
+
+      The two that get skipped most often are the first and the third, and they fail in opposite ways.
+      Skipping normalisation **invents** findings — a trailing space turns a matched subject into a
+      missing one. Skipping the second direction **suppresses** findings, silently, and leaves a clean
+      result behind.
+
+      The totals check is what catches both. If left total minus left-only plus right-only plus the
+      differences does not equal the right total exactly, something in the list above was not done.
+    explanation:
+      objective: "Sequence a reconciliation so each step rests on the one before."
+      given: "Six steps in arbitrary order."
+      relevant: "That key handling precedes value handling, and that both directions precede any total."
+      method: "For each step, ask what it assumes about the data."
+      interpretation: "Order is a correctness property here, not a preference."
+      changes: "Skipping normalisation invents findings; skipping the second direction hides them."
+      interviewer: "That the key comes before the values, unprompted."
+
+  - id: excel.recon.hotspot
+    format: hotspot
+    language: text
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [excel.qc, qc.discrepancy, excel.lookups]
+    lesson: excel-reconciliation-qc
+    minutes: 8
+    title: The subject that is there and reported missing
+    prompt: |
+      A lab reconciliation, filled down beside fourteen EDC subjects. Subject `1001-0004` appears in both
+      extracts with the same ALT value of 9, and this block reports it as missing from the vendor file.
+
+      Click the line responsible.
+    code: |
+      A2:  1001-0004                    (EDC subject id)
+      B2:  9                            (EDC ALT)
+      C2:  1001-0004                    (vendor subject id, exactly as delivered)
+      D2:  9                            (vendor ALT)
+      F2:  =IFNA(XLOOKUP(A2,$C$2:$C$15,$D$2:$D$15),"Not in vendor file")
+      G2:  =IF(F2=B2,"OK","DIFF")
+      F16: =COUNTIF(F2:F15,"Not in vendor file") & " missing from the vendor file"
+    answerLines: [5]
+    lineNotes:
+      - line: 3
+        note: "The vendor id as delivered. It looks identical to `A2` and is not: there is a trailing space on it, which nothing in this block removes."
+      - line: 5
+        note: "The defect. The lookup matches on the **raw** key, so a single invisible trailing space in `C4` turns a present subject into `Not in vendor file`. `XLOOKUP` does not trim, and neither does `COUNTIF`. Match on `=TRIM(A2)` against a trimmed vendor key column, and keep the raw ids for the report."
+      - line: 6
+        note: "Has a real problem of its own — `F2=B2` is type-aware, so a vendor cell holding the text `\"16\"` reports `DIFF` against a numeric 16. But it is downstream of line 5 and would behave correctly on a properly matched key."
+      - line: 7
+        note: "Counts only one direction. A subject the vendor sent that EDC does not have has no row here at all, so it cannot be counted — that needs a second flag beside the vendor extract."
+    fixed: |
+      A2:  1001-0004                    (EDC subject id)
+      B2:  9                            (EDC ALT)
+      C2:  1001-0004                    (vendor subject id, exactly as delivered)
+      D2:  9                            (vendor ALT)
+      H2:  =TRIM(A2)
+      I2:  =TRIM(C2)
+      F2:  =IFNA(XLOOKUP(H2,$I$2:$I$15,$D$2:$D$15),"Not in vendor file")
+      G2:  =IFS(F2="Not in vendor file","EDC ONLY", ABS(F2-B2)<=0.001,"OK", TRUE,"DIFF")
+      J2:  =IF(COUNTIF($H$2:$H$15,I2)=0,"Not in EDC","Matched")
+    hints:
+      - "The subject is in both files with the same value. What is being compared that is not the value?"
+      - "`XLOOKUP` and `COUNTIF` both match keys literally. Neither removes whitespace."
+      - "Which line decides whether a match happens at all?"
+    solution: |
+      **Line 5.** The lookup matches on the raw key.
+
+      `C4` is `"1001-0004 "`. A single trailing space, invisible on screen, and:
+
+      ```excel
+      =COUNTIF(C2:C15,A4)     → 0
+      =EXACT(A4,C4)           → FALSE
+      =EXACT(A4,TRIM(C4))     → TRUE       the proof
+      ```
+
+      The subject is reported as missing from the vendor file, a query goes to a laboratory that sent the
+      result correctly, and the 9 U/L the two files agree on never gets compared.
+
+      **Normalise into helper columns and keep the raw ids.** Match on `TRIM`; report on the raw value,
+      because "your file has a trailing space on subject 1001-0004" is the finding a transfer manager can
+      act on.
+
+      Two further defects are visible in the same block and are worth naming even though they are not the
+      answer. Line 6 compares with `=`, which is type-aware — a vendor cell holding the text `"16"` will
+      report `DIFF` against a numeric 16 even though both display the same thing; and it cannot
+      distinguish "value differs" from "subject absent", which are findings with different owners. Line 7
+      counts one direction only, so a subject present in the vendor file and not in EDC has no row in this
+      block at all and can never be reported.
+    explanation:
+      objective: "Locate the step that turns a matched subject into a missing one."
+      given: "A reconciliation column reporting a subject that is demonstrably present in both extracts."
+      relevant: "That XLOOKUP matches keys literally and the vendor id carries a trailing space."
+      irrelevant: "The IFNA wrapper and the fallback text, both of which are correct here."
+      method: "Ask which line decides whether a match occurs, before asking what happens after it."
+      interpretation: "An invented finding — the opposite failure from a suppressed one, and just as damaging."
+      changes: "Matching on trimmed helper keys makes the match succeed; the raw ids stay for the report."
+      interviewer: "That you check the key before you accept any not-found result."
+
+  - id: excel.recon.clean-result
+    format: diff
+    modes: [qc, debug]
+    difficulty: advanced
+    skills: [excel.qc, qc.discrepancy, communication.documentation]
+    lesson: excel-reconciliation-qc
+    title: Four flags, four different causes
+    prompt: |
+      A workbook reconciles fourteen EDC subjects against a vendor lab extract and flags four rows `DIFF`.
+      They are sent to the laboratory as four discrepancies.
+
+      Rebuilt with normalised keys, both directions and a categorised flag, the same two files give the
+      table on the right. What does the workbook's `DIFF` column actually mean?
+    left:
+      title: The workbook's flag column
+      columns: [Subject, Flag]
+      rows:
+        - ['1001-0004', 'DIFF']
+        - ['1001-0006', 'DIFF']
+        - ['1001-0011', 'DIFF']
+        - ['1001-0016', 'DIFF']
+      footnote: "F2 = IFERROR(XLOOKUP(A2,$C$2:$C$15,$D$2:$D$15),\"\"), G2 = IF(F2=B2,\"OK\",\"DIFF\"). Total: 4 discrepancies."
+    right:
+      title: Rebuilt reconciliation
+      columns: [Subject, Finding, Category]
+      rows:
+        - ['1001-0004', 'Vendor id has a trailing space; both files hold 9', 'File artefact']
+        - ['1001-0006', 'Vendor cell holds the text "16"; both files hold 16', 'File artefact']
+        - ['1001-0011', 'EDC 46 U/L, vendor 4.6 U/L', 'Value discrepancy']
+        - ['1001-0016', 'In EDC at 34 U/L, no vendor row', 'Transfer — EDC only']
+        - ['1002-0007', 'Vendor result of 24 U/L, no EDC row', 'Transfer — vendor only']
+      footnote: "Normalised keys, lookups in both directions, categorised flag. Totals close: 304 − 34 + 24 − 41.4 − 16 = 236.6."
+    choices:
+      - text: "`DIFF` means only \"this comparison was not TRUE\". Four different causes collapse into one word, and the one-directional lookup never looks for 1002-0007 at all — so the workbook finds four things, names none of them, and misses a fifth."
+        correct: true
+        feedback: "Correct. Only one of the four flagged rows is a disagreement about a value, and the finding the workbook cannot see is arguably the most serious of the five."
+      - text: "The workbook is simply missing one row; adding subject 1002-0007 to the EDC side would make the two agree."
+        feedback: "That subject is not in EDC — that is the finding. And it would not fix the three flagged rows that are not value discrepancies."
+      - text: "The rebuilt version is over-reporting: 1001-0004 and 1001-0006 agree on the value, so they are not findings at all."
+        feedback: "They are findings — about the file rather than the data. They will recur in every future extract until the transfer specification changes."
+      - text: "The `IFERROR` wrapper is the only defect; changing it to `IFNA` would produce the right-hand table."
+        feedback: "`IFNA` is better, but it changes nothing here: the problem is the empty-string fallback, the raw key, the type-aware comparison and the missing second direction."
+    solution: |
+      **`DIFF` is not a finding. It is the absence of a `TRUE`.**
+
+      Trace what produced each of the four flags:
+
+      | Subject | What the lookup returned | Why `F2=B2` was FALSE | What it actually is |
+      |---|---|---|---|
+      | 1001-0004 | `""` | The raw key had a trailing space, so the lookup failed | File artefact |
+      | 1001-0006 | `"16"` | Text never compares equal to the number 16 | File artefact |
+      | 1001-0011 | `4.6` | A genuine difference from 46 | **Value discrepancy** |
+      | 1001-0016 | `""` | The subject really is absent | Transfer finding |
+
+      Two of the four are defects in the file, one is a missing subject, one is a real disagreement about
+      a number. Sent as "four discrepancies", the report queries a laboratory twice about values they sent
+      correctly and buries the 46-against-4.6 that a medical monitor needs.
+
+      And the fifth, subject 1002-0007, is not in the left-hand table at all. The lookup is filled down
+      beside the EDC extract, so a vendor row with no EDC row has nowhere to appear. That is the direction
+      a one-sided reconciliation cannot see, and it is the one that means a laboratory ran a sample for
+      someone the study does not know about.
+
+      **The rebuilt version closes.** 304 − 34 + 24 − 41.4 − 16 = 236.6, exactly the vendor total, which
+      is how you know the list of five is complete.
+    explanation:
+      objective: "Read a flag column back to its causes and find what it structurally cannot show."
+      given: "Four DIFF flags from a one-directional lookup, against a categorised five-finding rebuild."
+      relevant: "That the flag records a failed comparison, and that comparison can fail for four unrelated reasons."
+      irrelevant: "The count of four, which happens to be close to five and means nothing."
+      numbers: "One value discrepancy, two file artefacts, two transfer findings; totals close at 236.6."
+      interpretation: "A report with the right number of rows and none of the right information."
+      changes: "A categorised flag plus a second direction turns the same two files into an actionable log."
+      interviewer: "That you ask what a flag means before you ask how many there are."
+
+  - id: excel.recon.open-reconciliation
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [excel.qc, qc.compare, qc.discrepancy, communication.interviewing]
+    lesson: excel-reconciliation-qc
+    title: Two extracts that should agree and do not
+    prompt: |
+      **Interviewer:** "A vendor sends a lab extract and it does not agree with EDC. Walk me through how
+      you would find out why, and what you would hand back."
+    modelAnswer: |
+      Before comparing any values I'd reconcile the key, because most of what looks like a missing subject
+      is a key that did not match. Trailing or leading spaces, a non-breaking space from something that
+      passed through a PDF, case, a site prefix on one side only, or one side numeric and the other text.
+      I'd build a normalised key with `TRIM` in a helper column on each side and keep the raw key beside
+      it, because the raw value is what goes into the query — "your file has a trailing space on subject
+      1001-0004" is the actual finding.
+
+      Then whether the key is unique on each side, with `COUNTIF`. If it repeats, any lookup is returning
+      the first of several matches without saying so, and the value comparison underneath it is
+      meaningless. On lab data that is a real possibility, because the true key is subject and visit and
+      test, not subject.
+
+      Then both directions. `XLOOKUP` is a left join; a reconciliation is a full outer join. One formula
+      tells me what the vendor has for each EDC subject and nothing at all about subjects the vendor sent
+      that EDC does not have — and there is no cell for those, because the column was filled down beside
+      the EDC rows. The second direction is a `COUNTIF` flag beside the vendor extract. Both keep their
+      non-matches as a visible marker rather than an empty string, so they stay countable and filterable.
+
+      On the rows that matched I'd compare with `ABS(a-b)` against a stated tolerance rather than with
+      `=`, partly because floating point makes a direct equality test something other than what you
+      intended, and partly because the tolerance is a decision somebody should see. For a lab reporting
+      whole units any non-zero difference is real.
+
+      Then the step I'd insist on: reconcile the totals. Left total, minus what is only on the left, plus
+      what is only on the right, plus the value differences, should equal the right total exactly. On the
+      file I've been working with, 304 minus 34 plus 24 minus 41.4 minus 16 is 236.6 to the last decimal.
+      A zero residual is what tells me the finding list is complete rather than merely long; "close
+      enough" throws away the only number that could have told me I had missed something.
+
+      What I'd hand back is a log, not a number. One row per finding, with both raw ids, both values, the
+      direction, a category and an owner — and the categories matter more than the count. Of the four
+      findings on that file, one is a real value discrepancy, two are subjects present on one side only,
+      and one is a cell holding text where a number belongs, which is not a disagreement with the
+      laboratory at all. Reporting all four as discrepancies sends two unnecessary queries and buries the
+      one number a medical monitor needs to look at. The file artefacts go to whoever owns the transfer
+      specification, because they will be in next month's extract too.
+
+      And I'd be explicit that a zero-discrepancy result is the one I'd distrust most. Suppressed `#N/A`,
+      an `IFERROR` that swallowed a `#REF!`, or a one-directional lookup will all produce a clean report
+      from a broken comparison.
+    rubric:
+      - Reconciles the key before comparing any values, and names the specific ways keys differ invisibly
+      - Keeps the raw key alongside the normalised one, and says why
+      - Checks key uniqueness on both sides before trusting any lookup
+      - States that a lookup is a left join and a reconciliation is a full outer join
+      - Writes both directions and explains what the second one finds
+      - Uses visible markers rather than empty strings so non-matches stay countable
+      - Compares values with an explicit, justified tolerance
+      - Reconciles the totals and treats the residual as the completeness check
+      - Separates data discrepancies from transfer findings from file artefacts, with owners
+      - Delivers a discrepancy log rather than a count
+      - Treats a zero-discrepancy result as a reason for suspicion
+    redFlags:
+      - "Compares values before checking that the keys match"
+      - "Writes one lookup and calls the result a reconciliation"
+      - "Suppresses #N/A with an empty string, or uses IFERROR where IFNA belongs"
+      - "Reports 'close enough' on a residual without naming it"
+      - "Sends every finding to the laboratory as a data query"
+      - "Sorts both sheets and compares them row by row"

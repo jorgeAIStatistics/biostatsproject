@@ -1,0 +1,473 @@
+items:
+  - id: stats.se.sd-vs-se
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [stats.sampling, stats.descriptive]
+    lesson: stats-sampling-distributions-se
+    title: Which statistic answers which question
+    prompt: |
+      Table 14.1.2 reports "Baseline systolic BP, mean (SD): 149.5 (9.85)" for the placebo arm (n = 91).
+
+      A clinician asks: *"So how confident are we that the true average baseline pressure in this population is close to 149.5?"*
+
+      Which number answers **that** question?
+    choices:
+      - text: "The standard error, 9.85 / √91 = 1.03 mmHg"
+        correct: true
+        feedback: "The SE measures how much the sample mean would move if you sampled 91 different subjects. It is the precision of the estimate — exactly what the clinician asked about."
+      - text: "The SD, 9.85 mmHg"
+        feedback: "The SD describes how far individual patients are from the arm mean. It answers 'how variable are these patients?', not 'how precisely do we know the average?'."
+      - text: "The range of the observed values"
+        feedback: "The range is determined by the two most extreme subjects and gets *wider* with more data. It says nothing about the precision of the mean."
+      - text: "Neither — you need the p-value"
+        feedback: "A p-value tests a hypothesis. The precision of an estimate is described by its standard error or its confidence interval."
+    solution: |
+      The standard error, $9.85/\sqrt{91} = 1.03$ mmHg. SD describes patients; SE describes the estimate. They differ by a factor of $\sqrt{n}$ — here about 9.5×.
+    explanation:
+      objective: "Decide which of two summary statistics answers a question about the precision of an estimate."
+      given: "A demographics cell reporting mean (SD) = 149.5 (9.85) for n = 91 subjects."
+      relevant: "The SD and the sample size — together they determine the SE."
+      irrelevant: "The mean itself does not affect which statistic answers the question."
+      calculating: "SE = s / sqrt(n) = 9.85 / sqrt(91) = 1.03 mmHg."
+      method: "The SD summarizes variability between patients; the SE summarizes variability of the sample mean across hypothetical repeated samples. The question asks about the latter."
+      numbers: "9.85 is the reported SD; 91 is the arm's sample size; sqrt(91) = 9.539, giving SE = 1.03."
+      interpretation: "The true population mean is plausibly within roughly +/- 2 mmHg of 149.5 — but individual patients range far more widely than that."
+      changes: "If the arm had 9 subjects instead of 91, the SE would be 3.28 mmHg and the two statistics would be much closer together. As n grows the gap widens."
+      interviewer: "That you can state the definitional difference, give the sqrt(n) relationship, and say which table uses which and why."
+  - id: stats.se.quadruple-n
+    format: mcq
+    modes: [check, speed, interview]
+    difficulty: foundation
+    skills: [stats.sampling, stats.power]
+    lesson: stats-sampling-distributions-se
+    title: Halving the standard error
+    prompt: |
+      A team wants the standard error of the mean change from baseline to be **half** its current value. The outcome's SD will not change.
+
+      By what factor must the sample size increase?
+    choices:
+      - text: "4×"
+        correct: true
+        feedback: "SE = s/√n, so halving SE requires √n to double, which requires n to quadruple. This is the single most expensive fact in trial design."
+      - text: "2×"
+        feedback: "Doubling n divides the SE by √2 ≈ 1.41, not by 2."
+      - text: "√2 ×"
+        feedback: "That would shrink the SE by only a factor of 2^(1/4) ≈ 1.19."
+      - text: "It depends on the SD"
+        feedback: "The SD cancels: SE₂/SE₁ = √(n₁/n₂) regardless of s. The *absolute* SE depends on the SD, but the *ratio* does not."
+    solution: |
+      **4×.** $\mathrm{SE} = s/\sqrt{n}$. Halving the SE means doubling $\sqrt{n}$, which means multiplying $n$ by $2^2 = 4$.
+    explanation:
+      objective: "Convert a precision requirement into a sample size requirement."
+      given: "A target of halving the standard error, with the SD held fixed."
+      relevant: "Only the relationship SE = s / sqrt(n)."
+      irrelevant: "The actual value of the SD cancels out of the ratio."
+      calculating: "The factor by which n must grow."
+      method: "Set SE_new / SE_old = 1/2 and solve: sqrt(n_old/n_new) = 1/2, so n_new = 4 n_old."
+      assumptions: "That the SD does not change with the larger sample, which is reasonable when the larger sample comes from the same population."
+      interpretation: "Precision improves with the square root of the sample size, so gains get progressively more expensive."
+      changes: "To reduce the SE by a factor of 3 you would need 9 times the subjects; to reduce it by 10% you need about 23% more."
+      interviewer: "That you reach for the sqrt(n) relationship immediately and can connect it to trial cost."
+  - id: stats.se.clt-claim
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [stats.sampling, communication.interpretation]
+    lesson: stats-sampling-distributions-se
+    title: What the central limit theorem actually says
+    prompt: |
+      A reviewer writes: *"You used a t-test on ALT, but ALT is clearly right-skewed. The central limit theorem says that with n ≥ 30 the data become normal, so this is fine."*
+
+      Which part of that sentence is wrong?
+    choices:
+      - text: "\"the data become normal\" — the CLT is about the sampling distribution of the mean, not about the individual observations"
+        correct: true
+        feedback: "Exactly. The observations stay as skewed as they ever were. What becomes approximately normal is the distribution of the *sample mean* over repeated samples."
+      - text: "\"right-skewed\" — ALT is not usually skewed"
+        feedback: "ALT is genuinely right-skewed in most populations; that part of the sentence is fine."
+      - text: "Nothing is wrong; the statement is a correct summary of the CLT"
+        feedback: "The conclusion (a t-test may be reasonable) can be defensible, but the stated reason is a misstatement of the theorem."
+      - text: "\"t-test\" — the CLT only justifies z-tests"
+        feedback: "With an estimated variance, the t distribution is the right reference; the CLT plus a consistent variance estimator is what justifies the large-sample behaviour."
+    solution: |
+      The phrase **"the data become normal"**. The CLT states that $(\bar X - \mu)/(\sigma/\sqrt n)$ converges in distribution to $N(0,1)$ — a statement about the *estimator*, not the observations. A histogram of 500 ALT values is still skewed.
+
+      "n ≥ 30" is also a teaching rule of thumb, not a theorem: for strongly skewed data the sample mean can remain visibly skewed at n = 100.
+    explanation:
+      objective: "Identify the specific misstatement in a plausible-sounding invocation of the central limit theorem."
+      given: "A reviewer comment claiming that n >= 30 makes skewed data normal."
+      relevant: "What the CLT is a statement about: the sampling distribution of a standardized mean."
+      irrelevant: "Whether ALT is in fact skewed — it is, and that part of the comment is correct."
+      method: "Compare the claim word by word against the theorem's actual conclusion."
+      assumptions: "The CLT assumes independent, identically distributed observations with finite variance. Dependence (repeated measures) breaks it regardless of n."
+      interpretation: "The reviewer's conclusion may still be defensible; the stated justification is not. Say so precisely rather than agreeing or refusing wholesale."
+      changes: "For a strongly skewed outcome, or a small n, the practical answer changes: consider a rank-based test, an exact method, a transformation pre-specified in the SAP, or a bootstrap."
+      interviewer: "That you distinguish a statement about the estimator from a statement about the data, and that you treat 'n >= 30' as folklore rather than a rule."
+  - id: stats.se.diff-se
+    format: numeric
+    modes: [check]
+    difficulty: intermediate
+    skills: [stats.sampling, stats.confidence-intervals]
+    lesson: stats-sampling-distributions-se
+    title: Standard error of a between-arm difference
+    prompt: |
+      Week 12 change from baseline in systolic BP (VTX221-201, analysis records):
+
+      | Arm | n | mean CHG | SD |
+      |---|---:|---:|---:|
+      | VTX-221 20 mg | 80 | −12.28 | 11.50 |
+      | Placebo | 77 | −3.30 | 11.61 |
+
+      What is the standard error of the **difference** in means (20 mg − placebo), treating the arms as independent and not pooling the variances?
+
+      Give your answer in mmHg to two decimal places.
+    answer: 1.84
+    tolerance: 0.02
+    unit: mmHg
+    hints:
+      - "Variances add when you take a difference of independent quantities — even though you are subtracting."
+      - "SE(A − B) = √(s₁²/n₁ + s₂²/n₂)."
+      - "11.50²/80 = 1.6531 and 11.61²/77 = 1.7505."
+    solution: |
+      $$\mathrm{SE} = \sqrt{\frac{11.50^2}{80} + \frac{11.61^2}{77}} = \sqrt{1.6531 + 1.7505} = \sqrt{3.4036} = 1.845 \text{ mmHg}$$
+
+      Note that this is *larger* than either arm's own SE (1.29 and 1.32): comparing two noisy numbers is less precise than either one alone.
+    explanation:
+      objective: "Compute the standard error of a difference between two independent arm means."
+      given: "Per-arm n, mean and SD for the Week 12 change from baseline."
+      relevant: "Both SDs and both sample sizes."
+      irrelevant: "The means themselves do not enter the standard error."
+      calculating: "SE of the difference in means, unpooled (Welch form)."
+      method: "Var(A - B) = Var(A) + Var(B) for independent A and B, so the variances add even though the means subtract."
+      numbers: "11.50^2/80 = 1.6531 is the placebo-arm... (20 mg arm) variance contribution; 11.61^2/77 = 1.7505 is the placebo one; their sum is 3.4036 and its square root is 1.845."
+      assumptions: "Independence between arms, which randomization to parallel groups provides. For a paired design you would reduce to within-subject differences first."
+      interpretation: "The difference of -8.98 mmHg is about 4.9 standard errors from zero, which is why the primary comparison is strongly significant."
+      changes: "Pooling the variances (assuming equal SDs) changes the answer only in the third decimal here, because the SDs and sample sizes are nearly equal. With unequal sizes and unequal SDs the two can differ materially."
+      interviewer: "That you add variances rather than subtract them, and that you can say why the comparison is less precise than either arm alone."
+  - id: stats.se.hand-se
+    format: numeric
+    modes: [guided, check]
+    difficulty: foundation
+    skills: [stats.sampling, stats.descriptive]
+    lesson: stats-sampling-distributions-se
+    title: Standard error by hand
+    prompt: |
+      Six subjects' baseline systolic BP (mmHg):
+
+      `132, 145, 151, 139, 158, 147`
+
+      Compute the standard error of the mean. Give your answer to two decimal places.
+    answer: 3.71
+    tolerance: 0.02
+    unit: mmHg
+    hints:
+      - "First the mean: the six values sum to 872."
+      - "Then the sum of squared deviations from the mean, divided by n − 1 = 5, gives the variance."
+      - "SE = s / √6, and √6 ≈ 2.4495."
+    solution: |
+      **Mean:** $872/6 = 145.3333$ mmHg.
+
+      **Sum of squared deviations:** $(132-145.3333)^2 + \dots + (147-145.3333)^2 = 413.3333$.
+
+      **Variance:** $413.3333/5 = 82.6667$, so $s = 9.0921$ mmHg.
+
+      **Standard error:** $9.0921/\sqrt{6} = 9.0921/2.4495 = 3.7118$ mmHg.
+
+      Report **3.71 mmHg**.
+    explanation:
+      objective: "Compute a standard error from raw values, showing each intermediate quantity."
+      given: "Six systolic blood pressure values."
+      relevant: "All six values, and the count n = 6."
+      calculating: "Mean, sum of squared deviations, sample SD, then SE."
+      method: "SE = s / sqrt(n), with s using the n - 1 divisor."
+      numbers: "Sum = 872, so mean = 145.3333. Sum of squared deviations = 413.3333. Variance = 413.3333/5 = 82.6667. s = 9.0921. SE = 9.0921/sqrt(6) = 3.7118."
+      assumptions: "That these six values are an independent sample from the population of interest."
+      computation: "Divide the sum of squared deviations by n - 1 = 5 (not 6), take the square root, then divide by sqrt(6) (not 6)."
+      changes: "Using the n divisor gives SE = 3.389 (about 9% low). Dividing by n instead of sqrt(n) gives 1.515, low by a factor of 2.449."
+      interviewer: "That you know which divisor belongs where, and that you can do it without software."
+  - id: stats.se.sample-size-for-se
+    format: numeric
+    modes: [check, independent]
+    difficulty: intermediate
+    skills: [stats.sampling, stats.power]
+    lesson: stats-sampling-distributions-se
+    title: How many subjects for a target precision?
+    prompt: |
+      Baseline systolic BP in this population has an SD of about **9.39 mmHg**.
+
+      How many subjects do you need so that the standard error of the mean is **0.50 mmHg** or smaller?
+
+      Give the smallest whole number of subjects.
+    answer: 353
+    tolerance: 1
+    unit: subjects
+    hints:
+      - "Set s/√n = 0.50 and solve for n."
+      - "√n = 9.39 / 0.50 = 18.78."
+      - "Square it, then round *up* — rounding down would leave the SE above target."
+    solution: |
+      $$\frac{9.39}{\sqrt{n}} \le 0.50 \;\Longrightarrow\; \sqrt{n} \ge 18.78 \;\Longrightarrow\; n \ge 352.69$$
+
+      Round up: **353 subjects**.
+
+      Sanity check against the trial: with n = 270 the observed SE was 0.5712 mmHg, which is indeed above 0.50 — consistent with needing more than 270.
+    explanation:
+      objective: "Invert the standard-error formula to find the sample size that achieves a target precision."
+      given: "A population SD of 9.39 mmHg and a target SE of 0.50 mmHg."
+      relevant: "Both numbers; nothing else is needed."
+      calculating: "The smallest integer n with s/sqrt(n) <= 0.50."
+      method: "Solve sqrt(n) >= s / target, then square and round up."
+      numbers: "9.39 / 0.50 = 18.78; 18.78^2 = 352.69; rounding up gives 353."
+      assumptions: "That the SD of 9.39 estimated from this trial applies to the new sample. In a real design you would use a conservative SD or run a sensitivity analysis over plausible values."
+      interpretation: "Precision targets in protocols are usually expressed as a confidence-interval half-width rather than an SE; the arithmetic is the same with a t or z multiplier included."
+      changes: "If the SD were 10% larger (10.33), the required n would rise to 427 — sample size is proportional to the square of the SD, so SD assumptions dominate the calculation."
+      interviewer: "That you round up rather than to nearest, and that you flag the SD assumption as the sensitive input."
+  - id: stats.se.r-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: foundation
+    skills: [stats.sampling, r.dplyr]
+    lesson: stats-sampling-distributions-se
+    title: n, mean, SD and SE by arm, handling missing values correctly
+    minutes: 10
+    prompt: |
+      `adsl` is a data frame with one row per subject and columns `TRT01P`, `ITTFL` and `SBPBL`. **Some `SBPBL` values are missing.**
+
+      Write dplyr code that produces one row per treatment arm with:
+
+      - `n` — the number of subjects with a **non-missing** `SBPBL`
+      - `mean`, `sd` — computed on non-missing values
+      - `se` — the standard error of the mean
+
+      Restrict to the ITT population (`ITTFL == "Y"`).
+
+      The trap: if you divide by the total number of rows instead of the number of non-missing values, your SE is too small.
+    starter: |
+      library(dplyr)
+
+      adsl |>
+        filter(___) |>
+        summarise(
+          # your code
+          .by = TRT01P
+        )
+    hints:
+      - "`sum(!is.na(SBPBL))` counts the non-missing values; `n()` counts all rows in the group."
+      - "`mean()` and `sd()` need `na.rm = TRUE`, otherwise a single NA makes the whole result NA."
+      - "Compute the non-missing count once and reuse it in the denominator of the SE."
+    reference: |
+      library(dplyr)
+
+      adsl |>
+        filter(ITTFL == "Y") |>
+        summarise(
+          n    = sum(!is.na(SBPBL)),
+          mean = mean(SBPBL, na.rm = TRUE),
+          sd   = sd(SBPBL, na.rm = TRUE),
+          se   = sd(SBPBL, na.rm = TRUE) / sqrt(sum(!is.na(SBPBL))),
+          .by  = TRT01P
+        )
+    checks:
+      - pattern: "filter\\s*\\(\\s*ITTFL\\s*==\\s*[\"']Y[\"']"
+        message: "Restricts to the ITT population"
+      - pattern: "sum\\s*\\(\\s*!\\s*is\\.na\\s*\\(\\s*SBPBL\\s*\\)\\s*\\)"
+        message: "Counts non-missing values with sum(!is.na(SBPBL))"
+      - pattern: "na\\.rm\\s*=\\s*TRUE"
+        message: "Passes na.rm = TRUE to mean() and sd()"
+      - pattern: "sqrt\\s*\\("
+        message: "Divides the SD by a square root to form the standard error"
+      - pattern: "\\.by\\s*=\\s*TRT01P|group_by\\s*\\(\\s*TRT01P"
+        message: "Groups by treatment arm"
+    solution: |
+      ```r
+      library(dplyr)
+
+      adsl |>
+        filter(ITTFL == "Y") |>
+        summarise(
+          n    = sum(!is.na(SBPBL)),
+          mean = mean(SBPBL, na.rm = TRUE),
+          sd   = sd(SBPBL, na.rm = TRUE),
+          se   = sd(SBPBL, na.rm = TRUE) / sqrt(sum(!is.na(SBPBL))),
+          .by  = TRT01P
+        )
+      ```
+
+      A tidier version computes the count once:
+
+      ```r
+      adsl |>
+        filter(ITTFL == "Y", !is.na(SBPBL)) |>
+        summarise(n = dplyr::n(), mean = mean(SBPBL), sd = sd(SBPBL),
+                  se = sd(SBPBL) / sqrt(dplyr::n()), .by = TRT01P)
+      ```
+
+      Filtering out the missing values first makes `n()` correct by construction — and makes the denominator visible to a reviewer, which matters more than elegance.
+    explanation:
+      objective: "Produce a by-arm summary whose n, SD and SE are all consistent when values are missing."
+      given: "A subject-level data frame with a treatment arm, a population flag and a partly missing continuous variable."
+      relevant: "The distinction between the number of rows and the number of non-missing values."
+      method: "Filter to the analysis population, then either drop missing values up front or use sum(!is.na(x)) everywhere the count is needed."
+      assumptions: "That the analysis set is defined by ITTFL = 'Y' and that missing values are to be excluded (an observed-case summary), which the SAP should state."
+      computation: "n = sum(!is.na(SBPBL)); sd() and mean() with na.rm = TRUE; se = sd / sqrt(n)."
+      interpretation: "The n printed in the table is the denominator the reader will use, so it must match the values actually summarized."
+      changes: "Using dplyr::n() as the denominator inflates n whenever values are missing and makes the SE too small; the mean and SD would still be right, which is what makes the error hard to spot."
+      interviewer: "That you noticed the missing-value trap without being told, and that you can name the SAS equivalent (PROC MEANS N counts non-missing values automatically)."
+  - id: stats.se.independence-hotspot
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: intermediate
+    skills: [stats.sampling, qc.compare]
+    lesson: stats-sampling-distributions-se
+    title: The standard error is far too small
+    minutes: 8
+    prompt: |
+      This code is meant to summarize **subject-level** Week 12 systolic BP change for the placebo arm. The reviewer says the standard error is roughly three times too small.
+
+      `advs` is the BDS vital-signs dataset: one row per subject **per visit** per parameter.
+
+      Click the line that causes the problem.
+    code: |
+      placebo <- advs |>
+        filter(TRTP == "Placebo",
+               PARAMCD == "SYSBP",
+               ANL01FL == "Y")
+
+      placebo |>
+        summarise(
+          n    = dplyr::n(),
+          mean = mean(CHG, na.rm = TRUE),
+          se   = sd(CHG, na.rm = TRUE) / sqrt(dplyr::n())
+        )
+    answerLines: [2]
+    lineNotes:
+      - line: 2
+        note: "The filter restricts the arm, the parameter and the analysis flag — but never restricts to a single visit. Every subject contributes one row per post-baseline visit, so n counts *records*, not subjects. Adding `AVISITN == 12` (or whichever visit the summary is for) fixes it."
+      - line: 8
+        note: "`dplyr::n()` is correct as written; it is counting the rows it was given. The problem is which rows it was given."
+      - line: 10
+        note: "The SE formula is right. Dividing by the square root of an inflated n is what makes it too small."
+    fixed: |
+      placebo <- advs |>
+        filter(TRTP == "Placebo",
+               PARAMCD == "SYSBP",
+               AVISITN == 12,
+               ANL01FL == "Y")
+
+      placebo |>
+        summarise(
+          n    = dplyr::n(),
+          mean = mean(CHG, na.rm = TRUE),
+          se   = sd(CHG, na.rm = TRUE) / sqrt(dplyr::n())
+        )
+    hints:
+      - "How many rows does one subject contribute to `advs`?"
+      - "What does the summary claim n means, and what does n actually count here?"
+      - "Compare `dplyr::n()` with `n_distinct(USUBJID)` on this filtered data."
+    solution: |
+      Line 2 — the filter never restricts to one visit, so the dataset still has four post-baseline records per subject. With roughly 4 records per subject, $\sqrt{4} = 2$ to $3.4\times$ too many "observations" makes the SE correspondingly too small.
+
+      Two habits prevent this class of bug: (1) always assert the grain before summarizing — `stopifnot(nrow(x) == dplyr::n_distinct(x$USUBJID))`; (2) name the dataset for its grain (`w12_subject`, not `placebo`).
+    explanation:
+      objective: "Find why a standard error came out far too small in a BDS summary."
+      given: "A filter on arm, parameter and analysis flag, followed by a summary that divides by sqrt(n)."
+      relevant: "The grain of the input dataset: one row per subject per visit per parameter."
+      irrelevant: "The arithmetic of the SE formula, which is correct as written."
+      method: "Check the grain before trusting any count. Compare dplyr::n() with n_distinct(USUBJID)."
+      assumptions: "The SE formula assumes independent observations; four visits from one subject are strongly correlated."
+      computation: "With about 4 post-baseline records per subject, the inflated n makes the SE too small by roughly a factor of 2 to 3.4."
+      interpretation: "Every other number in the output (mean, SD) stays approximately right, which is why this bug survives review."
+      changes: "Adding AVISITN == 12 restores the subject-level grain. If you genuinely want all visits, the correct tool is an MMRM that models the within-subject correlation."
+      interviewer: "That your first instinct on any summary is to assert the grain, and that you understand why correlated records are not independent observations."
+  - id: stats.se.qc-mismatch
+    format: numeric
+    modes: [qc, check]
+    difficulty: intermediate
+    skills: [stats.sampling, qc.compare]
+    lesson: stats-sampling-distributions-se
+    title: Reverse-engineering the other programmer's statistic
+    prompt: |
+      The shell asks for **mean (SD)**. Production prints `149.5 (1.03)` for the placebo arm; your QC program prints `149.5 (9.85)`. There are **91** subjects.
+
+      You suspect production used the wrong statistic keyword. Multiply the production value by √91 to test that theory — what do you get, to two decimal places?
+    answer: 9.85
+    tolerance: 0.03
+    hints:
+      - "√91 ≈ 9.539."
+      - "If production printed SE = s/√n, then SE × √n recovers s."
+    solution: |
+      $1.0327 \times \sqrt{91} = 9.85$ — your SD exactly.
+
+      That confirms production requested `STDERR` where the shell asked for `STD`. The finding is written against production, not QC, and the fix is a one-word change in the `PROC MEANS` statistic list.
+    explanation:
+      objective: "Diagnose a systematic discrepancy between a production table and a QC program."
+      given: "Two values for the same cell (1.03 and 9.85) and the arm's sample size (91)."
+      relevant: "The ratio between the two values and the sample size."
+      calculating: "production value x sqrt(n), to test whether the difference is exactly the sqrt(n) factor."
+      method: "When two numbers differ by a regular factor, identify the transformation and name the statistic it corresponds to."
+      numbers: "1.0327 x sqrt(91) = 1.0327 x 9.539 = 9.85, which reproduces the QC SD exactly."
+      interpretation: "Production requested STDERR where the shell asked for STD. The finding is written against production."
+      changes: "A factor of sqrt(n/(n-1)) instead would indicate a population SD (divisor n). A factor of exactly 2 in a p-value indicates one- versus two-sided. A last-decimal-only difference usually indicates rounding before computing."
+      interviewer: "That you diagnose systematically rather than rerunning code hoping the difference disappears."
+  - id: stats.se.repeated-measures
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [stats.sampling, communication.interviewing]
+    lesson: stats-sampling-distributions-se
+    title: Why not just use all the records?
+    prompt: |
+      **Interviewer:** "Our vital-signs dataset has about 3,000 records from 270 subjects. A junior analyst computed the standard error using n = 3,000 and got a very tight interval. What's wrong with that, and what would you do instead?"
+    modelAnswer: |
+      The formula $\mathrm{SE} = s/\sqrt{n}$ assumes independent observations. Four measurements on the same subject are strongly correlated — a subject who runs high at Week 2 runs high at Week 12 — so they carry much less information than four measurements on four different subjects. Using n = 3,000 treats them as if they were independent and understates the uncertainty; with about 11 records per subject here the SE would be understated by roughly a factor of 3.
+
+      What I'd do depends on the question. If the estimand is the Week 12 effect, I'd reduce to one record per subject at Week 12 and compute the SE with n = number of subjects — that is what the primary ANCOVA does. If I genuinely want to use all the visits, the right tool is a model that carries the within-subject correlation: an MMRM with an unstructured covariance by visit, which uses every observed record but estimates the correlation between visits rather than assuming it away. That also handles dropout under MAR, which a complete-case Week 12 analysis does not.
+
+      Either way, before summarizing anything I check the grain: the number of rows should equal the number of distinct subjects, and I assert that in code rather than trusting the filter.
+    rubric:
+      - Names the independence assumption as the thing being violated
+      - Explains *why* repeated measures are correlated, in concrete terms
+      - Quantifies or at least signs the direction of the error (SE too small)
+      - Gives a correct alternative matched to the estimand (one record per subject, or MMRM)
+      - Mentions verifying the grain of the dataset before summarizing
+    redFlags:
+      - "Says only 'you should use a mixed model' without explaining what goes wrong"
+      - "Claims the estimate of the mean is biased (it is the standard error that is wrong, not usually the mean)"
+      - "Suggests simply averaging each subject's visits without asking what the estimand is"
+
+  - id: stats.se.figure-footnote
+    format: mcq
+    modes: [qc, check]
+    difficulty: intermediate
+    skills: [stats.sampling, communication.visualization, tlf.figures]
+    lesson: stats-sampling-distributions-se
+    title: Unlabelled error bars in a figure
+    prompt: |
+      A draft figure shows mean systolic BP change by visit for three arms, with error bars. The footnote reads only: *"Error bars shown for each visit."*
+
+      You are the QC reviewer. What is the finding?
+    choices:
+      - text: "The footnote must state what the error bars represent (± 1 SD, ± 1 SE, or a 95% CI) — an unlabelled bar cannot be interpreted"
+        correct: true
+        feedback: "Correct. The same data produce bars of very different width depending on the choice, and the reader has no way to tell which one is drawn. This is a genuine finding, not a style preference."
+      - text: "Error bars should never appear on a mean-over-time figure"
+        feedback: "They are standard and useful; the issue is that they are undefined."
+      - text: "The bars should be SD, because SD is what demographics tables use"
+        feedback: "Either can be appropriate. What the shell and the SAP specify is what governs — and whatever is drawn must be stated."
+      - text: "There is no finding; the reader can infer the definition from the width"
+        feedback: "They cannot. Without n and s, an SD bar and an SE bar are indistinguishable on the page."
+    solution: |
+      The finding is the **missing definition**. Raise it against the figure footnote and against the shell if the shell did not specify. In this trial the Week 12 SDs are around 11.5 mmHg and the SEs around 1.3 mmHg — a factor of nine in the height of every bar, which completely changes the visual impression of separation between arms.
+
+    explanation:
+      objective: "Judge whether an undefined graphical element is a genuine QC finding."
+      given: "A mean-over-time figure with error bars and a footnote that does not define them."
+      relevant: "That SD bars and SE bars differ by a factor of sqrt(n) and are visually indistinguishable without a definition."
+      method: "Ask whether a reader could reconstruct what is drawn from the information on the page. Here they cannot."
+      numbers: "Week 12 SDs are about 11.5 mmHg and SEs about 1.3 mmHg — a nine-fold difference in bar height."
+      interpretation: "The choice materially changes whether the arms look separated, so the definition is not cosmetic."
+      changes: "Either bar type is acceptable if the SAP or shell specifies it and the footnote states it. A 95% CI is often clearer still, because it carries its own interpretation."
+      interviewer: "That you treat under-specified outputs as findings, and that you know the magnitude of the difference rather than just the principle."

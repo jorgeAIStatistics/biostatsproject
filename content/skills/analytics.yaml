@@ -1,0 +1,59 @@
+domain: analytics
+title: Industrial Analytics
+description: Applied pharma/biotech analytics outside the classic biostatistics department — process, instrument and quality data.
+skills:
+  - id: analytics.instrument-data
+    name: Instrument and sensor data wrangling
+    description: Parsing heterogeneous instrument exports, units, timestamps, batch identifiers and metadata.
+    weight: 3
+    tracks: [analytics]
+  - id: analytics.eda
+    name: Exploratory analysis of process data
+    description: Distributions, trends by batch, outliers, relationships among process parameters.
+    weight: 2
+    tracks: [analytics]
+  - id: analytics.multicollinearity
+    name: Correlation and multicollinearity
+    description: Correlated predictors, VIF, unstable coefficients, what multicollinearity does to inference vs prediction.
+    weight: 2
+    tracks: [analytics]
+  - id: analytics.standardization
+    name: Scaling and standardization
+    description: Centering, scaling, SNV and why PCA/regularization depend on scale.
+    weight: 2
+    tracks: [analytics]
+  - id: analytics.pca
+    name: Principal component analysis
+    description: Geometry, eigen-decomposition/SVD, scores, loadings, explained variance, interpretation limits.
+    weight: 3
+    tracks: [analytics, biostatistician]
+  - id: analytics.regression
+    name: Regression for process outcomes
+    description: Predicting potency/yield from process data, PCR/PLS concepts, interpreting coefficients responsibly.
+    weight: 3
+    tracks: [analytics]
+  - id: analytics.regularization
+    name: Regularization
+    description: Ridge and lasso concepts, shrinkage, choosing penalties by cross-validation.
+    weight: 2
+    tracks: [analytics]
+  - id: analytics.validation
+    name: Train/test and cross-validation
+    description: Holdout, k-fold, grouped CV by batch, choosing metrics, honest performance estimates.
+    weight: 3
+    tracks: [analytics]
+  - id: analytics.leakage
+    name: Data leakage
+    description: Target leakage, preprocessing leakage, repeated-measure leakage, look-ahead bias.
+    weight: 3
+    tracks: [analytics]
+  - id: analytics.spc
+    name: Statistical process control
+    description: Control charts, capability indices, run rules, monitoring vs improvement.
+    weight: 2
+    tracks: [analytics]
+  - id: analytics.goals
+    name: Prediction vs inference
+    description: Distinguishing predictive modeling goals from causal/inferential questions.
+    weight: 2
+    tracks: [analytics, biostatistician]

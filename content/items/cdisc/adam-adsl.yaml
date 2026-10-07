@@ -1,0 +1,620 @@
+items:
+  - id: adam.adsl.trt-pairing
+    format: mapping
+    modes: [check, speed]
+    difficulty: intermediate
+    skills: [adam.adsl, trials.populations, tlf.denominators]
+    lesson: adam-adsl
+    title: Which treatment variable goes with which population
+    prompt: |
+      Pair each analysis with the treatment variable its columns must use.
+    sourceLabel: Analysis
+    targetLabel: Treatment variable
+    targets: ["TRT01P (planned)", "TRT01A (actual)", "Neither — no treatment columns"]
+    pairs:
+      - source: "Table 14.1.2, demographics, intent-to-treat population"
+        target: "TRT01P (planned)"
+        note: "ITT means analyzed as randomized, so the columns are planned treatment."
+      - source: "Table 14.3.1.1, overview of treatment-emergent adverse events, safety population"
+        target: "TRT01A (actual)"
+        note: "Safety is conventionally evaluated by the treatment actually received."
+      - source: "Table 14.2.1, progression-free survival, intent-to-treat population"
+        target: "TRT01P (planned)"
+        note: "The primary efficacy analysis follows the intention-to-treat principle."
+      - source: "Table 14.3.4.1, laboratory values and change from baseline, safety population"
+        target: "TRT01A (actual)"
+        note: "Laboratory safety summaries are safety-population analyses."
+      - source: "Table 14.1.1, subject disposition including screen failures"
+        target: "Neither — no treatment columns"
+        note: "Screening counts come from SDTM DM and DS; screen failures were never randomized and have no treatment at all."
+    hints:
+      - "Efficacy follows the intention-to-treat principle; safety follows what the subject was actually exposed to."
+      - "One of these five is not an ADSL analysis at all."
+    solution: |
+      **Efficacy by planned, safety by actual** — applied without exception.
+
+      On CBX417-301 the two differ for three subjects: two randomized to placebo received at least one
+      CBX-417 kit, and one randomized to CBX-417 received only placebo kits. So the efficacy columns are
+      210 and 210 while the safety columns are 209 and 207.
+
+      **The disposition table is the odd one out.** It reports 468 screened and 48 screen failures, and
+      neither number is in ADSL — ADSL contains exactly the 420 randomized subjects. Those counts come
+      from SDTM `DM` and `DS`, and the ADRG says so, because a reviewer counting ADSL rows would
+      otherwise conclude 48 subjects are missing.
+    explanation:
+      objective: "Pair each table's population with the right treatment variable."
+      relevant: "Whether the analysis is efficacy or safety, and whether its subjects were randomized at all."
+      method: "ICH E9 Section 5.2: efficacy analyzed as randomized; safety conventionally by treatment received."
+      numbers: "ITT 210/210 by TRT01P; safety 209/207 by TRT01A; 3 subjects differ."
+      interpretation: "A subject appearing in different columns in the safety and efficacy sections is correct, and needs one sentence in the ADRG."
+      changes: "Pairing SAFFL with TRT01P still totals 416 and puts three subjects in the wrong column with no visible symptom."
+      interviewer: "That you name the count of discordant subjects rather than only the rule."
+
+  - id: adam.adsl.flag-values
+    format: mcq
+    modes: [check, qc, debug]
+    difficulty: intermediate
+    skills: [adam.adsl, adam.specs, qc.discrepancy]
+    lesson: adam-adsl
+    title: The null population flag
+    prompt: |
+      A QC programmer finds that `SAFFL` is null for two of the 420 ADSL rows. The production programmer
+      says those two subjects were never dosed, so null is equivalent to `"N"`.
+
+      Why is that not acceptable?
+    choices:
+      - text: "Because two tables written the two obvious ways — `SAFFL = \"Y\"` and `SAFFL ne \"N\"` — then disagree about the same population, and neither program is visibly wrong."
+        correct: true
+        feedback: "Correct. Null is not a value; it is the absence of a decision. `ne \"N\"` includes those rows and `= \"Y\"` excludes them, so the same population gets two different counts in the same CSR."
+      - text: "Because ADaMIG v1.3 requires all ADSL variables to be non-null."
+        feedback: "Many ADSL variables are legitimately null — `TRT01A` for never-dosed subjects, `DCTREAS` for ongoing subjects. The rule is specific to subject-level population flags."
+      - text: "Because null would make the record fail define.xml validation."
+        feedback: "define.xml describes the variable; it does not enforce non-null values."
+      - text: "Because SAS treats null and \"N\" identically in a WHERE clause, so the filter would be ambiguous."
+        feedback: "SAS treats them differently, which is exactly the problem — a null string is not equal to \"N\"."
+    explanation:
+      objective: "Explain why subject-level flags must be Y or N rather than Y or null."
+      relevant: "That a null flag means 'no decision was recorded', not 'no'."
+      method: "Write the two natural filters and see whether they agree."
+      assumptions: "ADaMIG v1.3 specifies Y/N for subject-level population flags and Y/null for record-level analysis flags."
+      interpretation: "The asymmetry is deliberate: a record-level flag answers 'is this THE record', which has no meaningful 'no'."
+      changes: "If the two subjects really are out of the safety population, setting SAFFL = 'N' makes both filters agree."
+      interviewer: "That you can say why record-level flags follow the opposite convention."
+
+  - id: adam.adsl.two-dispositions
+    format: numeric
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [adam.adsl, trials.lifecycle]
+    lesson: adam-adsl
+    datasets: [oncology/adam/adsl]
+    title: Still in the study, off treatment
+    prompt: |
+      From CBX417-301's ADSL:
+
+      | Variable | Value | n |
+      |---|---|---:|
+      | `EOTSTT` | DISCONTINUED | 393 |
+      | `EOTSTT` | ONGOING | 27 |
+      | `EOSSTT` | DISCONTINUED | 367 |
+      | `EOSSTT` | ONGOING | 53 |
+
+      How many subjects had stopped study treatment but were still in the study at the data cutoff?
+    answer: 26
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "Everyone still on treatment is necessarily still in the study."
+      - "53 subjects were still in the study. How many of those were still taking drug?"
+      - "53 − 27."
+    solution: |
+      **26.** All 27 subjects still on treatment are by definition still in the study, so of the 53
+      subjects with `EOSSTT = "ONGOING"`, `53 − 27 = 26` had stopped treatment and were in follow-up.
+
+      **Why an oncology trial has this gap at all.** A subject who progresses stops study drug — that is
+      `EOTSTT = "DISCONTINUED"`, `DCTREAS = "PROGRESSIVE DISEASE"`, and it applies to 278 subjects here.
+      They then enter survival follow-up and keep contributing to the overall survival endpoint. Leaving
+      the study requires something else entirely, and the reasons are short:
+
+      | `DCSREAS` | n |
+      |---|---:|
+      | DEATH | 356 |
+      | WITHDRAWAL BY SUBJECT | 9 |
+      | LOST TO FOLLOW-UP | 2 |
+      | (ongoing) | 53 |
+
+      **Progression is not a reason to leave a study with a survival endpoint.** A programmer who
+      summarises "discontinuation" without saying of what — treatment or study — produces a table nobody
+      can interpret, and putting `PROGRESSIVE DISEASE` in `DCSREAS` would be a category error.
+    explanation:
+      objective: "Distinguish treatment disposition from study disposition using the two status variables."
+      given: "Counts of EOTSTT and EOSSTT."
+      relevant: "That being on treatment implies being in the study, so the ongoing counts nest."
+      calculating: "Subjects in study minus subjects on treatment."
+      numbers: "53 ongoing in study, 27 ongoing on treatment, difference 26."
+      assumptions: "No subject is on treatment while out of the study; the nesting holds by construction."
+      interpretation: "26 subjects were in survival follow-up at the cutoff — off drug, still contributing to OS."
+      changes: "In a trial whose only endpoint is measured on treatment, the two dispositions would nearly coincide and one pair of variables would look sufficient."
+      interviewer: "That you explain why an OS endpoint forces the two to differ, not just that they do."
+
+  - id: adam.adsl.strat-source
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: advanced
+    skills: [adam.adsl, trials.randomization, stats.cox]
+    lesson: adam-adsl
+    title: STRAT1R disagrees with ECOGBL for 16 subjects
+    prompt: |
+      In CBX417-301's ADSL, `STRAT1R` (the ECOG stratum recorded in the IxRS at randomization) disagrees
+      with `ECOGBL` (baseline ECOG from the CRF) for **16 of 420 subjects**.
+
+      The primary analysis is a stratified log-rank test. Which variable should it stratify on?
+    choices:
+      - text: "`STRAT1R` — the analysis must reflect the strata randomization actually used, because that is the partition within which allocation was balanced."
+        correct: true
+        feedback: "Correct. The stratified test's correspondence with the randomization is the reason to stratify at all; analysing on a different partition breaks it. The SAP says so and the ADRG warns the reviewer that the two variables disagree by design."
+      - text: "`ECOGBL` — the CRF value is the clinically correct performance status, so it gives the less biased estimate."
+        feedback: "It may be the clinically correct value, and a sensitivity analysis using it is reported separately. But the primary analysis has to respect how allocation was performed."
+      - text: "Whichever gives the narrower confidence interval."
+        feedback: "Selecting an analysis on its result is exactly what pre-specification exists to prevent."
+      - text: "Neither — with only 16 discordant subjects the analysis should be unstratified."
+        feedback: "Stratified randomization was used, so ICH E9 Section 5.7 points toward accounting for the stratification factors. Discordance is a reason to document, not to drop the stratification."
+    explanation:
+      objective: "Choose between an as-randomized and a CRF-derived stratification variable."
+      given: "16 of 420 subjects with discordant stratum values and a stratified primary analysis."
+      relevant: "That randomization balanced the arms within the IxRS strata."
+      irrelevant: "Which value is clinically more accurate — that question drives the sensitivity analysis, not the primary."
+      method: "The stratified test derives its validity from matching the allocation scheme."
+      numbers: "16 discordant subjects: 11 with STRAT1R = ECOG 0 and ECOGBL 1, 1 with ECOGBL 2, and 4 with STRAT1R = ECOG 1 and ECOGBL 0."
+      assumptions: "ICH E9 Section 5.7 points toward accounting for randomization factors but does not resolve the mis-stratification case, so the SAP must."
+      interpretation: "A reviewer comparing the two variables finds the discordance; the ADRG's job is to have said so first."
+      changes: "The CRF-based analysis is run as a pre-specified sensitivity analysis, so both answers exist and neither was chosen after seeing the data."
+      interviewer: "That you mention the sensitivity analysis and the ADRG sentence, not just the choice."
+
+  - id: adam.adsl.denominators
+    format: numeric
+    modes: [guided, independent]
+    difficulty: foundation
+    skills: [adam.adsl, trials.populations, tlf.denominators]
+    lesson: adam-adsl
+    datasets: [oncology/adam/adsl]
+    title: The per-protocol denominator
+    prompt: |
+      CBX417-301's ADSL has 420 rows. `ITTFL = "Y"` on 420, `SAFFL = "Y"` on 416, `EFFFL = "Y"` on 411
+      and `PPROTFL = "Y"` on 388.
+
+      A supportive per-protocol analysis of progression-free survival is run. How many subjects does it
+      include?
+    answer: 388
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "Each population flag is the denominator for the analyses the SAP assigns to it."
+      - "Per-protocol means PPROTFL = 'Y'."
+    solution: |
+      **388.** `PPROTFL = "Y"` — ITT subjects with no major protocol deviation affecting efficacy.
+
+      The four populations nest on this study but they do not have to in general, and the reason each one
+      exists is different:
+
+      | Flag | n | Excludes | Because |
+      |---|---:|---|---|
+      | `ITTFL` | 420 | nobody | Everyone randomized, analyzed as randomized |
+      | `SAFFL` | 416 | 4 never dosed | Safety is about exposure |
+      | `EFFFL` | 411 | 9 without evaluable disease | Response cannot be assessed without a baseline target lesion |
+      | `PPROTFL` | 388 | 32 with a major deviation | Estimates the effect under the protocol as written |
+
+      **`PPROTFL` is the one with a process requirement attached.** SAP Section 6.2 requires major
+      protocol deviations to be classified **before database lock and while still blinded**. Assigning
+      per-protocol membership after seeing outcomes means the exclusion could be influenced by the
+      result, and that undermines the analysis rather than one table.
+
+      Per-protocol is always **supportive** here, never primary. Excluding subjects on the basis of
+      post-randomization behaviour breaks the balance randomization created, so a per-protocol result
+      that disagrees with ITT is a signal to investigate, not a better answer.
+    explanation:
+      objective: "Read the right denominator off the population flags."
+      given: "Four population flag counts from ADSL."
+      relevant: "That per-protocol corresponds to PPROTFL."
+      calculating: "A count of PPROTFL = 'Y'."
+      numbers: "388 of 420; 32 subjects have a major protocol deviation affecting efficacy."
+      assumptions: "Deviation classification happened blinded and before lock, as the SAP requires."
+      interpretation: "A supportive analysis, not a primary one — post-randomization exclusion breaks randomized balance."
+      changes: "If per-protocol and ITT disagreed materially, that is a finding to explain rather than a result to report preferentially."
+      interviewer: "That you mention the blinded, pre-lock classification requirement."
+
+  - id: adam.adsl.invariants-code
+    format: code
+    language: r
+    modes: [guided, independent, qc]
+    difficulty: intermediate
+    skills: [adam.adsl, qc.mindset, r.functions]
+    lesson: adam-adsl
+    datasets: [oncology/adam/adsl]
+    title: The ADSL invariants worth failing a build over
+    minutes: 12
+    prompt: |
+      Write `check_adsl(adsl)` that asserts the structural invariants of a subject-level dataset and
+      returns `invisible(TRUE)` when they all hold.
+
+      Assert:
+
+      1. One record per subject.
+      2. `ITTFL` and `SAFFL` are populated on every row and take only `"Y"` or `"N"`.
+      3. Every `SAFFL = "Y"` subject has a non-missing `TRT01A`.
+      4. Every `SAFFL = "N"` subject has a missing `TRTDURD`.
+      5. `TRTDURD` equals `TRTEDT − TRTSDT + 1` wherever it is populated.
+      6. No `LSTALVDT` falls after `DCUTDT`.
+    starter: |
+      check_adsl <- function(adsl) {
+        stopifnot(
+          nrow(adsl) == ___,
+          ___
+        )
+        invisible(TRUE)
+      }
+    reference: |
+      check_adsl <- function(adsl) {
+        stopifnot(
+          nrow(adsl) == dplyr::n_distinct(adsl$USUBJID),
+
+          all(adsl$ITTFL %in% c("Y", "N")),
+          all(adsl$SAFFL %in% c("Y", "N")),
+
+          all(!is.na(adsl$TRT01A[adsl$SAFFL == "Y"])),
+          all(is.na(adsl$TRTDURD[adsl$SAFFL == "N"])),
+
+          all(adsl$TRTDURD ==
+                as.integer(as.Date(adsl$TRTEDT) - as.Date(adsl$TRTSDT)) + 1L,
+              na.rm = TRUE),
+
+          all(as.Date(adsl$LSTALVDT) <= as.Date(adsl$DCUTDT), na.rm = TRUE)
+        )
+        invisible(TRUE)
+      }
+    hints:
+      - "`%in% c(\"Y\", \"N\")` is `FALSE` for `NA`, so one condition covers both 'populated' and 'valid value'."
+      - "Subset before testing: `adsl$TRT01A[adsl$SAFFL == \"Y\"]`."
+      - "`TRTDURD` is null for never-dosed subjects, so the duration arithmetic needs `na.rm = TRUE`."
+      - "There is no day 0: the duration is a difference plus one."
+    checks:
+      - pattern: "n_distinct\\s*\\(\\s*adsl\\$USUBJID\\s*\\)"
+        message: "Checks one record per subject"
+      - pattern: "ITTFL\\s*%in%\\s*c\\s*\\(\\s*[\"']Y[\"']\\s*,\\s*[\"']N[\"']\\s*\\)"
+        message: "Requires ITTFL to be Y or N — never null"
+      - pattern: "TRT01A\\s*\\[\\s*adsl\\$SAFFL\\s*==\\s*[\"']Y[\"']\\s*\\]"
+        message: "Requires an actual treatment for every dosed subject"
+      - pattern: "TRTDURD\\s*\\[\\s*adsl\\$SAFFL\\s*==\\s*[\"']N[\"']\\s*\\]"
+        message: "Requires no treatment duration for a never-dosed subject"
+      - pattern: "\\+\\s*1"
+        message: "Uses the no-day-zero convention in the duration arithmetic"
+      - pattern: "LSTALVDT[\\s\\S]{0,60}DCUTDT"
+        message: "Checks that no last-known-alive date follows the data cutoff"
+    expectedOutput: |
+      ```text
+      > check_adsl(adsl)
+      > nrow(adsl); sum(adsl$SAFFL == "Y"); sum(is.na(adsl$TRT01A))
+      [1] 420
+      [1] 416
+      [1] 4
+      ```
+    solution: |
+      **Every one of these has a failure mode with no symptom in the output.**
+
+      | Invariant | What its failure means |
+      |---|---|
+      | One record per subject | A duplicate silently doubles a subject's weight in every denominator |
+      | Flags `Y`/`N` only | `= "Y"` and `ne "N"` diverge, so two tables disagree about one population |
+      | Dosed ⇒ `TRT01A` | The kit-list join failed; the subject vanishes from safety columns |
+      | Never dosed ⇒ no `TRTDURD` | The exposure derivation ran on a subject with no exposure |
+      | `TRTDURD` arithmetic | An off-by-one from forgetting there is no day 0 |
+      | `LSTALVDT ≤ DCUTDT` | Post-cutoff data leaked in; the OS censoring dates are wrong |
+
+      **`%in% c("Y", "N")` is doing double duty.** In R, `NA %in% c("Y","N")` is `FALSE`, so this single
+      condition rejects both a null flag and an unexpected value such as `"y"` or `1`. Writing
+      `!is.na(x) & x %in% c("Y","N")` is the same test spelled longer.
+
+      **The `+ 1L` is the no-day-zero convention.** A subject dosed on one day only has
+      `TRTDURD = 1`, not 0. Verified on CBX417-301: the identity holds on all 416 dosed rows.
+
+      **`na.rm = TRUE` on the last two.** `TRTDURD`, `TRTSDT` and `TRTEDT` are all null for the four
+      never-dosed subjects, and `LSTALVDT` can be null; without `na.rm` the assertion evaluates to `NA`
+      and `stopifnot` fails on a dataset that is perfectly correct.
+    explanation:
+      objective: "Turn the structural properties of ADSL into assertions that fail a build."
+      given: "Six invariants stated in words."
+      relevant: "That each one has a silent failure mode downstream."
+      method: "stopifnot with one condition per invariant, subsetting rather than branching."
+      numbers: "420 rows, 416 with SAFFL = 'Y', 4 with a null TRT01A, and the duration identity true on all 416."
+      assumptions: "Never-dosed subjects legitimately have null treatment dates, so the date checks need na.rm."
+      computation: "NA %in% c('Y','N') is FALSE in R, so the membership test also rejects nulls."
+      interpretation: "None of these failures produces a visibly broken table, which is why they have to be asserted rather than reviewed."
+      changes: "Dropping na.rm turns every assertion into NA on a dataset with legitimate nulls and fails a correct build."
+      interviewer: "That you can name the downstream consequence of each invariant failing."
+
+  - id: adam.adsl.trtedt
+    format: mcq
+    modes: [check, debug, qc]
+    difficulty: advanced
+    skills: [adam.adsl, trials.safety, adam.occds]
+    lesson: adam-adsl
+    title: TRTEDT for a subject still on treatment
+    prompt: |
+      27 of CBX417-301's 420 subjects were still receiving study drug at the data cutoff
+      (`EOTSTT = "ONGOING"`). The SAP sets their `TRTEDT` to the last dose date on or before the cutoff
+      rather than leaving it null.
+
+      What breaks if `TRTEDT` is left null for those subjects, and what does the rule cost?
+    choices:
+      - text: "The treatment-emergent window `TRTSDT ≤ ASTDT ≤ TRTEDT + 30` becomes undefined, so every adverse event for those 27 subjects drops out of the safety tables. The cost is that exposure is slightly understated for ongoing subjects — the conservative direction."
+        correct: true
+        feedback: "Correct. A null upper bound makes the comparison null, not TRUE, so the records are silently excluded rather than included. Understating exposure cannot invent treatment-emergent events that were not observed."
+      - text: "Nothing breaks — a null `TRTEDT` is treated as an open-ended window, so all events are treatment-emergent."
+        feedback: "A comparison with a null value evaluates to missing, not to TRUE. The events would be excluded, not included."
+      - text: "`TRTDURD` becomes negative for those subjects."
+        feedback: "`TRTDURD` would also be null, not negative. The problem is exclusion, not a wrong number."
+      - text: "The subjects would be dropped from `SAFFL`, changing the denominator to 389."
+        feedback: "`SAFFL` depends on having received at least one dose, which these subjects did. The denominator is unaffected; only their events disappear."
+    explanation:
+      objective: "Reason about the downstream effect of a null date on a window comparison."
+      given: "27 subjects on treatment at the cutoff and the treatment-emergent window definition."
+      relevant: "That a comparison against a null bound is missing, and a missing flag is not Y."
+      method: "Trace the null through the TRTEMFL derivation to the table denominator and numerator."
+      numbers: "27 subjects; their events would vanish from the numerator while remaining in the 416-subject denominator."
+      assumptions: "TRTEDT is the last dose on or before the cutoff for ongoing subjects, per the SAP."
+      interpretation: "The rule makes the window computable and biases exposure downward, which is the safe direction for a safety analysis."
+      changes: "TRTEDT is therefore not a discontinuation date — EOTSTT is the variable that says whether the subject stopped."
+      interviewer: "That you identify the direction of the resulting bias, not just that something breaks."
+
+  - id: adam.adsl.classify-vars
+    format: classify
+    modes: [speed, guided]
+    difficulty: foundation
+    skills: [adam.adsl, adam.specs]
+    lesson: adam-adsl
+    title: What is this ADSL variable for?
+    minutes: 5
+    prompt: |
+      Sort each ADSL variable by the job it does in the analysis.
+    categories: ["Assigns the treatment column", "Defines a denominator", "Bounds a time window", "Describes the subject"]
+    entries:
+      - text: "`TRT01A`"
+        category: "Assigns the treatment column"
+        note: "Safety tables group on it. Null for the 4 never-dosed subjects."
+      - text: "`SAFFL`"
+        category: "Defines a denominator"
+        note: "416 subjects. Paired with `TRT01A`."
+      - text: "`TRTEDT`"
+        category: "Bounds a time window"
+        note: "The treatment-emergent window ends at `TRTEDT + 30`; `ONTRTFL` uses it too."
+      - text: "`BMIBL`"
+        category: "Describes the subject"
+        note: "A baseline covariate for Table 14.1.2; not a filter and not a window."
+      - text: "`ITTFL`"
+        category: "Defines a denominator"
+        note: "420 subjects. Paired with `TRT01P`."
+      - text: "`DCUTDT`"
+        category: "Bounds a time window"
+        note: "Nothing after 2025-03-31 enters an analysis dataset. It also caps `LSTALVDT` and imputed end dates."
+      - text: "`TRT01P`"
+        category: "Assigns the treatment column"
+        note: "Efficacy tables group on it."
+      - text: "`STRAT1R`"
+        category: "Describes the subject"
+        note: "A model term in the stratified log-rank and Cox — not a denominator and not a window."
+      - text: "`TRTSDT`"
+        category: "Bounds a time window"
+        note: "The origin for `ADY` and the lower bound of the treatment-emergent window."
+      - text: "`PPROTFL`"
+        category: "Defines a denominator"
+        note: "388 subjects, for supportive analyses only."
+    explanation:
+      objective: "Classify ADSL variables by their operational role rather than by their content."
+      method: "Ask where the variable appears in a table program: the GROUP BY, the WHERE, a date comparison, or a summary row."
+      relevant: "That denominators and treatment columns come in pairs."
+      interpretation: "Four jobs cover almost the whole dataset, which is why ADSL is copied into every other analysis dataset."
+      changes: "STRAT1R looks like a covariate and is used like one, but its value came from the IxRS rather than the CRF."
+
+  - id: adam.adsl.wrong-column
+    format: diff
+    modes: [debug, qc, boss]
+    difficulty: advanced
+    skills: [adam.adsl, tlf.denominators, qc.discrepancy]
+    lesson: adam-adsl
+    title: Two AE overview tables that differ by one subject
+    minutes: 12
+    prompt: |
+      Production and QC both produce the treatment-emergent adverse event overview on the safety
+      population. The totals match. Two cells do not.
+
+      Neither program errors and neither log has a warning. What is the root cause?
+    left:
+      title: "Production — TEAE overview, safety population"
+      columns: ["Row", "CBX-417 + Docetaxel", "Placebo + Docetaxel"]
+      rows:
+        - ["N", 209, 207]
+        - ["Subjects with any TEAE", "209 (100.0%)", "205 (99.0%)"]
+        - ["Subjects with grade >=3 TEAE", "152 (72.7%)", "145 (70.0%)"]
+      footnote: "Denominators and numerators both taken from ADSL.TRT01A."
+    right:
+      title: "QC — TEAE overview, safety population"
+      columns: ["Row", "CBX-417 + Docetaxel", "Placebo + Docetaxel"]
+      rows:
+        - ["N", 208, 208]
+        - ["Subjects with any TEAE", "208 (100.0%)", "206 (99.0%)"]
+        - ["Subjects with grade >=3 TEAE", "151 (72.6%)", "146 (70.2%)"]
+      footnote: "Denominators and numerators both taken from ADSL.TRT01P, restricted to SAFFL = 'Y'."
+    leftCode: |
+      proc sql;
+        select trt01a, count(*) as n
+        from   adam.adsl where saffl = 'Y' group by trt01a;
+      quit;
+    rightCode: |
+      proc sql;
+        select trt01p, count(*) as n
+        from   adam.adsl where saffl = 'Y' group by trt01p;
+      quit;
+    codeLanguage: sas
+    choices:
+      - text: "QC grouped the safety population by **planned** treatment. Three subjects with a dispensing error move columns: two randomized to placebo who received CBX-417, and one randomized to CBX-417 who received only placebo."
+        correct: true
+        feedback: "Correct — and the net movement is 1, because the two crossovers partly cancel. 209 + 207 and 208 + 208 both total 416, which is why nothing looks obviously wrong."
+      - text: "QC used the ITT population instead of the safety population."
+        feedback: "Both restrict to `SAFFL = 'Y'` and both total 416. The ITT population would total 420."
+      - text: "Production double-counted subjects with more than one TEAE."
+        feedback: "The numerators in both tables are below their denominators and the percentages are consistent. Double counting would show as a percentage above 100."
+      - text: "The two programs used different treatment-emergent windows."
+        feedback: "That would move numerators without moving the denominators. Here the denominators differ, which points at the grouping variable."
+      - text: "One program excluded the four never-dosed subjects and the other did not."
+        feedback: "Both total 416, so both excluded them. 420 would be the giveaway for that error."
+    hints:
+      - "Both tables total 416. What does that rule out?"
+      - "Compare the denominators: 209/207 against 208/208. Net movement of one subject."
+      - "Read the two footnotes."
+    solution: |
+      **QC paired `SAFFL` with `TRT01P`.** The safety population is right; the column assignment is not.
+
+      On CBX417-301 three subjects were affected by dispensing errors:
+
+      | `TRT01P` | `TRT01A` | n |
+      |---|---|---:|
+      | Placebo + Docetaxel | CBX-417 + Docetaxel | 2 |
+      | CBX-417 + Docetaxel | Placebo + Docetaxel | 1 |
+
+      Grouping by actual treatment gives `207 + 2 = 209` and `206 + 1 = 207`. Grouping by planned gives
+      208 and 208. **The two crossovers partly cancel, so the net movement is one subject in each
+      column** — small enough to look like a rounding artefact and large enough to be wrong.
+
+      **Why this is dangerous rather than merely wrong.** Both totals are 416. Both sets of percentages
+      are internally consistent. Neither program errors. The discrepancy shows up only as a one-subject
+      difference that a tired reviewer might attribute to a filter subtlety. And the direction matters
+      clinically: a CBX-417 adverse event has been attributed to the placebo column.
+
+      **The fix is a convention, not a check.** Safety with `TRT01A`, efficacy with `TRT01P`, every time.
+      The QC step is to confirm which treatment variable each table program grouped on — which means the
+      table specification has to say.
+    explanation:
+      objective: "Locate a denominator discrepancy that preserves the total."
+      given: "Two tables on the same population with denominators 209/207 and 208/208."
+      relevant: "That both total 416, so the population is the same and only the grouping differs."
+      irrelevant: "The numerators, which follow the denominators here."
+      method: "When a total is preserved but its parts move, the grouping variable changed, not the filter."
+      numbers: "2 subjects randomized to placebo received CBX-417; 1 randomized to CBX-417 received only placebo; net movement 1."
+      assumptions: "The safety population is defined by SAFFL and is identical in both programs."
+      interpretation: "A drug-related adverse event has been counted in the placebo column, which is the direction the SAP's actual-treatment rule exists to prevent."
+      changes: "Had all three crossovers gone the same way, the difference would have been 3 and far more visible."
+      interviewer: "That you use the preserved total as the diagnostic rather than guessing at the population."
+
+  - id: adam.adsl.new-flag
+    format: open
+    modes: [independent, interview]
+    difficulty: advanced
+    skills: [adam.adsl, trials.populations, adam.specs]
+    lesson: adam-adsl
+    title: The statistician wants a new population
+    prompt: |
+      **Interviewer:** "Two weeks before database lock, the study statistician asks you to add a
+      population flag for 'subjects with PD-L1 TPS ≥ 50%' so the team can run the efficacy analyses in
+      that group. What do you do?"
+    modelAnswer: |
+      I'd separate two questions that sound like one: whether the variable is easy to add, and whether
+      adding it as a population flag is the right thing to do.
+
+      **The variable is trivial.** `PDL1CAT` is already in ADSL, so a flag is one line. That is not the
+      issue.
+
+      **The issue is what a population flag means.** `ITTFL`, `SAFFL`, `EFFFL` and `PPROTFL` are analysis
+      populations defined in the protocol and the SAP, and they carry the implication that an analysis
+      run on them was pre-specified. Creating `PDL1FL` two weeks before lock and running the primary
+      efficacy analysis on it produces a result that looks pre-specified and is not. If the team wants
+      that group examined, it is a **subgroup analysis**, not a population — and `PDL1CAT` already
+      supports that as a `BY` variable without any new flag.
+
+      So my first question is what the output is going to be. A forest plot of the hazard ratio by PD-L1
+      category, alongside the other pre-specified subgroups? That already works. A separate efficacy
+      table presented as a co-primary result? That needs an SAP amendment, dated, before lock, with the
+      multiplicity implications considered — and if the team is not willing to write that down, that
+      tells us what kind of analysis it actually is.
+
+      **Second, what it costs mechanically.** Every analysis dataset copies subject-level variables from
+      ADSL, so adding a variable means rebuilding ADSL and then ADAE, ADLB, ADVS, ADEG, ADRS, ADTR and
+      ADTTE, re-running QC on all of them, and re-running every table. Two weeks before lock that is a
+      real schedule risk for a variable that may not need to be there. If it is genuinely needed I'd want
+      it in this cycle rather than as a late patch, because a partially rebuilt package is worse than
+      either state.
+
+      **Third, the documentation.** If it goes in, it needs a specification entry, a define.xml entry and
+      a line in the ADRG saying what it is and which outputs use it. A flag in the data with no entry in
+      the metadata is exactly the finding a reviewer picks up.
+
+      What I would not do is add it quietly because it is one line. The one line is the cheap part; what
+      it implies about pre-specification is not.
+    rubric:
+      - Distinguishes an analysis population from a subgroup
+      - Notes that PDL1CAT already supports a subgroup analysis without a new flag
+      - Raises pre-specification and the timing relative to database lock
+      - Asks what output the flag is for before agreeing to add it
+      - Identifies the rebuild cascade through every downstream analysis dataset
+      - Requires a specification, define.xml and ADRG entry if it goes ahead
+      - Declines to add it silently on the grounds that the code is trivial
+    redFlags:
+      - "Adds the flag because it is one line of code"
+      - "Does not ask what the flag will be used for"
+      - "Treats a post-hoc subgroup as equivalent to a pre-specified population"
+      - "Forgets that downstream datasets copy from ADSL and must be rebuilt"
+    followUps:
+      - "The statistician says it is only for an internal exploratory look, never for the CSR. Does your answer change?"
+      - "How would you handle the same request if it arrived after database lock?"
+
+  - id: adam.adsl.open-review
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [adam.adsl, trials.populations, communication.interviewing]
+    lesson: adam-adsl
+    title: Where do the numbers in the column headers come from?
+    prompt: |
+      **Interviewer:** "Pick up a CSR. The demographics table says N = 210 and the adverse event table
+      two pages later says N = 209, same arm. Explain."
+    modelAnswer: |
+      Two different populations, and both numbers come from ADSL.
+
+      Demographics is on the intent-to-treat population, which is everyone randomized, analyzed by the
+      treatment they were randomized to — `ITTFL = 'Y'`, grouped on `TRT01P`. That is 210 per arm on a
+      1:1 randomization of 420.
+
+      The adverse event table is on the safety population, which is everyone who received at least one
+      dose, analyzed by the treatment they actually received — `SAFFL = 'Y'`, grouped on `TRT01A`. Four
+      subjects were randomized and never dosed, so 416 remain. And three subjects got a drug they were
+      not randomized to: two randomized to placebo received at least one CBX-417 kit and one randomized
+      to CBX-417 received only placebo. The SAP's rule is that any subject who received a CBX-417 kit is
+      analyzed as CBX-417 — deliberately conservative, so drug-related harm lands in the active column.
+      That gives 209 and 207.
+
+      So the difference is four never-dosed subjects and a net movement of one from the dispensing
+      errors. Both numbers are correct, and three subjects genuinely appear in different columns in the
+      safety and efficacy halves of the same document.
+
+      **The part that matters operationally** is that this has to be one sentence in the ADRG. A reviewer
+      who spots it without warning raises a query and somebody spends a week answering it. A reviewer who
+      reads "efficacy analyses use planned treatment, safety analyses use actual treatment; they differ
+      for three subjects affected by dispensing errors" does not.
+
+      And the failure mode to watch for is pairing the wrong flag with the wrong treatment variable —
+      `SAFFL` with `TRT01P`. The total is still 416, the percentages are still consistent, nothing errors,
+      and three subjects are in the wrong column. There is no way to see it in the output, so it has to
+      be a convention applied without exception and confirmed in QC.
+    rubric:
+      - Names both populations and both treatment variables correctly
+      - Accounts for the never-dosed subjects separately from the dispensing errors
+      - States the actual-treatment rule and why it is asymmetric
+      - Says that both numbers are correct rather than one being an error
+      - Requires the ADRG to explain it pre-emptively
+      - Identifies the wrong-pairing failure mode and its invisibility
+    redFlags:
+      - "Says one of the two numbers must be wrong"
+      - "Cannot name the treatment variable that goes with each population"
+      - "Attributes the whole difference to never-dosed subjects"
+    followUps:
+      - "The demographics table is also produced on the safety population as a supportive output. What changes?"
+      - "A subject was randomized and dosed but withdrew consent to use their data. Which flags change?"

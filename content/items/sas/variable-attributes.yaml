@@ -1,0 +1,404 @@
+items:
+  - id: sas.variable-attributes.truncation-mcq
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.attributes]
+    lesson: sas-variable-attributes
+    title: What is stored for discontinued subjects?
+    prompt: |
+      No LENGTH statement is used for `EOTSTT`, and it does not exist in `ADSL_IN`:
+
+      ```sas
+      data adsl;
+        set adsl_in;
+        if missing(DCTREAS) then EOTSTT = 'ONGOING';
+        else EOTSTT = 'DISCONTINUED';
+      run;
+      ```
+
+      What value of `EOTSTT` is stored for a subject with `DCTREAS = 'ADVERSE EVENT'`?
+    choices:
+      - text: "`'DISCONT'`"
+        correct: true
+        feedback: "The first mention of EOTSTT at compile time is the 7-character literal 'ONGOING', so EOTSTT is $7 and 'DISCONTINUED' is cut to its first 7 characters."
+      - text: "`'DISCONTINUED'`"
+        feedback: "Only if EOTSTT were declared long enough before the first assignment, e.g. `length EOTSTT $12;`."
+      - text: "`'ONGOING'`"
+        feedback: "The ELSE branch runs for this subject; the problem is the stored length, not the branch."
+      - text: "Missing, because the value does not fit"
+        feedback: "SAS does not reject long values; it silently truncates them to the variable's length."
+    solution: |
+      `'DISCONT'`. Length is fixed at compile time by the first mention — here the literal `'ONGOING'` (7 characters). There is no ERROR or WARNING. Declare `length EOTSTT $12;` before the first assignment.
+
+  - id: sas.variable-attributes.first-assign-length-numeric
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.attributes]
+    lesson: sas-variable-attributes
+    title: Length from the first assignment
+    prompt: |
+      ```sas
+      data dm2;
+        set dm;
+        if SEX = 'M' then SEXC = 'Male';
+        else SEXC = 'Female';
+      run;
+      ```
+
+      `SEXC` does not exist in `DM`. What is the length (in bytes) of `SEXC` in `WORK.DM2`?
+    answer: 4
+    tolerance: 0
+    hints:
+      - "Which assignment does the compiler see first?"
+      - "Length is fixed during compilation, before a single row is read — so the data cannot influence it, and neither can the branch that actually executes."
+      - "Count the characters in that first literal. Then ask what has to happen to the longer value assigned on the other branch."
+    solution: |
+      4 — the length of `'Male'`, the first literal assigned to `SEXC` in the code. Female subjects get `'Fema'`. The order of rows in the data is irrelevant: length is decided at compile time, before any row is read.
+
+  - id: sas.variable-attributes.format-informat-classify
+    format: classify
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.attributes, sas.numeric-functions]
+    lesson: sas-variable-attributes
+    title: Format, informat or length?
+    prompt: |
+      Classify the highlighted element in each statement.
+    categories: [Format, Informat, Length]
+    entries:
+      - text: "`YYMMDD10.` in `RANDDT = input(RAND_DATE, yymmdd10.);`"
+        category: Informat
+        note: "INPUT() reads text into a value, so its second argument is an informat."
+      - text: "`DATE9.` in `format TRTSDT date9.;`"
+        category: Format
+      - text: "`YYMMDD10.` in `ADTC = put(ADT, yymmdd10.);`"
+        category: Format
+        note: "The same name can exist as both a format and an informat; PUT() always takes a format."
+      - text: "`$20` in `length USUBJID $20;`"
+        category: Length
+      - text: "`:$20.` in `input USUBJID :$20. AGE;`"
+        category: Informat
+      - text: "`8.1` in `format BMIBL 8.1;`"
+        category: Format
+      - text: "`COMMA10.` used to read the text `1,250` as the number 1250"
+        category: Informat
+      - text: "`length=8` in an `ATTRIB` statement"
+        category: Length
+    hints:
+      - "Ask which direction the data is moving. Text going *in* to become a stored value needs an informat; a stored value coming *out* to be displayed or written as text needs a format."
+      - "So `INPUT()` and the `INPUT` statement always take informats, and `PUT()` and the `FORMAT` statement always take formats — regardless of the name, since `YYMMDD10.` exists as both."
+      - "Length is neither: it is how many bytes the value occupies in storage. It appears in `LENGTH` and in the `length=` option of `ATTRIB`, and it never affects how a value is read or displayed."
+    solution: |
+      Informats read text into values (INPUT statement, INPUT function); formats display values as text (FORMAT statement, PUT function, procedures); lengths reserve storage. `YYMMDD10.` appears twice — as an informat in `input()` and as a format in `put()`.
+
+  - id: sas.variable-attributes.stored-value-mcq
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.attributes, sas.dates]
+    lesson: sas-variable-attributes
+    title: What is really stored in a date?
+    prompt: |
+      ```sas
+      RANDDT = input('2022-04-11', yymmdd10.);
+      format RANDDT date9.;
+      ```
+
+      What value is stored in `RANDDT`?
+    choices:
+      - text: "The number 22746"
+        correct: true
+        feedback: "A SAS date is the number of days since 1 January 1960; 11 April 2022 is day 22746. DATE9. only controls how it prints."
+      - text: "The text `'11APR2022'`"
+        feedback: "That is how the value is displayed with DATE9.; the variable is numeric."
+      - text: "The number 20220411"
+        feedback: "SAS dates are day counts, not YYYYMMDD integers. Treating 20220411 as a date would give nonsense durations."
+      - text: "The text `'2022-04-11'`"
+        feedback: "The INPUT function converted the text into a numeric SAS date."
+    solution: |
+      22746. Because it is a number, `TRTSDT - RANDDT` gives days between the dates. To produce ISO 8601 text (for SDTM `--DTC` variables), use `put(RANDDT, yymmdd10.)` — or `put(RANDDT, e8601da.)`.
+
+  - id: sas.variable-attributes.attrib-code
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sas.attributes, adam.specs]
+    lesson: sas-variable-attributes
+    title: Apply specification attributes
+    minutes: 12
+    prompt: |
+      `WORK.ADSL_RAW` has `USUBJID` (character, length 20), `TRT01PN` (1 or 2), `TRTSDTC` (ISO 8601 text such as `2022-04-14`) and `AGE`.
+
+      The ADSL specification says:
+
+      | Variable | Type | Length | Format | Label | Derivation |
+      |---|---|---:|---|---|---|
+      | USUBJID | Char | 20 | | Unique Subject Identifier | as is |
+      | TRT01P | Char | 19 | | Planned Treatment for Period 01 | 1 = `CBX-417 + Docetaxel`, 2 = `Placebo + Docetaxel` |
+      | TRTSDT | Num | 8 | DATE9. | Date of First Exposure to Treatment | numeric date from `TRTSDTC` |
+      | AGEGR1 | Char | 4 | | Pooled Age Group 1 | `<65`, `>=65`, blank if AGE missing |
+
+      Write the DATA step that creates `WORK.ADSL` with these attributes, with the four variables first and in this order.
+    starter: |
+      data adsl;
+        /* attributes first */
+        set adsl_raw;
+        /* derivations */
+      run;
+    hints:
+      - "Put an `ATTRIB` (or `LENGTH` + `FORMAT` + `LABEL`) statement before `SET`: attributes and variable order are fixed by the first mention."
+      - "Convert the ISO text with an informat: `input(TRTSDTC, yymmdd10.)`."
+      - "TRT01P needs length 19 declared before the first assignment, or 'Placebo + Docetaxel' could be cut to the length of the first literal."
+    checks:
+      - pattern: '^\s*(attrib|length)\b[\s\S]*^\s*set\s'
+        flags: im
+        message: "Declares attributes before the SET statement"
+      - pattern: 'usubjid\s+(length\s*=\s*)?\$\s*20\b'
+        message: "USUBJID has length 20"
+      - pattern: 'trt01p\s+(length\s*=\s*)?\$\s*19\b'
+        message: "TRT01P has length 19"
+      - pattern: 'agegr1\s+(length\s*=\s*)?\$\s*4\b'
+        message: "AGEGR1 has length 4"
+      - pattern: 'date9\.'
+        message: "TRTSDT gets the DATE9. format"
+      - pattern: '[''"]date of first exposure to treatment[''"]'
+        message: "TRTSDT gets the specified label"
+      - pattern: 'input\s*\(\s*trtsdtc\s*,\s*(yymmdd|e8601da)10\.\s*\)'
+        message: "Converts TRTSDTC with INPUT() and a date informat"
+      - pattern: 'trt01pn\s*=\s*1'
+        message: "Decodes TRT01P from TRT01PN"
+    reference: |
+      data adsl;
+        attrib USUBJID length=$20 label='Unique Subject Identifier'
+               TRT01P  length=$19 label='Planned Treatment for Period 01'
+               TRTSDT  length=8   format=date9. label='Date of First Exposure to Treatment'
+               AGEGR1  length=$4  label='Pooled Age Group 1';
+        set adsl_raw;
+        if TRT01PN = 1 then TRT01P = 'CBX-417 + Docetaxel';
+        else if TRT01PN = 2 then TRT01P = 'Placebo + Docetaxel';
+        TRTSDT = input(TRTSDTC, yymmdd10.);
+        if missing(AGE) then AGEGR1 = ' ';
+        else if AGE >= 65 then AGEGR1 = '>=65';
+        else AGEGR1 = '<65';
+      run;
+    solution: |
+      The `ATTRIB` statement is the first mention of all four variables, so it fixes their type, length, format, label and position before `SET` adds the input variables. `USUBJID` keeps its input length (20 = 20, so no length conflict). `TRTSDT` is created numeric by `INPUT()` and displays with `DATE9.`. Confirm with `proc contents data=adsl varnum;`: the first four rows must match the specification exactly.
+
+  - id: sas.variable-attributes.put-input-mcq
+    format: mcq
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [sas.numeric-functions, sas.attributes]
+    lesson: sas-variable-attributes
+    title: Character to numeric, cleanly
+    prompt: |
+      The raw demographics file stores age as text in `AGEC` (for example `'64'`). Which statement creates a numeric `AGE` without any conversion note in the log?
+    choices:
+      - text: "`AGE = input(AGEC, 8.);`"
+        correct: true
+        feedback: "INPUT() with a numeric informat is the explicit character-to-numeric conversion."
+      - text: "`AGE = put(AGEC, 8.);`"
+        feedback: "PUT() always returns character, and a numeric format cannot be applied to a character variable."
+      - text: "`AGE = AGEC + 0;`"
+        feedback: "It works, but through automatic conversion: the log gets 'Character values have been converted to numeric values', which a clean log does not allow."
+      - text: "`length AGE 8; AGE = AGEC;`"
+        feedback: "The LENGTH statement makes AGE numeric, so the assignment triggers an automatic conversion (and its note)."
+    solution: |
+      `input(AGEC, 8.)` — character to numeric uses INPUT with an informat; numeric to character uses PUT with a format. If some values may not be numbers, decide how to handle them before converting (and see the `??` modifier in the debug exercise).
+
+  - id: sas.variable-attributes.label-40-mcq
+    format: mcq
+    modes: [check, independent]
+    difficulty: foundation
+    skills: [sas.attributes, regulatory.submission]
+    lesson: sas-variable-attributes
+    title: Labels for a transport file
+    prompt: |
+      A programmer typed these labels into an ADSL specification. Which one cannot be used unchanged in a dataset submitted as a SAS version 5 transport file?
+    choices:
+      - text: "Reason for Discontinuation from Treatment"
+        correct: true
+        feedback: "41 characters — one more than the 40-character limit for variable labels (FDA TCG §3.1.4, Table 1)."
+      - text: "Date of First Exposure to Treatment"
+        feedback: "35 characters: within the limit."
+      - text: "Baseline Body Mass Index (kg/m2)"
+        feedback: "32 characters: within the limit."
+      - text: "Planned Treatment for Period 01"
+        feedback: "31 characters: within the limit."
+      - text: "End of Treatment Status"
+        feedback: "23 characters: within the limit."
+    solution: |
+      *Reason for Discontinuation from Treatment* has 41 characters. SAS itself would accept it (labels can be up to 256 characters), which is why the problem is usually found late by a conformance check. Shorten it (for example *Reason for Discontinuation of Treatment*, 39 characters) and keep the specification and define.xml consistent.
+
+  - id: sas.variable-attributes.length-warning-log
+    format: log
+    modes: [debug]
+    difficulty: intermediate
+    skills: [sas.attributes, sas.log]
+    lesson: sas-variable-attributes
+    title: The LENGTH statement did nothing
+    minutes: 5
+    prompt: |
+      A colleague "fixed" the truncated `EOTSTT` by adding a LENGTH statement, but QC still reports `'DISCONT'`. Click the log line that explains why.
+    program: |
+      data adsl;
+        set adsl_in;
+        if missing(DCTREAS) then EOTSTT = 'ONGOING';
+        else EOTSTT = 'DISCONTINUED';
+        length EOTSTT $12;
+      run;
+    log: |
+      40   data adsl;
+      41     set adsl_in;
+      42     if missing(DCTREAS) then EOTSTT = 'ONGOING';
+      43     else EOTSTT = 'DISCONTINUED';
+      44     length EOTSTT $12;
+      WARNING: Length of character variable EOTSTT has already been set.
+               Use the LENGTH statement as the very first statement in the DATA STEP to declare the length of a character variable.
+      45   run;
+
+      NOTE: There were 4 observations read from the data set WORK.ADSL_IN.
+      NOTE: The data set WORK.ADSL has 4 observations and 5 variables.
+    issues: [6]
+    lineNotes:
+      - line: 3
+        note: "The first mention of EOTSTT: the 7-character literal fixes its length at 7 during compilation."
+      - line: 5
+        note: "Too late: by the time the compiler reaches this statement, the length is already set."
+      - line: 6
+        note: "The WARNING says exactly that. Any WARNING must be resolved before delivery."
+      - line: 11
+        note: "Counts look normal — truncation never shows up in counts."
+    hints:
+      - "Length is decided at the first mention during compilation. Where is the first mention?"
+      - "Read the statements top to bottom the way the compiler does, and stop at the first one that names `EOTSTT`. What length does that statement imply?"
+      - "Notice what the counts do *not* tell you: 4 observations read, 4 written. Truncation never changes a count, so only the WARNING and a look at the values reveal it. Move the LENGTH statement above the assignments."
+    solution: |
+      Line 6: the LENGTH statement comes after the first assignment, so SAS ignores it and warns. Move `length EOTSTT $12;` above the IF statements (directly after `data adsl;` or after `set`).
+    explanation:
+      objective: "Explain why a LENGTH statement did not stop truncation."
+      given: "The program, its log and a QC finding that values are still truncated."
+      relevant: "The position of the LENGTH statement relative to the first assignment, and the WARNING."
+      irrelevant: "The observation counts; they are correct."
+      method: "Find the first mention of the variable in compile order."
+      interpretation: "Declarative statements do not act retroactively on attributes already fixed."
+      changes: "Placing LENGTH before the first assignment removes the WARNING and stores 'DISCONTINUED' in full."
+      interviewer: "That you know type and length are fixed at the first mention and you treat WARNINGs as defects."
+
+  - id: sas.variable-attributes.conversion-hotspot
+    format: hotspot
+    language: sas
+    modes: [debug]
+    difficulty: intermediate
+    skills: [sas.attributes, sas.numeric-functions, sas.log]
+    lesson: sas-variable-attributes
+    title: A "numeric" result that is character
+    minutes: 7
+    prompt: |
+      In `WORK.RAW_LABS`, `RESULT` is character (values such as `'35'`, `'112'`, `'<0.5'`) and `REF_HIGH` is numeric. After this step, `PROC CONTENTS` shows `LBSTRESN` as **Char**, and the log contains a character-to-numeric conversion note and an *Invalid numeric data* note for `'<0.5'`.
+
+      Click the line that makes `LBSTRESN` character.
+    code: |
+      data lb_num;
+        set raw_labs;
+        LBSTRESN = RESULT;
+        if LBSTRESN > REF_HIGH then HIGHFL = 'Y';
+      run;
+    answerLines: [3]
+    lineNotes:
+      - line: 3
+        note: "The first mention of LBSTRESN assigns a character variable, so LBSTRESN is created as character with RESULT's length. Assignment copies the type."
+      - line: 4
+        note: "Comparing a character variable with a number forces an automatic conversion on every row (the conversion NOTE), and '<0.5' cannot be converted (the invalid-data NOTE). This line is where the notes point, but line 3 is the cause."
+    fixed: |
+      data lb_num;
+        set raw_labs;
+        LBSTRESN = input(RESULT, ?? best32.);
+        if not missing(LBSTRESN) and LBSTRESN > REF_HIGH then HIGHFL = 'Y';
+      run;
+    hints:
+      - "What decides the type of a new variable created by an assignment?"
+      - "Which function converts character to numeric explicitly?"
+    solution: |
+      Line 3. Convert explicitly with `INPUT()`; the `??` modifier suppresses the invalid-data notes for values such as `'<0.5'`, which is only acceptable if you handle those values deliberately. The usual SDTM approach keeps a result such as `<0.5` in the character standardized result and leaves the numeric result missing — follow your specification, and produce a listing of every non-numeric result so the decision is visible.
+    explanation:
+      objective: "Find why a variable meant to be numeric is character and why the log has conversion notes."
+      given: "The step, the type reported by PROC CONTENTS, and two log notes."
+      relevant: "The first mention of LBSTRESN and the type of RESULT."
+      irrelevant: "HIGHFL's own attributes."
+      method: "Trace each new variable to its first mention and ask what type the right-hand side has."
+      interpretation: "The notes appear at line 4, but the cause is the type decided at line 3."
+      changes: "With `input(RESULT, ?? best32.)`, LBSTRESN is numeric, the comparison needs no conversion, and '<0.5' becomes missing (by design, to be handled per the spec)."
+      interviewer: "That you avoid implicit conversions, know that assignment copies the type, and handle non-numeric lab results deliberately."
+
+  - id: sas.variable-attributes.custom-format-mcq
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [sas.attributes, sas.formats, regulatory.submission]
+    lesson: sas-variable-attributes
+    title: Why TRT01P and TRT01PN?
+    prompt: |
+      In your session, `TRT01PN` with a user-written format `TRTF.` prints as *CBX-417 + Docetaxel* / *Placebo + Docetaxel*. The ADaM specification still requires a separate character variable `TRT01P`. What is the main reason?
+    choices:
+      - text: "Custom formats are not part of the submitted data (the FDA TCG says they should not be used), so without TRT01P a reviewer would see only 1 and 2"
+        correct: true
+        feedback: "Formats live in a SAS catalog, not in the transport file. Explicit decode variables make the data self-explanatory in any tool."
+      - text: "XPT files cannot store numeric variables"
+        feedback: "They can; TRT01PN is numeric in the same file."
+      - text: "Character variables sort faster than numeric ones"
+        feedback: "Performance is not the reason; TRT01PN is actually the variable used for ordering."
+      - text: "PROC REPORT cannot display formatted values"
+        feedback: "It can. The issue is what travels with the data, not what SAS can display."
+    solution: |
+      The TCG (§3.1.1) states that SAS custom formats should not be used in submissions, and formats are not stored in XPT files anyway. ADaM therefore pairs a character variable (`TRT01P`) with a numeric one (`TRT01PN`) used for sorting and modelling. The same applies to R and Python users of the data: `haven` would show the numbers with no labels.
+    explanation:
+      objective: "Understand why ADaM stores decodes as variables rather than formats."
+      given: "A numeric variable displaying text through a user-written format."
+      relevant: "Where formats are stored (catalogs) versus data (the dataset), and the TCG statement on custom formats."
+      interpretation: "What looks right in your SAS session may not be what a reviewer receives."
+      interviewer: "That you know the practical submission constraints behind common ADaM conventions."
+
+  - id: sas.variable-attributes.interview-truncation
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [sas.attributes, communication.interviewing]
+    lesson: sas-variable-attributes
+    title: Diagnosing truncation
+    prompt: |
+      **Interviewer:** "A character variable in your ADSL is truncated. How do you find the cause and fix it — and what attribute rules do you keep in mind for submission datasets?"
+    modelAnswer: |
+      I confirm it with PROC CONTENTS (the length is shorter than the longest expected value), then find the variable's first mention in the DATA step, because that is where the length is fixed at compile time. Usual causes: the first assignment is a short literal, the variable comes from an input dataset where it is shorter, or a LENGTH statement was placed after the first use — which the log flags as "length of character variable has already been set". I fix it with a LENGTH or ATTRIB statement before the first mention, using the length from the specification, rerun, and compare against QC.
+
+      For submission datasets I keep in mind the transport-format constraints: variable names up to 8 characters and labels up to 40 (FDA TCG Table 1), no custom formats, and character lengths set to the maximum length actually used rather than a blanket 200 — so there's usually a final step that trims lengths, and I make sure trimming never cuts real values.
+    rubric:
+      - Uses PROC CONTENTS (or the spec) to confirm the length problem
+      - Explains that length is fixed at the first mention during compilation
+      - Names a concrete cause (short literal, input length, late LENGTH statement)
+      - Fixes with LENGTH/ATTRIB before first use, from the specification
+      - Mentions submission constraints (8-character names, 40-character labels, maximum-length rule, no custom formats)
+    redFlags:
+      - "Suggests setting every character variable to $200"
+      - "Does not know that the first assignment can fix the length"
+      - "Would fix values manually instead of fixing the attribute"
+    followUps:
+      - "How would you check every character variable's length against the maximum value length?"
+      - "Why might shortening a variable before a merge be risky?"
+
+  - id: sas.variable-attributes.speed-num-length
+    format: numeric
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.attributes]
+    lesson: sas-variable-attributes
+    title: Default numeric length
+    prompt: |
+      What is the default length, in bytes, of a numeric SAS variable?
+    answer: 8
+    tolerance: 0
+    solution: |
+      8 bytes (a double-precision floating-point number). Shorter numeric lengths lose precision for non-integer values.

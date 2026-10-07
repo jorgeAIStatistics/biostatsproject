@@ -1,0 +1,557 @@
+items:
+  - id: adam.purpose.why-two-layers
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [adam.purpose, regulatory.data-standards]
+    lesson: adam-purpose-and-principles
+    title: Why SDTM and ADaM are separate layers
+    prompt: |
+      A data manager asks why the study needs ADaM when SDTM already contains every collected value.
+
+      What is the strongest single reason?
+    choices:
+      - text: "SDTM must stay faithful to what was collected, so the analysis decisions — baseline selection, record selection, date imputation, population membership — have nowhere to live in it."
+        correct: true
+        feedback: "Correct. The two layers have incompatible invariants: fidelity to collection versus reproducibility of the analysis. That is why partial dates stay partial in SDTM and are imputed and flagged in ADaM."
+      - text: "ADaM variable names are shorter and easier to program with."
+        feedback: "`AVAL` versus `LBSTRESN` is the least important difference. A dataset that only renames columns is not analysis-ready."
+      - text: "SDTM cannot store derived values at all."
+        feedback: "SDTM does contain derived values — `--DY`, `--STRESN`, `--LOBXFL` are all derived. The difference is which *analysis* decisions are permitted, not whether derivation is allowed."
+      - text: "ADaM is required for submission and SDTM is optional."
+        feedback: "Neither half of that is right. Check the FDA Data Standards Catalog for what is supported; do not assert requirements from memory."
+    explanation:
+      objective: "State the actual reason the two layers exist."
+      relevant: "That SDTM's invariant is fidelity to collection and ADaM's is reproducibility of the analysis."
+      irrelevant: "Variable naming, which is cosmetic."
+      interpretation: "If the SAP changes, ADaM changes and SDTM does not. That separation is the whole design."
+      interviewer: "That you can name a concrete decision (baseline, windowing, imputation) that has no home in SDTM."
+
+  - id: adam.purpose.one-proc
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [adam.purpose, adam.specs]
+    lesson: adam-purpose-and-principles
+    title: What "analysis-ready" actually requires
+    prompt: |
+      A reviewer asks whether `ADLB` is analysis-ready for a shift table of baseline CTCAE grade
+      against **worst post-baseline** grade.
+
+      `ADLB` contains `BTOXGRN`, `ATOXGRN` and `ONTRTFL`, but no worst-grade variable and no derived
+      records.
+
+      What is the honest answer?
+    choices:
+      - text: "Strictly no — the table needs a maximum computed per subject before tabulating, which is a derivation. That is acceptable only because the SAP and the ADRG state that worst-grade summaries are computed at reporting time."
+        correct: true
+        feedback: "Correct. The dataset is not one call away from the output; the sponsor chose to derive at reporting time rather than store derived records, and documented the choice. Documented is the operative word."
+      - text: "Yes — `ONTRTFL` is a filter, so the table is one PROC away."
+        feedback: "The filter gets you the candidate records, but you still have to reduce them to one worst grade per subject. That reduction is a derivation."
+      - text: "No, and it is a conformance violation that must be fixed before submission."
+        feedback: "ADaM permits worst-value summaries to be derived at reporting time. It is a sponsor choice, not a violation — the failure would be making the choice silently."
+      - text: "Yes — analysis-ready only applies to the primary efficacy analysis."
+        feedback: "The principle is not scoped to the primary endpoint."
+    explanation:
+      objective: "Apply the analysis-ready test to a concrete output rather than reciting it."
+      relevant: "That a `max()` per subject is a derivation, not a filter."
+      method: "The test: a WHERE using existing variables, a BY using existing variables, and one analytic call."
+      assumptions: "The alternative — storing worst-value records with `DTYPE` populated — is equally valid ADaM."
+      interpretation: "The standard does not force one answer; it forces the answer to be written down."
+      changes: "If the SAP were silent, two programmers would compute 'worst' over different record sets and the QC comparison would fail."
+      interviewer: "That you distinguish a filter from a derivation, and that you say where the decision has to be documented."
+
+  - id: adam.purpose.structure-choice
+    format: mcq
+    modes: [check, speed]
+    difficulty: intermediate
+    skills: [adam.purpose, adam.bds, adam.adtte]
+    lesson: adam-purpose-and-principles
+    title: Which structure is ADTTE?
+    prompt: |
+      `ADTTE` holds one record per subject per parameter (`PFS`, `OS`, `DOR`), with `AVAL` in days,
+      `ADT`, `CNSR` and `PARAMCD`. It is built from SDTM `RS`, `DS`, `EX` and `SS`.
+
+      Which ADaM structure is it?
+    choices:
+      - text: "BDS — one record per subject per parameter per analysis timepoint, with exactly one timepoint per parameter."
+        correct: true
+        feedback: "Correct. `PARAMCD`, `PARAM`, `AVAL` and `ADT` are the BDS signature. Time-to-event data is BDS with a single timepoint per parameter."
+      - text: "OCCDS, because an event either occurred or was censored."
+        feedback: "OCCDS is for occurrence data such as adverse events and concomitant medications, where the topic is an occurrence with attributes. ADTTE's topic is a parameter with a value."
+      - text: "ADSL, because there is one row per subject."
+        feedback: "There are three rows per subject here — one per parameter. ADSL is strictly one record per subject with no `PARAMCD`."
+      - text: "A sponsor-defined non-standard structure, because it draws on four SDTM domains."
+        feedback: "The number of source domains has nothing to do with the structure. The structure follows the analysis, not the source."
+    explanation:
+      objective: "Classify a dataset by its structure rather than by its source or its subject matter."
+      relevant: "That `PARAMCD`/`PARAM`/`AVAL` and one record per subject-parameter-timepoint is the BDS definition."
+      irrelevant: "The list of SDTM source domains."
+      numbers: "929 records in CBX417-301's ADTTE: 420 PFS, 420 OS, 89 DOR."
+      interviewer: "That you can say why the structure follows the analysis and not the source domain."
+
+  - id: adam.purpose.denominator
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [adam.adsl, trials.populations, tlf.denominators]
+    lesson: adam-purpose-and-principles
+    datasets: [oncology/adam/adsl]
+    title: The safety denominator for the CBX-417 column
+    prompt: |
+      CBX417-301 randomized 420 subjects, 210 to each arm. From `ADSL`:
+
+      | `TRT01P` | `TRT01A` | n |
+      |---|---|---:|
+      | CBX-417 + Docetaxel | CBX-417 + Docetaxel | 207 |
+      | CBX-417 + Docetaxel | Placebo + Docetaxel | 1 |
+      | CBX-417 + Docetaxel | (null — never dosed) | 2 |
+      | Placebo + Docetaxel | CBX-417 + Docetaxel | 2 |
+      | Placebo + Docetaxel | Placebo + Docetaxel | 206 |
+      | Placebo + Docetaxel | (null — never dosed) | 2 |
+
+      A treatment-emergent adverse event table is produced on the **safety population by treatment
+      received**. What is the denominator of the CBX-417 + docetaxel column?
+    answer: 209
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "Safety population = received at least one dose. Which rows have a null `TRT01A`?"
+      - "By treatment *received* means group on `TRT01A`, not `TRT01P`."
+      - "207 + 2."
+    solution: |
+      **209.**
+
+      Group on `TRT01A` and drop the never-dosed subjects: `207 + 2 = 209`.
+
+      The three tempting wrong answers are all defensible-sounding:
+
+      | Answer | What it actually counts |
+      |---|---|
+      | 210 | Randomized to CBX (ITT column, not safety) |
+      | 208 | Randomized to CBX **and** dosed — ignores the two placebo-randomized subjects who received CBX kits |
+      | 207 | Randomized to CBX and received CBX — ignores the crossover in the other direction |
+      | **209** | **Received CBX-417, whatever they were randomized to** |
+
+      The rule that produces 209 is in the SAP: a subject who received at least one CBX-417 kit is
+      analyzed as CBX-417 + docetaxel. It is deliberately conservative — it attributes potential
+      drug-related harm to the active arm.
+
+      **This is why ADSL carries both columns.** The efficacy tables use `TRT01P` (intention to treat);
+      the safety tables use `TRT01A`. Three subjects sit in different columns in the two halves of the
+      CSR, and that is correct rather than an inconsistency — the ADRG says so in one sentence so that a
+      reviewer does not raise it as a finding.
+    explanation:
+      objective: "Produce the correct safety denominator from a planned-versus-actual treatment cross-tabulation."
+      given: "A 2x3 cross-tabulation of planned against actual treatment, including never-dosed subjects."
+      relevant: "The `TRT01A` column and the exclusion of null `TRT01A`."
+      irrelevant: "The randomized totals of 210 per arm, which are the ITT denominators."
+      calculating: "Subjects with `SAFFL = 'Y'` and `TRT01A = 'CBX-417 + Docetaxel'`."
+      numbers: "207 subjects randomized to CBX who received CBX, plus 2 randomized to placebo who received at least one CBX kit."
+      assumptions: "The SAP's actual-treatment rule: at least one CBX-417 kit means the subject is analyzed as CBX."
+      interpretation: "A safety denominator of 209 and an ITT denominator of 210 in the same CSR is expected, not an error."
+      changes: "Using `TRT01P` would give 208 dosed subjects and would put a CBX-417 adverse event in the placebo column."
+      interviewer: "That you name the population and the treatment variable together — 'safety population by actual treatment' — rather than saying 'the CBX arm'."
+
+  - id: adam.purpose.classify-structures
+    format: classify
+    modes: [guided, speed]
+    difficulty: foundation
+    skills: [adam.purpose, adam.bds, adam.occds, adam.adsl]
+    lesson: adam-purpose-and-principles
+    title: Sort each analysis into its ADaM structure
+    minutes: 5
+    prompt: |
+      ADaMIG v1.3 defines three standard structures. Place each analysis in the structure its dataset
+      would use.
+    categories: [ADSL, BDS, OCCDS]
+    entries:
+      - text: "Mean change from baseline in systolic blood pressure at Week 12, by visit"
+        category: BDS
+        note: "A measurement repeated over time — `PARAMCD = 'SYSBP'`, `AVAL`, `BASE`, `CHG`, `AVISIT`."
+      - text: "Number of subjects with at least one grade ≥3 treatment-emergent adverse event"
+        category: OCCDS
+        note: "An occurrence with attributes (term, grade, seriousness, causality). ADAE."
+      - text: "Median duration of exposure to study drug in days"
+        category: ADSL
+        note: "`TRTDURD` is a subject-level attribute — one number per subject, no parameter and no timepoint."
+      - text: "Progression-free survival by treatment arm"
+        category: BDS
+        note: "ADTTE is BDS: one record per subject per parameter, with a single timepoint per parameter."
+      - text: "Proportion of subjects taking a proton-pump inhibitor during treatment"
+        category: OCCDS
+        note: "ADCM — an occurrence of a medication, with dates, class and indication as attributes."
+      - text: "Percentage of subjects in the per-protocol population"
+        category: ADSL
+        note: "`PPROTFL` is a subject-level flag. Every population count comes from ADSL."
+      - text: "Shift from baseline QTcF category to worst post-baseline category"
+        category: BDS
+        note: "ADEG — `PARAMCD = 'QTCFAG'`, with `MCRIT1`/`MCRIT1ML` carrying the category. Still a repeated measurement."
+      - text: "Best overall response per RECIST 1.1"
+        category: BDS
+        note: "ADRS — `PARAMCD = 'BOR'` with an ordered categorical result in `AVALC` and its numeric code in `AVAL`."
+    explanation:
+      objective: "Choose a structure from the shape of the analysis rather than from the source domain."
+      method: "Ask what the unit of analysis is: the subject, a parameter measured over time, or an occurrence."
+      relevant: "Whether the thing being summarized has a value (BDS), happened (OCCDS), or describes the subject (ADSL)."
+      interpretation: "ADTTE and ADRS both surprise people because they do not look like a lab dataset, but both are one record per subject per parameter."
+      changes: "If none of the three fits, ADaMIG v1.3 allows a sponsor-defined structure provided it is documented in the metadata."
+
+  - id: adam.purpose.analysis-ready-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: foundation
+    skills: [adam.purpose, adam.bds, r.dplyr]
+    lesson: adam-purpose-and-principles
+    datasets: [oncology/adam/adlb]
+    title: One filter, one group, one summary
+    minutes: 8
+    prompt: |
+      Write `lab_by_visit(adlb, paramcd, avisit)` returning the by-arm summary that Table 14.3.4.1 needs:
+      `n`, mean `AVAL` and mean `CHG`, grouped by actual treatment `TRTA`.
+
+      Restrict to the safety population, to the requested parameter and analysis visit, to the record
+      selected for that visit, and to records where `CHG` is not missing.
+
+      **Do not derive anything.** If you find yourself writing a join or a conditional assignment, the
+      variable you need already exists.
+    starter: |
+      library(dplyr)
+
+      lab_by_visit <- function(adlb, paramcd, avisit) {
+        adlb |>
+          filter(___) |>
+          group_by(___) |>
+          summarise(n = n(), mean_aval = ___, mean_chg = ___, .groups = "drop")
+      }
+    reference: |
+      library(dplyr)
+
+      lab_by_visit <- function(adlb, paramcd, avisit) {
+        adlb |>
+          filter(
+            PARAMCD == paramcd,
+            AVISIT  == avisit,
+            ANL01FL == "Y",
+            SAFFL   == "Y",
+            !is.na(CHG)
+          ) |>
+          group_by(TRTA) |>
+          summarise(n = n(),
+                    mean_aval = mean(AVAL),
+                    mean_chg  = mean(CHG),
+                    .groups = "drop")
+      }
+    hints:
+      - "Five filter conditions: parameter, analysis visit, the record-selection flag, the population flag, and a non-missing change."
+      - "`ANL01FL == \"Y\"` is the one people forget. Without it, subjects with an unscheduled draw in the window contribute twice."
+      - "Group on `TRTA` (actual treatment), because this is a safety table."
+    checks:
+      - pattern: "ANL01FL\\s*==\\s*[\"']Y[\"']"
+        message: "Selects one record per subject, parameter and visit with ANL01FL"
+      - pattern: "SAFFL\\s*==\\s*[\"']Y[\"']"
+        message: "Restricts to the safety population"
+      - pattern: "group_by\\s*\\(\\s*TRTA\\s*\\)"
+        message: "Groups by actual treatment, not planned treatment"
+      - pattern: "mean\\s*\\(\\s*CHG\\s*\\)"
+        message: "Summarises the stored change from baseline rather than recomputing it"
+      - pattern: "(left_|inner_|full_)?join\\s*\\("
+        absent: true
+        message: "Needs no join — every variable required is already on the record"
+    expectedOutput: |
+      ```text
+      > lab_by_visit(adlb, "ALT", "CYCLE 4 DAY 1")
+      # A tibble: 2 x 4
+        TRTA                    n mean_aval mean_chg
+      1 CBX-417 + Docetaxel   147     28.56     5.340
+      2 Placebo + Docetaxel   145     25.88     3.021
+      ```
+    solution: |
+      **Nothing in this function derives anything.** Five filters, one group, one summary — that is the
+      analysis-ready test passing.
+
+      Compare what each filter replaces:
+
+      | Filter | The SAP rule it stands in for |
+      |---|---|
+      | `SAFFL == "Y"` | "Received at least one dose of any study drug" |
+      | `AVISIT == avisit` | The analysis-visit windowing table |
+      | `ANL01FL == "Y"` | "The scheduled record if one exists, otherwise the latest unscheduled record in the window" |
+      | `!is.na(CHG)` | "Subjects without a baseline are excluded from change summaries" |
+
+      **`mean(CHG)`, not `mean(AVAL - BASE)`.** They give the same answer here, but recomputing means the
+      table program now owns a derivation, and a table program that owns a derivation is a table program
+      that can disagree with the dataset.
+
+      **`TRTA`, not `TRTP`.** Safety by treatment received. On this study three subjects differ.
+    explanation:
+      objective: "Produce a by-visit safety summary using only variables that already exist."
+      given: "An ADLB dataset carrying population, visit, selection and change variables."
+      relevant: "`ANL01FL`, `SAFFL`, `AVISIT`, `TRTA`, `CHG`."
+      method: "Filter with existing flags, group with an existing variable, call one summary."
+      numbers: "ALT at Cycle 4 Day 1: n = 147, mean change 5.340 (CBX-417); n = 145, mean change 3.021 (placebo)."
+      assumptions: "`CHG` is null on the baseline record and where `BASE` is missing, so `!is.na(CHG)` also removes the baseline row."
+      computation: "No join is required because ADLB carries the subject-level variables it needs."
+      interpretation: "Every filter corresponds to a sentence of the SAP that somebody already implemented once."
+      changes: "Dropping `ANL01FL == 'Y'` gives n = 154 and mean change 6.43 in the CBX arm and n = 149, 5.73 in placebo — the between-arm difference nearly disappears."
+      interviewer: "That you use the stored `CHG` rather than recomputing it, and can say why that matters."
+
+  - id: adam.purpose.flag-count
+    format: numeric
+    modes: [check, qc, debug]
+    difficulty: intermediate
+    skills: [adam.windows, adam.bds, qc.discrepancy]
+    lesson: adam-purpose-and-principles
+    datasets: [oncology/adam/adlb]
+    title: How many extra records does a missing flag add?
+    prompt: |
+      A programmer omits `ANL01FL == "Y"` from the ALT / Cycle 4 Day 1 summary. In the CBX-417 arm the
+      record count rises from 147 to 154.
+
+      Eleven subject-visit cells in the whole ALT / Cycle 4 Day 1 group contain two records instead of
+      one — some in each arm.
+
+      How many extra records did the placebo arm gain?
+    answer: 4
+    tolerance: 0
+    unit: records
+    hints:
+      - "Every duplicated cell contributes exactly one extra record."
+      - "11 duplicated cells in total, split between the two arms."
+      - "11 − 7."
+    solution: |
+      **4.** The CBX arm gained 7 (154 − 147) and the two arms together account for all 11 duplicated
+      cells, so placebo gained `11 − 7 = 4`. Verified: placebo goes from n = 145 to n = 149.
+
+      The effect on the numbers is worse than the count suggests:
+
+      | | With `ANL01FL` | Without |
+      |---|---:|---:|
+      | CBX-417 n, mean change | 147, **5.34** | 154, **6.43** |
+      | Placebo n, mean change | 145, **3.02** | 149, **5.73** |
+      | Difference in mean change | **2.32** | **0.70** |
+
+      **Four extra records out of 149 moved the placebo mean by 2.7 U/L.** They are not random extra
+      draws — an unscheduled laboratory sample is ordered *because* a clinician was worried, so the
+      values skew high. Including them preferentially inflates whichever arm had more of them.
+
+      This is the specific reason `ANL01FL` exists rather than the analysis simply averaging everything
+      in the window: the selection rule has to be the same for both arms and decided in advance.
+    explanation:
+      objective: "Quantify the effect of omitting a record-selection flag."
+      given: "Counts with and without the flag in one arm, and the total number of duplicated cells."
+      relevant: "That each duplicated cell contributes exactly one extra record."
+      calculating: "11 duplicated cells minus the 7 that fall in the CBX arm."
+      numbers: "CBX 154 - 147 = 7; placebo 149 - 145 = 4; 7 + 4 = 11."
+      assumptions: "No cell contains three records — verified: every duplicated cell in ADLB has exactly 2."
+      interpretation: "The between-arm difference in mean change falls from 2.32 to 0.70 U/L."
+      changes: "Unscheduled draws are ordered in response to a clinical concern, so they are systematically higher than scheduled draws — the bias has a direction."
+      interviewer: "That you recognise unscheduled records as informative rather than as random extra data."
+
+  - id: adam.purpose.missing-flag
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [adam.purpose, adam.specs, qc.mindset]
+    lesson: adam-purpose-and-principles
+    title: Where does the rule belong?
+    prompt: |
+      A table programmer needs to exclude local-laboratory results from a by-visit summary. `ADLB`
+      contains both central and local results and has no variable distinguishing them, but the source
+      `LB` records carry `LBNAM`.
+
+      They write `if index(upcase(LBNAM), 'LOCAL') = 0;` in the table program, after merging `LB` back on.
+
+      What is wrong with this, and what should happen?
+    choices:
+      - text: "The rule is invisible to the reviewer and absent from the metadata. It belongs in ADLB as a variable — a `PARCAT` value, a criterion flag or an additional `ANLzzFL` — so it is derived once and documented."
+        correct: true
+        feedback: "Correct. The code may be right; the problem is that a rule the tables depend on exists only inside one table program, where the QC program and define.xml cannot see it."
+      - text: "Nothing is wrong — filtering in the table program is faster than regenerating ADLB."
+        feedback: "It is faster today. It is also the reason the QC programmer, who reads the SAP rather than your program, will produce a different number."
+      - text: "Local laboratory results should have been excluded from SDTM."
+        feedback: "SDTM records what was collected. A local result was collected and belongs in `LB`; the analysis decision to exclude it is an ADaM decision."
+      - text: "The rule is fine in the table program as long as the ADRG mentions it."
+        feedback: "The ADRG describing a derivation that lives in one table program is worse, not better — the documentation would no longer match where the logic actually is."
+    explanation:
+      objective: "Decide where an analysis rule belongs in the data flow."
+      relevant: "That the table program is not visible to define.xml, the ADRG, or the independent QC program."
+      irrelevant: "Whether the code itself is correct — it may be."
+      method: "Ask who else needs to know this rule. If the answer includes anybody outside this program, it is an ADaM variable."
+      interpretation: "The CBX417-301 ADRG does exactly this: it lists local laboratory results as a known, intentional inclusion in ADLB and states that by-visit summaries use central records only, per the SAP."
+      changes: "If the rule were in ADLB as a flag, the QC program would use the same flag and could not diverge."
+      interviewer: "That you separate 'is the code correct' from 'is the code in the right place'."
+
+  - id: adam.purpose.rebuild-from-sdtm
+    format: order
+    modes: [independent, boss]
+    difficulty: advanced
+    skills: [adam.purpose, adam.specs, adam.bds]
+    lesson: adam-purpose-and-principles
+    title: What you would have to do without ADaM
+    minutes: 8
+    prompt: |
+      To produce *mean ALT change from baseline at Cycle 4 Day 1, safety population, by treatment
+      received* from SDTM `LB`, `EX` and `DM` alone, put the steps in the order they must happen.
+
+      Each step depends on the ones before it.
+    steps:
+      - "Derive the first and last dose dates per subject from `EX`, and the safety population as subjects with at least one dose."
+      - "Derive actual treatment per subject by joining dispensing records to the kit list, since `DM.ARM` is the randomized arm."
+      - "Select the baseline ALT record per subject: the last non-missing result on or before the first dose date, breaking ties by the later collection time then the higher `LBSEQ`."
+      - "Assign every post-baseline ALT record to an analysis visit by applying the study-day windowing table to `LBDY`."
+      - "Within the Cycle 4 Day 1 window, select one record per subject: the scheduled record if one exists, otherwise the latest unscheduled record."
+      - "Join the selected Cycle 4 record to the baseline record and compute the change."
+      - "Summarise n, mean value and mean change by actual treatment."
+    hints:
+      - "You cannot define baseline before you know the first dose date."
+      - "You cannot window records into an analysis visit before you know study day relative to first dose."
+      - "Selection within a window has to come after the windowing."
+    solution: |
+      Seven steps, six of which are **derivations that the SAP specifies and that every table program
+      would otherwise repeat**.
+
+      In ADLB each of them has already happened and left a variable behind:
+
+      | Step | The ADaM variable it produces |
+      |---|---|
+      | 1 | `ADSL.TRTSDT`, `ADSL.TRTEDT`, `ADSL.SAFFL` |
+      | 2 | `ADSL.TRT01A` → `ADLB.TRTA` |
+      | 3 | `ADLB.ABLFL`, `ADLB.BASE` |
+      | 4 | `ADLB.AVISIT`, `ADLB.AVISITN`, `ADLB.ADY` |
+      | 5 | `ADLB.ANL01FL` |
+      | 6 | `ADLB.CHG` |
+      | 7 | the `PROC MEANS` |
+
+      **Notice the dependency chain.** Step 3 needs step 1; step 4 needs step 1; step 5 needs step 4.
+      That chain is why ADSL is built first and why ADLB cannot be built in parallel with it.
+
+      **And notice what happens if two programmers do this independently.** Step 3's tie-breaker, step 4's
+      window boundaries and step 5's scheduled-versus-unscheduled preference are all places where two
+      reasonable people diverge. Doing it once, in a specified dataset, is the point.
+    explanation:
+      objective: "See the dependency chain that ADaM collapses into a filter."
+      relevant: "That treatment dates precede baseline selection, and that windowing precedes within-window selection."
+      method: "Each step consumes something the previous step produced."
+      assumptions: "The baseline rule keys on the first dose date, which is why exposure has to be derived first."
+      interpretation: "Six derivations and one summary — ADaM moves the six upstream so the seventh is all the table program does."
+      changes: "For a never-treated subject there is no first dose date, so step 1 has to fall back to the randomization date; that fallback is exactly where ADaM's `ABLFL` diverges from SDTM's `--LOBXFL`."
+      interviewer: "That you can name which steps two independent programmers would most likely implement differently."
+
+  - id: adam.purpose.spec-gap
+    format: open
+    modes: [interview, qc]
+    difficulty: advanced
+    skills: [adam.specs, qc.mindset, communication.documentation]
+    lesson: adam-purpose-and-principles
+    title: Reviewing an ADaM specification before it is programmed
+    prompt: |
+      **Interviewer:** "You've been handed a draft ADLB specification to review before anyone programs it.
+      What do you look for?"
+    modelAnswer: |
+      I'd read it against the SAP and the shells rather than on its own, because a specification can be
+      internally consistent and still not support the tables it has to support.
+
+      **First, I'd take two or three shells and check each one is one call away.** For the by-visit
+      change table I need a parameter variable, an analysis visit, a record-selection flag, a population
+      flag and a stored change. For the shift table I need a baseline grade, a post-baseline grade and a
+      window flag — and I'd notice that "worst post-baseline" isn't a variable, so either the spec adds
+      derived records or the SAP has to say that worst-value summaries are computed at reporting time.
+      Either answer is fine; no answer is the finding.
+
+      **Second, the derivations that have a tie or a fallback.** Baseline is the classic one. "Last
+      non-missing value on or before first dose" is incomplete — what breaks a tie when two draws share a
+      date, and what happens to a subject who was randomized and never dosed? On the study I've worked
+      with, four subjects were never dosed, and the fallback to the randomization date is exactly why
+      ADaM's `ABLFL` flags 28 records that SDTM's `LBLOBXFL` leaves null. If the spec doesn't answer both
+      questions, two programmers will answer them differently.
+
+      **Third, the population and treatment variables.** Which flag each table uses and which treatment
+      variable goes with it. Safety by actual treatment, efficacy by planned. If planned and actual
+      differ for anybody — three subjects here — I'd want that stated in the spec and in the ADRG, so a
+      reviewer seeing a subject in different columns in different tables doesn't raise it as a finding.
+
+      **Fourth, traceability.** Every BDS record should carry `SRCDOM`, `SRCVAR` and `SRCSEQ`, and any
+      record that isn't a single source observation needs `DTYPE` populated. If the spec creates derived
+      records without saying how they're labelled, the dataset loses the property that makes it
+      reviewable.
+
+      **Fifth, what's deliberately not in scope.** Local laboratory results, records outside all analysis
+      windows, post-cutoff assessments — I'd want the spec to say whether they're in the dataset and
+      excluded by a flag, or not in the dataset at all. "In and flagged" is almost always better, because
+      it keeps the exclusion visible.
+
+      And I'd check the spec is written in terms of rules, not in terms of code. A specification that
+      says `if VISIT = 'UNSCHEDULED' then delete` is a program transcript. One that says which record
+      represents the visit and why is something a statistician can approve and a QC programmer can
+      implement independently.
+    rubric:
+      - Reviews the specification against the shells and the SAP, not in isolation
+      - Applies the analysis-ready test to specific outputs
+      - Hunts for ties, fallbacks and edge cases in each derivation
+      - Names the never-treated subject as a concrete edge case for baseline
+      - Checks that each table's population flag and treatment variable are paired correctly
+      - Requires SRCDOM/SRCVAR/SRCSEQ and DTYPE for traceability
+      - Prefers "included and flagged" over "excluded from the dataset"
+      - Distinguishes a rule-based specification from a transcript of code
+    redFlags:
+      - "Reviews only for variable naming and label length"
+      - "Accepts a baseline definition with no tie-breaker"
+      - "Does not ask which population and treatment variable each table uses"
+      - "Treats 'the programmer will figure it out' as acceptable"
+    followUps:
+      - "The spec says worst post-baseline grade is derived at reporting time. What do you need to see elsewhere before you approve that?"
+      - "How would you review a specification for a dataset structure that ADaMIG does not define?"
+
+  - id: adam.purpose.open-principles
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [adam.purpose, regulatory.data-standards, communication.interviewing]
+    lesson: adam-purpose-and-principles
+    title: Explain ADaM to someone who only knows SDTM
+    prompt: |
+      **Interviewer:** "A new starter tells you ADaM is 'SDTM with nicer variable names'. Correct them."
+    modelAnswer: |
+      The renaming is real but it's the least important part. `AVAL` instead of `LBSTRESN` saves nobody
+      anything.
+
+      What ADaM actually adds is **the analysis decisions, stored as variables**. Take a single lab table
+      cell — mean ALT change at Cycle 4. Four questions have to be answered before you can compute it:
+      which record counts as baseline; which of two records in the Cycle 4 window counts as the Cycle 4
+      value; whether the subject is in the safety population; and which treatment column they belong in.
+      None of those are answerable from `LB`, and all four are in the SAP. ADaM is where they get
+      implemented, once — as `ABLFL` and `BASE`, as `ANL01FL`, as `SAFFL`, as `TRTA`.
+
+      That's the analysis-ready principle. After ADaM the table is a filter, a group and one procedure
+      call. Before ADaM it's four joins and a windowing rule, re-implemented by every programmer who
+      needs it.
+
+      The second thing it adds is **traceability**. Every BDS record carries `SRCDOM`, `SRCVAR` and
+      `SRCSEQ` pointing at the SDTM record that produced the value, so when a reviewer asks where a
+      number came from you follow pointers instead of reconstructing logic.
+
+      And there's a reason the two layers can't be merged, which is the part that usually lands. SDTM has
+      to stay faithful to what was collected — partial dates stay partial, local lab results stay in the
+      dataset. ADaM has to be reproducible — partial dates get imputed and flagged with `ASTDTF`, one
+      record per cell gets selected and flagged with `ANL01FL`. Those two obligations contradict each
+      other, so they need two datasets. And keeping them apart means the SAP can change without touching
+      the collected data.
+
+      The word to notice in all of that is *flagged*. ADaM never quietly resolves an ambiguity. It
+      resolves it and leaves behind a variable saying it did.
+    rubric:
+      - Rejects renaming as the substance of the difference
+      - Names concrete analysis decisions that have no home in SDTM
+      - States the analysis-ready principle in operational terms
+      - Mentions traceability and the SRCDOM/SRCVAR/SRCSEQ mechanism
+      - Explains why the two invariants (fidelity versus reproducibility) cannot coexist in one layer
+      - Notes that every resolved ambiguity leaves a flag behind
+    redFlags:
+      - "Says ADaM is 'denormalized SDTM' and stops there"
+      - "Claims SDTM cannot contain derived variables"
+      - "Cannot name a single decision that ADaM stores"
+    followUps:
+      - "Give me an example of something that is in SDTM and deliberately not in ADaM."
+      - "Why does ADLB store the same laboratory result in three places?"

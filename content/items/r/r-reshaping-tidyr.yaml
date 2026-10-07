@@ -1,0 +1,710 @@
+items:
+  - id: r.tidyr.duplicate-behaviour
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: intermediate
+    skills: [r.tidyr, r.sas-translation, qc.data-cleaning]
+    lesson: r-reshaping-tidyr
+    title: Three languages, three answers
+    prompt: |
+      A subject has **two** `SYSBP` rows at the same visit. You reshape long to wide.
+
+      What does each tool do?
+    choices:
+      - text: "SAS `PROC TRANSPOSE` errors; tidyr `pivot_wider` produces a list column; pandas `pivot_table` silently averages."
+        correct: true
+        feedback: "Correct — and the pandas behaviour is the dangerous one, because nothing in the output indicates that two readings became their mean."
+      - text: "All three error."
+        feedback: "Only SAS does. tidyr and pandas both produce output, in different ways."
+      - text: "All three keep the first value and discard the second."
+        feedback: "None of them does that. tidyr keeps both, pandas combines them, SAS refuses."
+      - text: "SAS averages; tidyr errors; pandas produces a list column."
+        feedback: "That reverses SAS and pandas, and tidyr does not error."
+    solution: |
+      | Tool | Behaviour |
+      |---|---|
+      | SAS `PROC TRANSPOSE` | **Errors**: `The ID value "SYSBP" occurs twice in the same BY group` |
+      | tidyr `pivot_wider()` | **List column** — `<dbl [2]>` in the cell, breaking things downstream |
+      | pandas `pivot_table()` | **Silently averages** (`aggfunc = "mean"` default) |
+      | pandas `pivot()` | Raises `ValueError` |
+
+      **The pandas default is the one to fear.** Two blood-pressure readings become their average, no
+      warning is issued, and the result looks entirely normal. You cannot tell from the output that it
+      happened.
+
+      The defence is the same in every language: **check before reshaping.**
+
+      ```r
+      d |> count(USUBJID, PARAMCD) |> filter(n > 1)   # must be empty
+      ```
+    explanation:
+      objective: "Compare how three tools resolve an ambiguous reshape."
+      given: "A duplicated label within one row identity."
+      relevant: "Each tool's default handling of multiple values per cell."
+      method: "The reshape must put one value in one cell; with two candidates each tool made a different design choice."
+      assumptions: "In clinical data a duplicate here always means something real — a windowed unscheduled visit, a repeat, or a bad merge."
+      interpretation: "Only the erroring behaviour forces you to look at the cause."
+      changes: "pandas df.pivot() raises instead of averaging, which is the safer function despite the less general name."
+      interviewer: "That you name the pandas averaging default specifically, since it is the one that produces a plausible wrong answer."
+
+  - id: r.tidyr.id-cols
+    format: numeric
+    modes: [check, debug]
+    difficulty: advanced
+    skills: [r.tidyr]
+    lesson: r-reshaping-tidyr
+    title: The reshape that did not combine anything
+    prompt: |
+      `advs` filtered to Week 12 has **476** rows — 238 subjects × 2 parameters (`SYSBP`, `DIABP`) —
+      and carries many other columns including `BASE` and `CHG`.
+
+      ```r
+      advs |>
+        filter(AVISITN == 12) |>
+        pivot_wider(names_from = PARAMCD, values_from = AVAL)
+      ```
+
+      How many rows does this return?
+    answer: 476
+    tolerance: 0
+    hints:
+      - "`id_cols` defaults to every column not named in `names_from` or `values_from`."
+      - "Do `BASE` and `CHG` have the same value on a subject's SYSBP row and their DIABP row?"
+      - "If two rows differ on any id column, can they combine?"
+    solution: |
+      **476 — unchanged.** Nothing combined.
+
+      `id_cols` defaults to **every column not named in `names_from` or `values_from`**, so `BASE`, `CHG`,
+      `ADT`, `AVISIT` and the rest all became part of the row identity. A subject's `SYSBP` row has a
+      different `BASE` from their `DIABP` row, so the two rows are different identities and never meet.
+
+      The result *looks* like a successful reshape — it has a `SYSBP` column and a `DIABP` column — and it
+      is twice as tall as it should be, with half of each new column empty.
+
+      ```r
+      advs |>
+        filter(AVISITN == 12) |>
+        select(USUBJID, PARAMCD, AVAL) |>      # <- this line
+        pivot_wider(names_from = PARAMCD, values_from = AVAL)
+      #> 238 rows
+      ```
+
+      **The check that catches it:** long rows ÷ distinct labels should equal the expected wide row count.
+      476 ÷ 2 = 238, so anything other than 238 means the row identity is wrong.
+    explanation:
+      objective: "Predict the effect of the default id_cols on a reshape."
+      given: "A long dataset with extra columns that vary between the rows being combined."
+      relevant: "That BASE and CHG differ between a subject's SYSBP and DIABP rows."
+      calculating: "The number of distinct row identities after the default id_cols is applied."
+      numbers: "476 long rows; 238 subjects x 2 parameters; the reshape returns 476 because no two rows share an identity."
+      method: "Two rows combine only if they agree on every id column."
+      interpretation: "The output has the right shape and the wrong height, which is why it passes a glance."
+      changes: "select()-ing down to USUBJID, PARAMCD and AVAL gives the expected 238 rows."
+      interviewer: "That you know the id_cols default rather than assuming it means 'the key'."
+
+  - id: r.tidyr.pandas-default
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [r.tidyr, qc.data-cleaning]
+    lesson: r-reshaping-tidyr
+    title: Which pandas function to use
+    prompt: |
+      You are reshaping long to wide in pandas and you **expect no duplicates**. Which function should
+      you use, and why?
+    choices:
+      - text: "`df.pivot()` — it raises on duplicates, so an unexpected one becomes an error rather than a silent average."
+        correct: true
+        feedback: "Correct. `pivot_table` defaults to `aggfunc=\"mean\"` and would combine them without comment."
+      - text: "`df.pivot_table()` — it is the more general function."
+        feedback: "It is more general, and its generality is the problem: `aggfunc` defaults to `\"mean\"`, so duplicates are averaged silently."
+      - text: "`df.pivot_table(aggfunc=\"first\")` — take the first value."
+        feedback: "That is still a silent resolution. If you expect no duplicates, you want to be told when there are some."
+      - text: "`df.melt()` — the reshape function."
+        feedback: "`melt` goes wide to long, the opposite direction."
+    solution: |
+      **`df.pivot()`.** It raises `ValueError: Index contains duplicate entries` when the reshape is
+      ambiguous.
+
+      `pivot_table()` is the more general function — it exists to aggregate — but `aggfunc` defaults to
+      `"mean"`, so two blood-pressure readings become their average with no indication in the output.
+
+      The naming is genuinely unfortunate: `pivot_table` sounds like the safer, more capable choice, and
+      it is the one most tutorials reach for.
+
+      **The general principle across all three languages:** when you expect no duplicates, use the
+      function that fails when there are some. SAS `PROC TRANSPOSE` does this by default; pandas requires
+      you to pick `pivot()`; tidyr requires you to check first, because it never errors.
+    explanation:
+      objective: "Choose the pandas reshape function that surfaces rather than hides an ambiguity."
+      given: "A long-to-wide reshape where duplicates are not expected."
+      relevant: "Each function's behaviour when a cell has more than one candidate value."
+      method: "Prefer the function whose failure mode is an error when your expectation is no duplicates."
+      assumptions: "aggfunc defaults to mean in pivot_table, which is documented but rarely noticed."
+      interpretation: "An averaged pair of readings is indistinguishable from a single reading in the output."
+      changes: "If aggregation IS intended — averaging triplicate ECG readings, say — pivot_table with an explicit aggfunc is correct, and the intent is then visible in the code."
+      interviewer: "That you can state the principle (use the function that fails) rather than only memorising which is which."
+
+  - id: r.tidyr.row-arithmetic
+    format: numeric
+    modes: [check, guided, speed]
+    difficulty: foundation
+    skills: [r.tidyr]
+    lesson: r-reshaping-tidyr
+    title: Predict the wide row count
+    prompt: |
+      A long dataset has **476** rows covering **2** parameters, with every subject having exactly one
+      row per parameter.
+
+      After `pivot_wider(names_from = PARAMCD, values_from = AVAL)` with `id_cols = USUBJID`, how many
+      rows will there be?
+    answer: 238
+    tolerance: 0
+    hints:
+      - "Each subject contributes one row per parameter to the long form."
+      - "Those rows collapse into a single wide row per subject."
+      - "476 ÷ 2."
+    solution: |
+      **238.** Each subject contributed 2 long rows (one per parameter), which collapse into 1 wide row.
+
+      $$476 \div 2 = 238 \text{ subjects}$$
+
+      **This arithmetic is a check worth doing before every reshape**, because it fails in an informative
+      way. If the wide result is not 238:
+
+      - **More** than 238 → extra columns crept into `id_cols`, keeping rows apart that should have combined
+      - **Fewer** than 238, or list columns appear → some subject has more than one row for a parameter
+
+      Either way the number tells you which problem you have before you start debugging types.
+    explanation:
+      objective: "Predict a reshape's output row count and use it as a check."
+      given: "A long row count, a parameter count, and a balanced structure."
+      relevant: "That every subject has exactly one row per parameter."
+      calculating: "Long rows divided by distinct labels."
+      numbers: "476 / 2 = 238."
+      assumptions: "Balance — every subject has the same set of parameters. An unbalanced dataset breaks the simple division, which is itself informative."
+      interpretation: "A mismatch between predicted and actual row count diagnoses the problem before you look at types."
+      changes: "More rows than predicted means id_cols is too wide; list columns mean a duplicated label."
+      interviewer: "That you compute the expected count in advance rather than inspecting the result and hoping."
+
+  - id: r.tidyr.check-first
+    format: code
+    language: r
+    modes: [guided, independent, qc]
+    difficulty: foundation
+    skills: [r.tidyr, qc.data-cleaning]
+    lesson: r-reshaping-tidyr
+    title: Check before you pivot
+    minutes: 10
+    prompt: |
+      Write `check_pivotable(data, id_cols, names_from)` that returns the **duplicated combinations** that
+      would make a `pivot_wider()` ambiguous — a data frame with the id columns, the label column, and
+      `n` — or a zero-row data frame if there are none.
+
+      `id_cols` and `names_from` arrive as character vectors of column names.
+    starter: |
+      library(dplyr)
+
+      check_pivotable <- function(data, id_cols, names_from) {
+        data |>
+          count(___) |>
+          filter(___)
+      }
+    reference: |
+      library(dplyr)
+
+      check_pivotable <- function(data, id_cols, names_from) {
+        data |>
+          count(across(all_of(c(id_cols, names_from)))) |>
+          filter(n > 1)
+      }
+    hints:
+      - "`count()` takes columns; `across(all_of(cols))` lets you pass them as a character vector."
+      - "A combination appearing more than once is what makes the reshape ambiguous."
+      - "Returning the offending rows is more useful than returning TRUE/FALSE — the caller can look at them."
+    checks:
+      - pattern: "count\\s*\\("
+        message: "Counts occurrences of each combination"
+      - pattern: "all_of\\s*\\("
+        message: "Selects columns safely from a character vector"
+      - pattern: "n\\s*>\\s*1"
+        message: "Keeps only the combinations that appear more than once"
+    expectedOutput: |
+      ```text
+      > check_pivotable(long, "USUBJID", "PARAMCD")
+      [1] USUBJID PARAMCD n
+      <0 rows> (or 0-length row.names)
+
+      > check_pivotable(dup, "id", "p")
+        id p n
+      1  1 A 2
+      ```
+    solution: |
+      ```r
+      check_pivotable <- function(data, id_cols, names_from) {
+        data |>
+          count(across(all_of(c(id_cols, names_from)))) |>
+          filter(n > 1)
+      }
+      ```
+
+      **Returning the offending rows rather than a logical** is the design decision that matters. A
+      function returning `FALSE` tells you there is a problem; one returning the rows tells you *which
+      subject, which parameter, how many times* — which is what you need to decide whether it is a
+      windowed unscheduled visit, a genuine repeat, or a bad merge upstream.
+
+      Used as a gate:
+
+      ```r
+      stopifnot(nrow(check_pivotable(long, "USUBJID", "PARAMCD")) == 0)
+      ```
+
+      **`all_of()`** rather than bare selection errors if a named column is missing, instead of silently
+      counting fewer columns and reporting no duplicates — a false reassurance that would be worse than
+      no check at all.
+    explanation:
+      objective: "Detect the ambiguity that makes a reshape unsafe, before performing it."
+      given: "A long dataset and the columns that will define row identity and column names."
+      relevant: "Whether any combination of id columns and label appears more than once."
+      method: "Count the combinations and keep those appearing more than once."
+      assumptions: "The caller supplies the same id_cols they will pass to pivot_wider; a mismatch would check the wrong thing."
+      computation: "across(all_of(...)) accepts character vectors and errors on a missing name."
+      interpretation: "The returned rows identify the subjects and parameters to investigate."
+      changes: "Returning a logical would make the function easier to use as a gate and far less useful for diagnosis."
+      interviewer: "That you return the evidence rather than a verdict, since the next question is always 'which ones?'"
+
+  - id: r.tidyr.wide-listing
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [r.tidyr, tlf.listings]
+    lesson: r-reshaping-tidyr
+    title: A wide Week 12 listing
+    minutes: 12
+    prompt: |
+      Write `bp_listing(advs)` producing one row per subject with columns `USUBJID`, `SYSBP` and `DIABP`
+      at Week 12.
+
+      Requirements:
+
+      - Filter to `AVISITN == 12`.
+      - `select()` down to the three columns needed **before** pivoting.
+      - Assert no duplicate subject/parameter combinations before reshaping.
+      - Assert the output has one row per subject.
+    starter: |
+      library(dplyr); library(tidyr)
+
+      bp_listing <- function(advs) {
+        long <- advs |>
+          filter(___) |>
+          select(___)
+
+        stopifnot(___)
+
+        wide <- long |>
+          pivot_wider(___)
+
+        stopifnot(___)
+        wide
+      }
+    reference: |
+      library(dplyr); library(tidyr)
+
+      bp_listing <- function(advs) {
+        long <- advs |>
+          filter(AVISITN == 12) |>
+          select(USUBJID, PARAMCD, AVAL)
+
+        stopifnot(nrow(count(long, USUBJID, PARAMCD) |> filter(n > 1)) == 0)
+
+        wide <- long |>
+          pivot_wider(names_from = PARAMCD, values_from = AVAL)
+
+        stopifnot(nrow(wide) == n_distinct(long$USUBJID))
+        wide
+      }
+    hints:
+      - "The `select()` must come before the pivot — otherwise `id_cols` picks up BASE, CHG and the rest."
+      - "`count(long, USUBJID, PARAMCD) |> filter(n > 1)` must be empty."
+      - "The output row count should equal the number of distinct subjects in the long data."
+    checks:
+      - pattern: "AVISITN\\s*==\\s*12"
+        message: "Filters to Week 12"
+      - pattern: "select\\s*\\(\\s*USUBJID\\s*,\\s*PARAMCD\\s*,\\s*AVAL\\s*\\)"
+        message: "Selects only the columns needed, before pivoting"
+      - pattern: "names_from\\s*=\\s*PARAMCD"
+        message: "Uses PARAMCD for the new column names"
+      - pattern: "values_from\\s*=\\s*AVAL"
+        message: "Uses AVAL for the cell values"
+      - pattern: "stopifnot\\s*\\("
+        message: "Asserts rather than assumes"
+    expectedOutput: |
+      ```text
+      > out <- bp_listing(advs)
+      > nrow(out); names(out)
+      [1] 238
+      [1] "USUBJID" "SYSBP"   "DIABP"
+      ```
+    solution: |
+      **The `select()` is the line that makes this work.** Without it the result has **476** rows rather
+      than 238, because `id_cols` defaults to every remaining column and `BASE`/`CHG` differ between a
+      subject's `SYSBP` and `DIABP` rows.
+
+      That failure is nasty because it produces an output with the right *shape* — a `SYSBP` column and a
+      `DIABP` column — and the wrong height, with half of each column empty. It passes a glance.
+
+      **The two assertions catch different things.** The duplicate check prevents list columns; the
+      row-count check confirms that the reshape actually combined what it was supposed to. Either can
+      pass while the other fails.
+
+      Note that the pivot puts `SYSBP` before `DIABP` — the order the values first appear in the data, not
+      alphabetical. If a listing needs a specific column order, `select(USUBJID, SYSBP, DIABP)` afterwards
+      or `names_sort = TRUE` in the pivot makes it explicit rather than incidental.
+    explanation:
+      objective: "Produce a wide listing with the checks that make it trustworthy."
+      given: "A long BDS dataset with extra columns."
+      relevant: "The three columns needed, and the duplicate and row-count checks."
+      method: "Filter, select, check, pivot, check."
+      numbers: "476 long rows from 238 subjects and 2 parameters, giving 238 wide rows."
+      assumptions: "Every subject has both parameters; an unbalanced set would give NA cells rather than an error."
+      computation: "Omitting the select gives 476 rows because BASE and CHG enter id_cols."
+      interpretation: "A reshape that returns the wrong row count has usually combined the wrong things rather than failed."
+      changes: "Column order follows first appearance in the data; names_sort = TRUE or a trailing select makes it deterministic."
+      interviewer: "That you add the select without prompting, since the id_cols default is the trap here."
+
+  - id: r.tidyr.shift-table
+    format: code
+    language: r
+    modes: [independent]
+    difficulty: advanced
+    skills: [r.tidyr, tlf.safety-tables]
+    lesson: r-reshaping-tidyr
+    title: Build a shift table
+    minutes: 15
+    prompt: |
+      Write `shift_table(advs, param = "SYSBP", cut = 140)` producing a baseline-to-Week-12 shift table
+      for systolic BP: counts of subjects by treatment arm, baseline category and Week 12 category.
+
+      - Categorise as `"Normal"` when `AVAL < cut`, else `"High"`.
+      - Use visits 0 (baseline) and 12.
+      - Name the pivoted columns `V0` and `V12`.
+      - Return counts by `TRTP`, `V0`, `V12`.
+
+      Subjects with no Week 12 record should appear with `V12` as `NA` — they are part of the population
+      and dropping them would change the denominator.
+    starter: |
+      library(dplyr); library(tidyr)
+
+      shift_table <- function(advs, param = "SYSBP", cut = 140) {
+        advs |>
+          filter(___) |>
+          mutate(CAT = ___) |>
+          select(___) |>
+          pivot_wider(___) |>
+          count(___)
+      }
+    reference: |
+      library(dplyr); library(tidyr)
+
+      shift_table <- function(advs, param = "SYSBP", cut = 140) {
+        advs |>
+          filter(PARAMCD == param, AVISITN %in% c(0, 12)) |>
+          mutate(CAT = if_else(AVAL < cut, "Normal", "High")) |>
+          select(USUBJID, TRTP, AVISITN, CAT) |>
+          pivot_wider(names_from = AVISITN, values_from = CAT,
+                      names_prefix = "V") |>
+          count(TRTP, V0, V12)
+      }
+    hints:
+      - "`AVISITN %in% c(0, 12)` keeps both the baseline and the Week 12 record."
+      - "`names_prefix = \"V\"` turns column names `0` and `12` into `V0` and `V12`, which are syntactic."
+      - "`select()` down to the four columns needed, or `id_cols` will pick up AVAL and keep the rows apart."
+    checks:
+      - pattern: "AVISITN\\s*%in%\\s*c\\s*\\(\\s*0\\s*,\\s*12\\s*\\)"
+        message: "Keeps both baseline and Week 12"
+      - pattern: "if_else\\s*\\(|case_when\\s*\\("
+        message: "Derives the category from the threshold"
+      - pattern: "names_prefix\\s*=\\s*[\"']V[\"']"
+        message: "Produces syntactic column names"
+      - pattern: "names_from\\s*=\\s*AVISITN"
+        message: "Pivots on the visit number"
+      - pattern: "count\\s*\\(\\s*TRTP\\s*,\\s*V0\\s*,\\s*V12\\s*\\)"
+        message: "Counts by arm and both categories"
+    expectedOutput: |
+      ```text
+                 TRTP     V0     V12  n
+      7  VTX-221 10 mg   High    High 42
+      8  VTX-221 10 mg   High  Normal 29
+      9  VTX-221 10 mg   High    <NA>  9
+      10 VTX-221 10 mg Normal    High  2
+      11 VTX-221 10 mg Normal  Normal  8
+      12 VTX-221 20 mg   High    High 34
+      13 VTX-221 20 mg   High  Normal 38
+      14 VTX-221 20 mg   High    <NA>  8
+      ```
+    solution: |
+      **Read the table as movement, not as two percentages.**
+
+      On 20 mg: 38 subjects moved High → Normal and only 3 moved Normal → High. On 10 mg: 29 improved,
+      2 worsened. The off-diagonal cells are the finding — a summary saying "26% controlled at baseline,
+      54% at Week 12" cannot distinguish "the same subjects improved" from "some improved while others
+      deteriorated".
+
+      **The `<NA>` rows are deliberate and belong in the table.** They are subjects with no Week 12 record,
+      and 9 + 8 of them is not a rounding detail. Dropping them — which an `inner_join` or a
+      `filter(!is.na(V12))` would do silently — changes the denominator of every percentage computed from
+      this table. Whether they should be shown as a row or imputed is a SAP decision, and showing them is
+      the honest default.
+
+      **Why `names_prefix` matters:** without it the columns are named `0` and `12`, which are legal but
+      require backticks everywhere (`` `12` ``) and break some downstream functions. Fixing it at the
+      reshape is cheaper than renaming later.
+
+      This is the reshape that genuinely earns its place in clinical reporting — laboratory shift tables
+      are standard in the safety section of a CSR, and they cannot be built from long data without
+      putting the two timepoints side by side.
+    explanation:
+      objective: "Build a shift table, the clinical case where widening is necessary rather than cosmetic."
+      given: "Long BDS data with baseline and Week 12 records and a categorisation threshold."
+      relevant: "The two visits, the category derivation, and the subjects missing a Week 12 value."
+      method: "Categorise while long, widen on visit, then cross-tabulate."
+      numbers: "On 20 mg: 34 High-High, 38 High-Normal, 3 Normal-High, 5 Normal-Normal, 8 with no Week 12 record."
+      assumptions: "A single threshold defines the categories; real lab shift tables use reference ranges or CTCAE grades."
+      interpretation: "The off-diagonal cells show movement, which marginal percentages cannot."
+      changes: "Dropping the NA rows would change every denominator — a missing-data decision belonging to the SAP, not to a filter."
+      interviewer: "That you keep the NA row and can say why a shift table answers a question that two percentages cannot."
+
+  - id: r.tidyr.roundtrip
+    format: numeric
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [r.tidyr]
+    lesson: r-reshaping-tidyr
+    title: Round-tripping a reshape
+    prompt: |
+      A long dataset of **476** rows is pivoted wide to **238** rows, then pivoted back to long with
+      `pivot_longer(cols = -USUBJID, ...)`.
+
+      How many rows does the round trip return?
+    answer: 476
+    tolerance: 0
+    hints:
+      - "The wide form has 238 rows and 2 value columns."
+      - "`pivot_longer` stacks each value column into its own row."
+      - "238 × 2."
+    solution: |
+      **476 — exactly the original.**
+
+      238 wide rows × 2 value columns = 476 long rows. A clean round trip.
+
+      **This is a useful sanity check** when you are unsure whether a reshape lost anything. If the round
+      trip does not return the original row count, something was dropped or duplicated in between.
+
+      One caveat worth knowing: the round trip is only exact when the wide form has **no missing cells**.
+      If a subject lacked one parameter, the wide form would carry an `NA` and `pivot_longer` would
+      faithfully produce a row for it — giving *more* long rows than you started with. Passing
+      `values_drop_na = TRUE` restores the original count, at the cost of discarding genuinely missing
+      values that you may want to keep.
+    explanation:
+      objective: "Predict the row count of a wide-to-long reshape and use the round trip as a check."
+      given: "A wide dataset of 238 rows with two value columns."
+      relevant: "The number of rows and the number of columns being stacked."
+      calculating: "Rows times value columns."
+      numbers: "238 x 2 = 476, matching the original long form."
+      assumptions: "No missing cells in the wide form. A subject lacking a parameter would produce an extra NA row."
+      interpretation: "A clean round trip confirms that the widening was lossless."
+      changes: "values_drop_na = TRUE removes the NA rows, which restores the count but discards information about which values were missing."
+      interviewer: "That you note the missing-cell caveat rather than treating the round trip as unconditionally exact."
+
+  - id: r.tidyr.list-column-debug
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [r.tidyr, qc.data-cleaning]
+    lesson: r-reshaping-tidyr
+    title: The column that became a list
+    minutes: 10
+    prompt: |
+      This pipeline produces a `SYSBP` column of class `list` rather than `numeric`, and the `mutate()`
+      on the last line fails with an error about an invalid argument type.
+
+      Click the line where the problem is **introduced**.
+    code: |
+      library(dplyr); library(tidyr)
+
+      wide <- advs |>
+        filter(PARAMCD %in% c("SYSBP", "DIABP")) |>
+        select(USUBJID, PARAMCD, AVAL) |>
+        pivot_wider(names_from = PARAMCD, values_from = AVAL) |>
+        mutate(PULSE_PRESSURE = SYSBP - DIABP)
+    answerLines: [4]
+    lineNotes:
+      - line: 4
+        note: "The filter keeps **every visit**, not one. So a subject has a SYSBP row at baseline, Week 2, Week 4 and so on — many rows per subject/parameter combination. `pivot_wider` finds several values for each cell and returns a list of them. Adding `AVISITN == 12` (or including AVISITN in the selection so it forms part of the row identity) fixes it."
+      - line: 5
+        note: "The select is correct in itself — it is what a safe reshape needs. But combined with a filter that keeps every visit, it *removes* the AVISITN column that would otherwise have separated the rows."
+      - line: 6
+        note: "`pivot_wider` is reporting the ambiguity faithfully by keeping both values. It is the messenger."
+      - line: 7
+        note: "This is where the error surfaces — subtracting one list from another — but the cause is four lines above."
+    fixed: |
+      library(dplyr); library(tidyr)
+
+      long <- advs |>
+        filter(PARAMCD %in% c("SYSBP", "DIABP"), AVISITN == 12) |>
+        select(USUBJID, PARAMCD, AVAL)
+
+      stopifnot(nrow(count(long, USUBJID, PARAMCD) |> filter(n > 1)) == 0)
+
+      wide <- long |>
+        pivot_wider(names_from = PARAMCD, values_from = AVAL) |>
+        mutate(PULSE_PRESSURE = SYSBP - DIABP)
+    hints:
+      - "A list column means `pivot_wider` found more than one value for a cell. How many values does each subject have for SYSBP?"
+      - "Which column would have distinguished those rows, and what happened to it?"
+      - "Run `count(USUBJID, PARAMCD) |> filter(n > 1)` on the data going into the pivot."
+    solution: |
+      **Line 4.** The filter restricts the *parameter* but not the *visit*, so every subject has a SYSBP
+      row at every visit — between 2 and 7 of them in this dataset.
+
+      **Line 5 is complicit.** The `select()` drops `AVISITN`, which would otherwise have been part of the
+      row identity and kept the visits apart. On its own the select is good practice; combined with a
+      filter that keeps every visit, it removes the only thing distinguishing the rows.
+
+      **That combination is the general shape of this bug:** restricting one dimension, then dropping the
+      column that distinguishes the other.
+
+      Two fixes, depending on what you want:
+
+      ```r
+      filter(..., AVISITN == 12)                       # one visit
+      select(USUBJID, AVISITN, PARAMCD, AVAL)          # keep all visits, one row each
+      ```
+
+      And the diagnostic that would have identified it in one line:
+
+      ```r
+      long |> count(USUBJID, PARAMCD) |> filter(n > 1)
+      ```
+    explanation:
+      objective: "Trace a list column back to the ambiguity that created it."
+      given: "A pipeline filtering on parameter but not visit, then selecting away the visit column."
+      relevant: "That each subject has several visits per parameter."
+      irrelevant: "The pivot and the mutate, which behave correctly given their inputs."
+      method: "A list column always means multiple values per cell; find which dimension was not restricted."
+      numbers: "Subjects have between 2 and 7 SYSBP records in this dataset, so most cells would hold several values."
+      interpretation: "The error surfaces at the arithmetic but originates at the filter, four lines earlier."
+      changes: "Keeping AVISITN in the selection gives one row per subject per visit instead, which is a different and also valid result."
+      interviewer: "That you identify the filter rather than the pivot, and that you name the count() diagnostic."
+
+  - id: r.tidyr.sas-transpose
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: intermediate
+    skills: [r.tidyr, r.sas-translation, sas.transpose]
+    lesson: r-reshaping-tidyr
+    title: Mapping PROC TRANSPOSE onto pivot_wider
+    prompt: |
+      ```text
+      proc transpose data=long out=wide (drop=_name_);
+        by usubjid;
+        id paramcd;
+        var aval;
+      run;
+      ```
+
+      Which `pivot_wider()` call is equivalent?
+    choices:
+      - text: "`pivot_wider(id_cols = USUBJID, names_from = PARAMCD, values_from = AVAL)`"
+        correct: true
+        feedback: "Correct. BY maps to id_cols, ID to names_from, VAR to values_from — a clean three-way correspondence."
+      - text: "`pivot_wider(id_cols = PARAMCD, names_from = USUBJID, values_from = AVAL)`"
+        feedback: "That transposes subjects into columns — the BY and ID statements swapped."
+      - text: "`pivot_longer(cols = -USUBJID, names_to = \"PARAMCD\", values_to = \"AVAL\")`"
+        feedback: "That is the opposite direction. PROC TRANSPOSE here goes long to wide."
+      - text: "`pivot_wider(names_from = AVAL, values_from = PARAMCD)`"
+        feedback: "That would make each distinct measurement value into a column — hundreds of columns of parameter names."
+    solution: |
+      | PROC TRANSPOSE | tidyr |
+      |---|---|
+      | `BY usubjid` | `id_cols = USUBJID` |
+      | `ID paramcd` | `names_from = PARAMCD` |
+      | `VAR aval` | `values_from = AVAL` |
+      | `DROP=_NAME_` | not needed |
+
+      **The crucial behavioural difference is what happens on a duplicate.** PROC TRANSPOSE errors:
+
+      ```text
+      ERROR: The ID value "SYSBP" occurs twice in the same BY group.
+      ```
+
+      `pivot_wider()` silently produces a list column. So a faithful translation of the SAS code needs an
+      explicit check that SAS gave you for free:
+
+      ```r
+      stopifnot(nrow(count(long, USUBJID, PARAMCD) |> filter(n > 1)) == 0)
+      ```
+
+      **Also note what `id_cols` does that `BY` does not.** PROC TRANSPOSE requires the data sorted by the
+      BY variables and uses only those; tidyr defaults `id_cols` to *every* unnamed column, so an
+      unrestricted `pivot_wider` can keep rows apart that the SAS version would have combined.
+    explanation:
+      objective: "Map a PROC TRANSPOSE onto its tidyr equivalent, including the behavioural difference."
+      given: "A PROC TRANSPOSE with BY, ID and VAR statements."
+      relevant: "The three-way correspondence and the differing duplicate handling."
+      method: "BY is the row identity, ID supplies column names, VAR supplies values."
+      assumptions: "PROC TRANSPOSE requires the input sorted by the BY variables; tidyr has no sorting requirement."
+      interpretation: "The syntax maps cleanly; the failure modes do not."
+      changes: "Translating the code faithfully requires adding a duplicate check, because SAS's error is a behaviour tidyr does not have."
+      interviewer: "That you translate the guarantee as well as the syntax, since the guarantee is what the SAS programmer was relying on."
+
+  - id: r.tidyr.open
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [r.tidyr, communication.interviewing]
+    lesson: r-reshaping-tidyr
+    title: Long or wide?
+    prompt: |
+      **Interviewer:** "You're given a clinical dataset. How do you decide whether to work with it long or wide?"
+    modelAnswer: |
+      "Analysis long, presentation wide — and the reshape happens as late as possible.
+
+      Everything that models the data wants it long. MMRM, ANCOVA, Cox, logistic — they all expect one row
+      per observation. ggplot2 does too. That is not a coincidence; it is why BDS is specified as one row
+      per subject per parameter per visit. The structure makes analysis and plotting natural and forces
+      the presentation decisions to happen somewhere reviewable.
+
+      Widening is for output. The two cases where it is genuinely necessary in clinical reporting are
+      **listings** — a reviewer reading one subject's record wants one column per parameter — and **shift
+      tables**, where you need each subject's baseline and post-baseline categories side by side to
+      cross-tabulate them. In long form those two values are on different rows and cannot be compared
+      without a self-join.
+
+      Practically, that means a pipeline that widens early has to narrow again to fit a model, and every
+      reshape is a chance to lose or duplicate a row. So I keep it long through the derivation and the
+      analysis, and widen in the table program.
+
+      The thing I'd always do before any `pivot_wider` is check for duplicates —
+      `count()` the id columns and the names column and confirm nothing appears twice. That matters
+      because the languages disagree about the ambiguous case: SAS `PROC TRANSPOSE` errors, tidyr gives
+      you list columns that break something three steps later, and pandas `pivot_table` silently
+      *averages*. Only one of those tells you there was a problem.
+
+      And a duplicate there always means something real — a windowed unscheduled visit, a repeat
+      measurement, a merge that went wrong. The reshape shouldn't be what decides it."
+    rubric:
+      - States the analysis-long, presentation-wide principle
+      - Connects it to why BDS is structured as it is
+      - Names listings and shift tables as the cases where widening is necessary
+      - Explains that widening early forces narrowing again and risks row loss
+      - Raises the duplicate check as a precondition for any pivot
+      - Names how the three languages differ on the ambiguous case
+      - Treats a duplicate as something to investigate rather than resolve
+    redFlags:
+      - "Treats the choice as a matter of preference or readability"
+      - "Does not mention checking for duplicates"
+      - "Cannot name a clinical case where widening is required"
+      - "Suggests using an aggregation function to resolve duplicates without investigating them"

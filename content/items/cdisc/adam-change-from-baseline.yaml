@@ -1,0 +1,565 @@
+items:
+  - id: adam.chg.baseline-row
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [adam.baseline, adam.bds, tlf.summary-stats]
+    lesson: adam-change-from-baseline
+    title: CHG on the baseline record
+    prompt: |
+      Two sponsors derive the same BDS dataset. One sets `CHG = 0` on the record where `ABLFL = "Y"`;
+      the other leaves it null.
+
+      Which is correct under ADaMIG v1.3, and what changes in the outputs?
+    choices:
+      - text: "Both are conformant — ADaMIG does not mandate either. The difference shows up as the baseline row's n in a by-visit change summary: the whole population under one convention, zero under the other."
+        correct: true
+        feedback: "Correct. It is a sponsor convention that must be stated, because the two produce visibly different tables and neither is a violation."
+      - text: "Null is required, because the baseline record is not a change."
+        feedback: "It is the more common convention and the one both studies here use, but ADaMIG v1.3 does not require it."
+      - text: "Zero is required, so that a mean-change figure has a point at the baseline visit."
+        feedback: "That is an argument for the zero convention, not a requirement. Plotting programs routinely add the baseline point themselves."
+      - text: "It depends on whether the parameter is continuous or categorical."
+        feedback: "The convention applies to the dataset, not to individual parameters."
+    explanation:
+      objective: "Recognise a sponsor convention that looks like a standard."
+      relevant: "That ADaMIG defines CHG's formula but not its value on the baseline record."
+      method: "Ask what the table would show under each convention."
+      numbers: "Both CBX417-301 and VTX221-201 use null: zero records with ABLFL = 'Y' carry a non-missing CHG."
+      interpretation: "Under the zero convention the baseline row shows the full n with a mean of 0 and an SD of 0; under null the row is empty."
+      changes: "A study that pools data across two sponsors with different conventions will produce a baseline row that is half populated."
+      interviewer: "That you label it a convention and say it must be documented, rather than asserting one answer."
+
+  - id: adam.chg.denominator
+    format: numeric
+    modes: [check, qc, debug]
+    difficulty: intermediate
+    skills: [tlf.denominators, adam.bds, stats.missing-data]
+    lesson: adam-change-from-baseline
+    datasets: [cardio/adam/advs]
+    title: How many randomized subjects are missing from the Week 12 row?
+    prompt: |
+      VTX221-201 randomized 270 subjects. The Week 12 change-from-baseline row of the primary table
+      reports:
+
+      | Arm | n | Mean change |
+      |---|---:|---:|
+      | Placebo | 77 | −3.30 |
+      | VTX-221 10 mg | 81 | −8.83 |
+      | VTX-221 20 mg | 80 | −12.28 |
+
+      How many randomized subjects contribute nothing to this row?
+    answer: 32
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "Add the three n values."
+      - "270 randomized."
+      - "270 − 238."
+    solution: |
+      **32.** `77 + 81 + 80 = 238`, and `270 − 238 = 32`.
+
+      **The count is the smaller half of the problem.** The question that decides whether the row means
+      anything is whether those 32 differ from the 238 — and here they do, in one arm:
+
+      | Arm | Week 2 change, later had Week 12 | Week 2 change, did not |
+      |---|---:|---:|
+      | Placebo | n = 75, **−2.71** | n = 12, **+2.98** |
+      | VTX-221 10 mg | n = 77, −5.69 | n = 8, −5.95 |
+      | VTX-221 20 mg | n = 77, −8.04 | n = 8, −6.20 |
+
+      On placebo the subjects who left were the ones going the wrong way. On active drug the two groups
+      are indistinguishable.
+
+      **So the placebo column is selectively favourable**, and every treatment difference measured against
+      it is too small. The MMRM, which uses the pre-dropout visits of subjects who left, moves the 20 mg
+      difference from −7.72 to −8.35.
+
+      The dropout mechanism here is missing at random — the chance of stopping for lack of efficacy rises
+      with the last *observed* pressure, and placebo subjects have higher pressures. That is exactly the
+      condition under which a model over all visits recovers the right answer and a complete-case
+      analysis does not.
+    explanation:
+      objective: "Recover the missing-data count from a table that does not print it."
+      given: "Three per-arm n values and the randomized total."
+      relevant: "That the row's denominator is subjects observed at that visit, not subjects randomized."
+      calculating: "Randomized total minus the sum of the per-arm n values."
+      numbers: "77 + 81 + 80 = 238; 270 - 238 = 32."
+      assumptions: "ITT here is all 270 randomized subjects."
+      interpretation: "12% missing at the primary timepoint, concentrated differently by arm."
+      changes: "The count alone says nothing; the Week 2 comparison shows the missingness is informative on placebo only."
+      interviewer: "That you go straight from the count to whether the missing subjects differ."
+
+  - id: adam.chg.pchg-trap
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [adam.bds, tlf.summary-stats, stats.descriptive]
+    lesson: adam-change-from-baseline
+    title: Mean percent change of 26.7%, median 10%
+    prompt: |
+      ALT at Cycle 4 Day 1 in the CBX-417 arm of CBX417-301, 147 subjects:
+
+      | Statistic | `CHG` (U/L) | `PCHG` (%) |
+      |---|---:|---:|
+      | Mean | 5.34 | 26.74 |
+      | Median | 2 | 10 |
+
+      The full range of `PCHG` for ALT across the study is −47% to +5,477%. What should the table report?
+    choices:
+      - text: "`CHG` with its median alongside the mean. Percent change is unbounded above and bounded at −100% below, so its mean is dominated by a few large rises and reads as though a typical subject rose by a quarter."
+        correct: true
+        feedback: "Correct. 5.34 U/L is a quantity a clinician can size against a normal range of 10 to 50; 26.7% is not, and the median of 10% says something quite different from the mean."
+      - text: "`PCHG`, because a percentage is comparable across parameters with different units."
+        feedback: "It is not comparable: PCHG is most extreme where the baseline is smallest, so neutrophils and ALT produce percent changes on completely different scales for the same clinical severity."
+      - text: "`PCHG` with outliers above 1,000% excluded."
+        feedback: "The +5,477% is a real grade 4 hepatotoxicity. Excluding it to make the summary behave removes the finding the safety analysis exists to detect."
+      - text: "Either — they carry the same information, since one is a linear transformation of the other."
+        feedback: "It is not linear: the divisor is a per-subject measured quantity, so the transformation differs for every subject."
+    explanation:
+      objective: "Choose between change and percent change for a safety summary."
+      given: "Means and medians of both, and the full range of the percent change."
+      relevant: "The asymmetry of the percent scale and the size of the mean-median gap."
+      irrelevant: "Comparability across parameters, which percent change does not provide."
+      method: "Ask whether the clinical statement you want to make contains a percentage."
+      numbers: "PCHG range -47% to +5,477%; the +5,477% is a baseline of 26 U/L rising to 1,450."
+      assumptions: "The outlying values are real findings, not data errors — they carry grade 4."
+      interpretation: "Blood pressure guidelines and CTCAE thresholds are absolute; RECIST response is a percentage. The endpoint definition decides."
+      changes: "For tumor size, percent change is the right variable — a 10 mm shrinkage means different things in a 20 mm and a 200 mm lesion."
+      interviewer: "That you connect the choice to how the clinical criterion is written rather than to statistical taste."
+
+  - id: adam.chg.flag-negation
+    format: hotspot
+    language: r
+    modes: [debug, qc, speed]
+    difficulty: intermediate
+    skills: [adam.bds, adam.baseline, qc.discrepancy]
+    lesson: adam-change-from-baseline
+    title: Every record got a change, including baseline
+    minutes: 6
+    prompt: |
+      This derivation produces a `CHG` on every record, including the baseline record, on a study whose
+      convention is that the baseline record has no change.
+
+      Click the line responsible.
+    code: |
+      library(dplyr)
+
+      advs <- advs_base |>
+        mutate(
+          CHG  = if_else(ABLFL != "N", AVAL - BASE, NA_real_),
+          PCHG = if_else(ABLFL != "N" & BASE != 0,
+                         100 * (AVAL - BASE) / BASE, NA_real_)
+        )
+    answerLines: [5]
+    lineNotes:
+      - line: 5
+        note: "`ABLFL` takes `\"Y\"` or null — never `\"N\"`. Record-level analysis flags use the Y/null convention, unlike subject-level population flags, which are Y/N. In R, `NA != \"N\"` is `NA`, so `if_else` returns its missing branch for non-baseline records and `\"Y\" != \"N\"` is TRUE for the baseline record — the condition is inverted *and* unreliable. The test is `is.na(ABLFL)`."
+      - line: 6
+        note: "The same defect, plus a second one: `BASE != 0` is `NA` when `BASE` is missing, so `PCHG` silently becomes missing rather than being excluded deliberately."
+      - line: 4
+        note: "`mutate` is the right verb — the values belong on the existing records, not on a filtered subset."
+    fixed: |
+      library(dplyr)
+
+      advs <- advs_base |>
+        mutate(
+          CHG  = if_else(!is.na(ABLFL) | is.na(BASE), NA_real_, AVAL - BASE),
+          PCHG = if_else(!is.na(ABLFL) | is.na(BASE) | BASE == 0, NA_real_,
+                         100 * (AVAL - BASE) / BASE)
+        )
+    hints:
+      - "What values can `ABLFL` actually take?"
+      - "Subject-level population flags are Y/N. Record-level analysis flags are something else."
+      - "What is `NA != \"N\"` in R?"
+    solution: |
+      **Line 5.** `ABLFL` is a **record-level** flag and takes `"Y"` or **null** — never `"N"`.
+
+      The asymmetry is deliberate and it is in ADaMIG v1.3:
+
+      | Flag kind | Values | Example | Safe test |
+      |---|---|---|---|
+      | Subject-level population | `Y` / `N`, never null | `SAFFL`, `ITTFL`, `PPROTFL` | `== "Y"` or `== "N"` |
+      | Record-level analysis | `Y` / null | `ABLFL`, `ANL01FL`, `TRTEMFL`, `ONTRTFL` | `== "Y"` or `is.na()` |
+
+      A record-level flag answers "is this **the** record", and the records that were not selected are not
+      "no" — they simply were not chosen. Setting them to `"N"` would invite exactly this negation.
+
+      **What the broken line actually does in R.** For the baseline record, `"Y" != "N"` is `TRUE`, so it
+      gets a change — the opposite of the intent. For every other record, `NA != "N"` is `NA`, and
+      `if_else` returns `NA_real_` for a missing condition. So the code produces a change on the baseline
+      record and nowhere else: the derivation is inverted, and the symptom is a by-visit table whose only
+      populated change row is baseline.
+
+      **In SAS the same mistake fails differently and more quietly.** A missing character value compares
+      as less than any non-missing string, so `ablfl ne 'N'` is true for both the baseline record and
+      every other record, and *every* record gets a change. Same bug, opposite symptom, and the SAS
+      version is harder to notice because the table looks almost right.
+    explanation:
+      objective: "Identify a flag-convention error and predict its symptom in each language."
+      given: "A derivation testing a record-level flag with a negation against 'N'."
+      relevant: "That ABLFL takes Y or null, and how each language evaluates a comparison against a missing value."
+      irrelevant: "The choice of mutate, which is correct."
+      method: "Enumerate the flag's actual values, then evaluate the condition for each."
+      numbers: "In R the condition is TRUE for the one baseline record per subject and parameter and NA for the rest."
+      assumptions: "ADaMIG v1.3 specifies Y/null for record-level analysis flags and Y/N for subject-level population flags."
+      interpretation: "In R the derivation inverts; in SAS it applies to everything. Neither errors."
+      changes: "Testing is.na(ABLFL) works identically in both languages and cannot be inverted by a missing value."
+      interviewer: "That you know both conventions and can say why the record-level one has no 'N'."
+
+  - id: adam.chg.derive-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [adam.bds, adam.baseline, r.dplyr]
+    lesson: adam-change-from-baseline
+    datasets: [cardio/adam/advs]
+    title: Derive CHG and PCHG with every guard
+    minutes: 10
+    prompt: |
+      Write `derive_change(bds)` adding `CHG` and `PCHG` to a BDS dataset that already has `AVAL`,
+      `BASE` and `ABLFL`.
+
+      This study's convention: **no change on the baseline record**.
+
+      Both variables must also be null when `BASE` is missing. `PCHG` must additionally be null when
+      `BASE` is zero.
+
+      `ABLFL` takes `"Y"` or null — test it accordingly.
+    starter: |
+      library(dplyr)
+
+      derive_change <- function(bds) {
+        bds |>
+          mutate(
+            CHG  = if_else(___, NA_real_, AVAL - BASE),
+            PCHG = if_else(___, NA_real_, 100 * (AVAL - BASE) / BASE)
+          )
+      }
+    reference: |
+      library(dplyr)
+
+      derive_change <- function(bds) {
+        bds |>
+          mutate(
+            CHG  = if_else(!is.na(ABLFL) | is.na(BASE) | is.na(AVAL),
+                           NA_real_, AVAL - BASE),
+            PCHG = if_else(!is.na(ABLFL) | is.na(BASE) | is.na(AVAL) | BASE == 0,
+                           NA_real_, 100 * (AVAL - BASE) / BASE)
+          )
+      }
+    hints:
+      - "`!is.na(ABLFL)` is the baseline-record test. `ABLFL != \"N\"` is wrong: the flag is `\"Y\"` or null."
+      - "`if_else` returns its missing branch when the condition itself is `NA`, so put the `is.na()` guards first."
+      - "`PCHG` needs one guard the change does not: a zero denominator."
+    checks:
+      - pattern: "!\\s*is\\.na\\s*\\(\\s*ABLFL\\s*\\)"
+        message: "Tests the baseline flag with is.na rather than a comparison against \"N\""
+      - pattern: "is\\.na\\s*\\(\\s*BASE\\s*\\)"
+        message: "Guards against a missing baseline"
+      - pattern: "BASE\\s*==\\s*0"
+        message: "Guards PCHG against a zero denominator"
+      - pattern: "AVAL\\s*-\\s*BASE"
+        message: "Computes the change as value minus baseline"
+      - pattern: "ABLFL\\s*(!=|<>)\\s*[\"']N[\"']"
+        absent: true
+        message: "Does not negate a record-level flag against \"N\""
+    expectedOutput: |
+      ```text
+      > out <- derive_change(advs_base)
+      > out |> filter(PARAMCD == "SYSBP") |>
+      +   summarise(base_rows_with_chg = sum(!is.na(ABLFL) & !is.na(CHG)),
+      +             chg_without_base   = sum(!is.na(CHG) & is.na(BASE)),
+      +             pchg_zero_base     = sum(!is.na(PCHG) & BASE == 0, na.rm = TRUE))
+        base_rows_with_chg chg_without_base pchg_zero_base
+      1                  0                0              0
+      ```
+    solution: |
+      **Three guards on `CHG`, four on `PCHG`**, and the order inside `if_else` matters.
+
+      `if_else` returns its missing branch whenever the *condition* evaluates to `NA`. Putting the
+      `is.na()` tests first means the condition is always `TRUE` or `FALSE`, so the behaviour is explicit
+      rather than an accident of how the condition happened to evaluate.
+
+      **`!is.na(ABLFL)`, never `ABLFL != "N"`.** `ABLFL` is a record-level flag and takes `"Y"` or null —
+      ADaMIG v1.3 reserves the `Y`/`N` pattern for subject-level population flags. In R, `NA != "N"`
+      is `NA`; in SAS, a missing character value compares as less than `'N'` so the test is *true* for
+      every record. The same line produces opposite wrong answers in the two languages, and neither
+      errors.
+
+      **`BASE == 0` is the guard `CHG` does not need.** A zero denominator makes the percent change
+      undefined. No laboratory baseline in either study is zero, but a tumor-size parameter for a subject
+      with no measurable disease, or any count that can reach zero, will produce one — and an infinity in
+      a dataset propagates into every summary that touches it.
+
+      **Verified on both studies:** zero records with `ABLFL = "Y"` have a non-missing `CHG`, and zero
+      records have a change computed against a missing baseline.
+    explanation:
+      objective: "Derive change and percent change with all the guards the conventions require."
+      given: "A BDS dataset with value, baseline and the baseline flag, and a stated sponsor convention."
+      relevant: "The flag's permitted values, the missing-baseline case and the zero-denominator case."
+      method: "One if_else per variable, with the missingness guards first so the condition is never NA."
+      assumptions: "This study's convention is that the baseline record carries no change; the other convention is equally valid."
+      computation: "if_else returns its missing branch for an NA condition, which is why guard order matters."
+      interpretation: "Every null in CHG corresponds to a documented rule, not to an accident."
+      changes: "ABLFL != 'N' inverts the derivation in R and applies it to every record in SAS."
+      interviewer: "That you reach for is.na on a record-level flag without being prompted."
+
+  - id: adam.chg.completer-bias
+    format: numeric
+    modes: [independent, qc, boss]
+    difficulty: advanced
+    skills: [stats.missing-data, tlf.denominators, adam.bds]
+    lesson: adam-change-from-baseline
+    datasets: [cardio/adam/advs]
+    title: How much does dropout flatter the placebo arm?
+    prompt: |
+      VTX221-201, systolic blood pressure, Week 2 change from baseline, placebo arm only, split on
+      whether the subject also has a Week 12 value:
+
+      | Group | n | Mean Week 2 change |
+      |---|---:|---:|
+      | Later had a Week 12 value | 75 | −2.71 |
+      | Did not | 12 | +2.98 |
+
+      By how many mmHg does restricting to completers improve the placebo arm's apparent Week 2 change?
+      Give the difference between the completers' mean and the mean over all 87 subjects, to two decimal
+      places.
+    answer: 0.78
+    tolerance: 0.03
+    unit: mmHg
+    hints:
+      - "The all-subjects mean is the weighted average of the two groups."
+      - "(75 x −2.71 + 12 x 2.98) / 87."
+      - "Then subtract that from −2.71, and take the size of the improvement."
+    solution: |
+      **0.78 mmHg.**
+
+      The Week 2 mean over all 87 placebo subjects is the weighted average:
+
+      $$\frac{75 \times (-2.71) + 12 \times 2.98}{87} = \frac{-203.25 + 35.76}{87} = -1.93$$
+
+      which matches the reported all-subjects Week 2 placebo change of **−1.93 mmHg**. Restricting to
+      completers gives −2.71, an apparent improvement of `2.71 − 1.93 = 0.78` mmHg.
+
+      **0.78 mmHg sounds negligible, and at Week 2 it is.** The point is the direction and what happens
+      to it by Week 12: the same selection operates at every visit and the gap widens as more subjects
+      leave. By Week 12 only 77 of 91 placebo subjects remain, all of them selected on having responded.
+
+      **The consequence for the treatment effect.** Every difference is measured against the placebo
+      column, so flattering placebo shrinks every treatment effect. The complete-case ANCOVA gives 20 mg
+      minus placebo as **−7.72**; the MMRM, which uses the pre-dropout visits of subjects who left, gives
+      **−8.35**.
+
+      **And the reason the same argument does not apply to the active arms:** their dropouts were
+      indistinguishable from their completers at Week 2 (−5.95 against −5.69 on 10 mg, −6.20 against
+      −8.04 on 20 mg). The missingness is informative in one arm only, which is what makes the
+      complete-case analysis biased rather than merely less precise.
+    explanation:
+      objective: "Quantify the selection effect of restricting a summary to completers."
+      given: "Two subgroup means and their sizes within one arm."
+      relevant: "That the all-subjects mean is the size-weighted average of the two."
+      calculating: "The weighted mean, then its distance from the completers' mean."
+      numbers: "(75 x -2.71 + 12 x 2.98) / 87 = -1.93; 2.71 - 1.93 = 0.78."
+      assumptions: "The 12 dropouts all have a Week 2 value, which they do — the split is within the 87 Week 2 records."
+      interpretation: "Small at Week 2 by construction, because dropout has only just begun; the mechanism compounds."
+      changes: "The active arms show no such gap, so the bias is arm-specific and does not cancel in the difference."
+      interviewer: "That you check the weighted average against the reported all-subjects mean as a self-test."
+
+  - id: adam.chg.shift-table
+    format: mcq
+    modes: [check, qc]
+    difficulty: advanced
+    skills: [adam.bds, tlf.safety-tables, tlf.denominators]
+    lesson: adam-change-from-baseline
+    title: Why the shift table's denominator is 203 and not 209
+    prompt: |
+      A shift table of baseline ALT grade against worst post-baseline ALT grade, CBX-417 arm:
+
+      ```text
+                         Worst post-baseline grade
+      Baseline grade      0     1     2     3     4
+              0         166    20     5     9     3
+      ```
+
+      209 subjects received CBX-417. The table's cells total **203**. What happened to the other six, and
+      where should they be?
+    choices:
+      - text: "They have no on-treatment ALT record — no value with `ONTRTFL = \"Y\"` — so they cannot have a worst post-baseline grade. They belong in an explicit 'missing post-baseline' column, not silently outside the table."
+        correct: true
+        feedback: "Correct. A shift table that drops them has a denominator a reader cannot reconstruct, and six subjects with no on-treatment laboratory data is itself worth seeing."
+      - text: "They have no baseline grade, so they were excluded by the row dimension."
+        feedback: "That would be a missing-baseline row, a different category. Here every subject in the table has a grade 0 baseline, and the six are missing the post-baseline half."
+      - text: "They were never dosed, so they are not in the safety population."
+        feedback: "The safety denominator is already 209, which excludes the never-dosed subjects."
+      - text: "Their worst grade was 0, so they fall in the first cell and the total is wrong."
+        feedback: "The first cell's 166 already counts subjects whose worst grade was 0. Having no record is different from having a normal record."
+    explanation:
+      objective: "Account for the gap between a population denominator and a shift table's total."
+      given: "A shift table totalling 203 against a safety denominator of 209."
+      relevant: "That the worst post-baseline grade requires at least one on-treatment record."
+      method: "ONTRTFL defines the window: TRTSDT < ADT <= TRTEDT + 30, per SAP Section 10.3.2."
+      numbers: "209 - 203 = 6 subjects with no graded on-treatment ALT record."
+      assumptions: "The worst grade is computed at reporting time as max(ATOXGRN) over ONTRTFL = 'Y' records, as the ADRG states."
+      interpretation: "Six subjects with no on-treatment laboratory data is a data-completeness observation, not a rounding artefact."
+      changes: "Subjects with no baseline grade would form a separate missing-baseline row with the same argument."
+      interviewer: "That you insist the missing category be printed rather than inferred."
+
+  - id: adam.chg.ancova-vs-mmrm
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [stats.ancova, stats.missing-data, adam.baseline]
+    lesson: adam-change-from-baseline
+    title: Does ANCOVA fix the dropout problem?
+    prompt: |
+      On VTX221-201's Week 12 systolic blood pressure change:
+
+      | Analysis | 20 mg − placebo (SE) |
+      |---|---:|
+      | Complete-case ANCOVA (`CHG ~ TRTP + BASE`), n = 238 | −7.72 (1.648) |
+      | MMRM over all post-baseline visits | −8.35 (1.631) |
+
+      A colleague says the ANCOVA already adjusts for baseline, so the difference must be noise. Are they
+      right?
+    choices:
+      - text: "No. ANCOVA fixes baseline *imbalance*; it does nothing about *missingness*, because it never sees the 32 subjects with no Week 12 value. The MMRM uses their earlier visits, and the shift is in the direction the dropout pattern predicts."
+        correct: true
+        feedback: "Correct — and the direction is the evidence. Placebo dropouts were rising at Week 2 while placebo completers were falling, so excluding them flattered placebo and shrank the difference. Recovering them enlarges it."
+      - text: "Yes — the two estimates are within one standard error of each other, so the difference is not meaningful."
+        feedback: "The two estimates come from overlapping data and their difference does not have that standard error. More importantly, a difference in the predicted direction from a known mechanism is not noise."
+      - text: "No, because the MMRM uses a different covariance structure, which changes the point estimate."
+        feedback: "The covariance structure affects the standard errors far more than the point estimate. What moves the estimate here is the inclusion of subjects the ANCOVA never saw."
+      - text: "Yes, provided baseline is balanced across arms, which randomization guarantees."
+        feedback: "Randomization balances baselines among *randomized* subjects, not among completers — and completers are a post-randomization subset."
+    explanation:
+      objective: "Separate covariate adjustment from missing-data handling."
+      given: "Two estimates of the same comparison, from the same variable, differing by 0.63 mmHg."
+      relevant: "That the ANCOVA is fitted on 238 subjects and the MMRM on all observed records from 267."
+      irrelevant: "The covariance structure, which affects precision far more than the point estimate."
+      method: "Check whether the shift goes in the direction the dropout pattern predicts."
+      numbers: "Complete-case -7.72 (SE 1.648); MMRM -8.35 (SE 1.631). 32 subjects have no Week 12 value."
+      assumptions: "MMRM's recovery relies on missing at random, which holds here by construction: dropout depends on the last observed value."
+      interpretation: "Two different questions, both answered — baseline imbalance and informative dropout are unrelated problems."
+      changes: "If dropout had been completely at random, the two estimates would differ only by chance."
+      interviewer: "That you use the predicted direction of the shift as evidence rather than comparing standard errors."
+
+  - id: adam.chg.missing-baseline
+    format: order
+    modes: [independent, qc, boss]
+    difficulty: advanced
+    skills: [adam.baseline, adam.bds, qc.mindset]
+    lesson: adam-change-from-baseline
+    title: Tracing a subject with no baseline through the outputs
+    minutes: 8
+    prompt: |
+      A subject received treatment but has no pre-dose haemoglobin. They have post-baseline haemoglobin
+      values at Cycle 1 Day 8, Cycle 2 Day 1 and Cycle 4 Day 1.
+
+      Put the consequences in the order they occur, from the derivation outward.
+    steps:
+      - "No record for that subject and parameter is flagged `ABLFL = \"Y\"`, because no record qualifies."
+      - "`BASE`, `BNRIND` and `BTOXGR` are null on all three of the subject's haemoglobin records."
+      - "`CHG` and `PCHG` are null on all three records, because the baseline they would be computed against is missing."
+      - "The subject contributes to the *value* columns of the by-visit table but not to the *change* columns, so the two columns have different n on those rows."
+      - "In the shift table the subject falls into the explicit 'missing baseline' row rather than into a grade category."
+      - "A QC check asserting exactly one baseline record per subject and parameter fails, although the dataset is correct."
+    hints:
+      - "Start with the flag, since everything else is derived from it."
+      - "What is broadcast from the flagged record, and what happens when there is no flagged record?"
+      - "The last consequence is about a check, not about the data."
+    solution: |
+      **Six consequences, one cause, and the last one is the dangerous one.**
+
+      The derivation is correct at every step: no qualifying record means no flag, no flag means no
+      broadcast, no baseline means no change. Each null is a faithful statement that the quantity is
+      undefined.
+
+      **The subject stays in the dataset throughout.** Their haemoglobin values are real measurements.
+      They feed the value columns, the worst-post-baseline summary through `ONTRTFL`, the shift table's
+      missing-baseline row and every listing. Only the change is undefined, and SAP Section 5.5 says so
+      explicitly: subjects without a baseline are excluded from change summaries for that parameter and
+      remain in the population and in all other summaries.
+
+      **Why the failing QC check matters more than it looks.** ADaMIG v1.3 requires *at most* one
+      baseline per subject and parameter — not exactly one. A check asserting `420 × 7 = 2,940` fails on
+      correct data, and the repair somebody reaches for is to flag the Cycle 1 Day 8 record as baseline.
+      That record is post-dose. Every subsequent change for that subject is then measured against a value
+      the drug has already affected, and the subject's apparent haemoglobin fall is understated.
+
+      **The right assertions** are that no cell has more than one baseline, and that `CHG` is null wherever
+      `BASE` is null. Both pass on this dataset. On CBX417-301 two subject-parameter cells are in exactly
+      this situation, covering five records.
+    explanation:
+      objective: "Trace a missing baseline through the derivation and into the outputs."
+      relevant: "That each consequence is produced by the previous one, and that the data are correct throughout."
+      method: "Follow the flag, the broadcast, the arithmetic, then the tables."
+      numbers: "Two such subject-parameter cells exist in CBX417-301's ADLB, covering 5 records."
+      assumptions: "The SAP excludes such subjects from change summaries while keeping them in the population."
+      interpretation: "The nulls are the exclusion; deleting the records would make the exclusion invisible."
+      changes: "An over-strict QC check invites a repair that corrupts the subject's entire series."
+      interviewer: "That you identify the failing check as the real hazard rather than the missing baseline."
+
+  - id: adam.chg.open-completer
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [stats.missing-data, tlf.denominators, communication.interviewing]
+    lesson: adam-change-from-baseline
+    title: What does a mean change from baseline mean?
+    prompt: |
+      **Interviewer:** "Your Week 12 table shows a mean change from baseline of −12 mmHg on the top dose
+      and −3 mmHg on placebo. What do you check before you believe it?"
+    modelAnswer: |
+      Three things, and the first is about who is in the table rather than about the numbers.
+
+      **How many randomized subjects are in each cell, and how did the rest differ?** On the study I
+      worked with, 270 were randomized and the three Week 12 columns totalled 238. That gap is not a
+      rounding issue. Splitting the Week 2 records on whether the subject later had a Week 12 value,
+      placebo subjects who dropped out were at **+2.98** mmHg while those who stayed were at **−2.71**.
+      On both active arms the two groups were indistinguishable.
+
+      So the placebo column isn't the placebo effect — it's the placebo effect among placebo subjects who
+      were doing well enough to stay. And because every treatment difference is measured against that
+      column, every treatment effect in the table is too small.
+
+      That's an informative-dropout problem, and specifically a missing-at-random one: the chance of
+      stopping for lack of efficacy rises with the last *observed* pressure, and placebo subjects have
+      higher pressures. Under MAR, an MMRM over all post-baseline visits uses the pre-dropout data of
+      subjects who left and recovers the estimate. Here it moves the 20 mg difference from −7.72 to −8.35
+      — larger, in the direction the dropout table predicts. The agreement between the predicted
+      direction and the observed shift is the evidence, not the size.
+
+      **Second: is the −3 mmHg on placebo real?** Part of it is regression to the mean. Eligibility
+      required a screening pressure of at least 140, so the enrolled group is enriched for people who
+      happened to be measured high that day, and their next reading drifts back — screening mean 151.3,
+      baseline mean 150.4, nearly a millimetre before anyone took a tablet. Which is the whole argument
+      for a control arm on a change endpoint: "fell by 12 mmHg" is true and almost meaningless; "8.35
+      more than placebo" is the estimate with a drug in it.
+
+      **Third: was baseline adjusted for, and is that a different question?** It is. ANCOVA fixes baseline
+      imbalance between arms; it does nothing about the missingness, because it never sees the 32
+      subjects who left. Those are two unrelated problems, and a SAP specifying complete-case ANCOVA as
+      the primary analysis of a longitudinal endpoint has answered one of them.
+
+      And I'd want the estimand stated. Under ICH E9(R1), "mean change among subjects still observed at
+      Week 12" and "mean change had everyone remained on treatment" are different targets, not two
+      estimators of one target. The table cannot tell you which one it is, and the SAP has to.
+    rubric:
+      - Starts with the denominator and the randomized total, not the means
+      - Compares dropouts with completers on an earlier visit, by arm
+      - Identifies informative dropout as arm-specific here, not symmetric
+      - Names MAR and explains why MMRM can recover the estimate under it
+      - Uses the predicted direction of the shift as evidence
+      - Raises regression to the mean as part of the placebo change
+      - Separates baseline adjustment from missing-data handling
+      - Asks what the estimand is, referencing ICH E9(R1)
+    redFlags:
+      - "Interprets the single-arm change as the treatment effect"
+      - "Assumes dropout is non-informative without checking"
+      - "Believes ANCOVA handles missing data"
+      - "Compares the two estimates' standard errors to decide whether the shift is real"
+    followUps:
+      - "The dropout pattern is symmetric across arms. Does your answer change?"
+      - "How would you design a sensitivity analysis for a missing-not-at-random mechanism?"

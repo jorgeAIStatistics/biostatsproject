@@ -1,0 +1,759 @@
+items:
+  - id: adam.onc.bor-vs-cbor
+    format: numeric
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [adam.bds, trials.oncology, tlf.efficacy-tables]
+    lesson: adam-oncology-adrs-adtr
+    datasets: [oncology/adam/adrs]
+    title: One word in the row label
+    prompt: |
+      A draft of CBX417-301's Table 14.2.3 reported an objective response rate of **33.3%** in the
+      CBX-417 arm. The final table reports **27.6%**. Both were produced from `ADRS`, on the same 210
+      ITT subjects, and neither program has a bug.
+
+      How many subjects is the difference?
+    answer: 12
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "`ADRS` carries two best-overall-response parameters. Which one is the ORR endpoint?"
+      - "33.3% of 210, and 27.6% of 210."
+      - "70 − 58."
+    solution: |
+      **12 subjects.** `0.333 × 210 = 70` and `0.276 × 210 = 58`.
+
+      The draft summarised `PARAMCD = "BOR"` — best overall response, **unconfirmed**. The final table
+      summarises `PARAMCD = "CBOR"`, which requires a subsequent assessment at least 28 days later
+      showing the same or a better response.
+
+      | | CBX-417 | Placebo | Total |
+      |---|---:|---:|---:|
+      | `BOR` CR or PR | 70 | 38 | 108 |
+      | `CBOR` CR or PR | 58 | 31 | 89 |
+      | Difference | 12 | 7 | **19** |
+
+      **Nineteen subjects lose their response across the study**, twelve of them in the active arm. The
+      cross-tabulation of the two parameters is diagonal except for a single cell: 19 subjects with
+      `BOR = "PR"` and `CBOR = "SD"`. Nobody improves on confirmation, and no CR, PD or NE changes.
+
+      **Both parameters are correct and both stay in the dataset.** Confirmation is a rule in the SAP,
+      not a property of the data, and a study that did not require it would report the 33.3%. RECIST 1.1
+      itself says confirmation is required in non-randomized trials where response is the primary
+      endpoint and is not required in randomized trials — CBX417-301's SAP requires it anyway, and that
+      sentence is the only thing that decides which parameter Table 14.2.3 uses.
+
+      **Cross-check:** the 89 confirmed responders are exactly the 89 subjects with a `DOR` record in
+      `ADTTE`. Duration of response can only start at a response, so the two datasets have to agree.
+    explanation:
+      objective: "Recognise that two correct parameters in the same dataset give two different ORRs."
+      given: "Two reported rates on the same 210-subject denominator."
+      relevant: "That ADRS carries both BOR and CBOR, and only one is the endpoint."
+      calculating: "The responder counts behind each percentage."
+      numbers: "70 and 58 in the CBX-417 arm; 38 and 31 on placebo; 19 downgrades in total."
+      assumptions: "The denominator is the ITT population in both drafts, which it is."
+      interpretation: "Confirmation is an SAP rule, so the choice of parameter is a reading of the SAP rather than a programming decision."
+      changes: "A study that did not require confirmation would report 33.3% and would still be right."
+      interviewer: "That you can name the parameter and the 19 downgrades rather than guessing at a filter."
+
+  - id: adam.onc.avalc-pairing
+    format: mcq
+    modes: [check, qc, debug]
+    difficulty: advanced
+    skills: [adam.bds, adam.specs, qc.discrepancy]
+    lesson: adam-oncology-adrs-adtr
+    datasets: [oncology/adam/adrs]
+    title: A codebook that drifted
+    prompt: |
+      A programmer adds a sixth response category to ADRS. In the new build, `AVALC = "NE"` appears with
+      `AVAL = 5` on 900 records and with `AVAL = 6` on 40 records.
+
+      Everything still runs. What breaks?
+    choices:
+      - text: "The one-to-one relationship ADaMIG v1.3 requires between `AVAL` and `AVALC` within a parameter. Any summary that groups on one variable and labels with the other now splits or mislabels a category, and best-overall-response derivations that take `min(AVAL)` rank the same category two different ways."
+        correct: true
+        feedback: "Correct. The pairing is a requirement nothing enforces at run time, which is why it has to be asserted on every build. `NE` at 6 would also sort below `NE` at 5, so two identical assessments would rank differently."
+      - text: "Nothing, as long as every table groups on `AVALC` — the numeric value is only there for sorting."
+        feedback: "Display order comes from the numeric value, so a category with two codes appears in two places in the same table. And the best-response derivation ranks on `AVAL`."
+      - text: "`AVAL` becomes non-numeric and the dataset fails Define-XML validation."
+        feedback: "`AVAL` is still numeric and define.xml describes the variable, not its values. The failure is semantic."
+      - text: "The percentage denominators change, because records with `AVAL = 6` are excluded from counts."
+        feedback: "Nothing excludes them; they are counted, just under a second label. The denominators are unaffected — which is part of why the error is hard to see."
+      - text: "It breaks only the confirmed best overall response, because confirmation compares `AVAL` values."
+        feedback: "Confirmation is affected, but so is every by-category summary and every sort. The requirement is dataset-wide."
+    explanation:
+      objective: "Say what the AVAL / AVALC one-to-one requirement actually protects."
+      given: "One character value appearing with two numeric codes."
+      relevant: "That AVAL is used for ranking and ordering while AVALC is used for labelling."
+      method: "Trace both variables into the places they are used: group-by, sort order, and min()."
+      assumptions: "ADaMIG v1.3 requires a one-to-one relationship between AVAL and AVALC within a parameter when both are populated."
+      interpretation: "Nothing errors, denominators stay right, and one category appears twice — the signature of a semantic rather than structural defect."
+      changes: "A dataset that populated only AVALC would have no pairing to break, and no way to express 'best'."
+      interviewer: "That you name where AVAL is used for ranking, not only for display."
+
+  - id: adam.onc.anl01fl-window
+    format: mcq
+    modes: [check, qc]
+    difficulty: advanced
+    skills: [adam.windows, trials.oncology, adam.bds]
+    lesson: adam-oncology-adrs-adtr
+    datasets: [oncology/adam/adrs]
+    title: Fifteen partial responses that do not count
+    prompt: |
+      Subject `CBX417-301-1039-0003` has `SD` at week 6 and a recorded `PR` at every one of the fifteen
+      assessments from week 12 to week 120. Those fifteen records are in ADRS, and all fifteen have a
+      **null** `ANL01FL`.
+
+      Their `BOR` is `SD`. Their ADTTE PFS record is `CNSR = 3`,
+      `EVNTDESC = "NEW ANTICANCER THERAPY BEFORE PD OR DEATH"`, censored on day 39.
+
+      Why is the subject not a responder?
+    choices:
+      - text: "Every assessment after week 6 was recorded once the subject was on a different anticancer therapy, so none of them is evidence about CBX-417. `ANL01FL` marks exactly the window the PFS censoring rule also respects, and both analyses stop at the same place."
+        correct: true
+        feedback: "Correct — and the alignment is the point. The response endpoint and the time-to-event endpoint use one definition of the informative window, expressed as a record-level flag in ADRS and as a censoring rule in ADTTE."
+      - text: "The partial responses were never confirmed, so they collapse to stable disease."
+        feedback: "Confirmation is what separates `BOR` from `CBOR`. Here even the *unconfirmed* `BOR` is SD, because the assessments never entered the derivation at all."
+      - text: "The assessments fall outside the protocol's visit windows, so `AVISIT` is null and they are excluded."
+        feedback: "They are scheduled assessments with proper `AVISIT` values from WEEK 12 to WEEK 120. Windowing is not the reason."
+      - text: "The subject was not in the efficacy-evaluable population, so their response records are ignored."
+        feedback: "Population flags decide who is in the denominator, not which of a subject's records a derivation reads. `ANL01FL` is a record-level flag and does a different job."
+      - text: "A PFS record with `CNSR = 3` removes the subject from all efficacy analyses."
+        feedback: "The subject stays in the ITT denominator for ORR — 420 subjects, all present. They are a non-responder, not an excluded subject."
+    explanation:
+      objective: "Connect a record-level analysis flag in ADRS to the censoring rule in ADTTE."
+      given: "Fifteen unflagged PR assessments and a PFS record censored for a new anticancer therapy."
+      relevant: "That both flags encode the same judgement about when the data stop being informative about the study drug."
+      irrelevant: "Confirmation, which operates on records that already passed the window."
+      method: "Read ANL01FL and the CNSR reason together rather than treating the two datasets separately."
+      numbers: "80 of the 1,928 OVRLRESP records have a null ANL01FL, across 16 subjects; ignoring the flag makes responders of 4 of them, all in the CBX-417 arm."
+      assumptions: "CBX417-301's ANL01FL is 'assessments up to and including the first PD and on or before the start of new anticancer therapy'."
+      interpretation: "The subject is a genuine non-responder for this analysis, not an exclusion — they stay in the 210."
+      changes: "A study that did not censor at new anticancer therapy would flag those assessments and count the response."
+      interviewer: "That you tie ANL01FL to the censoring rule instead of describing it as a de-duplication flag."
+
+  - id: adam.onc.dtype-absent
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [adam.traceability, adam.specs, regulatory.define]
+    lesson: adam-oncology-adrs-adtr
+    datasets: [oncology/adam/adrs]
+    title: ADRS has no DTYPE variable
+    prompt: |
+      A reviewer notices that CBX417-301's ADRS contains derived records — 420 `BOR` and 420 `CBOR`
+      records that are not copies of any single SDTM observation — and no `DTYPE` variable at all.
+
+      Is that a conformance defect?
+    choices:
+      - text: "No. `DTYPE` distinguishes derived records **within** a parameter; here the derived values were given their own `PARAMCD` values, so no parameter mixes observations with derivations. It does need a sentence in the reviewer's guide, because \"`DTYPE` is empty\" and \"`DTYPE` is absent\" are different statements."
+        correct: true
+        feedback: "Correct. The design rule is: a new PARAMCD when the derived value answers a different question, DTYPE when it answers the same question a different way. Best overall response is a different question from the response at week 12."
+      - text: "Yes. ADaMIG v1.3 requires `DTYPE` on every record whose value was not copied from SDTM, so all 840 derived records are non-conformant."
+        feedback: "`DTYPE` identifies records added to a parameter or derived differently from the rest of that parameter. A parameter whose records are all derivations has nothing to distinguish."
+      - text: "Yes, but only for `CBOR`, because confirmation is an imputation."
+        feedback: "Confirmation is a classification rule applied to observed assessments, not an imputation of a missing value. No value is invented."
+      - text: "No, and no documentation is needed — define.xml already describes how each parameter is derived."
+        feedback: "define.xml does describe the derivations. The point of the ADRG sentence is different: a reviewer cannot tell from the data whether an absent variable was a decision or an omission."
+      - text: "No, because `SRCDOM`, `SRCVAR` and `SRCSEQ` make `DTYPE` unnecessary in any dataset."
+        feedback: "They answer a different question — where a value came from, not how it was produced. A parameter containing both observed and LOCF-imputed records still needs `DTYPE` even with source pointers on every row."
+    explanation:
+      objective: "Decide whether an absent DTYPE is a defect and say why."
+      given: "840 derived records in ADRS and no DTYPE variable."
+      relevant: "That DTYPE operates within a parameter, and that these derivations have their own parameters."
+      method: "Ask whether any single parameter contains both observed and derived analysis values."
+      assumptions: "ADaMIG v1.3 defines DTYPE for records added to a parameter or derived differently from that parameter's other records, with CDISC controlled terminology such as LOCF and AVERAGE."
+      interpretation: "The structural choice is legitimate; the documentation obligation is real."
+      changes: "If ADRS imputed a missing assessment inside OVRLRESP, DTYPE would become mandatory and its absence a genuine finding."
+      interviewer: "That you state the PARAMCD-versus-DTYPE design rule rather than only answering yes or no."
+
+  - id: adam.onc.orr-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [adam.bds, r.dplyr, tlf.denominators]
+    lesson: adam-oncology-adrs-adtr
+    datasets: [oncology/adam/adrs, oncology/adam/adsl]
+    title: The objective response row, with its denominator
+    minutes: 12
+    prompt: |
+      Write `orr_row(adrs, adsl, paramcd)`, which produces one row per treatment arm of CBX417-301's
+      Table 14.2.3.
+
+      - The **denominator** is the intent-to-treat population from `ADSL`: `ITTFL == "Y"`, counted by
+        planned treatment `TRT01P`. Join the counts onto the denominator frame so an arm with no
+        responders still gets a row.
+      - The **numerator** counts subjects whose `AVALC` is `"CR"` or `"PR"`, for the parameter passed in.
+      - Return `TRTP`, `resp`, `N` and `pct`.
+
+      Calling it with `"CBOR"` must give 58 and 31; with `"BOR"`, 70 and 38.
+    starter: |
+      library(dplyr)
+
+      orr_row <- function(adrs, adsl, paramcd) {
+        denom <- adsl |>
+          filter(___) |>
+          count(TRTP = ___, name = "N")
+
+        adrs |>
+          filter(___) |>
+          group_by(TRTP) |>
+          summarise(resp = ___, .groups = "drop") |>
+          right_join(denom, by = "TRTP") |>
+          mutate(___)
+      }
+    reference: |
+      library(dplyr)
+
+      orr_row <- function(adrs, adsl, paramcd) {
+        denom <- adsl |>
+          filter(ITTFL == "Y") |>
+          count(TRTP = TRT01P, name = "N")
+
+        adrs |>
+          filter(PARAMCD == paramcd) |>
+          group_by(TRTP) |>
+          summarise(resp = sum(AVALC %in% c("CR", "PR")), .groups = "drop") |>
+          right_join(denom, by = "TRTP") |>
+          mutate(resp = coalesce(resp, 0L),
+                 pct  = 100 * resp / N)
+      }
+    hints:
+      - "The efficacy denominator pairs `ITTFL` with `TRT01P` — planned treatment, because ORR is an efficacy analysis."
+      - "`sum(AVALC %in% c(\"CR\", \"PR\"))` counts the responders; `BOR` and `CBOR` already have exactly one record per subject, so no de-duplication is needed."
+      - "`right_join(denom, ...)` keeps every arm even when the counts frame is missing one."
+      - "`coalesce(resp, 0L)` turns the resulting null into a zero."
+    checks:
+      - pattern: "PARAMCD\\s*==\\s*paramcd"
+        message: "Filters on the parameter passed in, so one function serves both rows"
+      - pattern: "AVALC\\s*%in%\\s*c\\s*\\(\\s*[\"']CR[\"']\\s*,\\s*[\"']PR[\"']\\s*\\)"
+        message: "Counts responders on the character value"
+      - pattern: "AVAL\\s*<=?\\s*2"
+        absent: true
+        message: "Does not rely on the numeric response codes to define a responder"
+      - pattern: "ITTFL\\s*==\\s*[\"']Y[\"']"
+        message: "Takes the denominator from the ITT population"
+      - pattern: "TRT01P"
+        message: "Counts the denominator by planned treatment"
+      - pattern: "right_join|full_join"
+        message: "Joins onto the denominator frame so every arm has a row"
+      - pattern: "100\\s*\\*\\s*resp\\s*/\\s*N"
+        message: "Computes the percentage over the ADSL denominator"
+    expectedOutput: |
+      ```text
+      > orr_row(adrs, adsl, "CBOR")
+      # A tibble: 2 × 4
+        TRTP                 resp     N   pct
+        <chr>               <int> <int> <dbl>
+      1 CBX-417 + Docetaxel    58   210  27.6
+      2 Placebo + Docetaxel    31   210  14.8
+
+      > orr_row(adrs, adsl, "BOR")
+      # A tibble: 2 × 4
+        TRTP                 resp     N   pct
+        <chr>               <int> <int> <dbl>
+      1 CBX-417 + Docetaxel    70   210  33.3
+      2 Placebo + Docetaxel    38   210  18.1
+      ```
+    solution: |
+      **Three decisions, and the parameter is only one of them.**
+
+      **The denominator comes from ADSL, not from ADRS.** It happens to be recoverable from ADRS here,
+      because `CBOR` has one record for all 420 subjects — but that is a property of this parameter, not
+      a rule. `DOR` in ADTTE has 89 records and `BPCHG` in ADTR has 404; take a denominator from the
+      analysis dataset and you divide by whoever happened to have a record.
+
+      **`ITTFL` with `TRT01P`.** Efficacy is analysed as randomized, so the columns are planned
+      treatment. Pairing `ITTFL` with `TRT01A` would still total 420 and would move three subjects
+      affected by dispensing errors into the wrong column.
+
+      **Joining onto the denominator, not the other way round.** `right_join(denom, ...)` guarantees two
+      rows. With a `left_join` from the counts, an arm with zero responders disappears from the table
+      instead of printing `0 (0.0%)`, and a reader cannot distinguish a zero from a dropped row.
+
+      **Why `AVALC` and not `AVAL <= 2`.** They are equivalent on this codebook and stop being
+      equivalent the moment a study adds a category or renumbers one. `AVAL` exists to rank and to
+      select; the definition of a responder is a list of categories, so write the list.
+
+      **One function, both rows.** Passing `paramcd` in means the unconfirmed and confirmed rows of
+      Table 14.2.3 come from the same code with the same denominator. Two copy-pasted functions is how
+      the two rows end up with different denominators six months later.
+    explanation:
+      objective: "Produce the ORR row with the correct denominator and a parameterised numerator."
+      given: "ADRS with BOR and CBOR parameters, and ADSL with the population flags."
+      relevant: "That efficacy pairs ITTFL with TRT01P and that the denominator cannot come from the analysis dataset in general."
+      method: "Build the denominator frame first and join the counts onto it."
+      numbers: "CBOR 58 / 210 and 31 / 210; BOR 70 / 210 and 38 / 210."
+      assumptions: "BOR and CBOR have exactly one record per subject, so the numerator needs no de-duplication."
+      computation: "sum() over a logical vector counts the TRUEs; right_join preserves both arms."
+      interpretation: "The same function produces both rows of the table, which is what keeps their denominators identical."
+      changes: "For a parameter that does not cover the whole population — DOR, BPCHG — the ADSL denominator is not optional."
+      interviewer: "That you say why the denominator comes from ADSL even when ADRS could supply it."
+
+  - id: adam.onc.classify-params
+    format: classify
+    modes: [speed, guided]
+    difficulty: intermediate
+    skills: [adam.bds, trials.oncology, adam.traceability]
+    lesson: adam-oncology-adrs-adtr
+    title: Observation, conclusion, or pointer?
+    minutes: 6
+    prompt: |
+      Sort each value from CBX417-301's ADRS and ADTR by what kind of thing it is.
+    categories: ["An observation copied from SDTM", "A conclusion derived across a subject's records", "A pointer to where the value came from", "A record-level selection decision"]
+    entries:
+      - text: "`ADRS`, `PARAMCD = \"OVRLRESP\"`, `AVALC = \"PR\"`"
+        category: "An observation copied from SDTM"
+        note: "One record per assessment, taken from `RS.RSSTRESC`. 1,928 records."
+      - text: "`ADRS`, `PARAMCD = \"CBOR\"`, `AVALC = \"SD\"`"
+        category: "A conclusion derived across a subject's records"
+        note: "One per subject. Reached by applying the confirmation rule to the whole assessment history."
+      - text: "`ADTR`, `PARAMCD = \"SUMDIAM\"`, `AVAL = 122`"
+        category: "An observation copied from SDTM"
+        note: "The sum of target-lesion diameters at one visit, from `TR.TRSTRESN`."
+      - text: "`ADTR`, `PARAMCD = \"BPCHG\"`, `AVAL = -27.5`"
+        category: "A conclusion derived across a subject's records"
+        note: "The minimum `PCHG` over the subject's analysis records. 404 records, not 420."
+      - text: "`SRCDOM = \"RS\"`, `SRCVAR = \"RSSTRESC\"`, `SRCSEQ = 2`"
+        category: "A pointer to where the value came from"
+        note: "On a derived `BOR` record it identifies the assessment that supplied the answer, not a record the value was copied from."
+      - text: "`ANL01FL = \"Y\"`"
+        category: "A record-level selection decision"
+        note: "Which assessments the derivation is allowed to see. Null on 80 `OVRLRESP` records."
+      - text: "`ABLFL = \"Y\"` on an `ADTR` `SUMDIAM` record"
+        category: "A record-level selection decision"
+        note: "Which scan is the baseline. Present on 418 of 420 subjects."
+      - text: "`ADTR`, `PCHG = -46.91` on the week 12 record"
+        category: "A conclusion derived across a subject's records"
+        note: "Arithmetic against `BASE`, which came from a different record — so it is a derivation, even though it looks like a measurement."
+    hints:
+      - "Ask whether the value could be read off one SDTM record, or whether it needed several."
+      - "Two of these are flags, and flags decide which records the next step is allowed to use."
+      - "Percent change looks like a measurement and needs two records to exist."
+    solution: |
+      **The dividing line is how many records the value needed.**
+
+      | Kind | Needs | Examples here |
+      |---|---|---|
+      | Observation | One SDTM record | `OVRLRESP`, `SUMDIAM` |
+      | Conclusion | The subject's whole history | `BOR`, `CBOR`, `BPCHG`, and `PCHG` |
+      | Pointer | — | `SRCDOM`, `SRCVAR`, `SRCSEQ` |
+      | Selection | — | `ANL01FL`, `ABLFL` |
+
+      **`PCHG` is the one worth arguing about.** It sits on a visit record and reads like a measurement,
+      and it cannot exist without `BASE` — a value from a different record, chosen by `ABLFL`. That is
+      why the two subjects with no baseline scan have 14 records with a null `PCHG` despite having a
+      perfectly good `AVAL` on every one of them.
+
+      **`SRCSEQ` on a derived record means something subtly different** from `SRCSEQ` on an observation.
+      On an `OVRLRESP` record it says *this value was copied from that record*. On a `BOR` record it says
+      *that record is the one that produced this conclusion* — the assessment at which the best response
+      was achieved. Same variable, same purpose for a reviewer, different logical claim.
+
+      **The two selection flags do the same job at different scales.** `ABLFL` picks one record per
+      subject and parameter to be the reference; `ANL01FL` picks the set of records an analysis may use.
+      Both are `"Y"` or null, never `"N"`.
+    explanation:
+      objective: "Distinguish observations, derivations, pointers and selection flags in an oncology BDS pair."
+      relevant: "How many source records each value required."
+      method: "Ask whether the value could be read off a single SDTM row."
+      interpretation: "Conclusions are stored as records so they keep a date and a source pointer."
+      changes: "PCHG looks like an observation and behaves like a derivation, which is why it is null wherever the baseline is."
+
+  - id: adam.onc.bpchg-count
+    format: numeric
+    modes: [guided, qc]
+    difficulty: intermediate
+    skills: [adam.bds, trials.oncology, tlf.figures]
+    lesson: adam-oncology-adrs-adtr
+    datasets: [oncology/adam/adtr]
+    title: How many bars does the waterfall plot have?
+    prompt: |
+      CBX417-301 randomized 420 subjects. `ADTR` has `SUMDIAM` records for all 420 of them, but only
+      **418** have a baseline record (`ABLFL = "Y"`), and two further subjects have a baseline with no
+      usable post-baseline scan in the analysis window.
+
+      A waterfall plot draws one bar per subject from `PARAMCD = "BPCHG"`. How many bars does it have?
+    answer: 404
+    tolerance: 0
+    unit: bars
+    hints:
+      - "`BPCHG` needs both a baseline and at least one post-baseline value in the analysis window."
+      - "It is not 420 and it is not 418."
+      - "Count the `BPCHG` records, not the subjects in the study."
+    solution: |
+      **404.** `ADTR` contains 404 `BPCHG` records, one per subject who has one.
+
+      Sixteen subjects have no bar:
+
+      - **2** have no baseline tumour assessment at all — `CBX417-301-1036-0003` and `1038-0009`, both
+        with `EFFFL = "N"` in ADSL. Their 14 post-baseline `SUMDIAM` records have a null `BASE`, a null
+        `CHG` and a null `PCHG`.
+      - **14** have a baseline and no usable post-baseline percentage change inside the analysis window.
+
+      **Why this matters more than it looks.** A waterfall plot is one of the most-read figures in an
+      oncology CSR, and it has no denominator printed on it. Drawing 420 bars means inventing sixteen,
+      and drawing 404 while captioning them "all randomized subjects" is the same error stated in words.
+      The caption has to say what the figure actually shows: 404 of 420 ITT subjects with an evaluable
+      best percentage change.
+
+      **A second trap in the same figure.** Of the 404, 108 have `BPCHG <= -30` — exactly the 108
+      subjects whose `BOR` is CR or PR on this dataset. That agreement is a property of CBX417-301's
+      simplified tumour data, where no new lesion or non-target progression occurs before a best
+      response. In real data a subject can shrink 40% and still have `BOR = "PD"` because of a new
+      lesion, and a waterfall coloured by response will show a deep negative bar in the PD colour. A QC
+      check asserting that the two always agree would fail on real data and would be right to.
+    explanation:
+      objective: "Get the number of subjects a derived summary parameter actually covers."
+      given: "420 randomized, 418 with a baseline, 2 more without a usable post-baseline value."
+      relevant: "That BPCHG requires both a baseline and an in-window post-baseline record."
+      calculating: "A count of BPCHG records."
+      numbers: "404 records; 16 subjects missing, 2 for lack of a baseline and 14 for lack of a post-baseline change."
+      assumptions: "One BPCHG record per subject who has one — verified as 404 records over 404 subjects."
+      interpretation: "A figure with no printed denominator needs its caption to carry one."
+      changes: "Taking the denominator from nrow() of the plotted frame makes every percentage in the caption self-consistent and wrong."
+      interviewer: "That you treat a missing bar as information rather than as something to fill in."
+
+  - id: adam.onc.sas-missing
+    format: hotspot
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [adam.bds, sas.missing-values, qc.discrepancy]
+    lesson: adam-oncology-adrs-adtr
+    datasets: [oncology/adam/adtr]
+    title: A shrinkage count six subjects too high
+    minutes: 10
+    prompt: |
+      This program counts the CBX417-301 subjects with at least one assessment showing a 30% or greater
+      shrinkage from baseline. It reports **114 subjects over 634 records**. The correct answers are
+      **108 subjects over 581 records**.
+
+      Click the **two** lines that are wrong.
+    language: sas
+    code: |
+      data resp30;
+        set adam.adtr;
+        where paramcd = 'SUMDIAM' and ablfl ne 'Y';
+        if pchg <= -30 then flag = 'Y';
+        if flag = 'Y';
+      run;
+
+      proc sql;
+        select count(*)                 as n_records,
+               count(distinct usubjid)  as n_subjects
+        from   resp30;
+      quit;
+    answerLines: [3, 4]
+    lineNotes:
+      - line: 3
+        note: "The `WHERE` excludes the baseline record and nothing else. It needs `and anl01fl = 'Y'`: without it, assessments recorded after the first progression or after the start of a new anticancer therapy enter the count, adding 4 subjects who were on a different drug when their tumour shrank."
+      - line: 4
+        note: "**In SAS a missing numeric compares as lower than any number**, so `pchg <= -30` is TRUE for the 14 records with no baseline. Two subjects with `EFFFL = \"N\"` in ADSL arrive in a response count. Write `if not missing(pchg) and pchg <= -30`."
+      - line: 5
+        note: "The subsetting IF is correct: `flag` is only ever `'Y'` or blank, so this keeps exactly the records line 4 flagged. It is the condition on line 4 that is wrong, not the way it is applied."
+      - line: 9
+        note: "Counting records and distinct subjects separately is right — 581 records over 108 subjects. Reporting only one of them hides whichever of the two defects moved the other."
+    fixed: |
+      data resp30;
+        set adam.adtr;
+        where paramcd = 'SUMDIAM' and ablfl ne 'Y' and anl01fl = 'Y';
+        if not missing(pchg) and pchg <= -30 then flag = 'Y';
+        if flag = 'Y';
+      run;
+
+      proc sql;
+        select count(*)                 as n_records,
+               count(distinct usubjid)  as n_subjects
+        from   resp30;
+      quit;
+    hints:
+      - "Two defects, and they add different subjects: one adds 2 and one adds 4."
+      - "What does SAS do when it compares a missing numeric value with −30?"
+      - "Which records is a response derivation allowed to look at?"
+    solution: |
+      **Line 4 — no missing-value guard.** SAS orders a missing numeric below every number, so
+      `pchg <= -30` is true wherever `PCHG` is missing. The 14 records belonging to
+      `CBX417-301-1036-0003` and `1038-0009` have no baseline scan and therefore no `PCHG`, and both
+      subjects land in a response count despite carrying `EFFFL = "N"` in ADSL.
+
+      In R the same expression fails the other way: `NA <= -30` is `NA`, and a filter on `NA` keeps
+      nothing. Neither language is wrong — they answer different questions with the same syntax. Say
+      what you mean:
+
+      ```sas
+      if not missing(pchg) and pchg <= -30 then flag = 'Y';
+      ```
+
+      **Line 3 — no `ANL01FL` filter.** Assessments after the first progression or after the start of a
+      new anticancer therapy are in ADTR and must not enter a response derivation. Four subjects —
+      `1001-0008`, `1013-0009`, `1039-0003` and `1039-0007` — shrank substantially after switching
+      therapy. All four are censored in ADTTE with
+      `EVNTDESC = "NEW ANTICANCER THERAPY BEFORE PD OR DEATH"`, and **all four are in the CBX-417 arm**,
+      so the error inflates only the active column.
+
+      | Program | Records | Subjects |
+      |---|---:|---:|
+      | As written | 634 | 114 |
+      | With the missing guard only | 620 | 112 |
+      | With the `ANL01FL` filter only | 581 | 108 |
+      | Both fixed | **581** | **108** |
+
+      **Read the third row carefully.** Adding the `ANL01FL` filter alone gives the right answer, because
+      on this dataset all 14 no-baseline records happen to have a null `ANL01FL` too. That is luck. The
+      two conditions are unrelated, nothing keeps them aligned, and the next build's missing values will
+      sit somewhere else. Fix both.
+    explanation:
+      objective: "Find two independent defects in a selection whose result is plausible."
+      given: "A program reporting 114 subjects where 108 is correct."
+      relevant: "SAS's ordering of missing values, and which records a response derivation may use."
+      irrelevant: "The subsetting IF on line 5 and the counts on line 9, both correct."
+      method: "Decompose the excess: 6 subjects, 2 from missing values and 4 from the analysis window."
+      numbers: "634 / 114 as written; 620 / 112 with the guard alone; 581 / 108 correct."
+      assumptions: "ADTR's ANL01FL marks assessments up to the first PD and on or before any new anticancer therapy."
+      computation: "Missing sorts below −30 in SAS, so 14 records with no baseline pass the comparison."
+      interpretation: "Both defects push the same way — into the responder count, and into the active arm."
+      changes: "Filtering on ANL01FL alone happens to give the right total on this dataset and does not fix the comparison."
+      interviewer: "That you name SAS's missing-value ordering explicitly rather than calling it a null-handling issue."
+
+  - id: adam.onc.orr-diff
+    format: diff
+    modes: [debug, qc, boss]
+    difficulty: advanced
+    skills: [adam.bds, trials.oncology, qc.discrepancy]
+    lesson: adam-oncology-adrs-adtr
+    datasets: [oncology/adam/adrs]
+    title: Two response tables, nineteen subjects apart
+    minutes: 12
+    prompt: |
+      Production and QC both produced CBX417-301's objective response table on the intent-to-treat
+      population from the same ADRS. The denominators match. The response counts do not, and the
+      stable-disease counts move by exactly the same amount in the opposite direction.
+
+      Neither program errors. What happened?
+    left:
+      title: "Production — best overall response, ITT"
+      columns: ["Category", "CBX-417 + Docetaxel", "Placebo + Docetaxel"]
+      rows:
+        - ["N", 210, 210]
+        - ["Complete response", "1 (0.5%)", "0"]
+        - ["Partial response", "57 (27.1%)", "31 (14.8%)"]
+        - ["Stable disease", "113 (53.8%)", "133 (63.3%)"]
+        - ["Objective response (CR + PR)", "58 (27.6%)", "31 (14.8%)"]
+      footnote: "Numerators from ADRS; denominators from ADSL, ITTFL = 'Y' by TRT01P."
+    right:
+      title: "QC — best overall response, ITT"
+      columns: ["Category", "CBX-417 + Docetaxel", "Placebo + Docetaxel"]
+      rows:
+        - ["N", 210, 210]
+        - ["Complete response", "1 (0.5%)", "0"]
+        - ["Partial response", "69 (32.9%)", "38 (18.1%)"]
+        - ["Stable disease", "101 (48.1%)", "126 (60.0%)"]
+        - ["Objective response (CR + PR)", "70 (33.3%)", "38 (18.1%)"]
+      footnote: "Numerators from ADRS; denominators from ADSL, ITTFL = 'Y' by TRT01P."
+    leftCode: |
+      proc freq data=adam.adrs;
+        where paramcd = 'CBOR' and ittfl = 'Y';
+        tables trtp * avalc / nocum nopercent;
+      run;
+    rightCode: |
+      proc freq data=adam.adrs;
+        where paramcd = 'BOR' and ittfl = 'Y';
+        tables trtp * avalc / nocum nopercent;
+      run;
+    codeLanguage: sas
+    choices:
+      - text: "QC summarised `PARAMCD = \"BOR\"` — best overall response **unconfirmed** — where the SAP's ORR endpoint is `CBOR`. Nineteen subjects with an unconfirmed partial response become stable disease once confirmation is required: 12 in the CBX-417 arm and 7 on placebo."
+        correct: true
+        feedback: "Correct. Both parameters are in the dataset, both counts are right for what they summarise, and the two totals still add to 210 — which is why the denominators match and nothing looks broken."
+      - text: "QC included assessments recorded after the first progression, so extra partial responses entered the derivation."
+        feedback: "That error changes `BOR` for 8 subjects and makes responders of 4, all in the CBX-417 arm. It cannot move 7 placebo subjects, and it does not move CR, PD or NE."
+      - text: "Production restricted to the efficacy-evaluable population and QC did not."
+        feedback: "Both denominators are 210 and 210. `EFFFL = 'Y'` would give 411 subjects across the study, not 420."
+      - text: "QC counted assessments rather than subjects, so a subject with several partial responses was counted more than once."
+        feedback: "`BOR` and `CBOR` both have exactly one record per subject — 420 each. There is nothing to double-count, and each column still totals 210."
+      - text: "The two programs used different response codebooks, so `AVAL = 2` decoded to PR in one and SD in the other."
+        feedback: "Both programs group on `AVALC` directly, so the numeric codes never enter. A broken codebook would also disturb CR, PD and NE."
+    hints:
+      - "The complete responses, progressions and unevaluable counts are identical. Only PR and SD moved."
+      - "PR falls by 12 and SD rises by 12 in one arm; 7 and 7 in the other. What rule converts a partial response into stable disease?"
+      - "Read the two `WHERE` clauses."
+    solution: |
+      **QC summarised the wrong parameter.** `BOR` is best overall response unconfirmed; `CBOR` requires
+      confirmation and is the SAP's ORR endpoint.
+
+      The signature is in the shape of the difference:
+
+      | | CBX-417 | Placebo |
+      |---|---:|---:|
+      | PR, `BOR` → `CBOR` | 69 → 57 | 38 → 31 |
+      | SD, `BOR` → `CBOR` | 101 → 113 | 126 → 133 |
+      | Net movement | 12 | 7 |
+
+      **PR falls by exactly what SD rises by, and nothing else moves.** The cross-tabulation of the two
+      parameters is diagonal apart from one cell: 19 subjects at `BOR = "PR"` and `CBOR = "SD"`. No CR,
+      PD or NE changes, and nobody improves on confirmation.
+
+      **Neither program is buggy.** Both parameters are correct, both are in the dataset, and both
+      summaries are faithful to what they summarise. The defect is a reading of the SAP, which is a
+      harder thing to catch in code review than a wrong filter — the `WHERE` clause looks perfectly
+      normal and the output is internally consistent.
+
+      **What makes it dangerous** is the direction and the size. 33.3% against 27.6% is a materially
+      better-looking result for the active arm, and 12 of the 19 downgrades are in that arm. A
+      discrepancy that flatters the experimental treatment is the one most worth being sure about.
+
+      **The defence is in the specification, not the program.** The table shell's row label has to say
+      *confirmed* objective response, and the table specification has to name the parameter. Then a QC
+      programmer reading the same spec writes the same `WHERE` clause, and a reviewer reading the
+      finished table knows which of the two definitions produced it.
+    explanation:
+      objective: "Diagnose a response-table discrepancy in which the denominators are identical."
+      given: "Two ITT response tables with the same N, the same CR/PD/NE counts, and PR and SD moving in opposite directions."
+      relevant: "That ADRS carries two best-overall-response parameters and only one is the endpoint."
+      irrelevant: "The populations and denominators, which the matching Ns rule out immediately."
+      method: "Use the conservation — PR down by exactly what SD is up by — to identify a reclassification rather than a filter."
+      numbers: "12 subjects in the CBX-417 arm and 7 on placebo, 19 in total; 70 and 38 against 58 and 31."
+      assumptions: "Confirmation requires a later assessment at least 28 days on showing the same or better, per the SAP."
+      interpretation: "Neither program has a bug; one of them read the SAP differently, which code review does not catch."
+      changes: "A study that did not require confirmation would report the QC numbers and be right."
+      interviewer: "That you read the conservation between two categories as a reclassification signature."
+
+  - id: adam.onc.bpchg-window
+    format: mcq
+    modes: [qc, boss, interview]
+    difficulty: expert
+    skills: [adam.windows, trials.oncology, tlf.figures]
+    lesson: adam-oncology-adrs-adtr
+    datasets: [oncology/adam/adtr]
+    title: The bar in the wrong place
+    prompt: |
+      A clinician reviewing CBX417-301's waterfall plot pulls the listing for subject
+      `CBX417-301-1039-0003` and finds a discrepancy.
+
+      ```text
+      ADTR, PARAMCD = SUMDIAM
+      AVISIT    ADT          ADY   AVAL   BASE     PCHG   ANL01FL
+      BASELINE  2022-10-14    -5     80     80        .   Y
+      WEEK 6    2022-11-24    37     58     80   -27.50   Y
+      WEEK 12   2023-01-06    80     43     80   -46.25   (null)
+      WEEK 18   2023-02-21   126     38     80   -52.50   (null)
+      …  twelve further assessments, deepest −53.75% at week 57  …
+
+      ADTR, PARAMCD = BPCHG      AVAL = -27.50   ADT = 2022-11-24
+      ```
+
+      The subject's deepest recorded shrinkage is −53.75%. Their bar on the waterfall plot is at
+      −27.5%, just short of the response threshold line. Which statement is correct?
+    choices:
+      - text: "The bar is right. `BPCHG` is the minimum `PCHG` over records with `ANL01FL = \"Y\"`, and every assessment from week 12 onward was recorded after the subject started a different anticancer therapy — the same reason their PFS record is censored on day 39 with `CNSR = 3`."
+        correct: true
+        feedback: "Correct. The later shrinkage is real and is not attributable to CBX-417. Plotting −53.75% would credit another drug's effect to the study treatment, in the figure clinicians read first."
+      - text: "The bar is wrong. `BPCHG` must be the minimum over all post-baseline assessments; restricting it to the analysis window is a derivation error."
+        feedback: "The analysis window is the specification. A best percentage change taken over every record would include assessments the SAP has already excluded from every other efficacy endpoint."
+      - text: "The bar is wrong because the baseline is a pre-randomization scan, so `BASE` should have been the week 6 value."
+        feedback: "Baseline for tumour assessment is the last scan on or before randomization — day −5 here — and is what the 30% shrinkage threshold is measured from by definition."
+      - text: "The bar is right, but only because the subject's `BOR` is SD; had it been PR, `BPCHG` would have been taken over all records."
+        feedback: "`BPCHG` is derived from ADTR records and their analysis flag. It does not consult the response category, and the two datasets are derived independently from the same window rule."
+      - text: "Both values should be plotted, with the out-of-window shrinkage shown in a different colour."
+        feedback: "A waterfall plot is one bar per subject. Putting two values on it would make the figure unreadable and would still be presenting a post-switch measurement as a treatment effect."
+    explanation:
+      objective: "Judge whether a derived best value is wrong or the window is doing its job."
+      given: "A subject whose deepest shrinkage is outside the analysis window."
+      relevant: "That ANL01FL stops at the start of a new anticancer therapy, and that the PFS record is censored for the same reason."
+      irrelevant: "The size of the later shrinkage, which is real and still not evidence about the study drug."
+      method: "Check whether the excluded records fall outside the window every other efficacy endpoint uses."
+      numbers: "BPCHG −27.5% from week 6; deepest recorded −53.75% at week 57; PFS censored day 39, CNSR = 3."
+      assumptions: "ADTR's ANL01FL and ADTTE's censoring rules implement the same SAP definition of the informative window."
+      interpretation: "The figure is conservative in the direction the SAP chose — it refuses to credit another therapy's effect to CBX-417."
+      changes: "Four subjects on this study are in this position, all in the CBX-417 arm, so ignoring the flag inflates only the active column."
+      interviewer: "That you connect the waterfall derivation to the time-to-event censoring rule rather than treating them as separate decisions."
+
+  - id: adam.onc.open-response-review
+    format: open
+    modes: [interview, boss]
+    difficulty: expert
+    skills: [trials.oncology, adam.bds, communication.documentation]
+    lesson: adam-oncology-adrs-adtr
+    title: You have been handed an oncology response dataset
+    prompt: |
+      **Interviewer:** "You have just joined a study and inherited its ADRS and ADTR. The ORR table is
+      due in a week. What do you check before you trust the datasets, and in what order?"
+    modelAnswer: |
+      I'd check the things whose failure is invisible in the output first, and leave the arithmetic for
+      last, because arithmetic tends to fail loudly.
+
+      **First, which response the endpoint is on.** Is the primary ORR investigator-assessed or from
+      blinded independent central review? A study with central review has two sets of response records,
+      usually separated by `PARCAT1` or by the evaluator in the source, and picking the wrong one
+      produces a completely reasonable-looking table. On the study I worked with it was investigator
+      only, so there was one set — but I'd want to have asked rather than assumed.
+
+      **Then confirmed or unconfirmed.** ADRS normally carries both — `BOR` and `CBOR` — and they differ.
+      On that study the gap was 19 subjects: 108 responders unconfirmed, 89 confirmed, 33.3% against
+      27.6% in the active arm. The shell's row label and the SAP decide which one, and twelve of those
+      nineteen downgrades were in the experimental arm, so getting it wrong flatters the treatment.
+
+      **Then the analysis window.** `ANL01FL` on the visit-level records is what stops assessments after
+      the first progression, or after a new anticancer therapy, from entering the derivation. On that
+      study 80 of 1,928 records were excluded, and deriving over all of them made responders of four
+      subjects — every one of whom the PFS analysis had censored for switching therapy. That is the
+      check I'd care most about, because the response endpoint and the time-to-event endpoint have to be
+      using the same definition of the informative window, and nothing in either output tells you if
+      they are not.
+
+      **Then the cross-dataset checks, which are cheap and catch real things.**
+
+      The response category in ADRS and the percentage change in ADTR have to agree visit by visit. A
+      partial response needs a 30% shrinkage from baseline, so a `PR` sitting on a `PCHG` of −12% means
+      one of the two datasets is wrong — or means there is something in the response that the tumour
+      measurement cannot show, which is worth knowing either way.
+
+      The confirmed responder count has to match the number of `DOR` records in ADTTE — 89 and 89 on that
+      study — because duration of response can only start at a response.
+
+      And I'd look at what is *missing*. `BPCHG` existed for 404 of 420 subjects: two with no baseline
+      scan at all, both flagged `EFFFL = "N"`, and fourteen more with no usable post-baseline change. A
+      waterfall plot has no printed denominator, so a figure with 420 bars has invented sixteen of them
+      and nobody can see it.
+
+      **Then the structural assertions**, which I'd put in the QC program rather than run by hand: one
+      `BOR` and one `CBOR` record per subject; the `AVAL`/`AVALC` pairing one-to-one across the whole
+      dataset, because ADaM requires it and nothing enforces it; and one baseline record per subject in
+      ADTR wherever a baseline exists.
+
+      **The last thing I'd do is read the reviewer's guide, or write the missing paragraph.** On that
+      study the derived parameters carried no `DTYPE`, which is a legitimate design — the derived values
+      have their own `PARAMCD` — and a reviewer cannot tell an absent variable from an omitted one
+      without being told. Same for the simplification in the tumour data: one subject's week 36
+      progression came from a new lesion that is not in the submitted SDTM at all, so a reviewer
+      recomputing the response from the sum of diameters gets stable disease and files a query. Both are
+      one sentence, and both are cheaper to write than to answer.
+
+      **What I would not do in a week** is re-derive both datasets from scratch to prove they are right.
+      I'd re-derive `BOR` the simple way — the minimum `AVAL` within the window — and reconcile the
+      handful of subjects it disagrees on. On that study it was two, and both were the SAP's rule that
+      stable disease has to be recorded at least 35 days after randomization. That is a much better use
+      of a week than a full rebuild, and the two disagreements are exactly where a real problem would
+      have been.
+    rubric:
+      - Asks which evaluator the primary endpoint uses before anything else
+      - Distinguishes confirmed from unconfirmed best overall response and ties the choice to the SAP and the shell
+      - Identifies ANL01FL as the analysis window and connects it to the PFS censoring rules
+      - Proposes the ADRS-to-ADTR consistency check between response category and percentage change
+      - Cross-checks the confirmed responder count against the DOR records in ADTTE
+      - Notices what is missing — subjects without a BPCHG record — and its effect on a waterfall plot
+      - Names the structural assertions, including the AVAL / AVALC one-to-one requirement
+      - Prefers a targeted re-derivation with reconciliation over a full rebuild under time pressure
+      - Treats the reviewer's guide as part of the deliverable, including absent variables and data-model simplifications
+    redFlags:
+      - "Starts with the arithmetic and never asks which parameter the endpoint uses"
+      - "Assumes there is only one set of response records"
+      - "Treats ANL01FL as a de-duplication flag rather than an analysis window"
+      - "Takes the ORR denominator from ADRS without checking that the parameter covers the population"
+      - "Plans a full independent rebuild of both datasets in a week"
+      - "Does not connect the response derivation to the time-to-event censoring rules"
+    followUps:
+      - "The response category and the percentage change disagree at one visit for six subjects. What are the innocent explanations?"
+      - "The study has blinded independent central review as well. What changes in ADRS and in the QC plan?"
+      - "You find that BPCHG was derived over all post-baseline records rather than the analysis window. How do you quantify the impact before raising it?"

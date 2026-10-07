@@ -1,0 +1,29 @@
+domain: regulatory
+title: Regulatory Concepts
+description: The regulatory context of clinical data — what is required, what is convention, and why.
+skills:
+  - id: regulatory.ich
+    name: ICH guidelines
+    description: E3 (CSR structure), E6 (GCP), E9 and E9(R1) (statistical principles, estimands) at a working level.
+    weight: 2
+    tracks: [biostatistician, programmer]
+  - id: regulatory.data-standards
+    name: Regulatory data standards
+    description: FDA data standards expectations, Study Data Technical Conformance Guide, Data Standards Catalog, eCTD Module 5 concepts.
+    weight: 2
+    tracks: [programmer]
+  - id: regulatory.define
+    name: Define-XML and reviewer guides
+    description: Purpose of Define-XML, cSDRG and ADRG; what reviewers need to understand your data.
+    weight: 2
+    tracks: [programmer]
+  - id: regulatory.gxp
+    name: Validation, audit trail and reproducibility expectations
+    description: Why regulated analysis must be reproducible, traceable and controlled (GCP, computerized systems principles).
+    weight: 2
+    tracks: [programmer, computing]
+  - id: regulatory.submission
+    name: Submission deliverables
+    description: CSR, integrated summaries, datasets and programs in a submission; educational simulation vs real submissions.
+    weight: 1
+    tracks: [programmer, biostatistician]

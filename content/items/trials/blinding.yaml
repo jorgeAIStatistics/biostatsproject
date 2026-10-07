@@ -1,0 +1,238 @@
+items:
+  - id: trials.blinding.bias-types
+    format: classify
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.blinding]
+    lesson: trials-blinding-bias
+    title: Name the bias
+    prompt: |
+      Classify each scenario by the type of bias it describes.
+    categories: [Selection, Performance, Detection/assessment, Attrition]
+    entries:
+      - { text: "A site coordinator who can see the next assignment enrolls sicker patients when the next slot is placebo", category: Selection }
+      - { text: "Investigators give more supportive care to patients they believe are on placebo", category: Performance }
+      - { text: "A radiologist reads an ambiguous scan as stable because the patient is known to be on the experimental drug", category: "Detection/assessment" }
+      - { text: "Patients who guess they are on placebo withdraw early, and those withdrawing had worse outcomes", category: Attrition }
+      - { text: "An unblinded investigator records mild symptoms as AEs more often in the experimental arm", category: "Detection/assessment" }
+      - { text: "Patients who know they receive the new drug use fewer concomitant painkillers", category: Performance }
+    hints:
+      - "Selection happens before or at assignment; the others happen after."
+      - "Ask whether the bias changes how patients are treated, how outcomes are measured, or who remains in follow-up."
+    solution: |
+      Selection bias is prevented by concealed randomization; performance and detection biases by blinding; attrition bias is reduced by blinding, continued follow-up and ITT analysis.
+
+  - id: trials.blinding.kit-list
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.blinding]
+    lesson: trials-blinding-bias
+    title: Which file breaks the blind?
+    prompt: |
+      Which CBX417-301 file, combined with the EDC dispensing records (`ex_study_drug.csv` with `KIT_NUMBER`), would reveal each subject's treatment?
+    choices:
+      - text: "`kit_list.csv` (KIT_NUMBER, KIT_CONTENT)"
+        correct: true
+        feedback: "KIT_CONTENT states whether each kit holds CBX-417 or placebo; joining it to dispensing records decodes every subject's assignment."
+      - text: "`ex_docetaxel.csv`"
+        feedback: "Docetaxel is open-label and given to both arms; its dosing records reveal nothing about CBX-417 vs placebo."
+      - text: "`vitals.csv`"
+        feedback: "Vital signs may show drug effects on average, but they do not identify assignment."
+      - text: "`enrollment.csv`"
+        feedback: "Enrollment and eligibility data are collected before randomization."
+    solution: |
+      The kit list. It must stay with unblinded supply staff until database lock; development uses a dummy kit list with the same structure.
+
+  - id: trials.blinding.who-unblinded
+    format: multi
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.blinding]
+    lesson: trials-blinding-bias
+    title: Who may see unblinded information during the trial?
+    prompt: |
+      During the ongoing double-blind phase of CBX417-301, which of these people may legitimately have access to unblinded information? Select all that apply.
+    choices:
+      - text: "The IDMC and the independent statistician preparing its interim reports"
+        correct: true
+        feedback: "The IDMC reviews unblinded aggregate data behind a firewall so the sponsor team stays blinded."
+      - text: "Pharmacovigilance staff assessing a suspected unexpected serious adverse reaction for expedited reporting"
+        correct: true
+        feedback: "Individual-case unblinding for expedited regulatory reporting is standard; the result is not shared with the study team."
+      - text: "An investigator who needs the treatment to manage a medical emergency"
+        correct: true
+        feedback: "Emergency unblinding through IxRS is allowed for patient safety; it is logged and reported."
+      - text: "The study team biostatistician finalizing the SAP"
+        feedback: "The SAP must be finalized blind; the study statistician should not see unblinded results before lock."
+      - text: "The study programmer validating the ADTTE program"
+        feedback: "Programs are validated on dummy randomization before lock."
+    solution: |
+      IDMC (and its independent statistical support), pharmacovigilance for SUSAR reporting, and the investigator in emergencies. The sponsor's study team — statisticians, programmers, clinical scientists — remain blinded until lock.
+
+  - id: trials.blinding.functional-unblinding
+    format: mcq
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.blinding, trials.oncology]
+    lesson: trials-blinding-bias
+    title: Characteristic toxicity and PFS assessment
+    prompt: |
+      Suppose CBX-417 causes rash far more often than placebo. The primary endpoint is PFS assessed by the investigator. What is the main concern, and what is the usual safeguard?
+    choices:
+      - text: "Investigators may infer assignment from rash and read scans differently; a blinded independent central review (BICR) of scans provides a supportive or sensitivity assessment"
+        correct: true
+        feedback: "Functional unblinding threatens assessment of a subjective endpoint. BICR uses reviewers who do not see clinical data such as toxicity."
+      - text: "Rash will be under-reported; the fix is to collect AEs more often"
+        feedback: "The concern is not AE reporting but its effect on how efficacy is assessed."
+      - text: "Nothing — kits are identical, so the study remains fully blinded"
+        feedback: "Identical kits do not prevent inference from side effects. That is functional unblinding."
+      - text: "Switch the primary endpoint to ORR"
+        feedback: "ORR also relies on scan interpretation and would face the same issue."
+    hints:
+      - "Which endpoints depend on someone's judgment?"
+      - "Who could assess scans without seeing the patient's side effects?"
+    solution: |
+      Functional unblinding can bias investigator-assessed endpoints. BICR (full or audit-based), careful RECIST training and objective endpoints such as OS are the usual mitigations.
+
+  - id: trials.blinding.unblinding-steps
+    format: order
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.blinding, trials.lifecycle]
+    lesson: trials-blinding-bias
+    title: From blinded development to final outputs
+    prompt: |
+      Put the steps for producing the final CBX417-301 outputs in order.
+    steps:
+      - "Develop and QC SDTM, ADaM and TLF programs using a dummy randomization file"
+      - "Hold the blinded data review meeting and document population decisions"
+      - "Finalize and approve the SAP"
+      - "Lock the database"
+      - "Release the real randomization and kit data to the study team"
+      - "Rerun all programs on real codes and complete final QC"
+    hints:
+      - "Everything that could be influenced by the results must happen before the real codes are released."
+      - "Population decisions (for example per-protocol exclusions) are made blind, before lock."
+    solution: |
+      Develop on dummy codes → blinded data review → SAP final → database lock → release codes → final runs and QC. The SAP and blinded review can overlap in time, but both precede lock and unblinding.
+
+  - id: trials.blinding.listing-review
+    format: hotspot
+    language: text
+    modes: [debug]
+    difficulty: intermediate
+    skills: [trials.blinding, tlf.listings]
+    lesson: trials-blinding-bias
+    title: Review a listing for the blinded team
+    prompt: |
+      This is the column header specification for a listing requested by the (blinded) medical monitor during the ongoing trial. Click the column(s) that would unblind the reader.
+    code: |
+      Column 1: Subject ID (USUBJID)
+      Column 2: Age/Sex
+      Column 3: Adverse event verbatim term / preferred term
+      Column 4: Start and end date (study day)
+      Column 5: CTCAE grade
+      Column 6: Study drug kit content (CBX-417 50 mg tablets / Placebo tablets)
+      Column 7: Docetaxel dose at onset (mg)
+      Column 8: CBX-417 plasma concentration at the nearest PK sample (ng/mL)
+    answerLines: [6, 8]
+    lineNotes:
+      - line: 6
+        note: "Kit content is the treatment assignment itself."
+      - line: 8
+        note: "Plasma concentrations of CBX-417 are non-zero only for subjects on active drug, so they reveal assignment indirectly."
+      - line: 7
+        note: "Docetaxel is open-label and given to both arms; its dose does not reveal the CBX-417/placebo assignment."
+    fixed: |
+      Column 1: Subject ID (USUBJID)
+      Column 2: Age/Sex
+      Column 3: Adverse event verbatim term / preferred term
+      Column 4: Start and end date (study day)
+      Column 5: CTCAE grade
+      Column 6: Docetaxel dose at onset (mg)
+    hints:
+      - "Look for any column that differs systematically between active and placebo subjects."
+      - "Think beyond an explicit 'arm' column — what data exist only when drug is present?"
+    solution: |
+      Remove kit content (explicit) and CBX-417 concentrations (implicit). Everything else is either clinical data needed for the review or open-label information.
+    explanation:
+      objective: "Keep a listing for blinded reviewers free of direct and indirect treatment information."
+      given: "Eight proposed columns."
+      relevant: "Columns that encode or correlate perfectly with assignment."
+      irrelevant: "Demographics, AE terms, grades and open-label docetaxel dosing."
+      method: "For each column, ask whether its values would differ between a placebo subject and an active subject by design."
+      interpretation: "Indirect unblinding through PK data is a classic miss."
+      changes: "After database lock, kit content and PK data can be listed freely."
+      interviewer: "That you recognize implicit unblinding, not only an arm column."
+
+  - id: trials.blinding.by-arm-request
+    format: mcq
+    modes: [debug]
+    difficulty: advanced
+    skills: [trials.blinding, communication.audiences]
+    lesson: trials-blinding-bias
+    title: A by-arm summary request during the blinded phase
+    prompt: |
+      Mid-study, a clinical scientist on the sponsor team emails: "Can you run the AE-by-SOC table by arm on the latest transfer? It's only for planning the next study." You have access to programs but not to the real randomization. What is the best response?
+    choices:
+      - text: "Explain that by-arm results would unblind the study team; offer a pooled table now, and point to the IDMC process if there is a safety question"
+        correct: true
+        feedback: "This protects the blind, still helps the requester, and uses the correct channel for any safety concern."
+      - text: "Ask the IxRS vendor for the randomization file and run the table"
+        feedback: "Requesting unblinding information for the study team breaches the blinding plan."
+      - text: "Run it with dummy randomization and send it without comment"
+        feedback: "Dummy outputs sent without labeling can be mistaken for real results; they are also useless for planning."
+      - text: "Run the table by arm but remove p-values"
+        feedback: "Removing p-values does not remove the unblinding; the counts by arm are the information."
+    solution: |
+      Decline the by-arm output politely, offer the pooled version, and escalate through the proper channel if a safety concern is behind the request. Document the exchange if your SOPs require it.
+    explanation:
+      objective: "Respond to a request that would unblind the study team."
+      given: "A mid-study request for a by-arm AE table from a sponsor team member."
+      relevant: "Who is asking (blinded study team), what they ask for (by-arm results), and what alternatives exist (pooled data, IDMC)."
+      irrelevant: "The stated purpose — planning — does not change the unblinding effect."
+      method: "Apply the blinding plan: by-arm data only through the firewalled IDMC process during the trial."
+      interpretation: "Helpfulness and protecting the trial are compatible if you offer the right alternative."
+      changes: "After lock and unblinding, the same request is routine."
+      interviewer: "That you can say no diplomatically and know the correct escalation path."
+
+  - id: trials.blinding.interview-dummy
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [trials.blinding, communication.interviewing]
+    lesson: trials-blinding-bias
+    title: Programming a blinded study
+    prompt: |
+      **Interviewer:** "The study is double-blind and lock is in three months. How do you make sure the final outputs are ready quickly without compromising the blind?"
+    modelAnswer: |
+      I build and validate all SDTM, ADaM and TLF programs on the current blinded data with a dummy randomization file that has the same structure as the real one — same variables, same arm labels, realistic arm sizes — so every program runs end to end and QC can compare outputs. Outputs are labeled as dummy. I keep the programs parameterized so the only change at unblinding is which randomization source is read.
+
+      Real randomization and kit data, and anything that reveals assignment such as PK concentrations, stay with the unblinded team. Blinded data reviews use pooled summaries. After lock, the real codes are loaded in a controlled, documented step, all programs are rerun, and QC confirms the final outputs — typically within days because everything was already validated.
+    rubric:
+      - Mentions dummy randomization with the real structure
+      - Keeps restricted files out of the study area
+      - Mentions labeling dummy outputs
+      - Describes the controlled switch to real codes after lock
+      - Mentions final QC after unblinding
+    redFlags:
+      - "Suggests peeking at real codes to check programs"
+      - "Does not know what could indirectly unblind"
+    followUps:
+      - "How would you handle an interim analysis for an IDMC?"
+      - "What would you do if you accidentally received the real randomization file?"
+
+  - id: trials.blinding.speed-idmc
+    format: text
+    modes: [speed]
+    difficulty: foundation
+    skills: [trials.blinding]
+    lesson: trials-blinding-bias
+    title: Expand IDMC
+    prompt: |
+      Interim unblinded data in CBX417-301 are reviewed by the **IDMC**. What does IDMC stand for?
+    accept: ["Independent Data Monitoring Committee"]
+    acceptPatterns: ["^independent\\s+data\\s+monitoring\\s+committee$"]
+    solution: |
+      Independent Data Monitoring Committee — also called a DMC or DSMB (Data and Safety Monitoring Board). Its members are independent of the sponsor and review unblinded interim data behind a firewall.

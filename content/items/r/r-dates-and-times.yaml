@@ -1,0 +1,628 @@
+items:
+  - id: r.dates.no-day-zero
+    format: numeric
+    modes: [check, guided, speed]
+    difficulty: foundation
+    skills: [r.dates, adam.bds, sdtm.dates]
+    lesson: r-dates-and-times
+    title: Study day on the day of first dose
+    prompt: |
+      A subject's first dose is **2025-03-14**. An assessment is performed on **2025-03-14**.
+
+      What is `ADY`?
+    answer: 1
+    tolerance: 0
+    hints:
+      - "A plain subtraction gives 0."
+      - "Does Day 0 exist in CDISC?"
+      - "The day of first dose is Day 1."
+    solution: |
+      **1.** The day of first dose is Day 1.
+
+      $$\text{ADY} = \text{ADT} - \text{TRTSDT} + 1 = 0 + 1 = 1$$
+
+      There is no Day 0 in SDTM or ADaM. The day *before* first dose is Day −1, so the sequence runs
+      −3, −2, −1, **1**, 2, 3.
+
+      A naive subtraction gives 0 here and is short by one for every later assessment — which shifts
+      every post-baseline visit and produces a value that fails conformance checking as well as being
+      wrong.
+    explanation:
+      objective: "Apply the study-day convention on the reference date itself."
+      given: "An assessment on the same calendar day as first dose."
+      relevant: "That the day of first dose is Day 1 by convention."
+      calculating: "ADT minus TRTSDT plus one, since ADT is not before TRTSDT."
+      numbers: "0 + 1 = 1."
+      assumptions: "The reference date is TRTSDT for ADY; SDTM's --DY anchors on RFSTDTC instead, and the two can differ."
+      interpretation: "An assessment on Day 1 shares a calendar day with the first dose; whether it preceded the dose requires the time, not the date."
+      changes: "For an assessment the day before, the naive subtraction gives -1, which is already correct — only the non-negative side shifts."
+      interviewer: "That you state the two-branch formula rather than just the answer."
+
+  - id: r.dates.epoch
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [r.dates, r.sas-translation, qc.compare]
+    lesson: r-dates-and-times
+    title: The same date, two numbers
+    prompt: |
+      R stores **2025-03-14** as the number **20161** (days since 1970-01-01).
+
+      SAS stores the same date as a different number, counting from 1960-01-01.
+
+      What number does SAS store?
+    answer: 23814
+    tolerance: 0
+    hints:
+      - "How many days are there between 1960-01-01 and 1970-01-01?"
+      - "Ten years, three of them leap years (1960, 1964, 1968)."
+      - "Add that offset to 20161."
+    solution: |
+      **23814.**
+
+      The epochs differ by $10 \times 365 + 3 = 3653$ days — ten years containing three leap days
+      (1960, 1964, 1968).
+
+      $$20161 + 3653 = 23814$$
+
+      **Why this matters:** a numeric date exported to CSV and read into the other system is out by ten
+      years, silently. `haven::read_sas()` and `read_xpt()` handle the conversion correctly because they
+      know about both epochs; a bare number does not carry that information.
+
+      **The defence** is to move dates between systems as ISO 8601 **text**, never as numbers — which is
+      exactly what SDTM requires of `--DTC` variables.
+    explanation:
+      objective: "Convert a date between the two systems' internal representations."
+      given: "R's numeric value for a date and the two epoch dates."
+      relevant: "The number of days between 1960-01-01 and 1970-01-01."
+      calculating: "The offset, then the SAS value."
+      numbers: "10 x 365 = 3650, plus leap days in 1960, 1964 and 1968 = 3653. 20161 + 3653 = 23814."
+      assumptions: "Both systems store dates as day counts, so the conversion is a simple offset."
+      interpretation: "A ten-year error is large enough to be caught by a range check and small enough to look like a real date."
+      changes: "haven converts correctly on read; a CSV of numeric dates carries no epoch information and cannot."
+      interviewer: "That you can derive the 3,653 rather than recall it, and that you name ISO text as the safe transfer format."
+
+  - id: r.dates.silent-parse
+    format: mcq
+    modes: [check, debug, qc]
+    difficulty: advanced
+    skills: [r.dates, qc.data-cleaning]
+    lesson: r-dates-and-times
+    title: The parse that did not fail
+    prompt: |
+      ```r
+      as.Date("14/03/2025")
+      ```
+
+      What does this return?
+    choices:
+      - text: "`\"14-03-20\"` — a valid Date in the year 14, because R matched `%Y/%m/%d` and ignored the trailing characters."
+        correct: true
+        feedback: "Correct, and this is the worst possible behaviour: not an error, not NA, but a plausible-looking Date that is nearly two thousand years wrong."
+      - text: "`NA`, because the format does not match."
+        feedback: "That would be recoverable. R half-matches instead and returns a real Date."
+      - text: "`\"2025-03-14\"` — R infers the day-first format."
+        feedback: "R does not infer day-first. Its defaults are `%Y-%m-%d` then `%Y/%m/%d`, both year-first."
+      - text: "An error."
+        feedback: "It errors only when no default format matches at all, as with `as.Date(\"2025-03\")`."
+    solution: |
+      **`"14-03-20"`** — a `Date` in the year 14 AD.
+
+      `as.Date()` with no `format` tries `"%Y-%m-%d"`, then `"%Y/%m/%d"`. The second matched: year `14`,
+      month `03`, day `20`, with the trailing `25` ignored rather than treated as a failure.
+
+      Nothing warns. The result is a genuine `Date`, so every later calculation succeeds.
+
+      **Always pass the format:**
+
+      ```r
+      as.Date("14/03/2025", format = "%d/%m/%Y")   # "2025-03-14"
+      as.Date("14MAR2025",  format = "%d%b%Y")     # "2025-03-14"
+      ```
+
+      A parser that returns `NA` on failure is recoverable — you can count the NAs and investigate. One
+      that returns a plausible wrong answer is not.
+    explanation:
+      objective: "Predict the result of an unformatted date parse on a non-ISO string."
+      given: "A day-first date string passed to as.Date with no format."
+      relevant: "That R's default formats are year-first and that a partial match succeeds."
+      method: "as.Date tries its default formats in order and accepts the first that matches a prefix."
+      numbers: "'14/03/2025' matched as %Y/%m/%d gives year 14, month 3, day 20; the trailing '25' is discarded."
+      interpretation: "A valid Date object nearly two thousand years wrong, produced without any warning."
+      changes: "Passing format = '%d/%m/%Y' gives the intended 2025-03-14. readr's col_date() with an explicit format has the same protection and reports failures via problems()."
+      interviewer: "That you know it returns a Date rather than NA, since that distinction is what makes it dangerous."
+
+  - id: r.dates.partial
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: advanced
+    skills: [r.dates, sdtm.dates, stats.missing-data]
+    lesson: r-dates-and-times
+    title: An adverse event with a partial onset date
+    prompt: |
+      An AE has onset `AESTDTC = "2025-03"` — March 2025, day unknown. The subject's first dose was
+      **2025-03-20**.
+
+      Is this event treatment-emergent?
+    choices:
+      - text: "It cannot be determined from the data. The SAP's imputation rule decides, and the convention is conservative — treat it as emergent unless it can be ruled out."
+        correct: true
+        feedback: "Correct. Under-counting adverse events is the more dangerous error, so the conservative default counts it as treatment-emergent."
+      - text: "No — March 2025 begins before 2025-03-20, so the event started before first dose."
+        feedback: "The event started somewhere in March; it could be the 25th. The partial date does not tell you which."
+      - text: "Yes — a partial date always imputes to the first of the month, which is before first dose."
+        feedback: "That rule would make it *not* emergent, and it is not a universal rule. The SAP specifies the imputation."
+      - text: "The record should be excluded until the site provides a complete date."
+        feedback: "Excluding events is not an option — the analysis must handle what was collected. A query may be raised, but the analysis still needs a rule."
+    solution: |
+      **It cannot be determined from the data**, and the SAP's imputation rule decides.
+
+      The event started somewhere between 1 and 31 March. First dose was 20 March. Nothing in the record
+      says which side.
+
+      **The conventional rule is conservative:** treat it as treatment-emergent unless it can be ruled
+      out. Under-counting adverse events is the more dangerous error in a safety analysis, so the
+      imputation errs toward inclusion.
+
+      A typical SAP rule: impute a missing day to the first of the month, **unless** that would place the
+      event before first dose in the same month, in which case impute to the first dose date.
+
+      Whatever the rule, the imputed record must be flagged with `DTYPE` so a sensitivity analysis can be
+      run on observed dates only.
+    explanation:
+      objective: "Recognise that a partial date makes a derivation a SAP decision rather than a computation."
+      given: "A month-precision AE onset in the same month as first dose."
+      relevant: "That the event could have started before or after the dose."
+      irrelevant: "Any single imputation convention — the SAP's rule is what governs."
+      method: "Establish whether the partial date's range spans the reference date. Here it does."
+      assumptions: "Conservative handling for adverse events, because under-counting is more dangerous than over-counting."
+      interpretation: "The answer depends on a documented rule, not on the data."
+      changes: "If first dose had been in April, the March onset would be unambiguously pre-treatment regardless of the imputed day."
+      interviewer: "That you say it depends on the SAP and can state why the convention is conservative for AEs specifically."
+
+  - id: r.dates.ady-hand
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [r.dates, adam.bds]
+    lesson: r-dates-and-times
+    title: Study day before treatment
+    prompt: |
+      First dose: **2025-03-14**. A screening assessment on **2025-03-07**.
+
+      What is `ADY`?
+    answer: -7
+    tolerance: 0
+    hints:
+      - "The assessment is before first dose, so which branch of the formula applies?"
+      - "The pre-treatment branch has no +1."
+      - "7 March to 14 March is 7 days."
+    solution: |
+      **−7.**
+
+      The assessment is before first dose, so the pre-treatment branch applies with no adjustment:
+
+      $$\text{ADY} = \text{ADT} - \text{TRTSDT} = -7$$
+
+      **Only the non-negative side gets the +1.** The pre-treatment days are already correct under a plain
+      subtraction — the day before first dose is Day −1 — and shifting them too would create a Day 0 at
+      the other end.
+    explanation:
+      objective: "Apply the pre-treatment branch of the study-day formula."
+      given: "A screening assessment seven days before first dose."
+      relevant: "That the assessment precedes the reference date."
+      calculating: "A plain date difference, with no adjustment."
+      numbers: "2025-03-07 minus 2025-03-14 is -7."
+      method: "The +1 applies only when the assessment is on or after the reference date."
+      interpretation: "Day -7 means seven days before the first dose, and Day -1 is the day immediately before."
+      changes: "An assessment on 2025-03-14 itself would be Day 1, not Day 0 — the convention skips zero."
+      interviewer: "That you know the asymmetry of the formula rather than applying +1 everywhere."
+
+  - id: r.dates.derive-ady
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [r.dates, adam.bds]
+    lesson: r-dates-and-times
+    title: A study-day function that handles missing dates
+    minutes: 12
+    prompt: |
+      Write `derive_ady(adt, trtsdt)` returning the analysis day, vectorised over both arguments.
+
+      - `ADT - TRTSDT + 1` when `ADT >= TRTSDT`
+      - `ADT - TRTSDT` when `ADT < TRTSDT`
+      - `NA` when either date is missing
+
+      Return a plain numeric vector, not a `difftime`.
+    starter: |
+      library(dplyr)
+
+      derive_ady <- function(adt, trtsdt) {
+        diff <- ___
+
+        if_else(___)
+      }
+    reference: |
+      library(dplyr)
+
+      derive_ady <- function(adt, trtsdt) {
+        diff <- as.numeric(adt - trtsdt)
+
+        if_else(adt >= trtsdt, diff + 1, diff, missing = NA_real_)
+      }
+    hints:
+      - "`as.numeric()` on the difference — otherwise you return a `difftime` carrying a units attribute."
+      - "`if_else` rather than `ifelse`: it type-checks both branches and preserves attributes."
+      - "`missing = NA_real_` handles the case where either date is NA, and documents the rule."
+    checks:
+      - pattern: "as\\.numeric\\s*\\("
+        message: "Converts the difftime to a plain numeric"
+      - pattern: "if_else\\s*\\("
+        message: "Uses the strict, type-checking conditional"
+      - pattern: "diff\\s*\\+\\s*1"
+        message: "Adds one on the treatment-onwards branch"
+      - pattern: "missing\\s*=\\s*NA_real_"
+        message: "States what happens when a date is missing"
+    expectedOutput: |
+      ```text
+               ADT naive ADY
+      1 2025-03-12    -2  -2
+      2 2025-03-13    -1  -1
+      3 2025-03-14     0   1
+      4 2025-03-15     1   2
+      ```
+    solution: |
+      ```r
+      derive_ady <- function(adt, trtsdt) {
+        diff <- as.numeric(adt - trtsdt)
+        if_else(adt >= trtsdt, diff + 1, diff, missing = NA_real_)
+      }
+      ```
+
+      **Three decisions, each worth defending:**
+
+      `as.numeric()` — a `Date` difference is a `difftime` carrying a units attribute. It mostly behaves
+      like a number, and "mostly" is not a property you want in a derived analysis variable.
+
+      `if_else` over `ifelse` — the strict version type-checks both branches and preserves attributes, so
+      it cannot silently return something unexpected.
+
+      `missing = NA_real_` — two subjects in this study were randomized and never dosed, so `TRTSDT` is
+      missing for them. Their study day must be `NA`, not a number computed from a date that does not
+      exist.
+
+      **That last point is where SAS needs an explicit branch and R does not.** A missing numeric in SAS
+      sorts below every real number, so `adt >= trtsdt` is **true** when `trtsdt` is missing, and the
+      subject gets a positive study day. The SAS version needs `if missing(trtsdt) then ady = .;` before
+      anything else.
+    explanation:
+      objective: "Implement the study-day derivation with correct missing handling."
+      given: "Two date vectors that may contain missing values."
+      relevant: "The two branches and the missing case."
+      method: "Compute the raw difference once, then apply the +1 conditionally."
+      numbers: "For a first dose of 2025-03-14: 2025-03-12 gives -2, 2025-03-14 gives 1, 2025-03-15 gives 2."
+      assumptions: "TRTSDT is the reference; SDTM's --DY would anchor on RFSTDTC instead."
+      computation: "as.numeric strips the difftime units; without it the column carries an attribute."
+      interpretation: "Two subjects in this study have no TRTSDT, so NA is the correct study day for them."
+      changes: "SAS requires an explicit missing branch because a missing numeric compares as less than every real number."
+      interviewer: "That you name the SAS missing-value difference, since it is the reason the two implementations are not symmetric."
+
+  - id: r.dates.duration
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [r.dates, adam.adsl]
+    lesson: r-dates-and-times
+    title: Treatment duration for a single dose
+    prompt: |
+      A subject's first dose and last dose are both on **2025-03-14** — they received one dose and
+      discontinued.
+
+      What is `TRTDURD` (treatment duration in days)?
+    answer: 1
+    tolerance: 0
+    unit: days
+    hints:
+      - "The plain subtraction gives 0."
+      - "The subject was treated on one day."
+      - "Duration counts days inclusively, like study day."
+    solution: |
+      **1 day.**
+
+      $$\text{TRTDURD} = \text{TRTEDT} - \text{TRTSDT} + 1 = 0 + 1 = 1$$
+
+      The subject was treated on one calendar day, so the duration is one day — not zero. This is the
+      same **inclusive counting** convention as study day, and for the same reason: a duration of 0 would
+      mean the subject was never treated, which is a different fact entirely and is represented by a
+      missing `TRTSDT`.
+
+      The distinction matters for exposure summaries: "mean treatment duration" over a population
+      including several single-dose subjects differs measurably depending on whether they contribute 0
+      or 1.
+    explanation:
+      objective: "Apply inclusive counting to a treatment-duration derivation."
+      given: "Identical first and last dose dates."
+      relevant: "That duration counts days of treatment, inclusively."
+      calculating: "End minus start, plus one."
+      numbers: "0 + 1 = 1 day."
+      assumptions: "Duration is defined as calendar days on treatment, which is the usual convention; some SAPs define exposure differently for intermittent dosing."
+      interpretation: "A duration of 0 would mean untreated, which is represented by a missing TRTSDT instead."
+      changes: "For intermittent or cyclic dosing, total days on treatment may exclude gaps — a different derivation that the SAP must define."
+      interviewer: "That you connect the +1 to the same convention as study day rather than treating it as a separate rule."
+
+  - id: r.dates.teae-code
+    format: code
+    language: r
+    modes: [independent, guided]
+    difficulty: advanced
+    skills: [r.dates, adam.occds, trials.safety]
+    lesson: r-dates-and-times
+    title: Derive the treatment-emergent flag
+    minutes: 15
+    prompt: |
+      Write `derive_trtemfl(astdt, trtsdt, trtedt, window = 30)` returning `"Y"` or `"N"`.
+
+      An event is treatment-emergent when its onset is **on or after** first dose and **on or before**
+      last dose plus the follow-up window.
+
+      - Return `NA_character_` if `ASTDT` or `TRTSDT` is missing.
+      - If `TRTEDT` is missing but `TRTSDT` is not — a subject still on treatment at the cut-off — treat
+        the upper bound as open, so any onset on or after first dose qualifies.
+    starter: |
+      library(dplyr)
+
+      derive_trtemfl <- function(astdt, trtsdt, trtedt, window = 30) {
+        upper <- ___
+
+        case_when(
+          ___
+        )
+      }
+    reference: |
+      library(dplyr)
+
+      derive_trtemfl <- function(astdt, trtsdt, trtedt, window = 30) {
+        upper <- trtedt + window
+
+        case_when(
+          is.na(astdt) | is.na(trtsdt)      ~ NA_character_,
+          astdt < trtsdt                     ~ "N",
+          is.na(trtedt)                      ~ "Y",
+          astdt <= upper                     ~ "Y",
+          .default                           ~ "N"
+        )
+      }
+    hints:
+      - "`trtedt + window` adds days directly to a Date — no conversion needed."
+      - "Order the `case_when` branches so the missing checks come first and the open-upper-bound case is handled before the comparison that would return NA."
+      - "`is.na(trtedt) ~ \"Y\"` must come *after* the `astdt < trtsdt` check, so a pre-treatment event is still N."
+    checks:
+      - pattern: "is\\.na\\s*\\(\\s*astdt\\s*\\)"
+        message: "Handles a missing onset date"
+      - pattern: "astdt\\s*<\\s*trtsdt"
+        message: "Excludes events starting before first dose"
+      - pattern: "is\\.na\\s*\\(\\s*trtedt\\s*\\)"
+        message: "Handles the open upper bound when last dose is missing"
+      - pattern: "trtedt\\s*\\+\\s*window"
+        message: "Adds the follow-up window to the last dose date"
+      - pattern: "NA_character_"
+        message: "Uses a correctly typed NA"
+    expectedOutput: |
+      ```text
+             ASTDT     TRTSDT     TRTEDT TRTEMFL
+      1 2025-03-10 2025-03-14 2025-04-20       N
+      2 2025-03-14 2025-03-14 2025-04-20       Y
+      3 2025-05-10 2025-03-14 2025-04-20       Y
+      4 2025-06-01 2025-03-14 2025-04-20       N
+      5 2025-05-10 2025-03-14       <NA>       Y
+      6       <NA> 2025-03-14 2025-04-20    <NA>
+      ```
+    solution: |
+      **The branch order is the whole exercise.** `case_when` is first-match, so:
+
+      1. **Missing checks first** — otherwise a missing `ASTDT` reaches a comparison and returns `NA` from
+         the comparison rather than from a stated rule.
+      2. **`astdt < trtsdt` before the `is.na(trtedt)` branch** — otherwise a subject with no last-dose
+         date would have a *pre-treatment* event marked `"Y"`.
+      3. **The open upper bound** — a subject still on treatment at the data cut-off has no `TRTEDT`, and
+         every event on or after first dose is emergent.
+
+      Reordering branches 2 and 3 produces a wrong answer with no error, which is exactly the kind of bug
+      a QC comparison against an independently written program is designed to catch.
+
+      **What this function does not handle**, deliberately: partial onset dates. `ASTDTC = "2025-03"`
+      cannot be compared with anything until the SAP's imputation rule has produced an `ASTDT`, and that
+      imputation belongs upstream with a `DTYPE` flag — not buried inside a flag derivation.
+    explanation:
+      objective: "Implement a treatment-emergent flag with correct branch ordering and missing handling."
+      given: "Onset, first dose and last dose dates, plus a follow-up window."
+      relevant: "The two bounds, the missing cases, and the open-ended case."
+      method: "case_when evaluates top to bottom, so the order encodes the precedence of the rules."
+      numbers: "With a 30-day window and a last dose of 2025-04-20, the upper bound is 2025-05-20."
+      assumptions: "The window comes from the SAP and is usually based on the drug's half-life; 30 days is a common default, not a standard."
+      computation: "Adding an integer to a Date adds days directly, so trtedt + window needs no conversion."
+      interpretation: "A subject with no TRTEDT is still on treatment at cut-off, so the upper bound is open."
+      changes: "Partial onset dates must be imputed upstream per the SAP and flagged with DTYPE; this function assumes a complete ASTDT."
+      interviewer: "That you can explain why swapping two branches gives a silently wrong answer."
+
+  - id: r.dates.class-loss
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [r.dates, r.basics, qc.discrepancy]
+    lesson: r-dates-and-times
+    title: The date that became a number
+    minutes: 8
+    prompt: |
+      A listing shows `TEAE_DT` as **20161** instead of a date. The value is right; the display is not.
+
+      Click the line that strips the class.
+    code: |
+      library(dplyr)
+
+      out <- adae |>
+        mutate(
+          TEAE_DT = ifelse(TRTEMFL == "Y", ASTDT, NA)
+        ) |>
+        select(USUBJID, AEDECOD, TEAE_DT)
+    answerLines: [5]
+    lineNotes:
+      - line: 5
+        note: "`ifelse()` strips attributes, so the `Date` class is lost and the underlying number surfaces. The bare `NA` compounds it — it is logical, so even `dplyr::if_else` would object. Use `if_else(TRTEMFL == \"Y\", ASTDT, NA_Date_)`, which type-checks and preserves the class."
+      - line: 6
+        note: "The select is fine; it carries through whatever type the mutate produced."
+      - line: 3
+        note: "Reading the data is not the problem — ASTDT arrives as a proper Date."
+    fixed: |
+      library(dplyr)
+
+      out <- adae |>
+        mutate(
+          TEAE_DT = if_else(TRTEMFL == "Y", ASTDT, NA_Date_)
+        ) |>
+        select(USUBJID, AEDECOD, TEAE_DT)
+
+      stopifnot(inherits(out$TEAE_DT, "Date"))
+    hints:
+      - "20161 is the numeric value of a Date. What removes the class?"
+      - "What does `ifelse()` do to attributes?"
+      - "A bare `NA` has a type. Which one?"
+    solution: |
+      **Line 5.** `ifelse()` builds its result from the first element's type and **strips attributes**, so
+      a `Date` — which is a numeric with a class attribute — comes back as a bare number.
+
+      The bare `NA` makes it worse: `NA` is logical, so even the type of the "otherwise" branch disagrees
+      with the date branch.
+
+      ```r
+      if_else(TRTEMFL == "Y", ASTDT, NA_Date_)   # preserves the Date class
+      ```
+
+      `dplyr::if_else` is strict — it requires both branches to be the same type and keeps the class. The
+      strictness is the feature: it turns a silent corruption into an error at the line that caused it.
+
+      **Why this matters more than a display problem.** The value is right, so nothing errors, and the
+      number propagates. A date compared with `<` still works numerically, so a later derivation using it
+      produces a correct-looking answer — until someone tries to format it, join on it, or read it in a
+      listing.
+
+      Assert it: `stopifnot(inherits(out$TEAE_DT, "Date"))`.
+    explanation:
+      objective: "Find where a Date loses its class in a pipeline."
+      given: "A date column displaying as its underlying number."
+      relevant: "That ifelse strips attributes and a bare NA is logical."
+      irrelevant: "The select and the data read, both of which preserve whatever they are given."
+      method: "20161 is recognisable as a Date's numeric value; look for the operation that removed the attribute."
+      numbers: "20161 days since 1970-01-01 is 2025-03-14."
+      interpretation: "The value survives, so nothing errors and the corruption propagates silently."
+      changes: "dplyr::if_else with NA_Date_ preserves the class and errors if the branches disagree."
+      interviewer: "That you know ifelse strips attributes generally, not only for dates — the same happens to factors."
+
+  - id: r.dates.imputation
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [r.dates, sdtm.dates, stats.missing-data]
+    lesson: r-dates-and-times
+    title: Where a date imputation belongs
+    prompt: |
+      A study's SAP specifies that a missing AE onset day is imputed to the first of the month, unless
+      that would place the event before first dose in the same month, in which case it is imputed to the
+      first dose date.
+
+      Where should this imputation be implemented?
+    choices:
+      - text: "In ADaM, producing `ASTDT` from `AESTDTC`, with `DTYPE` flagging the imputed records."
+        correct: true
+        feedback: "Correct. SDTM keeps the collected `--DTC` string unchanged; ADaM derives the analysis date and records that an imputation occurred."
+      - text: "In SDTM, by completing the `AESTDTC` value."
+        feedback: "SDTM must preserve what was collected. Overwriting a partial `--DTC` destroys the audit trail and the precision information."
+      - text: "In the table program, when the TEAE flag is computed."
+        feedback: "That buries an analysis decision inside a presentation step, where it is neither documented in define.xml nor reusable."
+      - text: "In the raw data, by querying the site for the missing day."
+        feedback: "Raising a query is right where the day is recoverable — but the analysis still needs a rule for the ones that are not."
+    solution: |
+      **In ADaM**, deriving `ASTDT` from `AESTDTC`, with `DTYPE` recording that the value was imputed.
+
+      The division of responsibility is the point:
+
+      | Layer | Holds |
+      |---|---|
+      | **SDTM** | `AESTDTC = "2025-03"` — what was collected, unchanged |
+      | **ADaM** | `ASTDT = 2025-03-20`, `DTYPE` flagging the imputation |
+      | **define.xml / ADRG** | The rule, in words |
+
+      **`DTYPE` is what makes the imputation reversible.** An analysis restricted to `is.na(DTYPE)` uses
+      observed dates only — which is exactly the sensitivity analysis a reviewer may ask for.
+
+      Overwriting the SDTM value would destroy both the audit trail and the information that the day was
+      never known. Implementing it in the table program would hide an analysis decision inside a
+      presentation step, where define.xml does not document it and a second table cannot reuse it.
+    explanation:
+      objective: "Place a date imputation in the correct layer of the data flow."
+      given: "A SAP-specified imputation rule for partial AE onset dates."
+      relevant: "Which layer is permitted to modify values and which must preserve them."
+      method: "SDTM preserves collected data; ADaM derives analysis-ready values and records how."
+      assumptions: "The imputation rule is in the SAP, so it is an analysis decision rather than a data correction."
+      interpretation: "DTYPE makes the imputation visible and lets an observed-only sensitivity analysis be run."
+      changes: "A query to the site is appropriate where the day is recoverable, but the analysis still needs a rule for the rest."
+      interviewer: "That you name DTYPE and explain what it enables, rather than only saying 'in ADaM'."
+
+  - id: r.dates.open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [r.dates, qc.mindset, communication.interviewing]
+    lesson: r-dates-and-times
+    title: Auditing date derivations
+    prompt: |
+      **Interviewer:** "You've inherited a set of ADaM programs from someone who left. What would you check about the date handling?"
+    modelAnswer: |
+      Dates are where I'd expect to find problems, because almost every derived variable in ADaM is a
+      date calculation and most of the failure modes are silent.
+
+      **First, study day.** Does the derivation have both branches, and is there a Day 0 anywhere in the
+      output? `count(ADY == 0)` answers it in one line. A Day 0 is both a wrong number and a conformance
+      finding, and it is the single most common date bug.
+
+      **Second, missing reference dates.** Subjects randomized but never dosed have no `TRTSDT` — there
+      are two in this study. If the programs are in SAS, I'd look specifically for an explicit
+      `if missing(trtsdt)` branch, because SAS's missing numeric sorts below every real number, so
+      `adt >= trtsdt` is *true* and those subjects get a positive study day from a date that does not
+      exist. R propagates `NA` automatically, so the R version is safe by default and the SAS version is
+      not.
+
+      **Third, partial dates.** Which variables can be partial — AE onset, medical history, prior therapy
+      — and is the imputation rule implemented where the SAP says, with `DTYPE` set? If `DTYPE` is empty
+      everywhere but the source has partial dates, either the imputation is happening silently or it is
+      not happening at all.
+
+      **Fourth, parsing.** Any `as.Date()` without a `format` argument is a finding. It returns a
+      plausible wrong date rather than `NA` for non-ISO input — `as.Date("14/03/2025")` gives a date in
+      the year 14, silently. I'd grep for it.
+
+      **Fifth, cross-system transfers.** If dates move between SAS and R anywhere as numbers rather than
+      ISO text, they are out by 3,653 days. `haven` handles it; a CSV of numeric dates does not.
+
+      **And then the empirical check**, which is faster than reading all the code: profile the derived
+      date and day variables. Minimum, maximum, and the count of missing. A study day of −4,000 or a date
+      in 1970 or in the year 14 shows up immediately in a range check, and range checks find things that
+      code review misses.
+
+      What I would not assume is that the previous programmer was wrong. Most of what I find will be
+      correct, and the value of the audit is the short list of things that are not.
+    rubric:
+      - Leads with study day and the Day 0 check
+      - Raises missing reference dates and names the SAS-versus-R difference explicitly
+      - Asks about partial dates, the imputation rule and DTYPE
+      - Flags unformatted as.Date() as a specific, greppable finding
+      - Mentions the epoch difference for cross-system transfers
+      - Proposes an empirical range check as faster than exhaustive code review
+      - Frames it as producing a short list rather than assuming errors
+    redFlags:
+      - "Proposes reading every program line by line with no prioritisation"
+      - "Does not mention Day 0"
+      - "Unaware that SAS and R treat a missing reference date differently"
+      - "Does not mention partial dates at all"

@@ -1,0 +1,280 @@
+items:
+  - id: trials.safety.severity-vs-serious
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.safety]
+    lesson: trials-safety-data
+    title: Severe is not serious
+    prompt: |
+      Subject A has a grade 3 rash treated at home with topical steroids. Subject B has grade 2 pneumonia that required hospital admission. Which statement is correct?
+    choices:
+      - text: "A's AE is severe but not serious; B's AE is serious"
+        correct: true
+        feedback: "Seriousness depends on consequences (here, hospitalization), not on intensity. Grade and seriousness are separate axes."
+      - text: "Both are serious because both are grade 2 or higher"
+        feedback: "No grade threshold defines seriousness; the ICH E2A criteria do."
+      - text: "A's AE is serious because grade 3 means severe"
+        feedback: "Grade 3 describes severity. Without a seriousness criterion (death, life-threatening, hospitalization, disability, congenital anomaly, medically important), it is not serious."
+      - text: "Neither is serious because neither is grade 4"
+        feedback: "B was hospitalized, which is a seriousness criterion."
+    solution: |
+      Severity (CTCAE grade) and seriousness (`AESER` and its criteria) are recorded separately. Grade ≥ 3 tables and SAE tables overlap but are different.
+
+  - id: trials.safety.serious-criteria
+    format: multi
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.safety]
+    lesson: trials-safety-data
+    title: Seriousness criteria
+    prompt: |
+      Select all outcomes that make an AE **serious** under ICH E2A.
+    choices:
+      - text: "Results in death"
+        correct: true
+        feedback: "`AESDTH`."
+      - text: "Is life-threatening"
+        correct: true
+        feedback: "`AESLIFE` — at risk of death at the time of the event."
+      - text: "Requires inpatient hospitalization or prolongs an existing hospitalization"
+        correct: true
+        feedback: "`AESHOSP`."
+      - text: "Is assessed as grade 3 by CTCAE"
+        feedback: "Grade is severity, not seriousness."
+      - text: "Is an important medical event requiring intervention to prevent one of the other outcomes"
+        correct: true
+        feedback: "`AESMIE` — medical judgment applies."
+      - text: "Is considered related to study drug by the investigator"
+        feedback: "Causality does not determine seriousness."
+    solution: |
+      Death, life-threatening, hospitalization (initial or prolonged), persistent or significant disability/incapacity, congenital anomaly/birth defect, and other medically important events. Grade and relatedness are separate assessments.
+
+  - id: trials.safety.meddra-order
+    format: order
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.safety]
+    lesson: trials-safety-data
+    title: The MedDRA hierarchy
+    prompt: |
+      Order the MedDRA levels from the most general to the most specific.
+    steps:
+      - "System Organ Class (SOC)"
+      - "High Level Group Term (HLGT)"
+      - "High Level Term (HLT)"
+      - "Preferred Term (PT)"
+      - "Lowest Level Term (LLT)"
+    solution: |
+      SOC → HLGT → HLT → PT → LLT. Verbatim terms are coded to an LLT; standard AE tables summarize by primary SOC and PT.
+
+  - id: trials.safety.teae-window-date
+    format: text
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [trials.safety]
+    lesson: trials-safety-data
+    title: The last treatment-emergent onset date
+    prompt: |
+      A subject's last dose date is `TRTEDT = 2023-10-10`. Under the CBX417-301 rule (`ASTDT ≤ TRTEDT + 30`), what is the **latest** onset date (YYYY-MM-DD) for an AE to be treatment-emergent?
+    accept: ["2023-11-09"]
+    placeholder: YYYY-MM-DD
+    monospace: true
+    hints:
+      - "October has 31 days: 21 days take you to 31 October."
+    solution: |
+      2023-10-10 + 30 days = **2023-11-09** (21 days to 31 October, then 9 more). An AE starting on 2023-11-10 is not treatment-emergent.
+
+  - id: trials.safety.partial-date
+    format: mcq
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.safety, adam.occds]
+    lesson: trials-safety-data
+    title: Apply the partial-date rule
+    prompt: |
+      `AESTDTC = "2023-07"`, `AEENDTC = "2023-07-25"`, `TRTSDT = 2023-07-18`. Using the CBX417-301 SAP rules, what are `ASTDT` and `ASTDTF`?
+    choices:
+      - text: "`ASTDT = 2023-07-18`, `ASTDTF = D`"
+        correct: true
+        feedback: "Same month and year as the first dose, so the first dose date is used; it is not after the end date (07-25), so no cap applies."
+      - text: "`ASTDT = 2023-07-01`, `ASTDTF = D`"
+        feedback: "The 1st of the month is the default, but the same-month exception applies here."
+      - text: "`ASTDT = 2023-07-25`, `ASTDTF = D`"
+        feedback: "The end-date cap only applies when the imputed date would be later than the end date."
+      - text: "`ASTDT` missing, `ASTDTF = M`"
+        feedback: "The month is known, so only the day is imputed (flag D)."
+    hints:
+      - "Start with the default for a missing day, then check the same-month exception."
+      - "Finally, check the end-date cap."
+    solution: |
+      Default 2023-07-01 → same month as `TRTSDT` → 2023-07-18 → not after `AENDT` (2023-07-25) → `ASTDT = 2023-07-18`, `ASTDTF = "D"`, and the AE is treatment-emergent. If `TRTSDT` had been 2023-06-20, `ASTDT` would be 2023-07-01.
+
+  - id: trials.safety.hys-law
+    format: classify
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.safety]
+    lesson: trials-safety-data
+    title: Screen for potential Hy's law
+    prompt: |
+      Peak values (multiples of ULN) for five subjects. Classify each using the criteria ALT or AST > 3 × ULN **and** total bilirubin > 2 × ULN, with ALP < 2 × ULN.
+    categories: ["Potential Hy's law", "Transaminase elevation only", "Bilirubin elevation only", "Not Hy's law: cholestatic pattern"]
+    entries:
+      - { text: "ALT 4.2 × ULN, bilirubin 2.6 × ULN, ALP 1.3 × ULN", category: "Potential Hy's law" }
+      - { text: "ALT 8.0 × ULN, bilirubin 1.1 × ULN, ALP 1.0 × ULN", category: "Transaminase elevation only" }
+      - { text: "ALT 1.5 × ULN, bilirubin 3.0 × ULN, ALP 1.2 × ULN", category: "Bilirubin elevation only" }
+      - { text: "ALT 3.5 × ULN, bilirubin 2.4 × ULN, ALP 2.8 × ULN", category: "Not Hy's law: cholestatic pattern" }
+      - { text: "AST 3.4 × ULN (ALT 2.7 × ULN), bilirubin 2.2 × ULN, ALP 1.1 × ULN", category: "Potential Hy's law", note: "The criterion is ALT **or** AST above 3 × ULN." }
+    hints:
+      - "Check the transaminase criterion (ALT or AST > 3 × ULN) and the bilirubin criterion (> 2 × ULN) separately."
+      - "If both are met, check ALP: at least 2 × ULN suggests cholestasis rather than hepatocellular injury."
+    solution: |
+      Potential Hy's law cases need both elevations without a cholestatic pattern and without another explanation (medical review follows). On an eDISH plot, subjects 1 and 5 fall in the upper-right quadrant; subject 2 in the lower-right; subject 3 in the upper-left. Subject 4 would also plot upper-right, which is why the ALP check and medical review matter.
+
+  - id: trials.safety.percent-calc
+    format: numeric
+    modes: [independent]
+    difficulty: foundation
+    skills: [trials.safety, tlf.denominators]
+    lesson: trials-safety-data
+    title: A TEAE percentage
+    prompt: |
+      In an illustrative run, 101 distinct subjects in the CBX-417 arm of the safety population (N = 209) have at least one TEAE with PT *Diarrhea*. What percentage appears in the table (one decimal)?
+    answer: 48.3
+    tolerance: 0.05
+    unit: "%"
+    solution: |
+      101 / 209 × 100 = 48.33 → **48.3%**. The denominator is the number of subjects in the arm of the safety population by actual treatment — 209, not the 210 randomized.
+
+  - id: trials.safety.trtedt-bug
+    format: hotspot
+    language: sas
+    modes: [debug]
+    difficulty: advanced
+    skills: [trials.safety, adam.occds, sas.missing-values]
+    lesson: trials-safety-data
+    title: No TEAEs for subjects still on treatment
+    prompt: |
+      QC reports that subjects still on treatment at the data cutoff have **no** TEAEs flagged, although many of their AEs start after the first dose. In this draft ADSL, `TRTEDT` is missing when `EOTSTT = "ONGOING"`. `ASTDT` has already been derived. Click the line where the problem shows up.
+    code: |
+      data adae;
+        merge ae_imp(in=inae) adsl(keep=USUBJID TRTSDT TRTEDT SAFFL EOTSTT DCUTDT);
+        by USUBJID;
+        if inae;
+        if SAFFL = 'Y' and TRTSDT <= ASTDT <= TRTEDT + 30 then TRTEMFL = 'Y';
+      run;
+    answerLines: [5]
+    lineNotes:
+      - line: 5
+        note: "With `TRTEDT` missing, `TRTEDT + 30` is missing. SAS treats missing as smaller than any number, so `ASTDT <= .` is false and no AE is flagged for ongoing subjects."
+    fixed: |
+      data adae;
+        merge ae_imp(in=inae) adsl(keep=USUBJID TRTSDT TRTEDT SAFFL EOTSTT DCUTDT);
+        by USUBJID;
+        if inae;
+        /* Preferred fix: define TRTEDT for ongoing subjects in ADSL (last dose on or before DCUTDT). */
+        if SAFFL = 'Y' and TRTSDT <= ASTDT <= coalesce(TRTEDT, DCUTDT) + 30 then TRTEMFL = 'Y';
+      run;
+    hints:
+      - "What is `. + 30` in SAS?"
+      - "How does SAS compare a number with a missing value?"
+    solution: |
+      Missing arithmetic propagates, and missing compares low. The real fix belongs in ADSL: define `TRTEDT` for subjects ongoing at the cutoff (commonly the last dose date on or before `DCUTDT`), and document it. A local `coalesce()` patch is a stopgap that must agree with the ADSL definition.
+    explanation:
+      objective: "Find why an entire group of subjects has no treatment-emergent AEs."
+      given: "The TEAE step, the QC symptom, and the fact that TRTEDT is missing for ongoing subjects."
+      relevant: "The upper bound of the TEAE window and SAS missing-value arithmetic/comparison rules."
+      irrelevant: "The merge itself — it works."
+      method: "Evaluate the condition for one ongoing subject: TRTEDT = ., so TRTEDT + 30 = ., and ASTDT <= . is false."
+      interpretation: "A silent under-count of TEAEs concentrated in subjects doing well enough to stay on treatment — a biased safety picture."
+      changes: "If ADSL defined TRTEDT for ongoing subjects, the original code would work."
+      interviewer: "That you think about missing values in date windows and fix derivations at the right level (ADSL)."
+
+  - id: trials.safety.events-vs-subjects-qc
+    format: diff
+    modes: [qc]
+    difficulty: advanced
+    skills: [trials.safety, tlf.safety-tables, qc.discrepancy]
+    lesson: trials-safety-data
+    title: TEAE counts by PT disagree
+    prompt: |
+      Production and QC TEAE-by-PT outputs for the CBX-417 arm (N = 209) disagree. Numbers are illustrative. What is the most likely root cause?
+    left:
+      title: "Production — TEAEs by PT, CBX-417 + Docetaxel (N=209)"
+      columns: ["Preferred term", "n (%)"]
+      rows:
+        - ["Diarrhea", "131 (62.7)"]
+        - ["Nausea", "84 (40.2)"]
+        - ["Rash", "70 (33.5)"]
+      footnote: "n = number of TRTEMFL = 'Y' records in ADAE."
+    right:
+      title: "QC — TEAEs by PT, CBX-417 + Docetaxel (N=209)"
+      columns: ["Preferred term", "n (%)"]
+      rows:
+        - ["Diarrhea", "101 (48.3)"]
+        - ["Nausea", "66 (31.6)"]
+        - ["Rash", "63 (30.1)"]
+      footnote: "n = number of subjects with >= 1 TEAE of the PT."
+    choices:
+      - text: "Production counted AE records (events) instead of distinct subjects"
+        correct: true
+        feedback: "Production is always higher, most for PTs that recur (diarrhea, nausea). The table's n must be subjects, per the shell footnote."
+      - text: "QC used the ITT denominator"
+        feedback: "Both use N = 209."
+      - text: "Production included non-treatment-emergent AEs"
+        feedback: "Production's footnote says it restricted to TRTEMFL = 'Y'. The pattern (larger gaps for recurring PTs) points to event counting."
+      - text: "QC used a different MedDRA version"
+        feedback: "A version change would move counts between PTs, not inflate every PT in one output."
+    solution: |
+      Count distinct `USUBJID` per PT (and per SOC). Event counts can be shown in a separate column if the shell asks for them, but the "n (%)" of subjects is the standard.
+    explanation:
+      objective: "Explain a systematic excess in production counts."
+      given: "Two sets of counts with the same denominator and footnotes describing what n counts."
+      relevant: "The footnotes and the fact that differences are largest for PTs that commonly recur."
+      irrelevant: "The absolute percentages."
+      calculating: "Production 131/209 = 62.7%; QC 101/209 = 48.3%."
+      method: "Look at the direction and pattern of differences before reading code."
+      interpretation: "Event counting overstates the proportion of patients affected; percentages can even exceed 100%."
+      changes: "If the shell asked for 'number of events', production would be correct for that column."
+      interviewer: "That subjects, not events, are the unit of analysis in incidence tables."
+
+  - id: trials.safety.interview-teae
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [trials.safety, communication.interviewing]
+    lesson: trials-safety-data
+    title: TEAE and the AE table
+    prompt: |
+      **Interviewer:** "Walk me through producing a table of treatment-emergent AEs by SOC and PT. What decisions matter, and how would you QC it?"
+    modelAnswer: |
+      Start from ADAE, restricted to the safety population and `TRTEMFL = "Y"`, by actual treatment (`TRTA`). The TEAE definition comes from the SAP — here, onset from first dose to last dose plus 30 days, with partial start dates imputed per the SAP and flagged in `ASTDTF`. The unit is the subject: a subject counts once per PT and once per SOC, so I count distinct `USUBJID` (or use first-occurrence flags). Denominators are the safety population N per arm from ADSL, including subjects with no AEs. Sort order and the use of primary SOC follow the shell. MedDRA version goes in a footnote.
+
+      QC: an independent program — for example PROC SQL with COUNT(DISTINCT USUBJID) — compared cell by cell; checks that SOC counts are at least the largest PT count within the SOC and at most the sum; checks that N matches ADSL; spot-checks of imputed dates and of subjects near the window boundaries.
+    rubric:
+      - Uses ADAE with TRTEMFL, SAFFL and TRTA
+      - Counts subjects, not events, at PT and SOC level
+      - Takes denominators from ADSL (including subjects with no AEs)
+      - Mentions partial-date imputation and window boundaries
+      - Describes independent QC and consistency checks
+    redFlags:
+      - "Counts records"
+      - "Uses ITT or planned treatment for safety"
+    followUps:
+      - "How would the table change if you summarized by maximum grade?"
+      - "Why can SOC totals be smaller than the sum of their PTs?"
+
+  - id: trials.safety.speed-grade5
+    format: numeric
+    modes: [speed]
+    difficulty: foundation
+    skills: [trials.safety]
+    lesson: trials-safety-data
+    title: CTCAE grade for death
+    prompt: |
+      Which CTCAE grade denotes death related to the adverse event?
+    answer: 5
+    tolerance: 0
+    solution: |
+      Grade 5. Grades 1–4 are mild, moderate, severe/medically significant, and life-threatening.

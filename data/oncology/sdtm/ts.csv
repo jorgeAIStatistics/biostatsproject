@@ -1,0 +1,42 @@
+STUDYID,DOMAIN,TSSEQ,TSPARMCD,TSPARM,TSVAL
+CBX417-301,TS,1,TITLE,Trial Title,"A Phase 2/3, Randomized, Double-Blind, Placebo-Controlled, Multicenter Study of CBX-417 plus Docetaxel versus Placebo plus Docetaxel in Adults with Previously Treated Advanced or Metastatic Non-Small Cell Lung Cancer"
+CBX417-301,TS,1,SPONSOR,Clinical Study Sponsor,Halden Therapeutics (fictional)
+CBX417-301,TS,1,TPHASE,Trial Phase Classification,PHASE II/III TRIAL
+CBX417-301,TS,1,STYPE,Study Type,INTERVENTIONAL
+CBX417-301,TS,1,TTYPE,Trial Type,EFFICACY
+CBX417-301,TS,2,TTYPE,Trial Type,SAFETY
+CBX417-301,TS,1,INTMODEL,Intervention Model,PARALLEL
+CBX417-301,TS,1,INTTYPE,Intervention Type,DRUG
+CBX417-301,TS,1,TBLIND,Trial Blinding Schema,DOUBLE BLIND
+CBX417-301,TS,1,TCNTRL,Control Type,PLACEBO
+CBX417-301,TS,1,TINDTP,Trial Intent Type,TREATMENT
+CBX417-301,TS,1,RANDOM,Trial is Randomized,Y
+CBX417-301,TS,1,RANDQT,Randomization Quotient,0.5
+CBX417-301,TS,1,STRATFCT,Stratification Factor,ECOG PERFORMANCE STATUS (0 VS 1)
+CBX417-301,TS,2,STRATFCT,Stratification Factor,PRIOR ANTI-PD-(L)1 THERAPY (YES VS NO)
+CBX417-301,TS,1,NARMS,Planned Number of Arms,2
+CBX417-301,TS,1,PLANSUB,Planned Number of Subjects,420
+CBX417-301,TS,1,ACTSUB,Actual Number of Subjects,420
+CBX417-301,TS,1,AGEMIN,Planned Minimum Age of Subjects,P18Y
+CBX417-301,TS,1,SEXPOP,Sex of Participants,BOTH
+CBX417-301,TS,1,INDIC,Trial Disease/Condition Indication,Previously treated advanced or metastatic non-small cell lung cancer
+CBX417-301,TS,1,TRT,Investigational Therapy or Treatment,CBX-417
+CBX417-301,TS,1,CURTRT,Current Therapy or Treatment,DOCETAXEL
+CBX417-301,TS,1,COMPTRT,Comparative Treatment Name,PLACEBO
+CBX417-301,TS,1,DOSE,Dose per Administration,200
+CBX417-301,TS,1,DOSU,Dose Units,mg
+CBX417-301,TS,1,DOSFRQ,Dosing Frequency,QD
+CBX417-301,TS,1,ROUTE,Route of Administration,ORAL
+CBX417-301,TS,1,DOSFRM,Dose Form,TABLET
+CBX417-301,TS,1,OBJPRIM,Trial Primary Objective,"To compare progression-free survival (investigator, RECIST 1.1) between CBX-417 + docetaxel and placebo + docetaxel"
+CBX417-301,TS,1,OBJSEC,Trial Secondary Objective,To compare overall survival between treatment arms
+CBX417-301,TS,1,OUTMSPRI,Primary Outcome Measure,Progression-free survival per investigator (RECIST 1.1)
+CBX417-301,TS,1,OUTMSSEC,Secondary Outcome Measure,Overall survival
+CBX417-301,TS,2,OUTMSSEC,Secondary Outcome Measure,Objective response rate (confirmed CR or PR)
+CBX417-301,TS,1,CRMDUR,Confirmed Response Minimum Duration,P28D
+CBX417-301,TS,1,SDMDUR,Stable Disease Minimum Duration,P35D
+CBX417-301,TS,1,SSTDTC,Study Start Date,2022-03-18
+CBX417-301,TS,1,DCUTDTC,Data Cutoff Date,2025-03-31
+CBX417-301,TS,1,DCUTDESC,Data Cutoff Description,Final PFS analysis
+CBX417-301,TS,1,SDTIGVER,SDTM IG Version,3.4
+CBX417-301,TS,1,SDTMVER,SDTM Version,2.0

@@ -1,0 +1,54 @@
+.interview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.interview-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.interview-cat {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 550;
+}
+.interview-cat span {
+  color: var(--text-4);
+  margin-left: 4px;
+  font-size: 11.5px;
+}
+.interview-cat:hover {
+  border-color: var(--border-strong);
+}
+.interview-cat.is-on {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent-text);
+}
+.interview-list li + li {
+  border-top: 1px solid var(--border);
+}
+.interview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 16px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text);
+}
+.interview-row:hover {
+  background: var(--surface-2);
+}

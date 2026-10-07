@@ -1,0 +1,106 @@
+lab: excel
+modules:
+  - id: excel-trustworthy-spreadsheets
+    title: Spreadsheets you can trust
+    summary: >-
+      Excel is where most clinical data is looked at before anyone writes code, and where a large share of
+      quiet data corruption happens. This module covers the structure that makes a sheet analysable, the
+      import behaviour that silently rewrites identifiers and dates, and the two formula families —
+      lookups and conditional aggregation — that do the work a programmer would do with a join and a
+      GROUP BY.
+    level: 1
+    lessons:
+      - id: excel-clean-data-layout
+        title: Layout that survives contact with analysis
+        summary: >-
+          One header row, one record per row, one value per cell, no merged cells and no formatting as
+          data. Why the layouts people build for reading are the ones that break every tool downstream,
+          and how to convert a report-shaped sheet into an analysable one.
+        minutes: 45
+        difficulty: foundation
+        tracks: [excel, analytics]
+        skills: [excel.layout, excel.tables]
+        keywords: [tidy data, header row, merged cells, one record per row, structured references, Excel table, ctrl-T, freeze panes, data dictionary]
+      - id: excel-import-pitfalls
+        title: What Excel changes the moment you open a file
+        summary: >-
+          Leading zeros stripped from subject and site identifiers, dates silently reinterpreted between
+          regional formats, long numbers turned into scientific notation, and text that becomes a date
+          and can never be turned back. What actually happens, which changes are reversible, and how to
+          import a clinical CSV without any of it.
+        minutes: 55
+        difficulty: foundation
+        tracks: [excel, analytics, programmer]
+        skills: [excel.import, excel.risk, qc.data-cleaning]
+        prerequisites: [excel-clean-data-layout]
+        keywords: [leading zeros, autoconversion, scientific notation, Text Import Wizard, Power Query, From Text/CSV, locale, DD/MM vs MM/DD, irreversible]
+      - id: excel-lookups
+        title: Lookups are joins
+        summary: >-
+          XLOOKUP, INDEX/MATCH and VLOOKUP as the spreadsheet form of a left join — including the two
+          things a join makes you confront that a lookup lets you ignore: duplicate keys and unmatched
+          rows.
+        minutes: 60
+        difficulty: intermediate
+        tracks: [excel, analytics, programmer]
+        skills: [excel.lookups, qc.compare]
+        prerequisites: [excel-clean-data-layout]
+        keywords: [XLOOKUP, VLOOKUP, INDEX, MATCH, exact match, approximate match, if_not_found, N/A, duplicate keys, left join]
+      - id: excel-conditional-aggregation
+        title: SUMIFS, COUNTIFS and the GROUP BY you are actually writing
+        summary: >-
+          Criteria-based summaries for enrolment tracking and adverse-event counts, the difference between
+          counting rows and counting subjects, and why a set of COUNTIFS that does not sum to the total
+          is telling you something important.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [excel, analytics]
+        skills: [excel.conditional-aggregation, excel.logic, tlf.denominators]
+        prerequisites: [excel-lookups]
+        keywords: [SUMIFS, COUNTIFS, AVERAGEIFS, MAXIFS, criteria, wildcards, GROUP BY, distinct subjects, denominator, reconciliation]
+
+  - id: excel-clinical-qc
+    title: Excel for clinical QC
+    summary: >-
+      The tasks Excel is genuinely good at in a biometrics group — reconciling two extracts, checking
+      dates and study days, and summarising for a meeting — done in a way that another person can check.
+      Ends with the judgement that matters most: recognising the point where a spreadsheet stops being
+      the right tool.
+    level: 2
+    lessons:
+      - id: excel-dates-and-study-day
+        title: Dates, serial numbers and study day
+        summary: >-
+          Excel stores dates as days since 1899-12-30, which is why a date can be a number, a number can
+          become a date, and a partial date cannot be either. Computing study day with no Day 0, handling
+          partial dates, and DATEDIF's undocumented behaviour.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [excel, programmer]
+        skills: [excel.logic, sdtm.dates, qc.data-cleaning]
+        prerequisites: [excel-import-pitfalls]
+        keywords: [serial date, 1899-12-30, 1900 leap year bug, DATEDIF, EDATE, EOMONTH, study day, no day 0, partial date, ISO 8601, TEXT]
+      - id: excel-reconciliation-qc
+        title: Reconciling two extracts
+        summary: >-
+          Two files that should agree and do not. Building a reconciliation that finds rows present in one
+          and not the other, values that differ, and near-matches caused by trailing spaces or case — and
+          reporting the result so someone else can act on it.
+        minutes: 60
+        difficulty: advanced
+        tracks: [excel, programmer]
+        skills: [excel.qc, qc.compare, qc.discrepancy, communication.documentation]
+        prerequisites: [excel-lookups, excel-conditional-aggregation]
+        keywords: [reconciliation, EXACT, TRIM, CLEAN, duplicates, conditional formatting, tolerance, floating point, discrepancy log, anti-join]
+      - id: excel-pivots-and-when-to-stop
+        title: PivotTables, and knowing when to stop
+        summary: >-
+          PivotTables for grouped summaries and distinct subject counts, Power Query as the repeatable
+          alternative to manual edits, and the judgement call this whole module is building toward —
+          deciding when a spreadsheet has stopped being defensible and the work belongs in code.
+        minutes: 55
+        difficulty: advanced
+        tracks: [excel, analytics, computing]
+        skills: [excel.pivots, excel.power-query, excel.risk, repro.documentation]
+        prerequisites: [excel-conditional-aggregation, excel-reconciliation-qc]
+        keywords: [PivotTable, distinct count, refresh, Power Query, applied steps, audit trail, spreadsheet risk, EuSpRIG, version control, when to use code]

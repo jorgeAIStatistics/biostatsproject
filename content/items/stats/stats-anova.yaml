@@ -1,0 +1,512 @@
+items:
+  - id: stats.av.df-count
+    format: numeric
+    modes: [check, speed, guided]
+    difficulty: foundation
+    skills: [stats.anova]
+    lesson: stats-anova
+    title: Counting residual degrees of freedom
+    prompt: |
+      A one-way ANOVA compares **4** treatment arms with a total of **312** subjects.
+
+      How many residual (within-group) degrees of freedom does the model have?
+    answer: 308
+    tolerance: 0
+    hints:
+      - "Residual df = N − k, where k is the number of groups."
+      - "One degree of freedom is spent estimating each group mean."
+    solution: |
+      $N - k = 312 - 4 = 308$.
+
+      The full partition: between = $k - 1 = 3$, within = $N - k = 308$, total = $N - 1 = 311$. And $3 + 308 = 311$ — the degrees of freedom add up exactly as the sums of squares do.
+
+      **Check this on every ANOVA table you build or review.** If the df do not partition, the model is not what you think it is.
+    explanation:
+      objective: "Compute residual degrees of freedom by counting estimated parameters."
+      given: "Four groups and 312 total subjects."
+      relevant: "Both numbers; nothing else enters."
+      calculating: "N minus the number of group means estimated."
+      method: "Each estimated mean consumes one degree of freedom from the data available to estimate variability."
+      numbers: "312 - 4 = 308. Between-group df = 4 - 1 = 3. Total = 311 = 3 + 308."
+      interpretation: "Residual df is how much information remains for estimating the within-group variance after the means are fitted."
+      changes: "Adding a continuous covariate (ANCOVA) costs one more degree of freedom: residual df would become 307."
+      interviewer: "That you count parameters rather than recall a formula, and that you use the additivity of df as a self-check."
+
+  - id: stats.av.f-near-one
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [stats.anova]
+    lesson: stats-anova
+    title: What F ≈ 1 tells you
+    prompt: |
+      A one-way ANOVA across four arms returns **F(3, 308) = 1.02, p = 0.38**.
+
+      What does an F statistic near 1 indicate?
+    choices:
+      - text: "The between-group and within-group mean squares are estimating the same variance — what you expect when the group means differ only by chance."
+        correct: true
+        feedback: "Under H₀ both mean squares estimate the common σ², so their ratio hovers around 1. This is the signature of no detectable effect."
+      - text: "There is strong evidence that all four means are exactly equal."
+        feedback: "Failing to reject is not evidence of equality. The trial may simply lack power; report the estimates and intervals."
+      - text: "The model is misspecified."
+        feedback: "F ≈ 1 is the expected result under the null, not a diagnostic of misspecification."
+      - text: "The between-group variance is zero."
+        feedback: "SS_between is essentially never exactly zero. It is small relative to what chance produces, which is a different statement."
+    solution: |
+      Under $H_0$, both $MS_{\text{between}}$ and $MS_{\text{within}}$ are unbiased for the same $\sigma^2$, so $F$ centres near 1. Observing $F = 1.02$ means the arm means are scattered about as much as random allocation alone would scatter them.
+
+      Worth knowing the other tail too: an $F$ **much smaller** than 1 — say 0.05 — means the group means are implausibly *close together*. That is not evidence of no effect; it is a data-integrity signal, and it is one of the patterns forensic statisticians look for.
+    explanation:
+      objective: "Interpret an F statistic near its null expectation."
+      given: "F(3, 308) = 1.02 with p = 0.38."
+      relevant: "What each mean square estimates under the null hypothesis."
+      method: "Both mean squares are unbiased for sigma-squared when the group means are equal, so their ratio is centred at approximately 1."
+      assumptions: "Independent observations, approximately normal residuals, and equal variances across groups."
+      interpretation: "No detectable difference. Whether that means 'no meaningful difference' depends on the confidence intervals, not on the F test."
+      changes: "An F far BELOW 1 is anomalous rather than reassuring — group means closer together than chance allows suggests the data were altered or over-cleaned."
+      interviewer: "That you know the null expectation is 1 rather than 0, and that you can say what an implausibly small F would mean."
+
+  - id: stats.av.omnibus-limit
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: intermediate
+    skills: [stats.anova, communication.interpretation]
+    lesson: stats-anova
+    title: What a significant F test does not tell you
+    prompt: |
+      A three-arm trial reports **F(2, 235) = 12.07, p < 0.0001**.
+
+      A colleague writes: *"The ANOVA shows the 20 mg dose is superior to placebo."*
+
+      What is wrong with that statement?
+    choices:
+      - text: "The omnibus F test says only that the three means are not all equal — it identifies no specific pair, direction or magnitude."
+        correct: true
+        feedback: "Exactly. F could be significant because only 10 mg differs, or because the two active arms differ from each other. It is a gatekeeper, not a result."
+      - text: "Nothing — a significant F test establishes that the largest difference is significant."
+        feedback: "It establishes no individual comparison. The largest observed difference is also the one most inflated by selection."
+      - text: "The p-value is too small to be trustworthy."
+        feedback: "A small p-value is not itself suspicious. The problem is the conclusion drawn from it."
+      - text: "The df of 235 is wrong for a three-arm trial."
+        feedback: "238 subjects minus 3 groups is exactly 235. The df is correct."
+    solution: |
+      The F test's alternative hypothesis is "the means are not all equal". It names no arm, no direction and no size of effect.
+
+      To support a claim about 20 mg versus placebo you need **that specific contrast**, with an estimate, a confidence interval and a multiplicity strategy: −8.98 mmHg (SE 1.84), t = −4.88 on 235 df, Holm-adjusted p < 0.0001.
+
+      Writing the claim from the F test alone also has a subtler problem: picking the comparison *after* seeing which looked biggest is selection, and it inflates the error rate the F test was supposed to protect.
+    explanation:
+      objective: "Recognise the limits of an omnibus test's conclusion."
+      given: "A significant three-arm F test and a claim about one specific pair."
+      relevant: "The alternative hypothesis of the F test."
+      irrelevant: "The size of the p-value; no p-value from an omnibus test licenses a pairwise claim."
+      method: "Ask what the alternative hypothesis actually is. For an F test it is 'not all equal' — a disjunction that names nothing."
+      interpretation: "The F test gates further comparisons; the comparisons are what supports a claim."
+      changes: "With a pre-specified contrast the claim is supportable directly, and more powerfully than via the omnibus test."
+      interviewer: "That you also flag the selection problem in choosing the comparison after seeing the means, not only the logical gap."
+
+  - id: stats.av.contrast-coefficients
+    format: mcq
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [stats.anova]
+    lesson: stats-anova
+    title: Reading a contrast
+    prompt: |
+      In a three-arm trial ordered **(Placebo, 10 mg, 20 mg)**, a SAP specifies the contrast with coefficients **(−2, +1, +1)**.
+
+      What question does it answer?
+    choices:
+      - text: "Whether the average of the two active doses differs from placebo."
+        correct: true
+        feedback: "The coefficients sum to zero and weight the two active arms equally against placebo — a 'drug versus no drug' comparison that pools the doses."
+      - text: "Whether there is a linear trend across the three doses."
+        feedback: "A linear trend uses (−1, 0, +1) for equally spaced doses. The (−2, +1, +1) pattern gives the two active arms the same weight, so it cannot detect an ordering between them."
+      - text: "Whether 20 mg differs from 10 mg."
+        feedback: "That would be (0, −1, +1). Here the two active arms have identical coefficients, so their difference cancels out entirely."
+      - text: "Nothing valid — the coefficients do not sum to zero."
+        feedback: "−2 + 1 + 1 = 0, so it is a valid contrast."
+    solution: |
+      It tests **placebo versus the combined active arms**. In this trial the estimate is −14.50 mmHg with SE 3.19, t = −4.54 on 235 df.
+
+      Two things worth noticing. The coefficients sum to zero, which is what makes it a contrast rather than an arbitrary linear combination. And because the two active arms carry equal weight, any difference *between* them cancels — this contrast is blind to dose-response, which is precisely why a dose-ranging trial would also pre-specify a trend contrast.
+    explanation:
+      objective: "Read a contrast's scientific question off its coefficients."
+      given: "Coefficients (-2, +1, +1) against a stated arm order."
+      relevant: "The signs, the relative magnitudes, and that they sum to zero."
+      method: "Group the positive and negative coefficients: this contrast compares the -2 arm against the two +1 arms, weighted so the totals balance."
+      numbers: "L = -2(-3.3000) + 1(-8.8284) + 1(-12.2762) = -14.5046 mmHg, SE = 3.1949, t = -4.54."
+      assumptions: "Pooling the two doses is only scientifically sensible if you are asking a 'does the drug do anything' question, not a dose-selection question."
+      interpretation: "Contrast coefficients encode a hypothesis. Reading them tells you what the SAP author was asking."
+      changes: "Scaling all coefficients by a constant — (-1, 0.5, 0.5) — gives the same t and p, because L and SE(L) scale identically. Only the pattern matters."
+      interviewer: "That you check the sum-to-zero condition and can say what the contrast is blind to, not only what it tests."
+
+  - id: stats.av.ss-between
+    format: numeric
+    modes: [guided, check]
+    difficulty: intermediate
+    skills: [stats.anova, stats.descriptive]
+    lesson: stats-anova
+    title: Between-group sum of squares
+    prompt: |
+      Week 12 change from baseline:
+
+      | Arm | n | mean |
+      |---|---:|---:|
+      | Placebo | 77 | −3.3000 |
+      | VTX-221 10 mg | 81 | −8.8284 |
+      | VTX-221 20 mg | 80 | −12.2762 |
+
+      The grand mean over all 238 subjects is **−8.1987**.
+
+      Compute $SS_{\text{between}} = \sum n_i(\bar{x}_i - \bar{x})^2$. Give your answer to the nearest whole number.
+    answer: 3210
+    tolerance: 3
+    hints:
+      - "Each arm contributes n × (its mean − grand mean)²."
+      - "The deviations are 4.8987, −0.6297 and −4.0775."
+      - "77 × 4.8987² = 1847.8; 81 × 0.6297² = 32.1; 80 × 4.0775² = 1330.1."
+    solution: |
+      $$
+      \begin{aligned}
+      SS_{\text{between}} &= 77(4.8987)^2 + 81(-0.6297)^2 + 80(-4.0775)^2 \\
+      &= 1847.8 + 32.1 + 1330.1 = 3210.0
+      \end{aligned}
+      $$
+
+      Notice how unevenly the arms contribute: the 10 mg arm sits almost exactly at the grand mean, so it adds only 32 to a total of 3210. **Almost all the between-group signal comes from placebo and 20 mg being far apart**, which is a hint that a trend contrast will be the productive analysis.
+    explanation:
+      objective: "Compute the between-group sum of squares from group means and sizes."
+      given: "Three arm means with sample sizes, and the grand mean."
+      relevant: "All of them; the within-arm SDs are not needed for this piece."
+      calculating: "Sum over arms of n times the squared deviation of the arm mean from the grand mean."
+      method: "Each arm's contribution is weighted by its size, because a large arm sitting far from the grand mean is stronger evidence than a small one doing the same."
+      numbers: "Deviations: -3.3000 - (-8.1987) = 4.8987; -8.8284 + 8.1987 = -0.6297; -12.2762 + 8.1987 = -4.0775. Contributions 1847.8, 32.1, 1330.1."
+      assumptions: "The grand mean must be the weighted mean of all observations, not the unweighted average of the three arm means (-8.1349), which would corrupt every downstream number."
+      interpretation: "The uneven contributions show where the signal lives — here in the placebo-versus-20 mg separation."
+      changes: "With equal arm sizes the weighting would be uniform and the arithmetic simpler, which is one practical argument for balanced allocation."
+      interviewer: "That you weight by n, and that you notice what the decomposition reveals about which comparison carries the evidence."
+
+  - id: stats.av.f-statistic
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [stats.anova]
+    lesson: stats-anova
+    title: Completing the ANOVA table
+    prompt: |
+      A three-arm ANOVA on 238 subjects gives $SS_{\text{between}} = 3210.02$ and $SS_{\text{within}} = 31236.75$.
+
+      Compute the F statistic. Give your answer to two decimal places.
+    answer: 12.07
+    tolerance: 0.05
+    hints:
+      - "Convert each sum of squares to a mean square by dividing by its degrees of freedom."
+      - "df between = 3 − 1 = 2; df within = 238 − 3 = 235."
+      - "F = MS_between / MS_within."
+    solution: |
+      $$MS_{\text{between}} = \frac{3210.02}{2} = 1605.01
+      \qquad
+      MS_{\text{within}} = \frac{31236.75}{235} = 132.92$$
+
+      $$F = \frac{1605.01}{132.92} = 12.07$$
+
+      Against $F_{0.95,\,2,\,235} = 3.03$, this is significant; $p = 1.02 \times 10^{-5}$.
+
+      Also useful: $\sqrt{MS_{\text{within}}} = \sqrt{132.92} = 11.53$ mmHg is the pooled residual SD — the "Root MSE" printed by every regression procedure.
+    explanation:
+      objective: "Turn sums of squares into an F statistic."
+      given: "Both sums of squares, the number of groups and the total sample size."
+      relevant: "All four; the degrees of freedom come from k and N."
+      calculating: "Two mean squares and their ratio."
+      method: "A mean square is a sum of squares per degree of freedom — that is, a variance estimate. F compares two such estimates."
+      numbers: "3210.02/2 = 1605.01; 31236.75/235 = 132.92; ratio = 12.07."
+      assumptions: "Independence, approximate normality of residuals, and equal variances across arms. The last is checkable against the three arm SDs, which here are 11.61, 11.48 and 11.50 — comfortably similar."
+      computation: "Dividing the sums of squares directly (3210.02/31236.75 = 0.103) is a common slip; the degrees of freedom are what make the two comparable."
+      interpretation: "Between-group variability is about 12 times what within-group noise alone would produce."
+      changes: "Root MSE = 11.53 is the residual SD; ANCOVA adjusting for baseline reduces it to 10.27, which is where the extra power of ANCOVA comes from."
+      interviewer: "That you divide by df before taking the ratio, and that you recognise Root MSE as the same quantity regression output calls the residual standard error."
+
+  - id: stats.av.contrast-se
+    format: numeric
+    modes: [check, independent]
+    difficulty: advanced
+    skills: [stats.anova]
+    lesson: stats-anova
+    title: Standard error of a contrast
+    prompt: |
+      With $MS_{\text{within}} = 132.92$ on 235 df and arm sizes 77 (placebo), 81 (10 mg) and 80 (20 mg), compute the standard error of the contrast **(−1, 0, +1)** — 20 mg versus placebo.
+
+      $$\operatorname{SE}(L) = \sqrt{MS_{\text{within}} \sum_i \frac{c_i^2}{n_i}}$$
+
+      Give your answer to three decimal places.
+    answer: 1.841
+    tolerance: 0.01
+    unit: mmHg
+    hints:
+      - "Only the arms with non-zero coefficients contribute; the 10 mg term is 0²/81 = 0."
+      - "1/77 + 1/80 = 0.025487."
+      - "√(132.92 × 0.025487)."
+    solution: |
+      $$\operatorname{SE}(L) = \sqrt{132.92\left(\frac{(-1)^2}{77} + \frac{0^2}{81} + \frac{1^2}{80}\right)} = \sqrt{132.92 \times 0.025487} = \sqrt{3.3878} = 1.8406$$
+
+      **Why this beats the equivalent t test.** A two-sample t test on just those two arms would estimate the variance from 155 subjects and carry 155 df. The contrast uses $MS_{\text{within}}$ pooled across **all 238** subjects and carries 235 df — the 10 mg arm contributes nothing to the *estimate* but everything it has to the *variance estimate*.
+    explanation:
+      objective: "Compute a contrast standard error and understand where its precision comes from."
+      given: "The pooled mean square, the arm sizes and the contrast coefficients."
+      relevant: "The mean square and the sizes of the arms with non-zero coefficients."
+      irrelevant: "The 10 mg arm's size does not enter the sum, because its coefficient is zero — but its subjects DO enter MS_within."
+      calculating: "The square root of MS_within times the sum of c-squared over n."
+      method: "A contrast is a linear combination of independent group means, so its variance is the sum of the squared coefficients times the individual mean variances."
+      numbers: "1/77 = 0.012987; 1/80 = 0.012500; sum 0.025487. 132.92 x 0.025487 = 3.3878; square root 1.8406."
+      assumptions: "A single common within-group variance across all arms — which is what allows the third arm to inform the comparison of the other two."
+      interpretation: "The gain over a two-arm t test is entirely in the degrees of freedom and the stability of the variance estimate, not in the point estimate."
+      changes: "If the equal-variance assumption fails badly, borrowing the third arm's variance is a liability rather than an asset, and a Welch-style analysis of the two arms would be safer."
+      interviewer: "That you can explain why an arm with coefficient zero still improves the comparison."
+
+  - id: stats.av.r-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: advanced
+    skills: [stats.anova, r.models]
+    lesson: stats-anova
+    title: A contrast function you can audit
+    minutes: 15
+    prompt: |
+      Write `anova_contrast(fit, group, data, cf)` that computes a contrast from a fitted `aov` object.
+
+      - `fit` is the result of `aov(y ~ group, data = data)`
+      - `group` is the name of the grouping column, as a string
+      - `cf` is a numeric vector of coefficients, in the order of `levels(data[[group]])`
+      - Return a named vector with `estimate`, `se`, `t`, `df` and `p`
+
+      It must **stop with an error** if the coefficients do not sum to zero (within a small tolerance) or if their length does not match the number of levels — a contrast whose coefficients do not sum to zero is not a contrast, and silently computing one is worse than failing.
+    starter: |
+      anova_contrast <- function(fit, group, data, cf) {
+        # validate cf
+
+        msw <- ___
+        m   <- ___
+        n   <- ___
+
+        # estimate, se, t, df, p
+      }
+    reference: |
+      anova_contrast <- function(fit, group, data, cf) {
+        lv <- levels(data[[group]])
+        if (length(cf) != length(lv)) {
+          stop("cf must have one coefficient per level of ", group)
+        }
+        if (abs(sum(cf)) > 1e-8) {
+          stop("contrast coefficients must sum to zero (got ", sum(cf), ")")
+        }
+
+        tab <- summary(fit)[[1]]
+        msw <- tab[["Mean Sq"]][nrow(tab)]
+        df  <- tab[["Df"]][nrow(tab)]
+
+        y <- model.response(model.frame(fit))
+        g <- data[[group]]
+        m <- tapply(y, g, mean)
+        n <- tapply(y, g, length)
+
+        est <- sum(cf * m)
+        se  <- sqrt(msw * sum(cf^2 / n))
+        tv  <- est / se
+
+        c(estimate = est, se = se, t = tv, df = df,
+          p = 2 * pt(-abs(tv), df))
+      }
+    hints:
+      - "`summary(fit)[[1]]` is the ANOVA table; the residual line is the last row, so `nrow(tab)` indexes it safely however many factors there are."
+      - "`tapply(y, g, mean)` and `tapply(y, g, length)` give the group means and sizes, in level order — which is why `cf` must also be in level order."
+      - "`stop()` for the validation. Use a tolerance like 1e-8 rather than `sum(cf) == 0`, because floating-point coefficients such as 1/3 will not sum to exactly zero."
+    checks:
+      - pattern: "stop\\s*\\("
+        message: "Fails loudly on invalid coefficients instead of computing something meaningless"
+      - pattern: "abs\\s*\\(\\s*sum\\s*\\(\\s*cf\\s*\\)\\s*\\)"
+        message: "Checks the sum-to-zero condition with a tolerance"
+      - pattern: "length\\s*\\(\\s*cf\\s*\\)\\s*!=\\s*length\\s*\\(\\s*lv\\s*\\)|length\\s*\\(\\s*lv\\s*\\)\\s*!=\\s*length\\s*\\(\\s*cf\\s*\\)"
+        message: "Checks that there is one coefficient per group level"
+      - pattern: "sqrt\\s*\\(\\s*msw\\s*\\*\\s*sum\\s*\\(\\s*cf\\s*\\^\\s*2\\s*/\\s*n\\s*\\)\\s*\\)"
+        message: "Computes SE as sqrt(MSW * sum(c^2/n))"
+      - pattern: "2\\s*\\*\\s*pt\\s*\\("
+        message: "Returns a two-sided p-value"
+    expectedOutput: |
+      ```text
+           estimate            se             t            df             p
+      -8.976250e+00  1.840596e+00 -4.876817e+00  2.350000e+02  1.986997e-06
+      ```
+    solution: |
+      The validation is the part worth arguing for. Coefficients that do not sum to zero still produce a number — it is just not a contrast, and the number is a weighted average contaminated by the grand mean. Failing loudly is the right behaviour.
+
+      Using `nrow(tab)` to index the residual row rather than hard-coding `[2]` means the function still works if the model gains a second factor.
+
+      Three checks to run once it works:
+
+      | Call | Result | Reading |
+      |---|---|---|
+      | `anova_contrast(fit, "TRTP", w12, c(-1, 0, 1))` | est −8.976, se 1.841, t −4.877, p 2.0e−06 | 20 mg vs placebo |
+      | `anova_contrast(fit, "TRTP", w12, c(-1, 1, 0))` | est −5.528, se 1.835, t −3.013, p 0.0029 | 10 mg vs placebo |
+      | `anova_contrast(fit, "TRTP", w12, c(1, 1, 1))` | **error** | not a contrast — coefficients sum to 3 |
+    explanation:
+      objective: "Implement contrast estimation with validation that prevents a silent wrong answer."
+      given: "A fitted aov object, a grouping variable and a coefficient vector."
+      relevant: "The residual mean square and df from the ANOVA table, and the group means and sizes."
+      method: "A contrast is a linear combination of group means; its variance is MSW times the sum of squared coefficients over group sizes."
+      numbers: "For (-1, 0, 1): estimate -8.976, SE 1.841, t -4.877 on 235 df, p = 2.0e-06."
+      assumptions: "cf is supplied in level order. This is the function's most dangerous assumption, which is why validating the LENGTH matters even though it cannot validate the ORDER."
+      computation: "Use a tolerance on the sum-to-zero check; coefficients like 1/3 will not sum to exactly zero in floating point."
+      interpretation: "A function that refuses invalid input is a function a reviewer can trust without reading every caller."
+      changes: "Indexing the residual row by nrow(tab) rather than [2] keeps the function correct if a second factor is added to the model."
+      interviewer: "That you validate inputs and fail loudly, since silent wrong answers are the expensive failure mode in statistical code."
+
+  - id: stats.av.missing-class
+    format: hotspot
+    language: sas
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [stats.anova, sas.stat-procs, qc.code-review]
+    lesson: stats-anova
+    title: The ANOVA with one degree of freedom too few
+    minutes: 10
+    prompt: |
+      This program should compare three treatment arms. The output shows **Model DF = 1** where you expected **2**, and the treatment effect is reported as a single slope rather than three means.
+
+      `TRTPN` is numeric: 0 = placebo, 1 = 10 mg, 2 = 20 mg.
+
+      Click the line that causes the problem.
+    code: |
+      proc glm data=w12;
+        model chg = trtpn;
+        lsmeans trtpn / pdiff cl;
+      run;
+      quit;
+
+      proc means data=w12 n mean std;
+        class trtpn;
+        var chg;
+      run;
+    answerLines: [2]
+    lineNotes:
+      - line: 2
+        note: "There is no CLASS statement, so PROC GLM treats the numeric TRTPN as a CONTINUOUS predictor and fits a single straight line through the coded dose values — 1 degree of freedom instead of 2. Adding `class trtpn;` before the MODEL statement makes it categorical and estimates three separate means."
+      - line: 3
+        note: "LSMEANS on a variable that is not in a CLASS statement will itself error in SAS, which is often the first symptom a programmer notices — but the root cause is the missing CLASS statement above it."
+      - line: 8
+        note: "PROC MEANS has its own CLASS statement and works correctly here; it is not the problem. It is a useful cross-check: it shows three groups where the model found one slope."
+    fixed: |
+      proc glm data=w12;
+        class trtpn;
+        model chg = trtpn;
+        lsmeans trtpn / pdiff cl;
+      run;
+      quit;
+
+      proc means data=w12 n mean std;
+        class trtpn;
+        var chg;
+      run;
+    hints:
+      - "How does PROC GLM decide whether a variable is categorical or continuous?"
+      - "What would a 1-degree-of-freedom treatment effect correspond to, given that TRTPN is coded 0, 1, 2?"
+      - "Compare this with the PROC MEANS step below, which does declare its grouping variable."
+    solution: |
+      Line 2 — the missing `CLASS TRTPN;` statement.
+
+      Without it, SAS reads `TRTPN` as a continuous covariate and fits
+
+      $$\mathrm{CHG} = \beta_0 + \beta_1 \cdot \mathrm{TRTPN}$$
+
+      forcing the three arm means onto a straight line: the model can no longer express a 20 mg effect that is anything other than exactly twice the 10 mg effect.
+
+      **The df column is the tell.** A three-level factor must contribute 2 degrees of freedom. Checking that model df equals the number of levels minus one, for every categorical term, catches this class of bug in seconds — and it is a bug that produces no error message when `LSMEANS` is absent.
+    explanation:
+      objective: "Diagnose a model that silently fits the wrong structure."
+      given: "A GLM with a numeric treatment code and an unexpected Model DF of 1."
+      relevant: "That TRTPN is numeric and that no CLASS statement declares it categorical."
+      method: "Read the df column against what the model should contain. k levels require k-1 degrees of freedom."
+      assumptions: "Fitting TRTPN as continuous assumes the effect is exactly linear in the coded values — here, that 20 mg gives precisely twice the 10 mg effect."
+      numbers: "Three arms should give Model DF = 2. Getting 1 means one parameter, i.e. a slope."
+      interpretation: "The model runs, produces plausible numbers, and answers a question nobody asked."
+      changes: "If the coding were 0, 10, 20 (actual doses) the fitted slope would differ numerically but the structural error would be identical."
+      interviewer: "That you check degrees of freedom against the model you intended, rather than trusting that the code expresses your intent."
+
+  - id: stats.av.holm-vs-bonferroni
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [stats.anova, stats.multiplicity]
+    lesson: stats-anova
+    title: Holm on two comparisons
+    prompt: |
+      Two pre-specified comparisons against placebo give unadjusted p-values of **0.00287** and **0.0000020**.
+
+      Applying the **Holm** step-down procedure, what is the adjusted p-value for the **larger** of the two (0.00287)?
+
+      Give your answer to five decimal places.
+    answer: 0.00287
+    tolerance: 0.00002
+    hints:
+      - "Holm orders the p-values smallest first and applies decreasing multipliers."
+      - "With k = 2 tests, the smallest is multiplied by 2 and the next by 1."
+      - "A multiplier of 1 means no change."
+    solution: |
+      Holm sorts the p-values and applies multipliers $k, k-1, \dots, 1$:
+
+      | Rank | Unadjusted p | Multiplier | Adjusted p |
+      |---|---:|---:|---:|
+      | 1 (smallest) | 0.0000020 | × 2 | 0.0000040 |
+      | 2 (largest) | 0.00287 | × 1 | **0.00287** |
+
+      The larger p-value is **unchanged**, because Holm spends the penalty on the smallest p-value and, once that is rejected, tests the next at full α.
+
+      Bonferroni would have given $0.00287 \times 2 = 0.00574$ for the same comparison. **Holm is uniformly more powerful than Bonferroni under identical assumptions**, so there is no situation where plain Bonferroni is preferable — which makes its continued popularity in SAPs slightly puzzling.
+    explanation:
+      objective: "Apply the Holm step-down adjustment and see how it differs from Bonferroni."
+      given: "Two unadjusted p-values from a pre-specified family of two comparisons."
+      relevant: "Their ordering and the family size."
+      calculating: "The adjusted p-value for the larger of the two."
+      method: "Sort ascending; multiply the r-th smallest by (k - r + 1); enforce monotonicity by taking a running maximum."
+      numbers: "Smallest 0.0000020 x 2 = 0.0000040. Largest 0.00287 x 1 = 0.00287."
+      assumptions: "Holm controls the family-wise error rate with no assumption about dependence between the tests — the same generality as Bonferroni."
+      interpretation: "The step-down structure means later tests inherit the alpha that earlier rejections did not spend."
+      changes: "If the smallest p-value had FAILED its threshold, Holm would stop and the second would not be rejected regardless of its value — the step-down stops at the first failure."
+      interviewer: "That you know Holm dominates Bonferroni and can explain the step-down mechanism rather than just naming the method."
+
+  - id: stats.av.dose-open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [stats.anova, trials.design, communication.interviewing]
+    lesson: stats-anova
+    title: Recommending a phase III dose
+    prompt: |
+      **Interviewer:** "Your phase II trial has placebo, 10 mg and 20 mg. Week 12 mean reductions are 3.3, 8.8 and 12.3 mmHg, and treatment-emergent AE rates are 27%, 36% and 55%. The team asks which dose to take into phase III. What do you say?"
+    modelAnswer: |
+      I'd start by being clear that this is not a statistical decision, and then make sure the statistics are stated well enough for the people who do own it.
+
+      On efficacy: both doses beat placebo — 10 mg by 5.5 mmHg (95% CI roughly 1.9 to 9.2) and 20 mg by 9.0 mmHg (5.3 to 12.6). The dose-response is monotone and the linear trend contrast is highly significant, which matters more than either pairwise comparison because a monotone dose-response is evidence of a real pharmacological effect rather than a chance finding. The 20 mg to 10 mg increment is about 3.4 mmHg, and I'd want the confidence interval on that increment specifically, because that is the actual trade-off being decided — it was borderline in this trial, around p = 0.05, which means the data do not strongly establish that 20 mg is better than 10 mg.
+
+      On safety: the AE rate roughly doubles from 27% to 55%, and the composition matters more than the total. Dizziness goes from 6.7% to 18.2%, peripheral oedema from 2.2% to 12.5%, and there are syncope and hypotension cases at 20 mg that barely appear at 10 mg. Those are mechanism-related and dose-related, and they are the kind of events that drive discontinuation in a chronic therapy. Discontinuations due to AEs were 2.2% versus 5.7%.
+
+      So the shape of the recommendation: 20 mg buys about 3.4 mmHg of additional reduction — real but modest, and not firmly established — at roughly double the AE burden and nearly triple the AE-driven discontinuation rate. For a chronic, largely asymptomatic condition where adherence is the main determinant of real-world benefit, that trade looks unfavourable to me, and I would lean toward 10 mg.
+
+      What I would actually propose, though, is that phase III carry both doses if the budget allows, with the multiplicity strategy pre-specified — that converts an argument into an experiment. If only one dose can go forward, I would want the clinical team's view on whether 3.4 mmHg is meaningful at the margin, and I would want to look at the exposure-response relationship and any subgroup where the 20 mg benefit is concentrated before committing.
+
+      The honest caveat: this is a phase II with about 80 subjects per arm. It is not powered for safety comparisons, and the AE rates carry wide intervals. I would not present any of these numbers as settled.
+    rubric:
+      - Frames dose selection as a benefit-risk decision the statistician informs rather than makes
+      - Quantifies the efficacy increment between doses, with its uncertainty, not just versus placebo
+      - Cites the dose-response trend as stronger evidence than individual pairwise comparisons
+      - Engages with the specific safety signals and their clinical character, not just the overall rate
+      - Notes that phase II is underpowered for safety and that the estimates are imprecise
+      - Proposes carrying both doses forward as the design-level resolution
+    redFlags:
+      - "Recommends the higher dose because it has the larger point estimate"
+      - "Treats the decision as purely statistical"
+      - "Ignores the safety data or mentions only the overall AE rate"
+      - "Does not ask for the confidence interval on the between-dose difference"
+      - "Presents phase II safety rates as if they were precisely estimated"

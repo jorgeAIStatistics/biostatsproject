@@ -1,0 +1,356 @@
+sources:
+  # ------------------------------------------------------------------
+  # CDISC — the data standards
+  # ------------------------------------------------------------------
+  - id: cdisc-sdtmig
+    title: SDTM Implementation Guide (SDTMIG)
+    org: CDISC
+    url: https://www.cdisc.org/standards/foundational/sdtmig
+    version: v3.4
+    note: |
+      The implementation guide for tabulation datasets: which domains exist, what variables each contains,
+      whether a variable is Required, Expected or Permissible, and the assumptions that govern each domain.
+
+      **This is the document that settles arguments.** When a lesson here states that something is an official
+      SDTM rule, it is traceable to this guide or to the SDTM model below. When a lesson describes something as
+      a convention, it is because the guide permits more than one choice and the industry has settled on one.
+    topics: [SDTM, domains, variables, controlled terminology, mapping]
+
+  - id: cdisc-sdtm-model
+    title: Study Data Tabulation Model (SDTM)
+    org: CDISC
+    url: https://www.cdisc.org/standards/foundational/sdtm
+    version: v2.0
+    note: |
+      The underlying model the implementation guide implements: the general observation classes
+      (Interventions, Events, Findings), the variable roles (Identifier, Topic, Qualifier, Timing, Rule) and
+      the naming conventions that produce variables such as `--SEQ`, `--STRESN` and `--DY`.
+
+      Read the model when you need to know *why* a domain is shaped the way it is; read the implementation
+      guide when you need to know what to put in a column.
+    topics: [SDTM, observation classes, variable roles, naming]
+
+  - id: cdisc-adamig
+    title: ADaM Implementation Guide (ADaMIG)
+    org: CDISC
+    url: https://www.cdisc.org/standards/foundational/adam
+    version: v1.3
+    note: |
+      The implementation guide for analysis datasets: ADSL, the Basic Data Structure (BDS), the
+      occurrence data structure (OCCDS), and the variable naming and derivation conventions —
+      `PARAMCD`/`PARAM`, `AVAL`/`AVALC`, `BASE`/`CHG`/`PCHG`, `ABLFL`, `ANLzzFL`, `TRTxxP`/`TRTxxA`.
+
+      The ADaM fundamental principles — analysis-ready, traceable, and accompanied by metadata —
+      are stated here, and they are the reason ADaM datasets look the way they do.
+    topics: [ADaM, ADSL, BDS, OCCDS, traceability, analysis flags]
+
+  - id: cdisc-adam-model
+    title: Analysis Data Model (ADaM)
+    org: CDISC
+    url: https://www.cdisc.org/standards/foundational/adam
+    version: v2.1
+    note: |
+      The model behind the ADaM implementation guide. It defines the fundamental principles —
+      in particular **traceability**, the requirement that an analysis result can be traced back through the
+      analysis dataset to the SDTM tabulation data and ultimately to the CRF.
+
+      The "Trace This Value" exercises in this app are a direct implementation of that principle.
+    topics: [ADaM, traceability, fundamental principles, metadata]
+
+  - id: cdisc-adam-tte
+    title: ADaM Structure for Time-to-Event Analyses (ADTTE)
+    org: CDISC
+    url: https://www.cdisc.org/standards/foundational/adam
+    version: v1.0
+    note: |
+      The supplement defining the time-to-event structure: `AVAL` as the time to event or censoring,
+      `CNSR` as the censoring indicator, and `EVNTDESC`/`CNSDTDSC` describing what happened.
+
+      One convention here trips up nearly everyone moving between CDISC and general statistics:
+      **`CNSR = 0` means an event occurred and `CNSR = 1` means censored** — the opposite of the
+      `event = 1` convention used by R's `survival` package and most textbooks.
+    topics: [ADTTE, survival, censoring, CNSR, EVNTDESC]
+
+  - id: cdisc-define-xml
+    title: Define-XML
+    org: CDISC
+    url: https://www.cdisc.org/standards/data-exchange/define-xml
+    version: v2.1
+    note: |
+      The machine-readable metadata document that accompanies a submission: dataset and variable
+      definitions, controlled terminology, value-level metadata, derivations and computational methods.
+
+      Define-XML is what makes a submission navigable by a reviewer. If you have ever wondered why
+      derivations must be documented so precisely, this is the document they are documented *in*.
+    topics: [define.xml, metadata, submission, derivations]
+
+  - id: cdisc-controlled-terminology
+    title: CDISC Controlled Terminology (NCI EVS)
+    org: NCI
+    url: https://evs.nci.nih.gov/ftp1/CDISC/
+    note: |
+      The controlled terminology underlying CDISC standards is published and versioned by the NCI
+      Enterprise Vocabulary Services, not by CDISC itself. Each codelist has an NCI C-code, is marked
+      extensible or non-extensible, and is released quarterly.
+
+      **Never guess a controlled term.** This app ships a lookup script — `scripts/tools/ct_lookup.py` —
+      that queries a downloaded copy, and the content agents were required to use it before asserting
+      that any value is a valid CT term.
+    topics: [controlled terminology, codelists, NCI, C-codes, extensible]
+
+  # ------------------------------------------------------------------
+  # ICH — the methodological guidelines
+  # ------------------------------------------------------------------
+  - id: ich-e9
+    title: ICH E9 — Statistical Principles for Clinical Trials
+    org: ICH
+    url: https://database.ich.org/sites/default/files/E9_Guideline.pdf
+    version: "1998"
+    note: |
+      The foundational statistical guideline. It is short, readable, and worth reading end to end at least once —
+      most of what a biostatistician is expected to know about trial conduct is stated here in plain language.
+
+      Sections this app cites directly: **§2.2.2** on type I error control in confirmatory trials,
+      **§3.5** on sample size and the requirement that the calculation be given in the protocol,
+      **§5.5** on presenting estimates with confidence intervals, **§5.6** on multiplicity, and
+      **§5.7** on accounting for stratification factors in the analysis.
+    topics: [ICH E9, SAP, estimands, multiplicity, analysis populations, sample size]
+
+  - id: ich-e9-r1
+    title: ICH E9(R1) — Addendum on Estimands and Sensitivity Analysis
+    org: ICH
+    url: https://database.ich.org/sites/default/files/E9-R1_Step4_Guideline_2019_1203.pdf
+    version: "2019"
+    note: |
+      The addendum that changed how trial objectives are specified. It introduces the **estimand** framework:
+      before choosing an analysis you define the population, the variable, the handling of intercurrent events
+      (discontinuation, rescue medication, death), and the population-level summary.
+
+      This is why "we ran an ANCOVA" is no longer a sufficient description of a primary analysis, and why
+      "what is the estimand?" is now a standard interview question.
+    topics: [estimands, intercurrent events, sensitivity analysis, missing data]
+
+  - id: ich-e3
+    title: ICH E3 — Structure and Content of Clinical Study Reports
+    org: ICH
+    url: https://database.ich.org/sites/default/files/E3_Guideline.pdf
+    version: "1995"
+    note: |
+      Defines what a CSR contains and in what order. The numbering you see on tables and listings
+      (Section 14.1 demographics, 14.2 efficacy, 14.3 safety) comes from here, as do the expectations for
+      how efficacy results are presented (**§11.4.2**).
+
+      Read it when you want to understand why a TLF shell looks the way it does.
+    topics: [CSR, TLF numbering, reporting, efficacy presentation]
+
+  - id: ich-e6
+    title: ICH E6(R2) — Good Clinical Practice
+    org: ICH
+    url: https://database.ich.org/sites/default/files/E6_R2_Addendum.pdf
+    version: R2 (2016)
+    note: |
+      The GCP guideline. Most relevant to biometrics for its requirements on **data handling** —
+      source data attributes (ALCOA principles), audit trails, the responsibilities around essential
+      documents, and the expectation that computerised systems are validated.
+
+      This is the document behind "why can't I just fix that value in the analysis program?".
+    topics: [GCP, data integrity, audit trail, source data, validation]
+
+  - id: ich-e10
+    title: ICH E10 — Choice of Control Group in Clinical Trials
+    org: ICH
+    url: https://database.ich.org/sites/default/files/E10_Guideline.pdf
+    version: "2000"
+    note: |
+      Why control arms exist and how to choose between placebo, active and other controls. Contains the
+      key discussion of **assay sensitivity** — the property a non-inferiority trial needs in order to be
+      interpretable, and the reason an NI margin has to be justified from historical evidence rather than
+      chosen for convenience.
+    topics: [control groups, non-inferiority, assay sensitivity, trial design]
+
+  - id: ich-m10
+    title: ICH M10 — Bioanalytical Method Validation
+    org: ICH
+    url: https://database.ich.org/sites/default/files/M10_Guideline_Step4_2022_0524.pdf
+    version: "2022"
+    note: |
+      Requirements for validating bioanalytical assays, including **calibration curves**: the number of
+      standards, the acceptance criteria, and the requirement that the regression model and any weighting
+      be specified in advance.
+
+      A good example of a place where the choice of regression model is a regulatory matter rather than
+      an analyst's preference.
+    topics: [bioanalysis, calibration curve, regression, weighting, validation]
+
+  # ------------------------------------------------------------------
+  # FDA — guidance and submission requirements
+  # ------------------------------------------------------------------
+  - id: fda-covariate-adjustment
+    title: Adjusting for Covariates in Randomized Clinical Trials for Drugs and Biological Products
+    org: FDA
+    url: https://www.fda.gov/regulatory-information/search-fda-guidance-documents/adjusting-covariates-randomized-clinical-trials-drugs-and-biological-products
+    version: "2023"
+    note: |
+      The current FDA position on covariate adjustment: it can improve precision, covariates should be
+      pre-specified, and adjusting for a small number of prognostic baseline covariates is generally
+      acceptable and often preferred.
+
+      This is the guidance behind the ANCOVA lesson's claim that adjustment is the expected default rather
+      than one option among several. Note the emphasis on **baseline** covariates — post-randomization
+      variables are a different matter entirely.
+    topics: [ANCOVA, covariate adjustment, precision, pre-specification]
+
+  - id: fda-multiple-endpoints
+    title: Multiple Endpoints in Clinical Trials
+    org: FDA
+    url: https://www.fda.gov/regulatory-information/search-fda-guidance-documents/multiple-endpoints-clinical-trials-guidance-industry
+    version: "2022"
+    note: |
+      How to handle multiplicity across endpoints: families of hypotheses, the difference between
+      co-primary and multiple primary endpoints, and the common strategies — fixed sequence, Holm,
+      Hochberg, graphical approaches and gatekeeping.
+
+      Read this before writing any SAP with more than one endpoint that could support a claim.
+    topics: [multiplicity, endpoints, testing hierarchy, family-wise error rate]
+
+  - id: fda-study-data-standards
+    title: Study Data Technical Conformance Guide
+    org: FDA
+    url: https://www.fda.gov/industry/fda-data-standards-advisory-board/study-data-standards-resources
+    note: |
+      The technical requirements for submitting standardised study data: which CDISC versions are
+      supported for which submission dates, dataset naming and size constraints, define.xml requirements,
+      and the expected contents of the **Study Data Reviewer's Guide (SDRG)** and
+      **Analysis Data Reviewer's Guide (ADRG)**.
+
+      The Data Standards Catalog on the same page is the authoritative statement of which standard
+      versions are currently supported — and it changes, which is why this app does not hard-code it.
+    topics: [submission, define.xml, ADRG, SDRG, data standards catalog]
+
+  - id: fda-missing-data
+    title: The Prevention and Treatment of Missing Data in Clinical Trials (National Research Council)
+    org: Academic
+    url: https://www.ncbi.nlm.nih.gov/books/NBK209904/
+    version: "2010"
+    note: |
+      The NRC report commissioned by the FDA that reshaped how the industry handles missing data.
+      It is the source of the modern consensus that **LOCF is not an acceptable default**, that the
+      missing-data mechanism should be stated explicitly, and that sensitivity analyses under different
+      assumptions are expected rather than optional.
+
+      Much of ICH E9(R1)'s treatment of intercurrent events traces back to this report.
+    topics: [missing data, MAR, MNAR, LOCF, sensitivity analysis, MMRM]
+
+  - id: fda-best-resource
+    title: BEST (Biomarkers, EndpointS, and other Tools) Resource
+    org: FDA
+    url: https://www.ncbi.nlm.nih.gov/books/NBK326791/
+    note: |
+      The FDA–NIH glossary defining the difference between a **biomarker**, a **surrogate endpoint** and a
+      **clinical endpoint**, and the levels of evidence each requires.
+
+      Cite this whenever someone proposes using a correlated biomarker as a trial endpoint: correlation
+      with an outcome across patients is not the same as the treatment effect on the biomarker predicting
+      the treatment effect on the outcome.
+    topics: [biomarkers, surrogate endpoints, endpoint selection]
+
+  # ------------------------------------------------------------------
+  # Clinical methodology
+  # ------------------------------------------------------------------
+  - id: recist-11
+    title: RECIST 1.1 — Response Evaluation Criteria in Solid Tumours
+    org: Academic
+    url: https://pubmed.ncbi.nlm.nih.gov/19097774/
+    version: 1.1 (2009)
+    note: |
+      The criteria behind oncology response assessment: target and non-target lesion selection,
+      the definitions of complete response, partial response, stable disease and progressive disease,
+      and the rules for confirmation.
+
+      The `RS`, `TU` and `TR` domains in SDTM exist to capture RECIST assessments, and the oncology
+      study in this app implements RECIST-style response so that response and progression derivations
+      can be practised against real rules rather than invented ones.
+    topics: [RECIST, oncology, response, progression, target lesions]
+
+  - id: consort
+    title: CONSORT 2010 Statement
+    org: Academic
+    url: https://www.equator-network.org/reporting-guidelines/consort/
+    version: "2010"
+    note: |
+      The reporting checklist for randomized trials, and the source of the **CONSORT flow diagram**
+      (screened → randomized → treated → analysed) that appears at the front of almost every trial
+      publication and mirrors the disposition table in a CSR.
+
+      Useful as a reference for what a complete description of a trial contains — and as a checklist when
+      writing up a capstone project.
+    topics: [reporting, CONSORT diagram, disposition, publication]
+
+  # ------------------------------------------------------------------
+  # Industry practice
+  # ------------------------------------------------------------------
+  - id: phuse
+    title: PHUSE — Pharmaceutical Users Software Exchange
+    org: PHUSE
+    url: https://phuse.global/
+    note: |
+      The industry community behind a large body of freely available working-group deliverables:
+      white papers on analysis results metadata, standard analyses and code, data transparency, and
+      the recurring conference papers that document how sponsors actually implement the standards.
+
+      When a practice is common across the industry but not written into any guidance, a PHUSE white
+      paper is often the closest thing to a citable source.
+    topics: [industry practice, white papers, standard analyses, community]
+
+  - id: cdisc-360
+    title: CDISC Library and Standards Browser
+    org: CDISC
+    url: https://www.cdisc.org/cdisc-library
+    note: |
+      The machine-readable API and browser for CDISC standards metadata — domains, variables, codelists
+      and their relationships, versioned and queryable.
+
+      Useful when you want to check a variable's core status or a codelist's extensibility without
+      opening a PDF, and the basis for automated conformance tooling.
+    topics: [CDISC Library, API, metadata, conformance]
+
+  # ------------------------------------------------------------------
+  # Software documentation
+  # ------------------------------------------------------------------
+  - id: sas-stat-doc
+    title: SAS/STAT User's Guide
+    org: Software
+    url: https://documentation.sas.com/doc/en/statug/latest/titlepage.htm
+    note: |
+      The authoritative reference for what SAS procedures actually compute. Worth consulting rather than
+      guessing whenever a default matters: `QNTLDEF`/`PCTLDEF` for quantiles, the `TIES=` option in
+      `PROC PHREG` (Breslow is the SAS default, Efron is R's), Type I versus Type III sums of squares in
+      `PROC GLM`, and the parameterisation `PROC LOGISTIC` uses for `CLASS` variables.
+
+      Many of the SAS-versus-R discrepancies in this app's QC exercises are documented defaults, not bugs.
+    topics: [SAS, defaults, PROC documentation, quantiles, ties]
+
+  - id: r-survival
+    title: R survival package documentation
+    org: Software
+    url: https://cran.r-project.org/package=survival
+    note: |
+      Terry Therneau's package and its vignettes, which are unusually good as statistical documentation.
+      The vignettes on the Cox model, on tied event times and on validating `coxph` against other software
+      are the reference used when verifying this app's survival implementations.
+
+      Note the conventions that differ from CDISC: `event = 1` means an event (ADaM's `CNSR` is the
+      opposite), and `coxph` defaults to Efron's method for ties while SAS `PROC PHREG` defaults to Breslow.
+    topics: [R, survival, Cox model, Kaplan-Meier, ties, conventions]
+
+  - id: r-emmeans
+    title: emmeans — Estimated Marginal Means
+    org: Software
+    url: https://cran.r-project.org/package=emmeans
+    note: |
+      The R package that produces least-squares means and their contrasts — the equivalent of SAS's
+      `LSMEANS` statement, and what an ANCOVA efficacy table is built from.
+
+      Its vignettes are also the clearest available explanation of what an estimated marginal mean *is*
+      and why it differs from an observed mean.
+    topics: [R, LS means, emmeans, contrasts, ANCOVA]

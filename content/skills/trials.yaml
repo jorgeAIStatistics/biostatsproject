@@ -1,0 +1,69 @@
+domain: trials
+title: Clinical Trials
+description: How clinical trials are designed, run and reported, and where biometrics fits.
+skills:
+  - id: trials.lifecycle
+    name: Drug development and the data lifecycle
+    description: Phases, roles (biostatistician, programmer, data manager, medical writer), and the protocol-to-CSR data flow.
+    weight: 3
+    tracks: [programmer, biostatistician, computing]
+  - id: trials.protocol
+    name: Reading a protocol
+    description: Objectives, endpoints, design, eligibility, schedule of assessments and their analytical consequences.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: trials.design
+    name: Trial design
+    description: Parallel, crossover, factorial, superiority/non-inferiority, phase II/III designs, control choice.
+    weight: 2
+    tracks: [biostatistician]
+  - id: trials.randomization
+    name: Randomization and stratification
+    description: Simple, permuted-block and stratified randomization, IxRS, allocation concealment.
+    weight: 2
+    tracks: [biostatistician, programmer]
+  - id: trials.blinding
+    name: Blinding and bias
+    description: Open-label vs double-blind, sources of bias, blinded data review, unblinding.
+    weight: 2
+    tracks: [biostatistician, programmer]
+  - id: trials.endpoints
+    name: Endpoints
+    description: Primary/secondary endpoints, surrogate endpoints, oncology endpoints (PFS, OS, ORR, DoR), PROs.
+    weight: 3
+    tracks: [biostatistician, programmer]
+  - id: trials.estimands
+    name: Estimands (ICH E9(R1))
+    description: Population, variable, intercurrent events and strategies, population-level summary.
+    weight: 3
+    tracks: [biostatistician]
+  - id: trials.populations
+    name: Analysis populations
+    description: ITT/FAS, per-protocol, safety populations and how flags are derived.
+    weight: 3
+    tracks: [biostatistician, programmer]
+  - id: trials.safety
+    name: Safety data
+    description: Adverse events, TEAEs, SAEs, CTCAE grading, MedDRA hierarchy concepts, lab safety.
+    weight: 3
+    tracks: [biostatistician, programmer]
+  - id: trials.oncology
+    name: Oncology trial concepts
+    description: RECIST response, PFS/OS censoring rules, tumor assessments, dose modifications.
+    weight: 2
+    tracks: [biostatistician, programmer]
+  - id: trials.data-management
+    name: Clinical data management
+    description: eCRF design, edit checks, queries, database lock, data cleaning and reconciliation.
+    weight: 2
+    tracks: [programmer, computing]
+  - id: trials.sap
+    name: Statistical analysis plans
+    description: SAP structure, analysis specifications, TLF shells and how programmers use them.
+    weight: 3
+    tracks: [biostatistician, programmer]
+  - id: trials.documents
+    name: Clinical study documents
+    description: Protocol, CRF/aCRF, DMP, SAP, specifications, reviewer guides and CSR sections.
+    weight: 2
+    tracks: [programmer, biostatistician]

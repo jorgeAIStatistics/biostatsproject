@@ -1,0 +1,134 @@
+domain: stats
+title: Statistics
+description: Statistical reasoning and methods for clinical research, always connected to clinical decisions.
+skills:
+  - id: stats.descriptive
+    name: Descriptive statistics
+    description: Mean, SD, median, quartiles (and their definitions), skewness, choosing summaries for clinical tables.
+    weight: 2
+    tracks: [biostatistician, programmer, analytics]
+  - id: stats.probability
+    name: Probability foundations
+    description: Random variables, common distributions, expectation/variance, conditional probability, Bayes’ rule.
+    weight: 2
+    tracks: [biostatistician]
+  - id: stats.sampling
+    name: Sampling distributions and standard errors
+    description: Sampling variability, CLT, SE vs SD, why SE shrinks with √n.
+    weight: 3
+    tracks: [biostatistician, analytics]
+  - id: stats.confidence-intervals
+    name: Confidence intervals
+    description: Construction and interpretation of CIs for means, differences, proportions (Wald, Wilson, Clopper–Pearson) and ratios.
+    weight: 3
+    tracks: [biostatistician, programmer, analytics]
+  - id: stats.hypothesis-testing
+    name: Hypothesis testing
+    description: Null/alternative, test statistics, p-values, one- vs two-sided tests, correct interpretation.
+    weight: 3
+    tracks: [biostatistician, analytics]
+  - id: stats.power
+    name: Power and sample size
+    description: Type I/II error, power, effect size, sample size for means, proportions and events.
+    weight: 3
+    tracks: [biostatistician]
+  - id: stats.t-tests
+    name: t tests and paired analyses
+    description: One-sample, Welch vs pooled two-sample, paired t test; assumptions and nonparametric alternatives.
+    weight: 2
+    tracks: [biostatistician, analytics]
+  - id: stats.anova
+    name: ANOVA
+    description: One-way ANOVA, F test, degrees of freedom, contrasts and post hoc comparisons.
+    weight: 2
+    tracks: [biostatistician, analytics]
+  - id: stats.categorical
+    name: Categorical data analysis
+    description: Chi-square, Fisher exact, CMH, risk difference/ratio/odds ratio with CIs.
+    weight: 3
+    tracks: [biostatistician, programmer]
+  - id: stats.correlation
+    name: Correlation
+    description: Pearson vs Spearman, what correlation does and does not imply.
+    weight: 1
+    tracks: [biostatistician, analytics]
+  - id: stats.linear-regression
+    name: Linear regression
+    description: OLS estimation, coefficient interpretation, inference, multiple regression, dummy coding.
+    weight: 3
+    tracks: [biostatistician, analytics]
+  - id: stats.interactions
+    name: Interactions and effect modification
+    description: Interaction terms, interpretation, treatment-by-covariate interactions in trials.
+    weight: 2
+    tracks: [biostatistician, analytics]
+  - id: stats.diagnostics
+    name: Model diagnostics
+    description: Residuals, leverage, influence, normality, heteroscedasticity, transformations.
+    weight: 3
+    tracks: [biostatistician, analytics]
+  - id: stats.ancova
+    name: ANCOVA and covariate adjustment
+    description: Baseline-adjusted analysis of change, LS means, why adjustment increases precision.
+    weight: 3
+    tracks: [biostatistician, programmer]
+  - id: stats.logistic
+    name: Logistic regression
+    description: Log-odds model, odds ratios, interpretation, separation, model checking.
+    weight: 3
+    tracks: [biostatistician, analytics]
+  - id: stats.count-models
+    name: Poisson and negative binomial models
+    description: Count outcomes, offsets for exposure time, overdispersion, rate ratios.
+    weight: 2
+    tracks: [biostatistician]
+  - id: stats.mixed-models
+    name: Repeated measures and mixed models
+    description: Correlated data, random effects, covariance structures, MMRM for longitudinal trials.
+    weight: 3
+    tracks: [biostatistician]
+  - id: stats.survival
+    name: Kaplan–Meier and log-rank
+    description: Censoring, KM estimation, Greenwood SE, median survival, log-rank test, number at risk.
+    weight: 3
+    tracks: [biostatistician, programmer]
+  - id: stats.cox
+    name: Cox proportional hazards
+    description: Hazard ratios, partial likelihood, ties, stratification, covariate adjustment, interpretation.
+    weight: 3
+    tracks: [biostatistician, programmer]
+  - id: stats.ph-assumption
+    name: Checking proportional hazards
+    description: log(−log) plots, Schoenfeld residuals, time-varying effects, what to do when PH fails.
+    weight: 2
+    tracks: [biostatistician]
+  - id: stats.missing-data
+    name: Missing data
+    description: MCAR/MAR/MNAR, complete-case bias, multiple imputation concepts, estimands and intercurrent events.
+    weight: 3
+    tracks: [biostatistician]
+  - id: stats.multiplicity
+    name: Multiplicity
+    description: Family-wise error, Bonferroni, Holm, Hochberg, fixed-sequence and graphical approaches.
+    weight: 2
+    tracks: [biostatistician]
+  - id: stats.subgroups
+    name: Subgroup analyses
+    description: Interaction tests, forest plots, shrinkage of expectations, avoiding over-interpretation.
+    weight: 2
+    tracks: [biostatistician]
+  - id: stats.sensitivity
+    name: Sensitivity analyses
+    description: Testing robustness of conclusions to assumptions (missing data, censoring, populations).
+    weight: 2
+    tracks: [biostatistician]
+  - id: stats.interim
+    name: Interim analyses
+    description: Group sequential designs, alpha spending, DMCs, futility, operational bias.
+    weight: 2
+    tracks: [biostatistician]
+  - id: stats.bayesian
+    name: Bayesian reasoning basics
+    description: Priors, posteriors and credible intervals at a conceptual level; where Bayesian methods appear in trials.
+    weight: 1
+    tracks: [biostatistician]

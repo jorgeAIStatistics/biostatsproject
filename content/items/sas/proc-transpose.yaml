@@ -1,0 +1,425 @@
+items:
+  - id: sas.proc-transpose.rows-numeric
+    format: numeric
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.transpose]
+    lesson: sas-proc-transpose
+    title: How many rows after transposing?
+    prompt: |
+      `WORK.RAW_VS` has one row per subject and visit: **3 subjects × 4 visits = 12 rows**, with five measurement columns (`SYSBP`, `DIABP`, `PULSE`, `TEMP`, `WEIGHT`). One subject has a missing `TEMP` at one visit.
+
+      ```sas
+      proc transpose data=raw_vs out=vs_long;
+        by SUBJECT_ID VISIT_NAME;
+        var SYSBP DIABP PULSE TEMP WEIGHT;
+      run;
+      ```
+
+      How many observations does `WORK.VS_LONG` contain?
+    answer: 60
+    tolerance: 0
+    hints:
+      - "One output row per BY group per transposed variable."
+      - "Does PROC TRANSPOSE drop rows whose value is missing?"
+    solution: |
+      12 BY groups × 5 transposed variables = 60. The missing temperature still produces a row, with a missing value — so 59 rows carry a measurement. Whether that 60th row should become a "not done" record or be dropped is a mapping decision, not something the procedure makes for you. "BY groups × VAR variables" is the arithmetic you state in the program header and check in the log.
+
+  - id: sas.proc-transpose.name-mcq
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.transpose]
+    lesson: sas-proc-transpose
+    title: What is in _NAME_?
+    prompt: |
+      After a wide-to-long `PROC TRANSPOSE` without an `ID` statement, what do the automatic columns `_NAME_` and `COL1` contain?
+    choices:
+      - text: "`_NAME_` holds the name of the transposed variable (e.g. `SYSBP`); `COL1` holds its value"
+        correct: true
+        feedback: "Exactly — the column name becomes data, and the value moves to COL1. `NAME=` and a rename turn them into VSTESTCD and the result."
+      - text: "`_NAME_` holds the BY variable's value; `COL1` holds the variable name"
+        feedback: "The BY variables keep their own columns; `_NAME_` is about the transposed variables."
+      - text: "`_NAME_` holds the dataset name; `COL1` the observation number"
+        feedback: "Neither is recorded by PROC TRANSPOSE."
+      - text: "`_NAME_` holds the variable's label; `COL1` its format"
+        feedback: "The label, if any, goes to a separate `_LABEL_` column."
+    solution: |
+      `_NAME_` = the source variable's name, `COL1` = its value. Rename them as you write the dataset: `out=vs_long(rename=(COL1=VSSTRESN)) name=VSTESTCD`. If the transposed variables carry labels, `_LABEL_` appears too (`LABEL=` renames it).
+
+  - id: sas.proc-transpose.mixed-types-mcq
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.transpose, sas.attributes]
+    lesson: sas-proc-transpose
+    title: Mixing character and numeric in VAR
+    prompt: |
+      ```sas
+      proc transpose data=raw_vs out=vs_long;
+        by SUBJECT_ID VISIT_NAME;
+        var SYSBP DIABP PULSE TEMP_UNIT;   /* TEMP_UNIT is character */
+      run;
+      ```
+
+      What type is the value column `COL1`?
+    choices:
+      - text: "Character — one character variable in VAR makes every transposed value character, with numbers written as text"
+        correct: true
+        feedback: "There is only one value column, so it can only have one type. Numeric values are converted to text, often with leading blanks."
+      - text: "Numeric, with TEMP_UNIT converted to missing"
+        feedback: "SAS does not silently drop the character values; it makes the column character."
+      - text: "The step fails with an error about mixed types"
+        feedback: "It runs — which is precisely why the change of type can go unnoticed."
+      - text: "Two columns are produced, one per type"
+        feedback: "Without an ID statement there is exactly one value column, COL1."
+    solution: |
+      Character. If you need both types preserved, transpose them in separate steps (or use a DATA step). This matters for SDTM: `VSORRES` is character by design, but a numeric `VSSTRESN` built from a character column needs an explicit `INPUT()` conversion — and any leading blanks or format artefacts have to be handled first.
+
+  - id: sas.proc-transpose.missing-rows-mcq
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [sas.transpose, sdtm.findings]
+    lesson: sas-proc-transpose
+    title: What happens to a measurement that was not taken?
+    prompt: |
+      A visit row has values for `SYSBP`, `DIABP` and `PULSE` but blanks for `TEMP` and `WEIGHT`. After a wide-to-long transpose of all five variables, what does the output contain for that visit, and what should you do about it?
+    choices:
+      - text: "Five rows, two of them with a missing value — and the mapping specification decides whether they become records with VSSTAT = 'NOT DONE' or are dropped"
+        correct: true
+        feedback: "PROC TRANSPOSE keeps missing values. In SDTM, a planned assessment that was not performed is usually represented with the status and reason variables rather than by an absent record."
+      - text: "Three rows — PROC TRANSPOSE drops missing values automatically"
+        feedback: "It does not; the rows are created with missing values."
+      - text: "Five rows, with the missing values replaced by zero"
+        feedback: "Nothing is imputed."
+      - text: "An error, because a transposed variable is missing"
+        feedback: "Missing values are perfectly valid input."
+    solution: |
+      Five rows, two with missing values. Decide explicitly: keep them as "not done" records (with `VSSTAT` and, where required, `VSREASND`) if the assessment was expected, or drop them if the test was never scheduled at that visit. Making the decision in code — `if not missing(VSORRESN) or VSSTAT = 'NOT DONE';` — is what makes it reviewable.
+    hints:
+      - "PROC TRANSPOSE rotates whatever is in the VAR columns; nothing in the procedure inspects the values."
+      - "So the row count is fixed by arithmetic (BY groups x VAR variables) regardless of missingness. The real question is what the *mapping spec* says a blank means."
+      - "In SDTM a blank result and a documented \"not done\" are different facts. One of them needs a status variable; the other may not belong in the domain at all."
+    explanation:
+      objective: "Decide what a blank measurement becomes after a wide-to-long transpose — a row, a documented non-assessment, or nothing."
+      given: "One visit row with three populated measurements and two blanks, transposed across five VAR variables."
+      relevant: "That PROC TRANSPOSE creates one output row per VAR variable per BY group, and that the blank carries a clinical meaning the program cannot infer."
+      irrelevant: "Which particular tests are blank, and the order the variables are listed in VAR — neither changes the count."
+      calculating: "Rows out = BY groups x variables named in VAR. Here 1 x 5 = 5."
+      method: "Count structurally first, then apply the mapping rule. Reversing that order (filtering blanks inside the transpose step) hides the count check you use to QC the step."
+      assumptions: "That the blank means the value is not present in the extract. Whether it was not done, not scheduled, or lost is information the raw data or a status field must supply — you may not guess."
+      computation: "Five rows appear, two with `VSORRESN` missing. A subsequent DATA step applies the rule from the spec."
+      interpretation: "A missing row in a findings domain is a silent statement that the assessment does not exist; a `VSSTAT = 'NOT DONE'` record is an explicit statement that it was expected and not performed. Reviewers read those differently, and so does a denominator."
+      changes: "If the protocol never schedules `TEMP` at that visit, dropping the row is right. If it does schedule it, dropping the row destroys the evidence that it was missed."
+      interviewer: "That you separate what the procedure does mechanically from what the mapping specification decides, and that you know a not-done assessment is represented with the status variable rather than by omitting a record."
+
+  - id: sas.proc-transpose.wide-to-long-code
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sas.transpose, sdtm.mapping, sdtm.findings]
+    lesson: sas-proc-transpose
+    title: Raw vitals to a VS-like structure
+    minutes: 12
+    prompt: |
+      `WORK.RAW_VS` has one row per subject and visit with `SUBJECT_ID`, `VISIT_NAME`, `VS_DATE`, `SYSBP`, `DIABP`, `PULSE`, `TEMP` and `WEIGHT`.
+
+      Produce `WORK.VS_LONG` with one row per measurement, containing the three identifying variables plus `VSTESTCD` (the measurement name) and `VSORRESN` (its value). Sort the input as the BY statement requires, and rename the automatic columns rather than leaving `_NAME_` and `COL1` in the output.
+    starter: |
+      proc sort data=raw_vs out=vs_s;
+        /* the BY variables of the transpose */
+      run;
+
+      proc transpose /* out=, name=, rename= */;
+        /* by / var */
+      run;
+    hints:
+      - "PROC TRANSPOSE does not sort; the BY variables must already be in order."
+      - "`name=VSTESTCD` renames `_NAME_`; `out=vs_long(rename=(COL1=VSORRESN))` renames the value column."
+      - "List the five measurement columns in VAR — relying on the default (all numeric variables) would also transpose anything else numeric in the dataset."
+    checks:
+      - pattern: 'proc\s+sort\s+data\s*=\s*raw_vs\b[^;]*out\s*='
+        message: "Sorts the input into a WORK copy"
+      - pattern: 'by\s+subject_id\s+visit_name'
+        message: "Sorts and groups by subject and visit"
+      - pattern: 'proc\s+transpose[^;]*out\s*=\s*vs_long'
+        message: "Creates WORK.VS_LONG with PROC TRANSPOSE"
+      - pattern: 'name\s*=\s*vstestcd'
+        message: "Renames _NAME_ to VSTESTCD"
+      - pattern: 'rename\s*=\s*\(\s*col1\s*=\s*vsorresn\s*\)'
+        message: "Renames COL1 to VSORRESN"
+      - pattern: 'var\s+sysbp\s+diabp\s+pulse\s+temp\s+weight'
+        message: "Names the five measurement variables in VAR"
+    reference: |
+      proc sort data=raw_vs out=vs_s;
+        by SUBJECT_ID VISIT_NAME VS_DATE;
+      run;
+
+      proc transpose data=vs_s out=vs_long(rename=(COL1=VSORRESN)) name=VSTESTCD;
+        by SUBJECT_ID VISIT_NAME VS_DATE;
+        var SYSBP DIABP PULSE TEMP WEIGHT;
+      run;
+    expectedOutput: |
+      NOTE: There were <visit rows> observations read from the data set WORK.VS_S.
+      NOTE: The data set WORK.VS_LONG has <visit rows x 5> observations and 5 variables.
+    solution: |
+      Sort, transpose, rename. Check the arithmetic in the log: rows in × 5 = rows out. The units, the standardized values and any "not done" handling come afterwards — the transpose only rotates the data.
+
+  - id: sas.proc-transpose.long-to-wide-code
+    format: code
+    language: sas
+    modes: [independent]
+    difficulty: intermediate
+    skills: [sas.transpose, qc.data-cleaning]
+    lesson: sas-proc-transpose
+    title: One row per visit for a listing
+    minutes: 10
+    prompt: |
+      `WORK.VS` is long: `USUBJID`, `VISITNUM`, `VSTESTCD` and `VSSTRESN`, with at most one record per subject, visit and test.
+
+      Produce `WORK.VS_WIDE` with one row per subject and visit and one column per test, named after the test code (`SYSBP`, `DIABP`, …), without the `_NAME_` column in the output.
+    starter: |
+      proc sort data=vs out=vs_s;
+        /* … */
+      run;
+
+      proc transpose /* … */;
+        /* by / id / var */
+      run;
+    hints:
+      - "The ID statement supplies the new column names."
+      - "`VAR` names the single column whose values fill the new columns."
+      - "`out=vs_wide(drop=_NAME_)` removes the automatic name column."
+    checks:
+      - pattern: 'by\s+usubjid\s+visitnum'
+        message: "Sorts and groups by subject and visit"
+      - pattern: 'id\s+vstestcd\s*;'
+        message: "Uses VSTESTCD as the ID variable"
+      - pattern: 'var\s+vsstresn\s*;'
+        message: "Transposes the VSSTRESN values"
+      - pattern: 'out\s*=\s*vs_wide'
+        message: "Creates WORK.VS_WIDE"
+      - pattern: 'drop\s*=\s*_name_|drop\s+_name_'
+        message: "Drops the _NAME_ column"
+    reference: |
+      proc sort data=vs out=vs_s;
+        by USUBJID VISITNUM;
+      run;
+
+      proc transpose data=vs_s out=vs_wide(drop=_NAME_);
+        by USUBJID VISITNUM;
+        id VSTESTCD;
+        var VSSTRESN;
+      run;
+    solution: |
+      One output row per BY group, with a column per distinct `VSTESTCD` value. If any subject has two records with the same test in one visit, the step stops with `ERROR: The ID value "…" occurs twice in the same BY group.` — resolve it with the analysis-record flag or by adding the distinguishing variable to the BY statement, not with the `LET` option.
+    explanation:
+      objective: "Produce a wide listing structure from a long findings dataset."
+      given: "A long dataset with at most one record per subject, visit and test."
+      relevant: "BY (identifies the output row), ID (supplies the column names), VAR (supplies the values)."
+      irrelevant: "The order of the tests in the data — column order follows first appearance."
+      assumptions: "The key USUBJID + VISITNUM + VSTESTCD is unique; verify before transposing."
+      interpretation: "Wide structures are for listings and side-by-side comparisons; analysis datasets stay long."
+      changes: "With repeated tests in a visit the step fails — which is the procedure protecting you from silently losing a value."
+      interviewer: "That you know what each statement does and why you check key uniqueness first."
+
+  - id: sas.proc-transpose.id-prefix-mcq
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.transpose]
+    lesson: sas-proc-transpose
+    title: Column names from numeric ID values
+    prompt: |
+      ```sas
+      proc transpose data=advs_s out=wide prefix=VIS;
+        by USUBJID PARAMCD;
+        id AVISITN;          /* values 10, 20, 30 */
+        var AVAL;
+      run;
+      ```
+
+      What are the resulting column names, and what would they be without `PREFIX=VIS`?
+    choices:
+      - text: "`VIS10`, `VIS20`, `VIS30` — without PREFIX they would start with an underscore, e.g. `_10`"
+        correct: true
+        feedback: "A column name cannot start with a digit, so SAS adds an underscore; PREFIX= gives them a readable, documented name."
+      - text: "`10`, `20`, `30` — SAS allows numeric variable names"
+        feedback: "Variable names must start with a letter or underscore."
+      - text: "`COL1`, `COL2`, `COL3` — PREFIX only affects labels"
+        feedback: "COL names are used when there is no ID statement; PREFIX changes the generated names."
+      - text: "The step fails because the ID variable is numeric"
+        feedback: "Numeric ID variables are allowed; their formatted values become names."
+    solution: |
+      `VIS10`, `VIS20`, `VIS30`. Without `PREFIX=`, SAS prefixes an underscore (`_10`). Readable column names matter because the next programmer (or a reviewer) has to recognise `VIS20` as Cycle 2 Day 1 — and because any ID value that is not a valid name gets characters replaced, which can produce collisions.
+
+  - id: sas.proc-transpose.dup-id-log
+    format: log
+    modes: [debug]
+    difficulty: intermediate
+    skills: [sas.transpose, sas.log, qc.data-cleaning]
+    lesson: sas-proc-transpose
+    title: The ID value occurs twice
+    minutes: 6
+    prompt: |
+      A long-to-wide transpose of vital signs stops. Click the log line that names the problem.
+    program: |
+      proc sort data=vs out=vs_s;
+        by USUBJID VISITNUM;
+      run;
+
+      proc transpose data=vs_s out=vs_wide(drop=_NAME_);
+        by USUBJID VISITNUM;
+        id VSTESTCD;
+        var VSSTRESN;
+      run;
+    log: |
+      88   proc transpose data=vs_s out=vs_wide(drop=_NAME_);
+      89     by USUBJID VISITNUM;
+      90     id VSTESTCD;
+      91     var VSSTRESN;
+      92   run;
+
+      ERROR: The ID value "SYSBP" occurs twice in the same BY group.
+      NOTE: The SAS System stopped processing this step because of errors.
+      NOTE: The data set WORK.VS_WIDE may be incomplete.
+    issues: [7]
+    lineNotes:
+      - line: 7
+        note: "A subject has two systolic readings in the same VISITNUM — a repeat measurement, an unscheduled assessment sharing the visit number, or a duplicate record. PROC TRANSPOSE refuses rather than discard one."
+      - line: 9
+        note: "A partial output dataset exists; do not use it."
+    hints:
+      - "What must be unique within each BY group for an ID statement to work?"
+      - "Which extra variable would distinguish the two records?"
+    solution: |
+      Find the offending records first:
+
+      ```sas
+      proc freq data=vs_s noprint;
+        tables USUBJID*VISITNUM*VSTESTCD / out=dups(where=(count > 1));
+      run;
+      ```
+
+      Then resolve according to the specification: restrict to the analysis record (`where ANL01FL = 'Y'`), add the distinguishing variable (time point, `VSSEQ`, unscheduled indicator) to the BY statement, or correct the data. Avoid the `LET` option, which keeps the last record silently and makes the result depend on sort order.
+    explanation:
+      objective: "Diagnose and resolve a duplicate ID value in a transpose."
+      given: "The program and the log."
+      relevant: "The ID statement requires one record per BY group per ID value."
+      irrelevant: "The DROP= option and the VAR statement."
+      method: "Count records per subject, visit and test to find the duplicates before deciding how to handle them."
+      interpretation: "The error protects a value from being silently discarded."
+      changes: "Adding the time point or sequence to the BY statement makes the key unique — and produces a different, more detailed output structure."
+      interviewer: "That you investigate duplicates rather than suppressing the error with LET."
+
+  - id: sas.proc-transpose.datastep-alt-hotspot
+    format: hotspot
+    language: sas
+    modes: [debug]
+    difficulty: intermediate
+    skills: [sas.transpose, sas.arrays, sas.data-step]
+    lesson: sas-proc-transpose
+    title: Only one row per visit
+    minutes: 6
+    prompt: |
+      This DATA step should turn each wide visit row into five long records. Instead, the output has **one** row per visit, containing only the weight.
+
+      Click the defective line.
+    code: |
+      data vs_long;
+        set vs_s;
+        array m{5} SYSBP DIABP PULSE TEMP WEIGHT;
+        array c{5} $8 _temporary_ ('SYSBP' 'DIABP' 'PULSE' 'TEMP' 'WEIGHT');
+        do i = 1 to dim(m);
+          VSTESTCD = c{i};
+          VSSTRESN = m{i};
+        end;
+        output;
+        keep SUBJECT_ID VISIT_NAME VSTESTCD VSSTRESN;
+      run;
+    answerLines: [9]
+    lineNotes:
+      - line: 9
+        note: "The OUTPUT is after END, so it runs once per input row — after the loop has overwritten VSTESTCD and VSSTRESN four times, leaving the last element (WEIGHT). It must be inside the loop, before END."
+      - line: 7
+        note: "Each pass overwrites the two variables; without an OUTPUT inside the loop, only the final pass survives."
+    fixed: |
+      data vs_long;
+        set vs_s;
+        array m{5} SYSBP DIABP PULSE TEMP WEIGHT;
+        array c{5} $8 _temporary_ ('SYSBP' 'DIABP' 'PULSE' 'TEMP' 'WEIGHT');
+        do i = 1 to dim(m);
+          VSTESTCD = c{i};
+          VSSTRESN = m{i};
+          output;
+        end;
+        keep SUBJECT_ID VISIT_NAME VSTESTCD VSSTRESN;
+      run;
+    hints:
+      - "How many times does a statement inside DO … END run? How many times does one after END run?"
+      - "Which test's values survive in the output — and why that one?"
+    solution: |
+      Line 9. Move `output;` inside the loop (before `end;`) so each measurement is written. The symptom identifies the defect precisely: the surviving values are always those of the **last** array element, because the loop kept overwriting the same PDV slots.
+    explanation:
+      objective: "Explain why a wide-to-long DATA step writes one row instead of five."
+      given: "The step and the observed output."
+      relevant: "The position of OUTPUT relative to the loop; the fact that the loop reuses the same PDV variables."
+      irrelevant: "The arrays and the KEEP list are correct."
+      computation: "Five passes assign VSTESTCD and VSSTRESN; only the values from pass 5 (WEIGHT) remain when the single OUTPUT executes."
+      interpretation: "Row counts are the quickest check: rows in × 5 should equal rows out."
+      changes: "With OUTPUT inside the loop the step produces 5 rows per visit, matching PROC TRANSPOSE."
+      interviewer: "That you understand OUTPUT inside loops — the mechanism behind every generated-row derivation."
+
+  - id: sas.proc-transpose.interview-transpose
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [sas.transpose, sdtm.mapping, communication.interviewing]
+    lesson: sas-proc-transpose
+    title: Reshaping raw data into SDTM
+    prompt: |
+      **Interviewer:** "A raw vitals file has one row per visit with a column per measurement. How do you turn it into SDTM VS, and what problems do you expect?"
+    modelAnswer: |
+      I'd sort by subject, visit and date, then either use PROC TRANSPOSE with those as BY variables and the measurement columns in VAR — renaming `_NAME_` to `VSTESTCD` and `COL1` to the result — or write a DATA step with an array over the measurements, a parallel temporary array of test codes and an OUTPUT inside the loop. In production I usually prefer the DATA step, because the unit, the standardized value, `VSSTAT` for a measurement that was not done and the sequence number can all be set while each record is built.
+
+      Expected problems: the data must be sorted for the BY statement; missing measurements still produce rows, so the specification has to say whether they become "not done" records or are dropped; units live in separate columns and can vary by site — Fahrenheit temperatures and pounds need converting into the standardized variables while the original stays in `VSORRES`; a character variable in VAR turns every transposed value into text; and going back to wide, repeated tests in one visit give the "ID value occurs twice in the same BY group" error, which I'd resolve with the analysis flag rather than the LET option.
+
+      My standard check is arithmetic: number of visit rows times number of tests equals the number of long records, minus anything the spec says to drop, and every subject-visit-test combination appears exactly once.
+    rubric:
+      - Describes BY/VAR (and ID for the reverse direction) correctly
+      - Mentions sorting before PROC TRANSPOSE
+      - Handles missing measurements deliberately (VSSTAT / drop per spec)
+      - Mentions units, including conversions and where the original value stays
+      - Mentions the duplicate-ID error and a sound resolution
+      - States a row-count check
+    redFlags:
+      - "Uses LET to silence the duplicate-ID error"
+      - "Assumes missing values disappear"
+      - "Cannot say what _NAME_ and COL1 contain"
+    followUps:
+      - "When would you write the DATA step version instead of PROC TRANSPOSE?"
+      - "How would you handle a site that reported weight in pounds?"
+
+  - id: sas.proc-transpose.speed-default-var
+    format: mcq
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.transpose]
+    lesson: sas-proc-transpose
+    title: No VAR statement
+    prompt: |
+      If you omit the `VAR` statement, which variables does PROC TRANSPOSE transpose?
+    choices:
+      - text: "All numeric variables that are not used in BY, ID or COPY"
+        correct: true
+        feedback: "Convenient in exploratory work, risky in production: any numeric column you add later is transposed too."
+      - text: "All variables, character and numeric"
+        feedback: "Only numeric variables are transposed by default."
+      - text: "None — VAR is required"
+        feedback: "It is optional."
+      - text: "Only the first numeric variable"
+        feedback: "All of them, unless they appear in BY, ID or COPY."
+    solution: |
+      All numeric variables not already used in `BY`, `ID` or `COPY`. In production code, list the variables explicitly so the derivation documents exactly which measurements it covers.

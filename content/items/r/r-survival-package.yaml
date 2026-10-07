@@ -1,0 +1,767 @@
+items:
+  - id: r.surv.cnsr-conversion
+    format: numeric
+    modes: [check, debug, qc]
+    difficulty: intermediate
+    skills: [r.survival, adam.adtte, qc.discrepancy]
+    lesson: r-survival-package
+    title: How many subjects does the wrong conversion lose?
+    prompt: |
+      CBX417-301's PFS records use censoring-reason codes:
+
+      | `CNSR` | n |
+      |---:|---:|
+      | 0 (event) | 332 |
+      | 1 | 36 |
+      | 2 | 9 |
+      | 3 | 28 |
+      | 4 | 15 |
+
+      A programmer writes `event <- 1 - CNSR`. `Surv()` converts any value outside {0, 1} to `NA`.
+
+      How many subjects are silently dropped from the analysis?
+    answer: 52
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "`1 - CNSR` gives 1 for CNSR=0 and 0 for CNSR=1 — both valid."
+      - "What does it give for CNSR values of 2, 3 and 4?"
+      - "9 + 28 + 15."
+    solution: |
+      **52** — every subject with `CNSR` greater than 1.
+
+      $$1 - 2 = -1, \quad 1 - 3 = -2, \quad 1 - 4 = -3$$
+
+      `Surv()` rejects negative status values, converts them to `NA`, and warns once:
+
+      ```text
+      Warning message:
+      In Surv(AVAL, event) : Invalid status value, converted to NA
+      ```
+
+      The curves still render. The hazard ratio still computes. Fifty-two subjects — 12% of the study —
+      are simply gone.
+
+      **The correct conversion works for every study:**
+
+      ```r
+      event <- as.integer(CNSR == 0)
+      stopifnot(all(event %in% c(0, 1)))
+      ```
+
+      `1 - CNSR` happens to work when only 0 and 1 appear, which is exactly why the habit survives until
+      it meets a study that records censoring reasons.
+    explanation:
+      objective: "Quantify the damage from the wrong CNSR conversion."
+      given: "A censoring-code distribution and the behaviour of Surv() on invalid status values."
+      relevant: "The counts for CNSR values above 1."
+      calculating: "The number of rows producing a negative status."
+      numbers: "9 + 28 + 15 = 52 subjects, out of 420."
+      assumptions: "ADaM permits CNSR > 1 to distinguish censoring reasons, which this study uses."
+      interpretation: "The analysis runs to completion on 88% of the data, with one warning as the only signal."
+      changes: "as.integer(CNSR == 0) is correct regardless of how many censoring codes a study uses."
+      interviewer: "That you know ADaM allows CNSR above 1, since that is what makes 1 - CNSR fail rather than merely being stylistically worse."
+
+  - id: r.surv.ties-default
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: intermediate
+    skills: [r.survival, r.sas-translation, qc.compare]
+    lesson: r-survival-package
+    title: Why the two hazard ratios differ in the third decimal
+    prompt: |
+      Production (SAS `PROC PHREG`) reports a hazard ratio of **1.4607**. QC (R `coxph`) reports
+      **1.4693**. Same data, same model, same strata.
+
+      What explains it?
+    choices:
+      - text: "Different tie-handling methods — SAS defaults to Breslow, R's `coxph` defaults to Efron."
+        correct: true
+        feedback: "Correct. Neither is wrong; the SAP should name the method, and whichever program does not match it must pass `ties=` explicitly."
+      - text: "R dropped subjects that SAS retained."
+        feedback: "That would change the event counts too, and the difference would usually be larger than the third decimal."
+      - text: "Different confidence-interval methods."
+        feedback: "The interval method does not change the point estimate."
+      - text: "One of the programs stratified and the other did not."
+        feedback: "Ignoring strata typically moves a hazard ratio much more than 0.0086."
+    solution: |
+      **Tie handling.** When two subjects have the same event time, the partial likelihood has no exact
+      closed form and an approximation is needed.
+
+      | Method | Default in | HR here |
+      |---|---|---:|
+      | Breslow | **SAS `PROC PHREG`** | 1.460700 |
+      | Efron | **R `coxph`** | 1.469320 |
+
+      A difference of **0.0086** — invisible in a table rounded to two decimals, and enough to fail a QC
+      comparison checking four.
+
+      Efron is generally more accurate with many tied event times; Breslow is simpler and slightly biased
+      toward the null under heavy ties. **Neither program is wrong.**
+
+      The resolution is a sentence in the SAP naming the method, and an explicit `ties=` argument in
+      whichever program does not default to it.
+    explanation:
+      objective: "Diagnose a small cross-language discrepancy in a hazard ratio."
+      given: "Two hazard ratios differing in the third decimal from the same data and model."
+      relevant: "Each tool's default tie-handling method."
+      method: "A difference too small for a data problem and too large for rounding points at a default."
+      numbers: "Breslow 1.460700, Efron 1.469320 — a difference of 0.0086."
+      assumptions: "Tied event times exist in the data; with no ties the two methods coincide exactly."
+      interpretation: "A specification gap rather than a programming error in either."
+      changes: "With few ties the methods agree closely; with heavy tying — coarse visit-based assessment schedules — they can diverge more."
+      interviewer: "That you know which tool defaults to which, since that is what lets you diagnose it without rerunning both."
+
+  - id: r.surv.reference-level
+    format: numeric
+    modes: [check, qc, debug]
+    difficulty: intermediate
+    skills: [r.survival, r.models]
+    lesson: r-survival-package
+    title: The hazard ratio came out upside down
+    prompt: |
+      `coxph` reports a hazard ratio of **1.4693**, but the experimental arm clearly performed better —
+      its median PFS is 6.93 months against 4.17.
+
+      The arms are `"CBX-417 + Docetaxel"` and `"Placebo + Docetaxel"`, stored as a character column.
+
+      What hazard ratio should the table report? Give your answer to four decimal places.
+    answer: 0.6806
+    tolerance: 0.002
+    hints:
+      - "`coxph` uses the first factor level as the reference; a character column sorts alphabetically."
+      - "Which arm name sorts first, C or P?"
+      - "Take the reciprocal."
+    solution: |
+      **0.6806.**
+
+      `"CBX-417 + Docetaxel"` sorts before `"Placebo + Docetaxel"`, so CBX became the reference level and
+      the reported 1.4693 is **placebo versus CBX**.
+
+      $$\frac{1}{1.4693} = 0.6806$$
+
+      **Set the reference deliberately rather than inverting afterwards:**
+
+      ```r
+      pfs$TRTP <- relevel(factor(pfs$TRTP), ref = "Placebo + Docetaxel")
+      ```
+
+      Then `exp(coef(cox))` reads directly as 0.680587 and `exp(confint(cox))` gives (0.5456, 0.8490)
+      the right way round. Inverting manually means also swapping and inverting the confidence limits,
+      which is one more place to make a mistake in a primary efficacy table.
+
+      **A sign or direction error in a primary endpoint reverses the trial's conclusion**, and it is
+      invisible unless someone deliberately checks the direction against the medians.
+    explanation:
+      objective: "Correct a hazard ratio reported against the wrong reference arm."
+      given: "A hazard ratio above 1 despite the experimental arm having longer median survival."
+      relevant: "That coxph uses the first factor level as reference and character columns sort alphabetically."
+      calculating: "The reciprocal of the reported value."
+      numbers: "1/1.4693 = 0.6806. With relevel, coxph reports 0.680587 directly with CI (0.5456, 0.8490)."
+      method: "Check the direction against an independent quantity — here the medians — rather than trusting the sign."
+      interpretation: "A hazard ratio above 1 alongside a longer median in the same arm is internally contradictory and should stop you."
+      changes: "Inverting manually also requires swapping and inverting both confidence limits; relevel avoids that entirely."
+      interviewer: "That you fix the reference level rather than the number, and that you mention the confidence limits."
+
+  - id: r.surv.ph-meaning
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [r.survival, stats.ph-assumption]
+    lesson: r-survival-package
+    title: What cox.zph is testing
+    prompt: |
+      ```text
+      > cox.zph(cox)
+             chisq df    p
+      TRTP   0.195  1 0.66
+      GLOBAL 0.195  1 0.66
+      ```
+
+      What does this tell you?
+    choices:
+      - text: "No evidence that the hazard ratio changes over time, so reporting a single HR is reasonable."
+        correct: true
+        feedback: "Correct. The test looks for a trend in the Schoenfeld residuals against time; no trend means proportional hazards is tenable."
+      - text: "The treatment effect is not significant."
+        feedback: "That is a different test entirely. cox.zph tests the *constancy* of the effect, not whether it differs from zero."
+      - text: "The model fits the data well."
+        feedback: "It tests one specific assumption, not overall fit."
+      - text: "The strata satisfy proportional hazards."
+        feedback: "Stratified terms are not tested — each stratum gets its own baseline hazard, so no proportionality is assumed for them."
+    solution: |
+      **No evidence against proportional hazards.** The test looks for a trend in the **Schoenfeld
+      residuals** against time; a significant result means the hazard ratio changes over follow-up.
+
+      That matters because a hazard ratio is a *single number* summarising the whole follow-up period. If
+      the ratio moves, the number is a time-average of something changing, and the Kaplan–Meier curves
+      show a shape the HR hides.
+
+      **Two things this output does not tell you:**
+
+      `GLOBAL` equals `TRTP` here only because the model has one covariate — the joint test *is* that
+      term's test. With more covariates the rows separate.
+
+      **Stratification terms are never tested.** Each stratum gets its own baseline hazard, free to take
+      any shape, so no proportionality is assumed for them. That also means **stratifying on a variable
+      is the fix for that variable violating PH** — useful when a check comes back significant on a
+      prognostic factor.
+    explanation:
+      objective: "Interpret a proportional-hazards diagnostic correctly."
+      given: "cox.zph output with a non-significant p-value."
+      relevant: "That the test examines whether the effect is constant over time."
+      irrelevant: "Whether the treatment effect itself is significant — a different test."
+      method: "Under proportional hazards, Schoenfeld residuals have no trend against time."
+      numbers: "chisq 0.195 on 1 df, p = 0.66."
+      assumptions: "The test has limited power, so a non-significant result is weak evidence for proportionality rather than proof of it."
+      interpretation: "A single hazard ratio is a defensible summary here."
+      changes: "If it failed, the options are reporting the HR as time-averaged, leading with the KM curves, or using RMST, which assumes no proportionality."
+      interviewer: "That you know stratified terms are not tested, and that stratifying is itself a remedy for a PH violation."
+
+  - id: r.surv.event-derive
+    format: code
+    language: r
+    modes: [guided, independent, qc]
+    difficulty: foundation
+    skills: [r.survival, adam.adtte]
+    lesson: r-survival-package
+    title: Convert ADaM censoring to R's convention
+    minutes: 10
+    prompt: |
+      Write `prep_tte(adtte, paramcd = "PFS", days_per_month = 30.4375)` returning the records for one
+      parameter with two derived columns:
+
+      - `event` — 1 when `CNSR == 0`, else 0
+      - `months` — `AVAL / days_per_month`
+
+      **Assert** that `event` contains only 0 and 1, so a bad conversion fails immediately rather than
+      producing a warning inside `Surv()`.
+    starter: |
+      library(dplyr)
+
+      prep_tte <- function(adtte, paramcd = "PFS", days_per_month = 30.4375) {
+        out <- adtte |>
+          filter(___) |>
+          mutate(
+            event  = ___,
+            months = ___
+          )
+
+        stopifnot(___)
+        out
+      }
+    reference: |
+      library(dplyr)
+
+      prep_tte <- function(adtte, paramcd = "PFS", days_per_month = 30.4375) {
+        out <- adtte |>
+          filter(PARAMCD == paramcd) |>
+          mutate(
+            event  = as.integer(CNSR == 0),
+            months = AVAL / days_per_month
+          )
+
+        stopifnot(all(out$event %in% c(0, 1)))
+        out
+      }
+    hints:
+      - "`as.integer(CNSR == 0)` — never `1 - CNSR`, which breaks when a study uses censoring-reason codes."
+      - "`all(out$event %in% c(0, 1))` catches a bad conversion before `Surv()` merely warns about it."
+      - "Making `days_per_month` a parameter documents a convention that varies by sponsor."
+    checks:
+      - pattern: "as\\.integer\\s*\\(\\s*CNSR\\s*==\\s*0\\s*\\)"
+        message: "Uses CNSR == 0 rather than 1 - CNSR"
+      - pattern: "AVAL\\s*/\\s*days_per_month"
+        message: "Converts days to months using the supplied divisor"
+      - pattern: "stopifnot\\s*\\("
+        message: "Asserts the event indicator is valid"
+      - pattern: "%in%\\s*c\\s*\\(\\s*0\\s*,\\s*1\\s*\\)"
+        message: "Checks that only 0 and 1 are present"
+    expectedOutput: |
+      ```text
+      > pfs <- prep_tte(adtte)
+      > table(pfs$CNSR); sum(pfs$event); nrow(pfs)
+
+        0   1   2   3   4
+      332  36   9  28  15
+      [1] 332
+      [1] 420
+      ```
+    solution: |
+      **The assertion is the point of writing this as a function.** `Surv()` only warns on an invalid
+      status value, and a warning in a long script is a warning nobody reads. `stopifnot` stops.
+
+      On this study `1 - CNSR` would produce `-1`, `-2` and `-3` for the 52 subjects with `CNSR` above 1,
+      and those subjects would silently vanish from every curve and every model.
+
+      **`days_per_month` as a parameter** documents a convention rather than burying it. 30.4375
+      ($365.25/12$) is the most common divisor; 30.4167 ($365/12$) and a flat 30 also appear. The choice
+      shifts a median of 6.93 months by about 0.02 — invisible in a rounded table, enough to fail a
+      four-decimal QC comparison, and therefore something the SAP should state.
+    explanation:
+      objective: "Prepare ADTTE for R's survival functions with the correct censoring conversion."
+      given: "An ADTTE dataset using censoring-reason codes and a month-conversion convention."
+      relevant: "That CNSR = 0 means an event, and that values above 1 are valid censoring codes."
+      method: "Test CNSR against 0 rather than subtracting, then assert the result."
+      numbers: "332 events out of 420 records; 52 records have CNSR above 1."
+      assumptions: "days_per_month is a sponsor convention; 30.4375 is the most common."
+      computation: "as.integer of a logical gives 1 for TRUE and 0 for FALSE."
+      interpretation: "The assertion converts a silent 12% data loss into an immediate failure."
+      changes: "1 - CNSR would drop 52 subjects with only a warning from Surv()."
+      interviewer: "That you assert rather than trusting the warning, and that you can say why the divisor is a SAP decision."
+
+  - id: r.surv.km-medians
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [r.survival, stats.survival]
+    lesson: r-survival-package
+    title: Reading the KM summary table
+    prompt: |
+      ```text
+                               records events median 0.95LCL 0.95UCL
+      TRTP=CBX-417 + Docetaxel     210    155 6.9322  5.5524  8.2793
+      TRTP=Placebo + Docetaxel     210    177 4.1725  3.9754  5.4867
+      ```
+
+      What is the difference in median PFS between the arms, in months, to two decimal places?
+    answer: 2.76
+    tolerance: 0.02
+    unit: months
+    hints:
+      - "Subtract the two medians."
+      - "6.9322 − 4.1725."
+    solution: |
+      $$6.9322 - 4.1725 = 2.76 \text{ months}$$
+
+      **A difference of medians is descriptive, not inferential.** It has no confidence interval here and
+      no test attached — the formal comparison is the stratified log-rank p-value and the hazard ratio.
+
+      Two things worth noticing in this table:
+
+      **The event counts differ** (155 versus 177) despite equal randomization. That is the treatment
+      effect showing up in the data: fewer subjects on CBX-417 progressed during follow-up.
+
+      **The confidence intervals are asymmetric** around each median — 5.55 to 8.28 around 6.93. That is
+      expected: the interval comes from inverting the Kaplan–Meier confidence band, not from a symmetric
+      formula, and the curve is flatter above the median than below.
+    explanation:
+      objective: "Read medians and event counts from a survfit summary table."
+      given: "A KM summary table for two arms."
+      relevant: "The two median values."
+      calculating: "Their difference."
+      numbers: "6.9322 - 4.1725 = 2.7597 months."
+      assumptions: "A median difference is descriptive; it carries no interval and no test."
+      interpretation: "Roughly 2.8 additional months before progression, on average, at the median."
+      changes: "The formal comparison is the stratified log-rank test and the hazard ratio, not this difference."
+      interviewer: "That you flag the difference as descriptive rather than presenting it as the trial result."
+
+  - id: r.surv.stratified-cox
+    format: mcq
+    modes: [check, qc, debug]
+    difficulty: advanced
+    skills: [r.survival, stats.cox, trials.randomization]
+    lesson: r-survival-package
+    title: strata() or a covariate?
+    prompt: |
+      Subjects were randomized stratified by two factors, `STRAT1R` (ECOG 0 / ECOG 1) and `STRAT2R`
+      (prior IO yes / no). A programmer writes:
+
+      ```r
+      survdiff(Surv(months, event) ~ TRTP + STRAT1R + STRAT2R, data = pfs)
+      ```
+
+      The output shows **7 degrees of freedom** and a chi-square of 35.29. The correctly stratified test
+      gives 11.65 on 1 df. What went wrong?
+    choices:
+      - text: "Without `strata()`, `survdiff` treats every treatment-by-stratum combination as a separate group and tests whether all eight differ — a different hypothesis with more df."
+        correct: true
+        feedback: "Correct, and the df is the tell: a two-arm stratified log-rank has 1 degree of freedom no matter how many strata there are."
+      - text: "Nothing — adding the stratification factor as a covariate is the standard approach."
+        feedback: "For `survdiff` there are no covariates. A term outside `strata()` becomes part of the grouping."
+      - text: "`survdiff` cannot handle more than one variable."
+        feedback: "It can, but every term outside `strata()` contributes to the grouping rather than being adjusted for."
+      - text: "`STRAT1R` should be numeric."
+        feedback: "The variable type is not the issue; its role in the formula is."
+    solution: |
+      **`survdiff` has no covariates.** Every term outside `strata()` becomes part of the **grouping
+      variable**. With 2 arms × 2 ECOG levels × 2 prior-IO levels the formula builds
+      $2 \times 2 \times 2 = 8$ groups and tests whether all eight have the same survival — a different
+      hypothesis on 7 degrees of freedom.
+
+      ```r
+      survdiff(Surv(months, event) ~ TRTP + strata(STRAT1R, STRAT2R), data = pfs)
+      #  Chisq= 11.6  on 1 degrees of freedom, p= 6e-04
+      ```
+
+      **The degrees of freedom are the diagnostic.** A two-arm stratified log-rank has **1** degree of
+      freedom regardless of how many strata exist, because it compares two groups.
+
+      **The dangerous part is the direction of the error.** The wrong test gives a *larger* chi-square —
+      35.29 against 11.65 — because it is picking up the prognostic differences between ECOG strata on top
+      of the treatment effect. ECOG 1 subjects progress faster than ECOG 0 subjects in **both** arms, and
+      the eight-group test counts that as a difference. Nobody questions a result that looks stronger than
+      expected, which is exactly why this one survives review.
+
+      Note that `strata()` means different things in the two procedures you use together:
+
+      | | `strata()` / `STRATA` means |
+      |---|---|
+      | R `survdiff`, `coxph` | stratify — separate baseline hazard per stratum |
+      | SAS `PROC PHREG` | stratify — same meaning |
+      | **SAS `PROC LIFETEST`** | **compare these groups** — the opposite |
+
+      That last row catches people constantly, because `PROC LIFETEST` and `PROC PHREG` are used in the
+      same program.
+    explanation:
+      objective: "Distinguish stratifying from grouping in a log-rank test."
+      given: "A survdiff formula with a stratification factor outside strata(), and an unexpected df."
+      relevant: "That survdiff treats every non-strata term as part of the grouping."
+      method: "Check the degrees of freedom against the number of groups being compared."
+      numbers: "2 arms x 2 ECOG x 2 prior-IO = 8 groups, 7 df, chisq 35.29. The correct stratified test gives 11.65 on 1 df."
+      assumptions: "Stratified randomization means the analysis should respect the strata, per ICH E9 section 5.7."
+      interpretation: "The test answers a different question than intended, with no error, and returns a larger chi-square than the correct test."
+      changes: "In SAS PROC LIFETEST the STRATA statement means 'compare these groups' — the opposite of its meaning in PROC PHREG."
+      interviewer: "That you use the degrees of freedom as the diagnostic, and that you know the SAS keyword collision."
+
+  - id: r.surv.code
+    format: code
+    language: r
+    modes: [independent]
+    difficulty: advanced
+    skills: [r.survival, stats.cox, tlf.efficacy-tables]
+    lesson: r-survival-package
+    title: The complete time-to-event analysis
+    minutes: 18
+    prompt: |
+      Write `pfs_analysis(adtte, ref_arm)` returning a list with `medians`, `hr` and `ph_p`.
+
+      - `medians` — a data frame with `arm`, `n`, `events`, `median`, `lower`, `upper`
+      - `hr` — a one-row data frame with `hr`, `lower`, `upper` for the **non-reference** arm
+      - `ph_p` — the `cox.zph` p-value for the treatment term
+
+      Requirements: derive `event` from `CNSR == 0`, convert to months, set `ref_arm` as the reference
+      level, use `conf.type = "log-log"`, `ties = "efron"`, and stratify by `STRAT1R` and `STRAT2R`.
+    starter: |
+      library(survival); library(dplyr)
+
+      pfs_analysis <- function(adtte, ref_arm) {
+        pfs <- adtte |>
+          filter(PARAMCD == "PFS") |>
+          mutate(event = ___, months = ___)
+
+        stopifnot(all(pfs$event %in% c(0, 1)))
+        pfs$TRTP <- relevel(factor(pfs$TRTP), ref = ref_arm)
+
+        km  <- survfit(___)
+        cox <- coxph(___)
+
+        list(medians = ___, hr = ___, ph_p = ___)
+      }
+    reference: |
+      library(survival); library(dplyr)
+
+      pfs_analysis <- function(adtte, ref_arm) {
+        pfs <- adtte |>
+          filter(PARAMCD == "PFS") |>
+          mutate(event  = as.integer(CNSR == 0),
+                 months = AVAL / 30.4375)
+
+        stopifnot(all(pfs$event %in% c(0, 1)))
+        pfs$TRTP <- relevel(factor(pfs$TRTP), ref = ref_arm)
+
+        km <- survfit(Surv(months, event) ~ TRTP, data = pfs,
+                      conf.type = "log-log")
+
+        cox <- coxph(Surv(months, event) ~ TRTP + strata(STRAT1R, STRAT2R),
+                     data = pfs, ties = "efron")
+
+        tb <- summary(km)$table
+        medians <- data.frame(
+          arm    = sub("^TRTP=", "", rownames(tb)),
+          n      = tb[, "records"],
+          events = tb[, "events"],
+          median = tb[, "median"],
+          lower  = tb[, "0.95LCL"],
+          upper  = tb[, "0.95UCL"],
+          row.names = NULL
+        )
+
+        ci <- exp(confint(cox))
+        hr <- data.frame(hr = unname(exp(coef(cox))),
+                         lower = ci[1], upper = ci[2])
+
+        list(medians = medians, hr = hr,
+             ph_p = cox.zph(cox)$table["TRTP", "p"])
+      }
+    hints:
+      - "`relevel()` before fitting, so the hazard ratio reads as experimental versus control."
+      - "`summary(km)$table` has columns `records`, `events`, `median`, `0.95LCL`, `0.95UCL`."
+      - "`cox.zph(cox)$table` is a matrix; index it by row name and the `\"p\"` column."
+    checks:
+      - pattern: "as\\.integer\\s*\\(\\s*CNSR\\s*==\\s*0\\s*\\)"
+        message: "Derives the event indicator correctly"
+      - pattern: "relevel\\s*\\("
+        message: "Sets the reference arm so the hazard ratio reads the right way round"
+      - pattern: "conf\\.type\\s*=\\s*[\"']log-log[\"']"
+        message: "Uses the log-log confidence type the SAP specifies"
+      - pattern: "strata\\s*\\(\\s*STRAT1R\\s*,\\s*STRAT2R\\s*\\)"
+        message: "Stratifies rather than adjusting"
+      - pattern: "ties\\s*=\\s*[\"']efron[\"']"
+        message: "States the tie-handling method explicitly"
+      - pattern: "cox\\.zph\\s*\\("
+        message: "Checks the proportional-hazards assumption"
+    expectedOutput: |
+      ```text
+      $medians
+                        arm   n events   median    lower    upper
+      1 Placebo + Docetaxel 210    177 4.172485 3.975359 5.486653
+      2 CBX-417 + Docetaxel 210    155 6.932238 5.552361 8.279261
+
+      $hr
+              hr     lower     upper
+      1 0.680587 0.5455875 0.8489907
+
+      $ph_p
+      [1] 0.6585277
+      ```
+    solution: |
+      **The hazard ratio of 0.6806 (0.5456, 0.8490)** reads directly as CBX-417 versus placebo, because
+      `relevel()` made placebo the reference before fitting. Without that line `coxph` would use
+      alphabetical order, make CBX the reference, and report 1.4693 — the reciprocal — with the
+      confidence limits also inverted and swapped.
+
+      **Every specification decision is explicit in the code:**
+
+      | Line | Decision |
+      |---|---|
+      | `as.integer(CNSR == 0)` | Censoring convention |
+      | `AVAL / 30.4375` | Days-to-months divisor |
+      | `relevel(..., ref = ref_arm)` | Direction of the comparison |
+      | `conf.type = "log-log"` | Median CI method (R defaults to `"log"`) |
+      | `ties = "efron"` | Tie handling (SAS defaults to Breslow) |
+      | `strata(...)` | Stratified, not adjusted |
+
+      **Four of those six differ from a default somewhere.** That is the argument for writing them out:
+      a reviewer can check each against the SAP without knowing which language's conventions apply.
+
+      `ph_p = 0.6585` means no evidence against proportional hazards, so a single hazard ratio is a
+      defensible summary of the whole follow-up.
+    explanation:
+      objective: "Assemble a complete, specification-explicit time-to-event analysis."
+      given: "An ADTTE dataset and the arm to treat as the reference."
+      relevant: "Censoring conversion, time units, reference level, CI type, tie handling and stratification."
+      method: "Prepare, assert, set the reference, fit KM and Cox, extract each piece."
+      numbers: "Medians 4.1725 and 6.9322 months; HR 0.6806 (0.5456, 0.8490); cox.zph p = 0.6585."
+      assumptions: "Proportional hazards, which the returned ph_p lets the caller check."
+      computation: "summary(km)$table row names carry a 'TRTP=' prefix that has to be stripped."
+      interpretation: "A 32% lower instantaneous risk of progression, with no evidence the ratio varies over time."
+      changes: "Omitting relevel gives 1.4693 with inverted and swapped confidence limits — the same fit, reported backwards."
+      interviewer: "That you state every default explicitly and can say which ones differ between R and SAS."
+
+  - id: r.surv.silent-drop
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [r.survival, adam.adtte, qc.discrepancy]
+    lesson: r-survival-package
+    title: The analysis that lost 52 subjects
+    minutes: 10
+    prompt: |
+      This runs and produces a Kaplan–Meier plot. The event count in the output is **332**, matching the
+      SAP — but the number at risk at time zero is **368**, not the 420 randomized.
+
+      Click the line that loses the subjects.
+    code: |
+      library(survival); library(dplyr)
+
+      pfs <- adtte |>
+        filter(PARAMCD == "PFS") |>
+        mutate(event = 1 - CNSR,
+               months = AVAL / 30.4375)
+
+      km <- survfit(Surv(months, event) ~ TRTP, data = pfs)
+      plot(km)
+    answerLines: [5]
+    lineNotes:
+      - line: 5
+        note: "`1 - CNSR` gives -1, -2 and -3 for the 52 subjects whose CNSR is 2, 3 or 4 — valid ADaM censoring-reason codes. `Surv()` rejects negative status values, converts them to NA, and warns once. Those 52 subjects are dropped: 420 - 52 = 368. Use `as.integer(CNSR == 0)`."
+      - line: 4
+        note: "Filtering to PFS is correct and keeps all 420 records."
+      - line: 8
+        note: "`Surv()` is where the warning is emitted, but the invalid values were created three lines earlier."
+    fixed: |
+      library(survival); library(dplyr)
+
+      pfs <- adtte |>
+        filter(PARAMCD == "PFS") |>
+        mutate(event  = as.integer(CNSR == 0),
+               months = AVAL / 30.4375)
+
+      stopifnot(all(pfs$event %in% c(0, 1)),
+                nrow(pfs) == 420)
+
+      km <- survfit(Surv(months, event) ~ TRTP, data = pfs)
+    hints:
+      - "420 randomized, 368 at risk. What is 420 − 368, and what in this data comes in that quantity?"
+      - "What values does CNSR take in a study that records censoring reasons?"
+      - "What is `1 - 3`, and what does `Surv()` do with it?"
+    solution: |
+      **Line 5.** `1 - CNSR` produces `-1`, `-2` and `-3` for the 52 subjects with `CNSR` of 2, 3 or 4 —
+      legitimate ADaM censoring-reason codes.
+
+      `Surv()` rejects negative status values, converts them to `NA`, and warns **once**:
+
+      ```text
+      Warning message:
+      In Surv(months, event) : Invalid status value, converted to NA
+      ```
+
+      $420 - 52 = 368$, exactly the number at risk.
+
+      **Why the event count still looked right.** All 332 events have `CNSR = 0`, giving `event = 1`, so
+      none of them was affected. Only *censored* subjects were lost — which means the analysis looks
+      correct on the statistic most people check first, while the denominator is wrong.
+
+      That is the worst possible combination: the number you verify is right and the number you do not is
+      wrong. Losing censored subjects biases the survival estimate, because those subjects were
+      contributing risk-set time up to their censoring date.
+
+      **The fix and the guard:**
+
+      ```r
+      event <- as.integer(CNSR == 0)
+      stopifnot(all(event %in% c(0, 1)), nrow(pfs) == 420)
+      ```
+    explanation:
+      objective: "Trace silently dropped subjects to an invalid status derivation."
+      given: "A correct event count alongside a number at risk 52 below the randomized total."
+      relevant: "That CNSR takes values above 1 and that 1 - CNSR then goes negative."
+      irrelevant: "The Surv() call and the filter, which behave correctly on what they are given."
+      method: "The gap of 52 matches the count of records with CNSR above 1 exactly."
+      numbers: "9 + 28 + 15 = 52 subjects; 420 - 52 = 368."
+      assumptions: "Surv() converts invalid status values to NA rather than erroring, warning only once."
+      interpretation: "Only censored subjects were lost, so the event count — the number most people check — is unaffected."
+      changes: "Asserting the row count as well as the event values catches it even if the conversion silently changes."
+      interviewer: "That you notice the event count being right is what makes this dangerous, not reassuring."
+
+  - id: r.surv.ph-failure
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [r.survival, stats.ph-assumption, communication.interviewing]
+    lesson: r-survival-package
+    title: When proportional hazards fails
+    prompt: |
+      **Interviewer:** "Your `cox.zph` test comes back with p = 0.004 and the Kaplan–Meier curves cross at about four months. What do you do?"
+    modelAnswer: |
+      First I'd say what the hazard ratio now means, because the team will still want one.
+
+      With non-proportional hazards the Cox HR is a **weighted average of a ratio that is changing over
+      follow-up**, and the weights depend on when events happen rather than on anything clinically
+      chosen. So a single HR is not wrong exactly, but it summarises a moving quantity and the summary
+      hides the shape. Crossing curves are the extreme case: an HR near 1 can mean "no effect" or "harm
+      early, benefit late", and those are opposite conclusions.
+
+      Then I'd look at the curves and ask what pattern this is. Crossing at four months with a later
+      separation is the classic **delayed treatment effect** — common in immuno-oncology, where the
+      mechanism takes time to act. Early crossing can also mean early harm, which is a completely
+      different and more serious finding. The KM plot and the Schoenfeld residual plot together usually
+      make it obvious which.
+
+      What I'd report depends entirely on what the SAP pre-specified, and that is the real answer to the
+      question. If it anticipated this — and in an immuno-oncology trial it should have — there is a
+      pre-specified alternative: **RMST**, comparing the area under the curves up to a fixed horizon,
+      which is interpretable in months and assumes nothing about proportionality; or a weighted log-rank
+      test that gives later events more weight; or a pre-specified landmark analysis.
+
+      If the SAP did **not** anticipate it, I would not go shopping for a test that gives a better answer.
+      That is selecting an analysis on the data. I'd report the pre-specified analysis, report the PH
+      violation honestly, lead with the Kaplan–Meier curves since they show what the HR conceals, and add
+      RMST as a clearly-labelled post-hoc sensitivity analysis.
+
+      One more thing I'd check before concluding any of it: whether the violation is driven by a
+      covariate rather than by treatment. If a strong prognostic factor is causing it, **stratifying on
+      that factor** fixes it — each stratum gets its own baseline hazard, so no proportionality is assumed
+      for it. That is worth ruling out before reaching for a different estimand.
+
+      And I'd flag it for the next protocol. A programme where PH fails once will likely see it again, and
+      pre-specifying RMST costs nothing in advance and is unavailable afterwards.
+    rubric:
+      - Explains what a Cox HR means when hazards are non-proportional
+      - Distinguishes delayed effect from early harm as clinically different findings
+      - Makes the response conditional on what the SAP pre-specified
+      - Names concrete alternatives (RMST, weighted log-rank, landmark)
+      - Refuses to select an analysis post hoc to get a better answer
+      - Suggests leading with the KM curves
+      - Checks whether stratifying on a covariate resolves it
+      - Recommends pre-specifying for the next trial
+    redFlags:
+      - "Switches to whichever test gives a significant result"
+      - "Reports the hazard ratio without mentioning the violation"
+      - "Treats crossing curves and a delayed effect as the same finding"
+      - "Does not ask what the SAP specified"
+
+  - id: r.surv.open
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [r.survival, adam.adtte, communication.interviewing]
+    lesson: r-survival-package
+    title: QC-ing a survival analysis
+    prompt: |
+      **Interviewer:** "You're the QC programmer on an oncology PFS analysis. Production is in SAS, you're writing the check in R. What do you look at first?"
+    modelAnswer: |
+      I'd check the derivation before the model, because a correct model on a wrong dataset is the more
+      common failure and the harder one to spot.
+
+      **The censoring conversion first.** ADaM uses `CNSR = 0` for an event — the opposite of R's
+      convention — and studies that record censoring *reasons* have `CNSR` values of 2, 3 and 4. So
+      `1 - CNSR` produces negatives, `Surv()` converts them to `NA` with a single warning, and those
+      subjects disappear. In the study I've worked with that is 52 subjects, 12% of the trial. I'd assert
+      the derived indicator is only 0 and 1, and separately assert the row count against the randomized
+      total.
+
+      The nasty part is that only *censored* subjects are lost that way, so the event count — the number
+      most people verify first — still matches the SAP. The denominator is wrong and the statistic you
+      checked is right.
+
+      **Then the event counts and censoring breakdown.** Total events against the SAP's target, and the
+      counts by censoring reason. That breakdown is where two independent ADTTE derivations disagree, and
+      a handful of subjects differing is normal and worth reconciling before lock.
+
+      **Then the direction.** `coxph` uses the first factor level as the reference, alphabetically for a
+      character column, so the HR can easily come out as control-versus-experimental. I'd check it against
+      the medians — a hazard ratio above 1 in the arm with the longer median is internally contradictory
+      and should stop you.
+
+      **Then the defaults that differ between the languages**, because these are where a discrepancy
+      appears with neither program at fault: `ties` (R Efron, SAS Breslow — a third-decimal difference in
+      the HR), `conf.type` for the median CI (R `"log"`, SAS `"log-log"`), and the days-to-months divisor
+      if the SAP does not state it.
+
+      **Then `strata()` versus a covariate.** A stratified log-rank on two arms has 1 degree of freedom
+      however many strata exist. More than 1 means the stratification factor was added as a grouping
+      variable instead.
+
+      **And the PH check**, since whether a single hazard ratio is a meaningful summary is part of whether
+      the analysis is right, not a separate question.
+
+      Most of what I find will be specification gaps rather than bugs — the SAP not naming a method that
+      the two languages default differently on. That is still a finding, and it goes to the study
+      statistician rather than to a programmer.
+    rubric:
+      - Checks the derivation before the model
+      - Names the CNSR convention and the 1 - CNSR failure specifically
+      - Notes that only censored subjects are lost, so the event count still matches
+      - Reconciles event counts and censoring reasons against the SAP
+      - Checks the hazard ratio direction against the medians
+      - Lists the cross-language defaults (ties, conf.type, month divisor)
+      - Checks strata() usage via the degrees of freedom
+      - Frames specification gaps as findings against the SAP rather than a programmer
+    redFlags:
+      - "Starts by comparing the hazard ratios"
+      - "Does not mention the CNSR convention"
+      - "Assumes a discrepancy means one program has a bug"
+      - "Does not check the direction of the effect"

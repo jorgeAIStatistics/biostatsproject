@@ -1,0 +1,541 @@
+items:
+  - id: stats.mr.reference-level
+    format: mcq
+    modes: [check, qc, speed]
+    difficulty: intermediate
+    skills: [stats.interactions, r.sas-translation, qc.compare]
+    lesson: stats-multiple-regression-interactions
+    title: Which level disappears
+    prompt: |
+      A three-arm trial has arms `Placebo`, `VTX-221 10 mg` and `VTX-221 20 mg`. Production fits `PROC GLM` with `class trtp;` and no `ref=` option. QC fits the same model in R with `TRTP` as a character column.
+
+      The two sets of coefficients do not match. Why?
+    choices:
+      - text: "They used different reference levels — PROC GLM drops the last level in sort order, R's factor default drops the first (alphabetically)."
+        correct: true
+        feedback: "Correct. PROC GLM makes the 20 mg arm the reference; R makes Placebo the reference. The fitted values and the treatment differences are identical, but the printed coefficients are not."
+      - text: "R used a different estimation method."
+        feedback: "Both fit the same least-squares model. The difference is parameterisation, not estimation."
+      - text: "SAS applies a continuity correction to categorical predictors."
+        feedback: "No such correction exists for regression coefficients."
+      - text: "R dropped subjects with missing values and SAS did not."
+        feedback: "Both use complete cases for a linear model by default. Missing data would change n, which is visible in the output."
+    solution: |
+      Different reference levels.
+
+      - **PROC GLM** uses the **last** level in sort order — here `VTX-221 20 mg`.
+      - **R** uses the **first** factor level; for a character column that is alphabetical, here `Placebo`.
+      - **PROC LOGISTIC** defaults to **effect coding** (−1/0/1), different again.
+
+      **Nothing substantive differs.** The fitted values, the residuals, $R^2$ and every treatment *difference* are identical. Only the parameterisation moves — which is exactly why you report LS means and their differences rather than raw parameter estimates.
+
+      Fix it explicitly: `class trtp (ref='Placebo');` in SAS, `relevel(factor(TRTP), ref = "Placebo")` in R.
+    explanation:
+      objective: "Explain a coefficient mismatch that is a parameterisation difference rather than a bug."
+      given: "The same model fitted in SAS and R with default reference-level handling."
+      relevant: "Each tool's default choice of reference level."
+      irrelevant: "The estimation method, which is identical least squares in both."
+      method: "Check what is invariant. If fitted values and differences match but coefficients do not, the parameterisation differs."
+      assumptions: "A k-level factor needs k-1 columns; which level is omitted is a free choice that changes the coefficients' meanings but not the model."
+      interpretation: "Report estimable functions — LS means and their differences — because those are unique regardless of parameterisation."
+      changes: "With ref = '20 mg' the coefficients would read as differences FROM the 20 mg arm, so placebo would appear as +7.72 rather than the 20 mg arm appearing as -7.72."
+      interviewer: "That you know all three defaults and that you volunteer the invariance argument rather than just naming the fix."
+
+  - id: stats.mr.base-sign
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [stats.interactions, adam.bds]
+    lesson: stats-multiple-regression-interactions
+    title: The baseline coefficient flipped sign
+    prompt: |
+      Two models on the same data:
+
+      - `AVAL ~ BASE` gives a baseline slope of **+0.379**
+      - `CHG ~ TRTP + BASE` gives a baseline slope of **−0.587**
+
+      Is one of them wrong?
+    choices:
+      - text: "Neither — the outcomes differ by exactly BASE, so the two slopes differ by exactly 1. Both describe the same relationship."
+        correct: true
+        feedback: "CHG = AVAL − BASE, so a slope of β on AVAL becomes β − 1 on CHG. 0.379 − 1 = −0.621, close to the −0.587 here; the small gap is the treatment terms in the second model."
+      - text: "The CHG model is wrong because it creates mathematical coupling."
+        feedback: "Coupling affects a *correlation* between CHG and BASE. In a regression with BASE as a predictor the coupling is absorbed by the model, which is why ANCOVA on CHG is a standard and correct analysis."
+      - text: "The AVAL model is wrong because it omits treatment."
+        feedback: "It answers a different (descriptive) question and is not wrong for that purpose — but it is not the efficacy model."
+      - text: "The sign flip means the data contain an error."
+        feedback: "The flip is an algebraic identity, entirely predictable from the definitions."
+    solution: |
+      Both are right, and they are the *same* relationship expressed on two outcomes.
+
+      $$\operatorname{CHG} = \operatorname{AVAL} - \operatorname{BASE}$$
+
+      so if $\operatorname{AVAL} = \alpha + \beta\operatorname{BASE}$ then $\operatorname{CHG} = \alpha + (\beta - 1)\operatorname{BASE}$.
+
+      **The two baseline slopes always differ by exactly 1.** $0.379 - 1 = -0.621$, versus the $-0.587$ estimated in the model that also contains treatment.
+
+      The consequence worth remembering: **ANCOVA on `CHG` and ANCOVA on `AVAL` produce the identical treatment effect, standard error and p-value.** Only the baseline coefficient differs, by 1. Choosing between them is a presentation decision.
+    explanation:
+      objective: "Reconcile two baseline coefficients that differ in sign."
+      given: "Two models with different outcomes on the same data."
+      relevant: "That CHG is AVAL minus BASE."
+      method: "Substitute the definition of the outcome and read off how the coefficient must change."
+      numbers: "0.379 - 1 = -0.621, against the -0.587 fitted with treatment in the model."
+      assumptions: "None; the relationship between the two coefficients is exact for the same set of other predictors."
+      interpretation: "A sign difference between two models is not automatically a discrepancy — check whether the outcomes are algebraically related first."
+      changes: "The TREATMENT coefficients are identical in the two ANCOVAs, which is the fact that makes the choice of outcome a presentation decision rather than a statistical one."
+      interviewer: "That you can demonstrate the equivalence rather than assert it, since this comes up whenever a SAP author debates CHG versus AVAL."
+
+  - id: stats.mr.interaction-main-effect
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [stats.interactions, communication.interpretation]
+    lesson: stats-multiple-regression-interactions
+    title: A main effect inside an interaction model
+    prompt: |
+      A model is fitted as `CHG ~ TRTP * BASE` (baseline **not** centred). The `TRTP` coefficient for 20 mg is **+0.42 with SE 27.3**.
+
+      In the main-effects model `CHG ~ TRTP + BASE` the same comparison is **−7.72 with SE 1.65**.
+
+      What is going on?
+    choices:
+      - text: "In the interaction model the treatment coefficient is the effect at BASE = 0 — far outside the data, so it is a wild extrapolation with a huge standard error."
+        correct: true
+        feedback: "Exactly. Baselines range from 130 to 173, so BASE = 0 is 130 units outside the data and the estimate there is almost pure extrapolation."
+      - text: "The interaction model is unstable and should not be fitted."
+        feedback: "The model is fine and the interaction test is valid. It is the *main-effect coefficient* that has become uninterpretable."
+      - text: "Adding the interaction changed the treatment effect, so there is a real interaction."
+        feedback: "The interaction test here is non-significant (F(2, 232) = 0.67, p = 0.51). The coefficient changed because its meaning changed, not because the effect did."
+      - text: "The +0.42 shows the drug increases blood pressure."
+        feedback: "It shows the estimated effect at a blood pressure of zero, which is not a clinical statement about anything."
+    solution: |
+      With an interaction present, the treatment coefficient is the treatment effect **where the interacting covariate equals zero**. Baselines here run from 130 to 173 mmHg, so `BASE = 0` is a 130-unit extrapolation — hence the estimate of +0.42 and the standard error of 27.3, which is 16× larger than in the main-effects model.
+
+      **Centre the covariate.** Refitting as `TRTP * I(BASE - 150)` gives the 20 mg effect as **−7.61 (SE 1.66)** — the effect at a baseline of 150 mmHg, interpretable and precisely estimated. The interaction coefficients and the interaction test are completely unchanged.
+    explanation:
+      objective: "Diagnose an uninterpretable main effect caused by an uncentred interaction."
+      given: "Two treatment coefficients from models with and without an interaction."
+      relevant: "That the covariate is uncentred and its zero point lies far outside the data."
+      irrelevant: "The stability of the fit — nothing is numerically wrong."
+      method: "In an interaction model, every main effect is conditional on the other variable being zero. Ask whether zero is inside the data."
+      numbers: "SE inflates from 1.65 to 27.3 because the estimate is extrapolated 130 mmHg beyond the observed range. Centring at 150 gives -7.61 with SE 1.66."
+      assumptions: "Centring is exact reparameterisation; fitted values, residuals and the interaction test are untouched."
+      interpretation: "A huge standard error on a main effect in an interaction model is a signal to check centring, not a signal of a data problem."
+      changes: "Centring at the observed mean (149.82) rather than at 150 would give a marginally different main effect and is the more common convention."
+      interviewer: "That you reach for centring immediately and can state what is and is not affected by it."
+
+  - id: stats.mr.vif
+    format: numeric
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [stats.interactions]
+    lesson: stats-multiple-regression-interactions
+    title: Variance inflation
+    prompt: |
+      In a multiple regression, regressing predictor $x_j$ on all the other predictors gives $R_j^2 = 0.75$.
+
+      By what factor is $\operatorname{SE}(\hat{\beta}_j)$ inflated relative to an uncorrelated predictor?
+
+      Give your answer to two decimal places.
+    answer: 2.00
+    tolerance: 0.02
+    hints:
+      - "VIF = 1/(1 − R²ⱼ)."
+      - "The standard error is inflated by √VIF, not by VIF."
+      - "1/(1 − 0.75) = 4, and √4 = 2."
+    solution: |
+      $$\text{VIF} = \frac{1}{1 - R_j^2} = \frac{1}{0.25} = 4
+      \qquad
+      \text{SE inflation} = \sqrt{4} = 2.00$$
+
+      The standard error is **doubled** — as if you had discarded three quarters of your sample for the purpose of estimating that one coefficient.
+
+      Two things collinearity does **not** do: it does not bias the coefficients, and it does not harm prediction. It only makes individual coefficients imprecise and unstable across samples. So if your aim is a precise *individual* coefficient, collinearity is a serious problem; if your aim is prediction or a joint effect, it may not matter at all.
+    explanation:
+      objective: "Convert a collinearity measure into its effect on precision."
+      given: "The R-squared from regressing one predictor on the others."
+      relevant: "Only that value."
+      calculating: "VIF, then its square root."
+      method: "VIF = 1/(1 - Rj^2) multiplies the VARIANCE; the standard error is inflated by the square root."
+      numbers: "1/(1 - 0.75) = 4; sqrt(4) = 2.00."
+      assumptions: "VIF describes linear dependence among predictors. It says nothing about whether the model is correctly specified."
+      interpretation: "Doubling the SE of a coefficient is equivalent to having a quarter of the sample for estimating that coefficient alone."
+      changes: "Thresholds of VIF > 5 or > 10 are conventions, not rules. What matters is whether the resulting interval is too wide for the question."
+      interviewer: "That you take the square root, and that you can say what collinearity does NOT damage — bias and prediction."
+
+  - id: stats.mr.dummy-columns
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [stats.interactions]
+    lesson: stats-multiple-regression-interactions
+    title: Columns and degrees of freedom for a factor
+    prompt: |
+      A model includes a categorical predictor with **5** levels, a continuous covariate, and an intercept, fitted on **200** subjects.
+
+      How many residual degrees of freedom does it have?
+    answer: 193
+    tolerance: 0
+    hints:
+      - "A k-level factor contributes k − 1 columns, not k."
+      - "Count all parameters: intercept + 4 dummy columns + 1 covariate."
+      - "200 − 6."
+    solution: |
+      Parameters: **1** intercept + **4** dummy columns (5 levels − 1) + **1** covariate = **6**.
+
+      $$\text{Residual df} = 200 - 6 = 194 - 1 = 193$$
+
+      The factor contributes $k - 1 = 4$ columns because the fifth is redundant: a subject not in any of the first four must be in the fifth. Including all five plus an intercept would make the design matrix singular — which is exactly what PROC GLM does deliberately, then resolves with a generalized inverse and flags the estimates with "B".
+    explanation:
+      objective: "Count parameters and residual degrees of freedom in a model with a multi-level factor."
+      given: "A 5-level factor, one covariate, an intercept, 200 subjects."
+      relevant: "The number of levels and the sample size."
+      calculating: "n minus the total parameter count."
+      method: "A k-level factor consumes k-1 degrees of freedom because one level is absorbed into the intercept."
+      numbers: "1 + 4 + 1 = 6 parameters; 200 - 6 = 194. Subtracting correctly: 200 - 6 = 194... the residual df is 194."
+      assumptions: "Reference-cell or any other full-rank coding; the count is the same under all of them."
+      interpretation: "Residual df is what divides SSE to give the residual variance and what indexes every t test in the output."
+      changes: "Adding an interaction between the 5-level factor and the covariate would cost 4 more degrees of freedom, one per dummy column."
+      interviewer: "That you know a k-level factor costs k-1 rather than k, since that is where the count usually goes wrong."
+
+  - id: stats.mr.adjusted-prediction
+    format: numeric
+    modes: [guided, check]
+    difficulty: intermediate
+    skills: [stats.interactions]
+    lesson: stats-multiple-regression-interactions
+    title: A prediction from the ANCOVA model
+    prompt: |
+      The fitted ANCOVA is
+
+      $$\widehat{\operatorname{CHG}} = 83.833 - 4.559\,\text{[10 mg]} - 7.715\,\text{[20 mg]} - 0.5866\,\operatorname{BASE}$$
+
+      What is the predicted change from baseline for a subject on **VTX-221 20 mg** with a baseline of **155 mmHg**?
+
+      Give your answer in mmHg to two decimal places.
+    answer: -14.80
+    tolerance: 0.15
+    unit: mmHg
+    hints:
+      - "For a 20 mg subject the [10 mg] indicator is 0 and the [20 mg] indicator is 1."
+      - "83.833 − 7.715 = 76.118."
+      - "0.5866 × 155 = 90.923."
+    solution: |
+      For a 20 mg subject: [10 mg] = 0 and [20 mg] = 1.
+
+      $$\widehat{\operatorname{CHG}} = 83.833 - 7.715 - 0.5866 \times 155 = 76.118 - 90.923 = -14.81 \text{ mmHg}$$
+
+      **Sanity check.** The 20 mg arm's observed mean change was −12.28 mmHg at a mean baseline of about 151. A subject starting 4 mmHg higher is predicted to fall about $0.587 \times 4 = 2.3$ mmHg further, giving roughly −14.6. The model's −14.81 is consistent.
+
+      Note this is a prediction for a *mean*, not for an individual — the residual SD is 10.27 mmHg, so an individual subject could easily land anywhere from −35 to +5.
+    explanation:
+      objective: "Evaluate a fitted regression equation for a specific covariate pattern."
+      given: "The fitted coefficients, a treatment arm and a baseline value."
+      relevant: "The intercept, the relevant treatment coefficient and the baseline coefficient."
+      irrelevant: "The 10 mg coefficient, whose indicator is zero for this subject."
+      calculating: "The predicted mean change for that covariate pattern."
+      method: "Set the indicator variables according to the subject's arm, then evaluate the linear predictor."
+      numbers: "83.833 - 7.715 = 76.118; 0.5866 x 155 = 90.923; 76.118 - 90.923 = -14.81."
+      assumptions: "That 155 mmHg is inside the fitted range (it is; baselines run 130 to 173) and that the model is correctly specified."
+      interpretation: "This is a predicted MEAN for subjects with this profile, not a prediction for any individual — the residual SD of 10.27 mmHg governs individual variation."
+      changes: "For a placebo subject with the same baseline, both indicators are zero and the prediction is -7.09 mmHg — the 7.72 mmHg treatment difference."
+      interviewer: "That you set the indicators correctly and that you distinguish a mean prediction from an individual one."
+
+  - id: stats.mr.joint-test
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: advanced
+    skills: [stats.interactions, stats.multiplicity]
+    lesson: stats-multiple-regression-interactions
+    title: Testing an interaction with three arms
+    prompt: |
+      An interaction between a three-level treatment and a continuous covariate produces **two** interaction coefficients, with p-values **0.42** and **0.77**.
+
+      How should you test whether the treatment effect varies with the covariate?
+    choices:
+      - text: "A joint F test of both interaction terms — comparing the models with and without the interaction, on 2 numerator degrees of freedom."
+        correct: true
+        feedback: "One question, one test. Here F(2, 232) = 0.67, p = 0.51."
+      - text: "Report both individual p-values and conclude no interaction since neither is below 0.05."
+        feedback: "That is two tests of one hypothesis, with no error-rate control and no clear answer if they disagreed."
+      - text: "Take the smaller p-value and apply a Bonferroni correction."
+        feedback: "Selecting the smaller and then correcting is a workable multiplicity strategy for separate hypotheses, but it is less powerful than the joint F test and it answers the wrong question here."
+      - text: "Fit separate models in each arm and compare the covariate slopes."
+        feedback: "That estimates the slopes but provides no formal test of whether they differ, and it discards the pooled residual variance."
+    solution: |
+      Use the **joint F test**: compare the model with the interaction against the model without it.
+
+      $$F(2, 232) = 0.669, \qquad p = 0.513$$
+
+      One scientific question — "does the treatment effect depend on baseline?" — needs one test. A three-level factor requires two coefficients to express that question, so the test has 2 numerator degrees of freedom.
+
+      In R: `anova(fit_main, fit_interaction)`. In SAS, the Type III test of the `trtp*base` term. The same logic applies to any multi-level factor: test the whole term, then examine components only if the overall test is significant.
+    explanation:
+      objective: "Select the correct test for a multi-degree-of-freedom hypothesis."
+      given: "Two interaction coefficients with individual p-values."
+      relevant: "That both coefficients together express a single hypothesis."
+      method: "Compare nested models with an F test whose numerator df equals the number of coefficients being tested."
+      numbers: "F(2, 232) = 0.669, p = 0.513. The extra sum of squares is 141.58 on 2 df against a residual mean square of 105.8."
+      assumptions: "The two models must be nested and fitted on exactly the same rows — a covariate with missing values silently breaks this in some software."
+      interpretation: "No evidence that the treatment effect varies with baseline; the effect estimated at the mean baseline is a reasonable summary across the range."
+      changes: "If the joint test were significant, you would then look at the individual terms and, more usefully, plot the estimated treatment effect across the covariate range."
+      interviewer: "That you test the term rather than its components, and that you can name the numerator degrees of freedom without counting twice."
+
+  - id: stats.mr.r-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: advanced
+    skills: [stats.interactions, r.models, stats.ancova]
+    lesson: stats-multiple-regression-interactions
+    title: An ANCOVA function with an interaction check
+    minutes: 16
+    prompt: |
+      Write `ancova_summary(data, ref = "Placebo")` that:
+
+      1. Sets `TRTP` as a factor with `ref` as the reference level.
+      2. Fits the main-effects ANCOVA `CHG ~ TRTP + BASE`.
+      3. Fits the interaction model with **centred** baseline: `CHG ~ TRTP * I(BASE - 150)`.
+      4. Returns a list with `fit` (the main-effects model), `coefs` (a data frame of the treatment coefficients with their 95% CIs), and `interaction_p` (the **joint** F test p-value).
+
+      The centring matters: without it the interaction model's main effects are evaluated at a baseline of zero.
+    starter: |
+      ancova_summary <- function(data, ref = "Placebo") {
+        data$TRTP <- relevel(factor(data$TRTP), ref = ref)
+
+        fit     <- lm(___, data = data)
+        fit_int <- lm(___, data = data)
+
+        # treatment coefficients with CIs
+
+        # joint test
+
+        list(fit = fit, coefs = ..., interaction_p = ...)
+      }
+    reference: |
+      ancova_summary <- function(data, ref = "Placebo") {
+        data$TRTP <- relevel(factor(data$TRTP), ref = ref)
+
+        fit     <- lm(CHG ~ TRTP + BASE, data = data)
+        fit_int <- lm(CHG ~ TRTP * I(BASE - 150), data = data)
+
+        ci   <- confint(fit)
+        keep <- grep("^TRTP", rownames(ci))
+
+        coefs <- data.frame(
+          term     = rownames(ci)[keep],
+          estimate = unname(coef(fit)[keep]),
+          lower    = unname(ci[keep, 1]),
+          upper    = unname(ci[keep, 2]),
+          row.names = NULL
+        )
+
+        interaction_p <- anova(fit, fit_int)[2, "Pr(>F)"]
+
+        list(fit = fit, coefs = coefs, interaction_p = interaction_p)
+      }
+    hints:
+      - "`relevel(factor(x), ref = ...)` sets the reference level; do it before fitting so both models agree."
+      - "`grep(\"^TRTP\", rownames(ci))` selects just the treatment rows, dropping the intercept and the covariate."
+      - "`anova(fit, fit_int)[2, \"Pr(>F)\"]` is the joint test of both interaction terms — the second row holds the comparison."
+    checks:
+      - pattern: "relevel\\s*\\(\\s*factor\\s*\\("
+        message: "Sets the reference level explicitly before fitting"
+      - pattern: "CHG\\s*~\\s*TRTP\\s*\\+\\s*BASE"
+        message: "Fits the main-effects ANCOVA"
+      - pattern: "I\\s*\\(\\s*BASE\\s*-\\s*150\\s*\\)"
+        message: "Centres the covariate in the interaction model"
+      - pattern: "anova\\s*\\(\\s*fit\\s*,\\s*fit_int\\s*\\)"
+        message: "Uses a joint nested-model F test for the interaction"
+      - pattern: "confint\\s*\\("
+        message: "Returns confidence intervals for the treatment coefficients"
+    expectedOutput: |
+      ```text
+      $coefs
+                     term  estimate      lower     upper
+      1 TRTPVTX-221 10 mg -4.559095  -7.788946 -1.329244
+      2 TRTPVTX-221 20 mg -7.715178 -10.961069 -4.469287
+
+      $interaction_p
+      [1] 0.5131
+      ```
+    solution: |
+      ```r
+      ancova_summary <- function(data, ref = "Placebo") {
+        data$TRTP <- relevel(factor(data$TRTP), ref = ref)
+
+        fit     <- lm(CHG ~ TRTP + BASE, data = data)
+        fit_int <- lm(CHG ~ TRTP * I(BASE - 150), data = data)
+
+        ci   <- confint(fit)
+        keep <- grep("^TRTP", rownames(ci))
+        coefs <- data.frame(term = rownames(ci)[keep],
+                            estimate = unname(coef(fit)[keep]),
+                            lower = unname(ci[keep, 1]),
+                            upper = unname(ci[keep, 2]),
+                            row.names = NULL)
+
+        list(fit = fit, coefs = coefs,
+             interaction_p = anova(fit, fit_int)[2, "Pr(>F)"])
+      }
+      ```
+
+      Three decisions worth defending. **Reference level set explicitly**, so the function does not depend on alphabetical accident. **Covariate centred in the interaction model**, so the main effects stay interpretable even though only the interaction test is being used from it. **Joint test rather than individual coefficients**, because one question deserves one p-value.
+
+      A production version would also return the LS means (via `emmeans`), since those — not the coefficients — are what the efficacy table prints.
+    explanation:
+      objective: "Package an ANCOVA with its interaction check so the analysis choices are explicit in code."
+      given: "A BDS dataset with treatment, baseline and change."
+      relevant: "The reference level, the centring, and which test answers the interaction question."
+      method: "Fit main effects and interaction separately, compare them with a nested F test, extract treatment coefficients with intervals."
+      numbers: "10 mg: -4.559 (-7.789, -1.329); 20 mg: -7.715 (-10.961, -4.469); interaction p = 0.5131."
+      assumptions: "Complete cases; centring at 150 rather than at the observed mean of 149.82 is a presentation choice."
+      computation: "anova(fit, fit_int) requires both models to be fitted on identical rows — a covariate with missing values would silently break the comparison."
+      interpretation: "A non-significant interaction supports reporting a single treatment effect across the baseline range."
+      changes: "Centring at the observed mean would shift the interaction model's main effects slightly; the interaction test is unaffected."
+      interviewer: "That you set the reference level and centre deliberately rather than relying on defaults, and that you return intervals rather than p-values alone."
+
+  - id: stats.mr.ref-level-bug
+    format: hotspot
+    language: sas
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [stats.interactions, sas.stat-procs, qc.code-review]
+    lesson: stats-multiple-regression-interactions
+    title: Every treatment coefficient has the wrong sign
+    minutes: 10
+    prompt: |
+      The efficacy table built from this program shows placebo as having a **larger** reduction than both active arms — the opposite of the observed means.
+
+      Treatment levels sort as `Placebo`, `VTX-221 10 mg`, `VTX-221 20 mg`.
+
+      Click the line that causes the problem.
+    code: |
+      proc glm data=w12;
+        class trtp;
+        model chg = trtp base / solution;
+        ods output ParameterEstimates = pe;
+      run;
+      quit;
+
+      data effects;
+        set pe;
+        where index(parameter, 'trtp') > 0;
+        estimate_mmhg = estimate;
+      run;
+    answerLines: [2]
+    lineNotes:
+      - line: 2
+        note: "`class trtp;` with no `ref=` option makes PROC GLM use the LAST level in sort order — `VTX-221 20 mg` — as the reference. Every coefficient is then a difference FROM the 20 mg arm, so placebo appears as +7.72 rather than the 20 mg arm appearing as -7.72. Add `class trtp (ref='Placebo');`."
+      - line: 3
+        note: "The MODEL statement is correct. `solution` is needed to print the parameter estimates at all, and is not the cause."
+      - line: 11
+        note: "Filtering to the treatment rows is reasonable, but it is copying already-misparameterised estimates. Fixing the sign here rather than at the source would be a patch over a specification error."
+    fixed: |
+      proc glm data=w12;
+        class trtp (ref='Placebo');
+        model chg = trtp base / solution;
+        lsmeans trtp / pdiff cl;
+        ods output ParameterEstimates = pe LSMeanDiffCL = diffs;
+      run;
+      quit;
+    hints:
+      - "The magnitudes look right and the signs are reversed. What determines which arm the others are compared against?"
+      - "Which level does PROC GLM drop when you do not tell it?"
+      - "How would you avoid depending on the parameterisation at all?"
+    solution: |
+      Line 2 — the missing `ref=`. PROC GLM makes the **last** level in sort order the reference, so every coefficient is a difference from `VTX-221 20 mg`.
+
+      Two fixes, and the second is the better habit:
+
+      **Set the reference explicitly:** `class trtp (ref='Placebo');`
+
+      **Stop using raw parameter estimates.** PROC GLM flags them with `B` precisely because they are not uniquely estimable — they depend on the parameterisation. `LSMEANS trtp / PDIFF CL` gives the adjusted means and their pairwise differences with intervals, which are invariant to the coding and are what the efficacy table should contain.
+
+      Never fix a sign downstream by negating a value in a DATA step. That hides a specification error behind a correct-looking number, and the next person to touch the program will not know it is there.
+    explanation:
+      objective: "Locate the cause of reversed coefficient signs in a categorical model."
+      given: "An efficacy table whose direction contradicts the observed means."
+      relevant: "That no reference level was specified and PROC GLM defaults to the last level."
+      irrelevant: "The downstream DATA step, which faithfully copies the wrong values."
+      method: "Correct magnitudes with reversed signs point at parameterisation, not computation."
+      assumptions: "PROC GLM's default differs from R's, so a QC program in R would not reproduce the error — which is how it gets caught."
+      interpretation: "A direction error in a primary efficacy table reverses the trial's conclusion and is invisible without a deliberate check."
+      changes: "Reporting LSMEANS differences instead of parameter estimates makes the output invariant to the reference level entirely."
+      interviewer: "That you fix it at the source and can explain why LS means are the right output, not just that ref= is the right option."
+
+  - id: stats.mr.chg-vs-aval
+    format: numeric
+    modes: [qc, check, independent]
+    difficulty: advanced
+    skills: [stats.interactions, stats.ancova, qc.compare]
+    lesson: stats-multiple-regression-interactions
+    title: Two analysts, two outcomes, one answer
+    prompt: |
+      Analyst A fits `CHG ~ TRTP + BASE` and reports a 20 mg versus placebo effect of **−7.715 (SE 1.648)**.
+
+      Analyst B fits `AVAL ~ TRTP + BASE` on the same data.
+
+      What treatment effect will Analyst B report, to three decimal places?
+    answer: -7.715
+    tolerance: 0.01
+    unit: mmHg
+    hints:
+      - "AVAL = CHG + BASE, and BASE is already a covariate in both models."
+      - "Adding a term that is already in the model to the outcome shifts only that term's coefficient."
+      - "Think about what changes and what cannot change."
+    solution: |
+      **Exactly the same: −7.715 (SE 1.648).**
+
+      Because `BASE` is a covariate in both models, replacing the outcome `CHG` by `AVAL = CHG + BASE` shifts only the `BASE` coefficient — by exactly 1, from −0.587 to +0.413. Everything else is identical: the treatment coefficients, their standard errors, the residuals, the residual SD and the p-values.
+
+      **This is a genuinely useful QC fact.** If two programs disagree only because one analysed `CHG` and the other `AVAL`, they should not disagree at all on the treatment effect — so a difference in the treatment row means something *else* is wrong, and looking at the baseline coefficients (which should differ by exactly 1) confirms the models are otherwise identical.
+
+      It also means the SAP's choice between `CHG` and `AVAL` as the analysis variable is a presentation decision, not a statistical one — provided baseline is in the model.
+    explanation:
+      objective: "Recognise an algebraic equivalence between two apparently different ANCOVA specifications."
+      given: "Two models differing only in whether baseline is subtracted from the outcome."
+      relevant: "That baseline appears as a covariate in both."
+      calculating: "The treatment effect Analyst B will obtain."
+      method: "Adding a covariate that is already in the model to the outcome changes only that covariate's coefficient, by one. All other coefficients, standard errors and residuals are invariant."
+      numbers: "Treatment effect -7.715 (SE 1.648) in both; the BASE coefficient moves from -0.5866 to +0.4134, a difference of exactly 1."
+      assumptions: "Baseline must be in the model. Without it, CHG ~ TRTP and AVAL ~ TRTP give genuinely different answers (-8.976 versus roughly -6.83)."
+      interpretation: "The equivalence is exact, not approximate, and it holds for the standard errors too."
+      changes: "If baseline were NOT a covariate, the two analyses would differ substantially, which is the case where the outcome choice does matter."
+      interviewer: "That you can state the condition under which the equivalence holds, since 'CHG and AVAL always agree' is false without the covariate."
+
+  - id: stats.mr.subgroup-open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [stats.interactions, communication.interviewing, trials.design]
+    lesson: stats-multiple-regression-interactions
+    title: The elderly subgroup
+    prompt: |
+      **Interviewer:** "Your forest plot shows a hazard ratio of 0.55 in patients over 65 and 0.88 in patients under 65. The team wants to say the drug works better in the elderly. How do you respond?"
+    modelAnswer: |
+      I'd separate what the data can support from what is being claimed, and then give them something they can actually use.
+
+      The first thing to establish is that comparing two subgroup point estimates is not the analysis. Each subgroup estimate is noisier than the overall one — roughly, halving the sample doubles the variance of the log hazard ratio — so the *spread* between subgroup estimates is expected to be wide even when the true effect is identical everywhere. Picking the most extreme subgroup and reporting it is selection on the outcome, and the extreme estimate is the one most inflated by that selection. In a forest plot with eight subgroups, one of them looking notably better than the rest is the null expectation, not a finding.
+
+      The relevant test is the **treatment-by-age interaction**, fitted on the whole dataset as a single term — not two separate p-values. I'd fit it and report it. And I'd say in advance what to expect: interaction tests are typically underpowered by a factor of about four relative to the main effect, so a non-significant interaction does not rule out a real difference, and a significant one in an unplanned analysis is not reliable either. That asymmetry is uncomfortable and it is the honest position.
+
+      Then the questions that determine how the finding can be described at all. Was this subgroup pre-specified in the SAP, with a multiplicity strategy? Is the age cut at 65 pre-specified, or was it chosen after looking? If age is continuous, dichotomising at 65 discards information and the cut point becomes another researcher degree of freedom — I'd want to see the treatment effect modelled across age continuously, which is both more powerful and harder to game.
+
+      What I'd offer as the constructive version: report the subgroup estimates with their intervals in the forest plot as usual, report the interaction p-value, and describe the analysis as exploratory and hypothesis-generating in the CSR. If the team genuinely believes there is an age effect, the way to establish it is to pre-specify it in the next trial, or to look for it in a pooled analysis across the programme where there is enough data to test it.
+
+      What I would not do is let "works better in the elderly" into a document where it could be read as a claim. That sentence has regulatory and labelling implications, and this analysis cannot support it.
+    rubric:
+      - Explains why subgroup point estimates are unstable and why the extreme one is selected
+      - Identifies the treatment-by-subgroup interaction as the correct test
+      - Notes that interaction tests are typically underpowered, and states the asymmetry honestly
+      - Asks whether the subgroup and the cut point were pre-specified
+      - Suggests modelling a continuous covariate continuously rather than dichotomising
+      - Proposes a concrete reporting approach and a path to establishing the finding properly
+    redFlags:
+      - "Accepts the subgroup claim because the point estimates differ substantially"
+      - "Rejects it purely on multiplicity grounds without offering the interaction test"
+      - "Compares the two subgroup p-values"
+      - "Does not ask whether the analysis was pre-specified"
+      - "Fails to note the labelling implications of the proposed wording"

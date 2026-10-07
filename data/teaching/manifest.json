@@ -1,0 +1,50 @@
+{
+  "study": "teaching",
+  "title": "Teaching datasets",
+  "description": "Tiny fixed datasets used for hand calculations in lessons and interactive widgets, so the same numbers can be reproduced in SAS, R and Python.",
+  "synthetic": true,
+  "generator": "scripts/data/teaching/generate.ts",
+  "seed": "fixed",
+  "datasets": [
+    {
+      "id": "teaching/km12",
+      "layer": "teaching",
+      "name": "KM12",
+      "label": "Twelve-subject survival dataset for Kaplan–Meier by hand",
+      "file": "km12.csv",
+      "rows": 12,
+      "keys": [
+        "SUBJ"
+      ],
+      "structure": "One record per subject",
+      "description": "Twelve subjects with follow-up times in months. Includes a tie between an event and a censoring at month 6, so the convention that events precede censorings at the same time can be demonstrated. Kaplan–Meier median = 11 months.",
+      "columns": [
+        {
+          "name": "SUBJ",
+          "label": "Subject identifier",
+          "type": "char",
+          "role": "Identifier"
+        },
+        {
+          "name": "TIME_MONTHS",
+          "label": "Time to event or censoring (months)",
+          "type": "num",
+          "role": "Timing"
+        },
+        {
+          "name": "EVENT",
+          "label": "Event indicator (1 = event, 0 = censored)",
+          "type": "num",
+          "role": "Result",
+          "notes": "Note that ADaM ADTTE uses CNSR with the opposite convention (0 = event)."
+        },
+        {
+          "name": "ARM",
+          "label": "Arbitrary group for two-sample exercises",
+          "type": "char",
+          "role": "Grouping"
+        }
+      ]
+    }
+  ]
+}

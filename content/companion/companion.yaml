@@ -1,0 +1,738 @@
+topics:
+  # ------------------------------------------------------------------
+  - id: comp-two-sample-t
+    title: The two-sample t test
+    course: inference
+    academic: |
+      Your inference course derives the two-sample $t$ statistic, proves that
+      $(\bar X_1 - \bar X_2)/\mathrm{SE}$ follows $t_{n_1+n_2-2}$ under normality and equal variances,
+      and has you compute it by hand and from a table. The equal-variance version is presented first
+      because it is the one with a clean derivation; Welch's is usually a remark.
+
+      The homework asks: *"Test whether the two population means differ at the 5% level."*
+    industry: |
+      Nobody asks you to test whether two means differ. They ask for a **row in a table**: an estimate,
+      a confidence interval, and a p-value — in that order of importance.
+
+      Three things change:
+
+      **Welch is the default, not the footnote.** R's `t.test()` defaults to `var.equal = FALSE`, most
+      modern SAPs specify Satterthwaite, and the equal-variance version is the special case. The
+      derivation your course spent a week on describes the analysis you will run least often.
+
+      **You never choose after seeing the data.** The Folded F test that SAS prints next to the t test
+      is not a decision rule — using it makes your analysis two-stage and invalidates the error rate.
+      Which method is used is written in the SAP before anyone is unblinded.
+
+      **The t test is rarely the primary analysis.** For a continuous endpoint with a baseline
+      measurement, the primary is ANCOVA — which is more powerful and which your regression course
+      already taught you, without telling you it was the same thing.
+    clinicalExample: |
+      In VTX221-201, the Week 12 comparison of VTX-221 10 mg against placebo:
+
+      | Method | t | df | p | 95% CI |
+      |---|---:|---:|---:|---|
+      | Pooled | −3.0084 | 156 | 0.00306 | (−9.158, −1.899) |
+      | Welch | −3.0076 | 155.41 | 0.00307 | (−9.159, −1.897) |
+
+      Identical to three decimals, because the arms have nearly equal SDs (11.48 and 11.61) and nearly
+      equal sizes (81 and 77). **That is the normal case**, and it is why most people go years without
+      discovering the two methods differ — until they meet an unbalanced comparison and a QC mismatch.
+
+      The number that actually goes in the CSR is the difference: **−5.53 mmHg (95% CI −9.16 to −1.90)**.
+    sas: |
+      proc ttest data=advs alpha=0.05 sides=2;
+        where paramcd = 'SYSBP' and anl01fl = 'Y' and avisitn = 12
+              and trtp in ('Placebo', 'VTX-221 10 mg');
+        class trtp;
+        var chg;
+      run;
+
+      /* SAS prints BOTH rows and makes no choice for you.
+         The SAP decides which one is the analysis. */
+    r: |
+      w12 <- advs |>
+        dplyr::filter(PARAMCD == "SYSBP", ANL01FL == "Y", AVISITN == 12,
+                      TRTP %in% c("VTX-221 10 mg", "Placebo"))
+
+      # Write the arguments out even when they are the defaults —
+      # R defaults to Welch, SciPy defaults to pooled.
+      t.test(CHG ~ TRTP, data = w12,
+             var.equal = FALSE, alternative = "two.sided")
+    python: |
+      from scipy import stats
+
+      d10 = w12.loc[w12.TRTP == "VTX-221 10 mg", "CHG"]
+      pbo = w12.loc[w12.TRTP == "Placebo", "CHG"]
+
+      # equal_var defaults to TRUE in SciPy — the opposite of R
+      stats.ttest_ind(d10, pbo, equal_var=False)
+    interview:
+      question: |
+        "When would you use a pooled t test rather than Welch's?"
+      answer: |
+        The honest answer starts by reframing the question, because the interviewer is usually probing
+        whether you know that this is a **pre-specification** decision rather than a data-driven one.
+
+        "Whichever the SAP specifies. The pooled test assumes equal variances and is slightly more
+        powerful when that holds; Welch does not assume it and costs very little when variances are
+        equal. Most current SAPs specify Welch for that reason.
+
+        What I would *not* do is choose after seeing the data — using the equality-of-variances test as
+        a switch makes the analysis two-stage, so the real type I error is not the nominal 5%, and the
+        F test is itself unreliable under non-normality, which is exactly when you would want it."
+
+        If they push on the practical side, the useful detail is that SAS prints both rows and R and
+        SciPy have opposite defaults — so an under-specified SAP produces a QC discrepancy where neither
+        programmer has made a mistake.
+    lessons: [stats-t-tests-paired, stats-hypothesis-testing]
+    skills: [stats.t-tests, stats.hypothesis-testing, r.sas-translation]
+
+  # ------------------------------------------------------------------
+  - id: comp-linear-regression
+    title: Linear regression
+    course: regression
+    academic: |
+      Your regression course builds OLS from the normal equations, derives
+      $\hat\beta = (X'X)^{-1}X'y$, proves the Gauss–Markov theorem, and spends substantial time on
+      $R^2$, model selection (stepwise, AIC, BIC) and prediction intervals.
+
+      Homework problems tend to be: *"Fit the model, interpret the coefficients, assess the fit."*
+      A model with $R^2 = 0.09$ would be marked as a poor fit.
+    industry: |
+      The machinery is identical. The **purpose** is completely different, and three habits from
+      coursework actively mislead.
+
+      **$R^2$ is nearly irrelevant.** Clinical models routinely explain under 10% of the variance and
+      are still exactly right. Most of why one patient's blood pressure fell more than another's has
+      nothing to do with which arm they were in. The numbers that matter are the coefficient, its
+      confidence interval, and the residual SD.
+
+      **There is no model selection.** The model is written in the SAP before unblinding, with a small
+      number of pre-specified covariates. Stepwise selection — a whole week of your course — is not
+      used for a confirmatory analysis, because selecting on the data inflates the type I error of the
+      treatment test.
+
+      **You are estimating one coefficient, not building a predictor.** Every other term exists to make
+      that one coefficient more precise or less confounded. Nobody will use the model to predict a new
+      patient, so the predictive-accuracy apparatus — train/test splits, cross-validation — does not apply.
+    clinicalExample: |
+      The primary analysis of VTX221-201 is a regression: `CHG ~ TRTP + BASE`.
+
+      ```text
+                        Estimate  Std. Error  t value  Pr(>|t|)
+      (Intercept)       83.83333    11.11907    7.540   < 0.0001
+      TRTPVTX-221 10 mg -4.55909     1.63939   -2.781   0.00586
+      TRTPVTX-221 20 mg -7.71518     1.64753   -4.683   < 0.0001
+      BASE              -0.58660     0.07444   -7.880   < 0.0001
+      ```
+
+      $R^2 = 0.283$. Residual SD 10.27 mmHg on 234 df.
+
+      **Only two of those twelve numbers go anywhere near the CSR** — the two treatment coefficients,
+      converted into LS mean differences with confidence intervals. The intercept is meaningless (it is
+      the predicted change at a baseline blood pressure of zero), and the baseline coefficient is a
+      nuisance parameter that exists to reduce the residual variance.
+
+      That variance reduction is the whole point: it cut the treatment-effect SE from 1.841 to 1.648 —
+      the precision of a trial 25% larger.
+    sas: |
+      proc glm data=w12;
+        class trtp (ref='Placebo');
+        model chg = trtp base / solution clparm;
+        lsmeans trtp / pdiff cl;
+      run;
+      quit;
+
+      /* LSMEANS, not the parameter estimates, is what the table reports. */
+    r: |
+      w12$TRTP <- relevel(factor(w12$TRTP), ref = "Placebo")
+      fit <- lm(CHG ~ TRTP + BASE, data = w12)
+
+      summary(fit)
+      confint(fit)          # a separate call — summary() gives no intervals
+
+      library(emmeans)
+      emmeans(fit, ~ TRTP)             # LS means
+      pairs(emmeans(fit, ~ TRTP))      # differences
+    python: |
+      import statsmodels.formula.api as smf
+
+      fit = smf.ols("CHG ~ C(TRTP, Treatment('Placebo')) + BASE", data=w12).fit()
+      print(fit.summary())
+
+      # NOT sklearn — it gives coefficients with no standard errors,
+      # because it is built for prediction rather than inference.
+    interview:
+      question: |
+        "Your model has an R² of 0.09. Is that a problem?"
+      answer: |
+        "Not on its own — it depends entirely on what the model is for.
+
+        If the goal is to estimate a treatment effect, $R^2$ is almost beside the point. Most of the
+        variation in a clinical outcome is between-patient variation that nothing we measured explains.
+        A low $R^2$ with a precisely estimated, clinically meaningful treatment coefficient is a good
+        model for its purpose.
+
+        The numbers I would look at instead are the coefficient and its confidence interval — is the
+        effect big enough to matter, and how sure are we — and the residual SD, which tells me what an
+        individual prediction would be worth. In our trial that residual SD was about 11 mmHg, so the
+        model is useful for comparing groups and useless for predicting a patient.
+
+        $R^2$ would matter if I were building something to predict individuals — but then I would also
+        be using held-out data to assess it, which is a different exercise."
+
+        The follow-up to be ready for is "so when *does* $R^2$ matter?" — and the honest answer is:
+        when the model's job is prediction, and even then out-of-sample performance matters more.
+    lessons: [stats-linear-regression, stats-multiple-regression-interactions, stats-ancova-covariate-adjustment]
+    skills: [stats.linear-regression, stats.ancova, stats.interactions]
+
+  # ------------------------------------------------------------------
+  - id: comp-survival
+    title: Survival analysis
+    course: survival
+    academic: |
+      Your survival course defines the hazard, survivor and cumulative hazard functions, derives the
+      Kaplan–Meier estimator as a non-parametric MLE, builds Greenwood's variance formula, and develops
+      the Cox partial likelihood in detail. Parametric models — exponential, Weibull, log-logistic —
+      usually get a chapter.
+
+      Data comes as `(time, status)` with `status = 1` for an event.
+    industry: |
+      The estimators are the same. What is new is everything **around** them.
+
+      **The censoring rules are the work.** Your course treats censoring as given — a subject was
+      followed for 14 months and did not have an event. In a real trial the SAP contains five or more
+      numbered rules defining *when and at what date* each subject is censored, and implementing them
+      from the source domains is the bulk of the effort. Deriving ADTTE takes far longer than fitting
+      the model.
+
+      **`CNSR` is backwards.** ADaM uses `CNSR = 0` for an event and `1` for censored — the opposite of
+      the `status = 1` convention in your course and in R's `survival` package. Studies that distinguish
+      censoring *reasons* use `CNSR` values 2, 3, 4, so `1 - CNSR` produces negative values and silently
+      corrupts the analysis.
+
+      **Ties matter and the defaults differ.** SAS `PROC PHREG` defaults to Breslow; R's `coxph`
+      defaults to Efron. On the same data these give different hazard ratios in the third decimal —
+      enough to fail a QC comparison.
+
+      **Parametric models are rare.** Almost all confirmatory time-to-event analysis is Kaplan–Meier,
+      stratified log-rank and Cox. Weibull models appear mainly in health-economic extrapolation.
+    clinicalExample: |
+      CBX417-301, progression-free survival, 420 subjects:
+
+      | | CBX-417 + Docetaxel | Placebo + Docetaxel |
+      |---|---:|---:|
+      | Events | 155 | 177 |
+      | Median PFS (months) | 6.93 | 4.17 |
+      | 95% CI | (5.55, 8.28) | (3.98, 5.49) |
+
+      Stratified Cox: **HR 0.681 (95% CI 0.546 to 0.849)**. Stratified log-rank $p = 0.00064$.
+
+      Note the censoring breakdown that your coursework never mentions: of the 88 censored subjects,
+      36 were alive without progression at cut-off, 28 started new anticancer therapy first, 15 had two
+      or more consecutive missed assessments, and 9 had no adequate post-baseline assessment. **Four
+      different censoring rules**, each with its own date derivation, each specified in the SAP.
+    sas: |
+      proc lifetest data=adtte method=km conftype=loglog plots=survival(atrisk);
+        where paramcd = 'PFS';
+        time aval * cnsr(1, 2, 3, 4);     /* every non-zero CNSR is censored */
+        strata trtp / group=trtp;
+      run;
+
+      proc phreg data=adtte;
+        where paramcd = 'PFS';
+        class trtp (ref='Placebo + Docetaxel');
+        model aval * cnsr(1, 2, 3, 4) = trtp / ties=efron rl;
+        strata strat1r strat2r;
+      run;
+
+      /* ties=efron to match R; SAS's default is BRESLOW */
+    r: |
+      library(survival)
+
+      pfs <- subset(adtte, PARAMCD == "PFS")
+      pfs$event <- as.integer(pfs$CNSR == 0)   # NOT 1 - CNSR
+
+      fit <- survfit(Surv(AVAL, event) ~ TRTP, data = pfs, conf.type = "log-log")
+      summary(fit)$table
+
+      cox <- coxph(Surv(AVAL, event) ~ TRTP + strata(STRAT1R, STRAT2R),
+                   data = pfs, ties = "efron")
+      summary(cox)
+    python: |
+      from lifelines import KaplanMeierFitter, CoxPHFitter
+
+      pfs = adtte.query("PARAMCD == 'PFS'").assign(event=lambda d: (d.CNSR == 0).astype(int))
+
+      kmf = KaplanMeierFitter().fit(pfs.AVAL, pfs.event)
+      kmf.median_survival_time_
+
+      # lifelines uses Efron for ties and supports strata
+      CoxPHFitter().fit(pfs[["AVAL", "event", "TRTPN"]],
+                        duration_col="AVAL", event_col="event")
+    interview:
+      question: |
+        "Walk me through how you would derive a PFS dataset."
+      answer: |
+        Start with the endpoint definition, then the rules, then the mechanics — that order shows you
+        understand it is a specification problem rather than a coding problem.
+
+        "PFS is time from randomization to documented progression per RECIST or death from any cause,
+        whichever is first. So the origin is the randomization date from DS, not the treatment start
+        date — the ITT principle anchors on randomization.
+
+        Then the censoring rules from the SAP, and there are usually four or five: censor at the last
+        adequate assessment if no event by cut-off; censor at the last assessment before new anticancer
+        therapy; censor at the last assessment before a gap of two or more missed scans; censor at
+        randomization if there is no adequate post-baseline assessment. Each has its own date, and rules
+        3 and 4 exist because both new therapy and a long gap are informative — they happen more to
+        subjects doing badly.
+
+        Mechanically I'd build a per-subject timeline from RS for progression, DS for death and
+        disposition, and CM and PR for subsequent therapy, then apply the rules in the SAP's stated
+        order, because the order changes the answer for a subject who triggers two rules.
+
+        And `CNSR = 0` means the event occurred — the opposite of R's convention, so the conversion is
+        `CNSR == 0`, never `1 - CNSR`, because studies with censoring-reason codes have `CNSR` values
+        above 1."
+
+        If they ask what is hardest, the true answer is partial dates and same-day events — a
+        progression documented on the day new therapy started needs the SAP to say which rule wins.
+    lessons: [stats-power-sample-size]
+    skills: [stats.survival, adam.adtte, stats.cox, trials.endpoints]
+
+  # ------------------------------------------------------------------
+  - id: comp-categorical
+    title: Categorical data analysis
+    course: categorical
+    academic: |
+      Your categorical course covers contingency tables, the chi-square and likelihood-ratio tests,
+      Fisher's exact test, odds ratios and their asymptotic variance, log-linear models, and logistic
+      regression with its link functions and deviance-based inference.
+
+      Exercises are typically: *"Test for independence in this 2×2 table."*
+    industry: |
+      **The test is the least important output.** What goes in the table is the effect measure with a
+      confidence interval; the p-value comes last, and in safety tables usually not at all.
+
+      **Three effect measures, and they are not interchangeable.** The risk difference, relative risk
+      and odds ratio describe the same 2×2 table and tell a reader three different stories. Your course
+      emphasises the odds ratio because it is what logistic regression estimates and what case-control
+      designs permit; clinical reporting usually wants the **risk difference**, because it says what
+      happens to 100 patients.
+
+      Calling an odds ratio a relative risk is a factual error, and the OR always sits further from 1 —
+      in the example below, 3.31 versus 2.07.
+
+      **Stratified analysis is the default, not an extension.** If the trial randomized within strata,
+      the analysis uses CMH, because ICH E9 §5.7 says the analysis should reflect the randomization.
+      Your course probably covered Mantel–Haenszel as a topic; in practice it is the standard method
+      for a binary secondary endpoint.
+
+      **Most safety tables carry no p-values at all**, because a safety database contains hundreds of
+      preferred terms and testing each produces false positives by the dozen.
+    clinicalExample: |
+      Week 12 controlled hypertension (SBP < 140 mmHg), 20 mg versus placebo:
+
+      |  | Controlled | Not | Total |
+      |---|---:|---:|---:|
+      | VTX-221 20 mg | 43 | 37 | 80 |
+      | Placebo | 20 | 57 | 77 |
+
+      | Measure | Estimate | 95% CI |
+      |---|---:|---|
+      | Risk difference | **27.8 pp** | (13.1, 42.5) |
+      | Relative risk | 2.07 | (1.35, 3.18) |
+      | Odds ratio | 3.31 | (1.69, 6.49) |
+
+      Chi-square $p = 0.00039$; stratified by the randomization stratum, CMH $p = 0.00018$ with a common
+      OR of 3.74.
+
+      **The number a clinician acts on is 27.8 percentage points** — about one additional patient at
+      goal for every four treated. The odds ratio should not appear in patient-facing material; nobody
+      outside statistics reasons in odds.
+    sas: |
+      proc freq data=resp order=data;
+        tables trtp * resp / chisq riskdiff relrisk nocol nopercent;
+        exact fisher;
+      run;
+
+      /* Stratified by the randomization stratum */
+      proc freq data=resp order=data;
+        tables sbpgr1n * trtp * resp / cmh nocol nopercent;
+      run;
+      /* The FIRST variable in the three-way syntax is the stratifier. */
+    r: |
+      tab <- table(w12$TRTP, w12$RESP)
+
+      chisq.test(tab, correct = FALSE)   # R defaults to correct = TRUE for 2x2
+      fisher.test(tab)
+
+      # Always look at these before trusting a chi-square
+      chisq.test(tab, correct = FALSE)$expected
+
+      # Stratified — stratum must be the THIRD dimension
+      mantelhaen.test(table(w12$TRTP, w12$RESP, w12$SBPGR1N), correct = FALSE)
+    python: |
+      from statsmodels.stats.contingency_tables import Table2x2, StratifiedTable
+
+      t = Table2x2([[43, 37], [20, 57]])
+      t.riskratio, t.riskratio_confint()
+      t.oddsratio, t.oddsratio_confint()
+      t.summary()
+
+      StratifiedTable([tab_s1, tab_s2]).test_null_odds()
+    interview:
+      question: |
+        "Our responder rate went from 26% on placebo to 54% on drug. How would you report that?"
+      answer: |
+        "I'd lead with the absolute difference, because it is the number a clinician can use: a 27.8
+        percentage-point improvement, 95% CI 13.1 to 42.5. That translates to roughly one additional
+        patient reaching goal for every four treated — an NNT of about 3.6.
+
+        I'd give the relative risk alongside, 2.07, since 'about twice as likely' is how people
+        naturally talk about it. I would not lead with the odds ratio of 3.31, because 'the odds were
+        3.3 times higher' gets misread as 'three times more likely', and the OR always exaggerates
+        relative to the risk ratio when the event is common.
+
+        For the test, since this trial randomized within baseline BP strata, I'd use CMH stratified by
+        those strata rather than a plain chi-square — that is what ICH E9 expects, and here it gives a
+        slightly stronger result because the strata differ in baseline event rate.
+
+        And I'd state the denominator explicitly. 43 out of 80 subjects *with a Week 12 measurement* is
+        54%; out of all 89 randomized it is 48%. Which one is correct depends on the SAP's
+        missing-data handling, and for a responder endpoint non-responder imputation is common."
+
+        The interviewer is checking whether you know the three measures are different and whether you
+        volunteer the denominator question without prompting.
+    lessons: [stats-categorical-tests, stats-confidence-intervals]
+    skills: [stats.categorical, stats.confidence-intervals, tlf.denominators]
+
+  # ------------------------------------------------------------------
+  - id: comp-missing-data
+    title: Missing data and longitudinal models
+    course: longitudinal
+    academic: |
+      Your longitudinal course covers mixed models — random intercepts and slopes, covariance
+      structures, REML versus ML — and introduces Rubin's taxonomy of MCAR, MAR and MNAR along with
+      multiple imputation.
+
+      The emphasis is on the modelling: which covariance structure fits, how to test variance
+      components, how to interpret random effects.
+    industry: |
+      **The taxonomy is the operative content, and it drives a regulatory conversation.**
+
+      **MMRM is the standard, and it is a specific model.** Treatment, visit, treatment-by-visit,
+      baseline and baseline-by-visit, with an **unstructured** covariance matrix and often Kenward–Roger
+      degrees of freedom. Not a random-intercept model — the industry default uses a fully general
+      covariance rather than imposing a structure, because the structure is rarely defensible and the
+      cost of the extra parameters is small at typical trial sizes.
+
+      **LOCF is dead and you should know why.** It was the default for decades; the 2010 National
+      Research Council report commissioned by FDA is the usual citation for its abandonment. It assumes
+      a subject's outcome froze when they left, understates variability, and can bias in either direction.
+
+      **You cannot test which mechanism holds**, because the distinguishing information is exactly what
+      is missing. That is why sensitivity analyses under MNAR — tipping point, jump-to-reference — are
+      expected rather than optional.
+
+      **ICH E9(R1) reframed all of this as an estimand question.** Discontinuation is an *intercurrent
+      event*, and the SAP must state the strategy for handling it before choosing a model. "Which
+      imputation should we use?" is the wrong first question.
+    clinicalExample: |
+      VTX221-201 had 13% discontinuation, and it was not random: lack of efficacy was the most common
+      reason and was concentrated on placebo (10 subjects versus 5 and 4).
+
+      | Analysis | 10 mg − placebo | 20 mg − placebo |
+      |---|---:|---:|
+      | Complete-case ANCOVA at Week 12 | −4.56 (SE 1.639) | −7.72 (SE 1.648) |
+      | **MMRM, all observed visits** | **−5.42 (SE 1.625)** | **−8.35 (SE 1.631)** |
+
+      **The difference has a mechanism.** Subjects who left for lack of efficacy were doing badly, and
+      they left disproportionately from placebo. So placebo *completers* are the better responders,
+      which flatters the placebo arm in a complete-case analysis and shrinks the estimated treatment
+      difference.
+
+      MMRM uses the pre-dropout visits of subjects who left and, under MAR, corrects for it. The
+      estimated within-subject correlations were 0.67 (Weeks 2–4), 0.56, 0.64 and 0.45 (Weeks 2–12) —
+      declining with separation, which is why an unstructured covariance is a better description than
+      compound symmetry.
+    sas: |
+      proc mixed data=advs method=reml;
+        where paramcd = 'SYSBP' and anl01fl = 'Y' and avisitn > 0;
+        class usubjid trtp avisit;
+        model chg = trtp avisit trtp*avisit base base*avisit / ddfm=kr;
+        repeated avisit / subject=usubjid type=un;
+        lsmeans trtp*avisit / pdiff cl;
+      run;
+
+      /* type=un is the unstructured covariance; ddfm=kr is Kenward-Roger */
+    r: |
+      library(nlme)
+
+      pb <- subset(advs, PARAMCD == "SYSBP" & ANL01FL == "Y" & AVISITN > 0)
+      pb$AVISIT <- factor(pb$AVISITN)
+
+      mm <- gls(CHG ~ TRTP * AVISIT + BASE * AVISIT, data = pb,
+                correlation = corSymm(form = ~ as.integer(AVISIT) | USUBJID),
+                weights = varIdent(form = ~ 1 | AVISIT),
+                method = "REML")
+
+      # nlme has no Kenward-Roger; the mmrm package does and is closer to
+      # PROC MIXED. CIs from gls use the normal approximation.
+    interview:
+      question: |
+        "Twenty percent of subjects discontinued before the final visit. How does that affect your analysis?"
+      answer: |
+        Lead with the estimand, then the mechanism, then the model — that order is what signals you
+        have read E9(R1) rather than just a textbook chapter.
+
+        "First I'd want the estimand settled: discontinuation is an intercurrent event, and the SAP has
+        to say what treatment effect we are estimating. Is it the effect regardless of discontinuation —
+        a treatment-policy strategy — or the effect while on treatment? Those are different questions
+        and they license different analyses.
+
+        Then the mechanism. I'd look at *why* subjects left and whether it differs by arm. In our
+        hypertension trial, lack-of-efficacy dropout was concentrated on placebo, which means placebo
+        completers are the better responders — so a complete-case analysis flatters placebo and shrinks
+        the treatment difference. That is MAR: missingness depends on observed outcomes.
+
+        Under MAR, an MMRM using all observed post-baseline visits is valid where a complete-case
+        analysis is not, and in our data it moved the estimate from −7.72 to −8.35 mmHg. I would not use
+        LOCF — it assumes the outcome froze at discontinuation, and it has been out of favour since the
+        2010 NRC report.
+
+        And because we cannot test MAR against MNAR — the distinguishing information is the missing data
+        itself — I'd pre-specify sensitivity analyses that assume the missing data are worse than MAR
+        implies: a tipping-point analysis, or jump-to-reference imputation."
+
+        If they ask what a tipping-point analysis is, the short version is: progressively penalise the
+        imputed values in the treated arm until the conclusion reverses, then ask whether that degree
+        of penalty is clinically plausible.
+    lessons: [stats-ancova-covariate-adjustment]
+    skills: [stats.missing-data, stats.mixed-models, stats.sensitivity]
+
+  # ------------------------------------------------------------------
+  - id: comp-power
+    title: Power and sample size
+    course: design
+    academic: |
+      Your design course derives the power function, shows the relationship between $\alpha$, $\beta$,
+      effect size and $n$, and has you compute sample sizes for means and proportions. Power curves get
+      plotted; the four-way trade-off is stated clearly.
+
+      Problems are usually: *"How many subjects are needed to detect a difference of δ with 90% power?"*
+    industry: |
+      The formulas are the same and two things are new.
+
+      **Time-to-event trials are sized in events, not subjects.** The Schoenfeld formula gives a
+      required number of **events**; the subject count and accrual period are then chosen so those
+      events arrive on an acceptable timeline. This changes how the whole trial is run — analyses trigger
+      on event count, the database-lock date is uncertain at design time, and a better-than-expected drug
+      delays its own read-out.
+
+      **The assumptions are contested, and that is the real work.** The SD or control event rate you plug
+      in is someone's estimate, usually from a smaller earlier trial where it was itself imprecise. Since
+      $n \propto \sigma^2$, a 10% error in the SD changes the sample size by 21%. A sample-size section
+      without a sensitivity table across plausible assumptions is incomplete.
+
+      **Powering on the phase II point estimate is the classic failure.** Phase II estimates are
+      selected on — the compound advanced *because* the estimate looked good — so they are biased upward.
+      Power on the smallest effect that would be clinically worth detecting instead.
+
+      And post-hoc power, computed from the observed effect, is a deterministic function of the p-value
+      and adds nothing. If a trial was negative, report the confidence interval.
+    clinicalExample: |
+      The CBX417-301 protocol states: 420 subjects, **331 PFS events**, 90% power for HR 0.70 at
+      two-sided α = 0.05.
+
+      Reproducing 331 from the Schoenfeld formula:
+
+      $$d = \frac{4(z_{0.975} + z_{0.90})^2}{[\ln(\mathrm{HR})]^2}
+        = \frac{4(1.95996 + 1.28155)^2}{(-0.356675)^2}
+        = \frac{42.0297}{0.127217} = 330.38 \rightarrow \mathbf{331}$$
+
+      Four inputs, one formula, the protocol number exactly. Reproducing someone else's sample size is a
+      task you will be given early in a biometrics job.
+
+      **The sensitivity that matters:** at HR 0.75 instead of 0.70, the requirement rises to 508 events —
+      a 54% increase for a five-point change in an assumed quantity nobody can observe in advance.
+    sas: |
+      proc power;
+        twosamplesurvival
+          test        = logrank
+          hazardratio = 0.70
+          alpha       = 0.05
+          power       = 0.90
+          eventstotal = .;         /* the missing value marks the unknown */
+      run;
+
+      proc power;
+        twosamplemeans test=diff meandiff=5 stddev=11.55
+          alpha=0.05 power=0.90 npergroup=.;
+      run;
+    r: |
+      # Continuous
+      power.t.test(delta = 5, sd = 11.55, sig.level = 0.05, power = 0.90)
+
+      # Time to event — worth writing once yourself
+      schoenfeld_events <- function(hr, alpha = 0.05, power = 0.90, ratio = 1) {
+        za  <- qnorm(1 - alpha / 2)   # two-sided
+        zb  <- qnorm(power)           # one-sided
+        pi1 <- ratio / (1 + ratio)
+        ceiling((za + zb)^2 / (pi1 * (1 - pi1) * log(hr)^2))
+      }
+
+      schoenfeld_events(0.70)   # 331
+    python: |
+      import numpy as np
+      from scipy.stats import norm
+
+      def schoenfeld_events(hr, alpha=0.05, power=0.90, ratio=1.0):
+          za, zb = norm.ppf(1 - alpha / 2), norm.ppf(power)
+          pi1 = ratio / (1 + ratio)
+          return int(np.ceil((za + zb) ** 2 / (pi1 * (1 - pi1) * np.log(hr) ** 2)))
+
+      schoenfeld_events(0.70)   # 331
+    interview:
+      question: |
+        "The team wants to detect a hazard ratio of 0.75 instead of 0.70. What happens?"
+      answer: |
+        Run the arithmetic out loud first — the interviewer wants to see you can, and the number is the
+        conversation.
+
+        "$\\ln(0.75) = -0.2877$, so the event requirement goes from 331 to
+        $4(3.2415)^2/0.2877^2 = 508$ — a 54% increase. At the same accrual rate that means materially
+        longer to the analysis, or substantially more subjects, or both.
+
+        Then I'd want to know *why* 0.75. If the team genuinely now believes the drug is weaker, that is
+        a real design input and the cost is the cost. If they are adding a safety margin, I'd push back:
+        the sample size should be driven by the smallest effect worth detecting clinically, and shrinking
+        the assumed HR is an expensive and indirect way to buy insurance.
+
+        I'd put the alternatives in front of them rather than a single number — 80% power at HR 0.75
+        needs 380 events, and a sensitivity table across HR from 0.70 to 0.80 lets them see the
+        trade-off and decide with their eyes open."
+
+        Interviewers are checking whether you can hold a design conversation, not whether you can
+        operate a formula. The candidate who asks *why* the assumption changed is the one who gets
+        invited into design meetings.
+    lessons: [stats-power-sample-size, stats-hypothesis-testing]
+    skills: [stats.power, trials.design, stats.survival]
+
+  # ------------------------------------------------------------------
+  - id: comp-computing
+    title: Statistical computing
+    course: computing
+    academic: |
+      Your computing course teaches R (or Python), reproducible reports with R Markdown or Quarto,
+      version control basics, simulation, and possibly some numerical methods — optimisation, the
+      bootstrap, MCMC.
+
+      Code is graded on whether it produces the right answer. It is written once, by one person, and
+      read by a grader.
+    industry: |
+      Everything changes when code is a **regulated deliverable** rather than a means to an answer.
+
+      **SAS is still the dominant language in clinical reporting**, not because it is better but because
+      of validated installations, decades of existing standards and macro libraries, and regulator
+      familiarity. R is growing fast and is accepted — the R Consortium's submission pilots to FDA have
+      been successful — but a statistical programming role today still usually means SAS first.
+
+      **Your code will be read, run and modified by other people, for years.** That changes what good
+      code is: explicit over clever, defaults written out rather than inherited, assumptions asserted
+      rather than assumed.
+
+      **Double programming is the norm for key outputs.** A second programmer writes independent code
+      from the same specification without seeing yours, and the outputs are compared. This is why
+      specifications must be precise enough for two people to converge — and why so many of the
+      discrepancies in this app's QC exercises are specification defects rather than code bugs.
+
+      **Nothing is fixed silently.** A wrong value in the data goes back through data management with an
+      audit trail. Correcting it in your program destroys traceability, which is the thing GCP most
+      cares about.
+    clinicalExample: |
+      The same analysis in a coursework style and a production style:
+
+      ```r
+      # Coursework: correct, and unreviewable
+      t.test(CHG ~ TRTP, data = subset(advs, AVISITN == 12))
+      ```
+
+      ```r
+      # Production: every decision visible
+      w12 <- advs |>
+        filter(PARAMCD == "SYSBP",      # which parameter
+               ANL01FL == "Y",          # which records the SAP selects
+               AVISITN == 12)           # one row per subject
+
+      stopifnot(nrow(w12) == dplyr::n_distinct(w12$USUBJID))   # assert the grain
+
+      t.test(CHG ~ TRTP, data = w12,
+             var.equal = FALSE,          # stated, not inherited
+             alternative = "two.sided")  # stated, not inherited
+      ```
+
+      The second version is four times as long and answers, without being run: which records, which
+      population, what the grain is, and which variant of the test. **A reviewer can check it by
+      reading it**, which the first version does not permit.
+    sas: |
+      /* Production SAS: header, no hard-coded paths, assertions */
+      /*--------------------------------------------------------------
+        Program : t-14-2-1-efficacy.sas
+        Purpose : Table 14.2.1 - Week 12 change from baseline, ANCOVA
+        Input   : adam.advs, adam.adsl
+        Output  : outputs/t-14-2-1.rtf
+        SAP ref : Section 9.2
+      --------------------------------------------------------------*/
+      %let visit = 12;
+
+      proc sql noprint;
+        select count(distinct usubjid) into :n_check
+        from adam.advs
+        where paramcd='SYSBP' and anl01fl='Y' and avisitn=&visit;
+      quit;
+
+      %if &n_check ne 238 %then %put ERROR: unexpected subject count &n_check;
+    r: |
+      # Production R: an assertion before every summary
+      library(dplyr)
+
+      stopifnot(
+        !any(duplicated(adsl$USUBJID)),                 # ADSL grain
+        all(w12$USUBJID %in% adsl$USUBJID)              # no orphans
+      )
+
+      w12 <- advs |>
+        filter(PARAMCD == "SYSBP", ANL01FL == "Y", AVISITN == 12) |>
+        left_join(select(adsl, USUBJID, TRT01P, ITTFL),
+                  by = "USUBJID", relationship = "one-to-one")
+    interview:
+      question: |
+        "How do you make sure your analysis is reproducible?"
+      answer: |
+        Answer in layers, from the environment outward — and give a concrete example, because everyone
+        says "version control" and few can say what they actually do.
+
+        "At the environment level: version control for the code, and a record of the software versions —
+        `renv` for R, a locked environment for Python, the SAS version and any macro library versions in
+        the program header. The data version too: which extract, which cut-off date.
+
+        At the code level: no hard-coded paths, no manual steps, and a single entry point that runs the
+        whole pipeline from raw data to outputs. If a step cannot be rerun from scratch, it is not
+        reproducible — it is just saved.
+
+        At the verification level: assertions. I check the grain of every dataset before summarising it,
+        and I check key counts against an independent source — the subject count in my analysis dataset
+        against the disposition table, for instance. Those catch the class of error where the code runs
+        fine and the answer is wrong.
+
+        And for anything that matters, independent double programming, which is the industry's answer
+        to the fact that a single programmer's reproducibility guarantees only that they will get their
+        own mistake again."
+
+        The last sentence is the one worth having ready — reproducibility and correctness are different
+        properties, and a lot of candidates conflate them.
+    lessons: []
+    skills: [repro.project-structure, repro.git-basics, qc.code-review]

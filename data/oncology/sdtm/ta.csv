@@ -1,0 +1,7 @@
+STUDYID,DOMAIN,ARMCD,ARM,TAETORD,ETCD,ELEMENT,TABRANCH,TATRANS,EPOCH
+CBX417-301,TA,CBX+DOC,CBX-417 200 mg + Docetaxel 75 mg/m2,1,SCRN,Screening,Randomized to CBX-417 200 mg + Docetaxel 75 mg/m2,,SCREENING
+CBX417-301,TA,CBX+DOC,CBX-417 200 mg + Docetaxel 75 mg/m2,2,CBXDOC,CBX-417 + Docetaxel,,"If study treatment discontinued, go to Follow-up",TREATMENT
+CBX417-301,TA,CBX+DOC,CBX-417 200 mg + Docetaxel 75 mg/m2,3,FU,Follow-up,,,FOLLOW-UP
+CBX417-301,TA,PBO+DOC,Placebo + Docetaxel 75 mg/m2,1,SCRN,Screening,Randomized to Placebo + Docetaxel 75 mg/m2,,SCREENING
+CBX417-301,TA,PBO+DOC,Placebo + Docetaxel 75 mg/m2,2,PBODOC,Placebo + Docetaxel,,"If study treatment discontinued, go to Follow-up",TREATMENT
+CBX417-301,TA,PBO+DOC,Placebo + Docetaxel 75 mg/m2,3,FU,Follow-up,,,FOLLOW-UP

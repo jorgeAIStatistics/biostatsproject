@@ -1,0 +1,556 @@
+category: abbreviations
+title: Industry abbreviations
+description: >-
+  The alphabet soup you will meet in your first week. Grouped roughly by where you encounter them —
+  documents, data standards, roles, regulators and analysis. When an abbreviation means different
+  things in different contexts, both are given.
+entries:
+  # ---------------- Documents and deliverables ----------------
+  - id: abbr-csr
+    term: CSR
+    aliases: [Clinical Study Report]
+    summary: The complete report of a clinical trial, structured according to ICH E3.
+    body: |
+      Typically several hundred pages plus appendices. The statistical outputs live in **Section 14**
+      (in-text and post-text tables and figures) and **Section 16** (listings and supporting documents),
+      which is why TLF numbering starts at 14.1, 14.2, 14.3.
+
+      A biometrics team's year is largely organised around producing the Section 14 outputs for a CSR.
+    related: [abbr-tlf, abbr-sap, abbr-ich]
+    source: { label: ICH E3, url: https://database.ich.org/sites/default/files/E3_Guideline.pdf }
+
+  - id: abbr-sap
+    term: SAP
+    aliases: [Statistical Analysis Plan]
+    summary: The document that fixes every analysis decision before the blind is broken.
+    body: |
+      Specifies the estimand, analysis populations, the primary and secondary models, handling of
+      missing data and intercurrent events, multiplicity strategy, and the planned sensitivity analyses.
+
+      **The SAP is what makes an analysis confirmatory rather than exploratory.** Any decision made after
+      unblinding that the SAP did not anticipate has to be documented as a deviation.
+    related: [abbr-csr, abbr-itt, abbr-tlf]
+
+  - id: abbr-tlf
+    term: TLF
+    aliases: [TFL, Tables Listings and Figures]
+    summary: The tables, listings and figures that present a trial's results.
+    body: |
+      Some sponsors write **TFL** instead; the two are interchangeable. A mid-size trial produces
+      several hundred, each defined by a **shell** (a mock-up showing layout, titles, footnotes and
+      the population) that a programmer implements exactly.
+    related: [abbr-csr, abbr-sap]
+
+  - id: abbr-crf
+    term: CRF / eCRF
+    aliases: [Case Report Form]
+    summary: The form on which study data is recorded at the site; almost always electronic (eCRF).
+    body: |
+      The **annotated CRF (aCRF)** is a copy of the CRF marked up with the SDTM variable each field maps
+      to, and it is a required submission component — it is how a reviewer traces a dataset value back
+      to the question the site was asked.
+    related: [abbr-edc, abbr-sdtm, abbr-define]
+
+  - id: abbr-edc
+    term: EDC
+    aliases: [Electronic Data Capture]
+    summary: The system sites use to enter CRF data (Medidata Rave, Veeva CDMS, Oracle Clinical and others).
+    related: [abbr-crf, abbr-dm]
+
+  - id: abbr-adrg
+    term: ADRG
+    aliases: [Analysis Data Reviewer's Guide]
+    summary: A plain-language guide submitted with the ADaM datasets explaining how they were built and why.
+    body: |
+      Covers anything a reviewer could not infer from define.xml alone: analysis population derivations,
+      non-obvious imputation rules, known data issues, and the mapping between SAP analyses and datasets.
+
+      Its SDTM counterpart is the **SDRG** (Study Data Reviewer's Guide). Both follow PHUSE templates
+      that are widely used but are not themselves regulatory documents.
+    related: [abbr-define, abbr-adam, abbr-sdtm]
+
+  - id: abbr-define
+    term: define.xml
+    aliases: [Define-XML, data definition file]
+    summary: The machine-readable metadata document describing every dataset and variable in a submission.
+    body: |
+      Contains dataset and variable definitions, controlled terminology, value-level metadata, origins
+      and computational methods. It is what makes a submission navigable, and it is required for both
+      SDTM and ADaM.
+    standard: official
+    related: [abbr-sdtm, abbr-adam, abbr-adrg]
+    source: { label: CDISC Define-XML v2.1, url: https://www.cdisc.org/standards/data-exchange/define-xml }
+
+  # ---------------- Data standards ----------------
+  - id: abbr-cdisc
+    term: CDISC
+    aliases: [Clinical Data Interchange Standards Consortium]
+    summary: The organisation that publishes the clinical data standards — CDASH, SDTM, ADaM and define.xml.
+    body: |
+      Note that the **controlled terminology** used by CDISC standards is published and versioned by
+      the NCI's Enterprise Vocabulary Services, not by CDISC itself.
+    related: [abbr-sdtm, abbr-adam, abbr-cdash, abbr-ct]
+    source: { label: CDISC, url: https://www.cdisc.org/ }
+
+  - id: abbr-sdtm
+    term: SDTM
+    aliases: [Study Data Tabulation Model]
+    summary: The standard for organising collected trial data into domains — one dataset per kind of observation.
+    body: |
+      SDTM datasets are **tabulation** data: as collected, standardised in structure but not
+      pre-computed for analysis. Domains are two-letter codes — DM (demographics), AE (adverse events),
+      EX (exposure), LB (laboratory), VS (vital signs), and so on.
+
+      Contrast with ADaM, which is analysis-ready.
+    standard: official
+    related: [abbr-adam, abbr-cdisc, abbr-define]
+    source: { label: SDTMIG v3.4, url: https://www.cdisc.org/standards/foundational/sdtmig }
+
+  - id: abbr-adam
+    term: ADaM
+    aliases: [Analysis Data Model]
+    summary: The standard for analysis-ready datasets, derived from SDTM and traceable back to it.
+    body: |
+      The two structures you meet first are **ADSL** (one row per subject — the subject-level analysis
+      dataset every study has) and **BDS** (Basic Data Structure — one row per subject, parameter and
+      timepoint, used for anything measured repeatedly).
+
+      ADaM's defining requirement is **traceability**: every analysis value must be traceable back
+      through SDTM to the CRF.
+    standard: official
+    related: [abbr-sdtm, abbr-adsl, abbr-bds, abbr-define]
+    source: { label: ADaMIG v1.3, url: https://www.cdisc.org/standards/foundational/adam }
+
+  - id: abbr-adsl
+    term: ADSL
+    aliases: [Subject-Level Analysis Dataset]
+    summary: One row per randomized subject, holding treatment, demographics, population flags and key dates.
+    body: |
+      Required in every ADaM submission. It is the dataset every other ADaM dataset merges against for
+      treatment and population variables, which is why `TRT01P`, `ITTFL` and `SAFFL` appear on ADSL and
+      are copied outward rather than re-derived.
+    standard: official
+    related: [abbr-adam, abbr-bds, abbr-itt]
+
+  - id: abbr-bds
+    term: BDS
+    aliases: [Basic Data Structure]
+    summary: The ADaM structure for repeated measurements — one row per subject, parameter and timepoint.
+    body: |
+      Identified by `PARAMCD`/`PARAM` (what is being measured), `AVAL`/`AVALC` (the value),
+      `AVISIT`/`AVISITN` (when), and the derived `BASE`, `CHG` and `PCHG`.
+
+      Most efficacy and lab datasets are BDS. Adverse events use **OCCDS** instead, because an AE is an
+      occurrence rather than a measurement.
+    standard: official
+    related: [abbr-adam, abbr-adsl, abbr-paramcd]
+
+  - id: abbr-paramcd
+    term: PARAMCD / PARAM
+    summary: The pair of ADaM variables that say *what is being measured* on each BDS row.
+    body: |
+      `PARAMCD` is the short code used in code and `WHERE` clauses (`SYSBP`); `PARAM` is the full
+      human-readable description that appears in table row labels
+      (`Systolic Blood Pressure (mmHg)`). `PARAMN` is an optional numeric companion used to control
+      the display order.
+
+      **`PARAM` must be unique per `PARAMCD` and fully describe the value** — including units and any
+      transformation — because a reader of the table sees only `PARAM`. A `PARAM` of
+      "Blood Pressure" on rows holding both systolic and diastolic values is a genuine ADaM
+      conformance problem, not a cosmetic one.
+    standard: official
+    related: [abbr-bds, abbr-adam]
+    source: { label: ADaMIG v1.3, url: https://www.cdisc.org/standards/foundational/adam }
+
+  - id: abbr-cdash
+    term: CDASH
+    aliases: [Clinical Data Acquisition Standards Harmonization]
+    summary: The CDISC standard for how data is *collected* on the CRF, designed to flow cleanly into SDTM.
+    body: |
+      CDASH sits upstream of SDTM. Collecting in CDASH format makes the SDTM mapping mostly mechanical;
+      collecting in an ad-hoc format is what creates the mapping work.
+    standard: official
+    related: [abbr-crf, abbr-sdtm]
+
+  - id: abbr-ct
+    term: CT
+    aliases: [Controlled Terminology]
+    summary: The versioned, published lists of permitted values for CDISC variables, maintained by NCI EVS.
+    body: |
+      Each codelist has an NCI **C-code** and is marked **extensible** (you may add sponsor terms) or
+      **non-extensible** (you may not). Released quarterly.
+
+      "CT" also means "computed tomography" in a clinical context and "clinical trial" in casual use —
+      read from context.
+    standard: official
+    related: [abbr-cdisc, abbr-sdtm]
+    source: { label: NCI EVS CDISC Terminology, url: https://evs.nci.nih.gov/ftp1/CDISC/ }
+
+  - id: abbr-meddra
+    term: MedDRA
+    aliases: [Medical Dictionary for Regulatory Activities]
+    summary: The dictionary used to code adverse events and medical history into a standard hierarchy.
+    body: |
+      Five levels, from most specific to broadest: **LLT** (lowest level term) → **PT** (preferred term)
+      → **HLT** (high level term) → **HLGT** (high level group term) → **SOC** (system organ class).
+
+      AE tables are almost always presented by SOC and PT. MedDRA is licensed, versioned twice a year,
+      and the version used must be stated in the CSR.
+    related: [abbr-whodrug, abbr-ae, abbr-soc-pt]
+
+  - id: abbr-whodrug
+    term: WHODrug
+    aliases: [WHO Drug Dictionary]
+    summary: The dictionary used to code concomitant and prior medications.
+    body: |
+      Provides the **ATC** (Anatomical Therapeutic Chemical) classification and a standardised drug name,
+      so that "Tylenol", "paracetamol" and "acetaminophen" resolve to one substance. Licensed and versioned,
+      like MedDRA.
+    related: [abbr-meddra]
+
+  - id: abbr-soc-pt
+    term: SOC / PT
+    aliases: [System Organ Class, Preferred Term]
+    summary: The two MedDRA levels used in almost every adverse-event table.
+    body: |
+      **SOC** is the broad body-system grouping (e.g. *Gastrointestinal disorders*); **PT** is the specific
+      event (e.g. *Nausea*). AE tables are conventionally sorted by descending frequency within SOC.
+
+      A subject is counted **once** per PT no matter how many times the event occurred — event counts and
+      subject counts are different rows and are a classic source of QC findings.
+    related: [abbr-meddra, abbr-ae]
+
+  # ---------------- Populations and analysis ----------------
+  - id: abbr-itt
+    term: ITT
+    aliases: [Intention-to-Treat, Full Analysis Set, FAS]
+    summary: All randomized subjects, analysed according to the treatment they were *assigned*.
+    body: |
+      The principle that preserves randomization: a subject randomized to drug who never took a dose is
+      still analysed in the drug arm. Deviating from it breaks the comparability randomization created.
+
+      The **FAS** (Full Analysis Set) is ICH E9's term for the set as close to ITT as possible after
+      justified exclusions — the two are often used interchangeably but are not identical.
+    standard: official
+    related: [abbr-pp, abbr-saf, abbr-sap]
+    source: { label: ICH E9 §5.2, url: https://database.ich.org/sites/default/files/E9_Guideline.pdf }
+
+  - id: abbr-pp
+    term: PP
+    aliases: [Per-Protocol, PPS]
+    summary: The subset of subjects without major protocol deviations, analysed as treated.
+    body: |
+      Usually a **secondary** or sensitivity population, because excluding subjects post-randomization
+      can break comparability. The exclusion criteria must be defined in the SAP and applied blind.
+
+      In a **non-inferiority** trial the PP analysis matters more than usual, because sloppy conduct
+      biases an NI trial toward its own conclusion.
+    related: [abbr-itt, abbr-saf]
+
+  - id: abbr-saf
+    term: SAF
+    aliases: [Safety population, SAFFL]
+    summary: All subjects who received at least one dose, analysed according to the treatment actually received.
+    body: |
+      Note the two differences from ITT: **at least one dose** (not all randomized), and **as treated**
+      (not as randomized). A subject randomized to placebo who mistakenly received drug appears in the
+      drug arm of safety tables and the placebo arm of efficacy tables — which is correct, and confusing
+      the first time you see it.
+    related: [abbr-itt, abbr-pp]
+
+  - id: abbr-teae
+    term: TEAE
+    aliases: [Treatment-Emergent Adverse Event]
+    summary: An adverse event that started or worsened on or after the first dose of study treatment.
+    body: |
+      The emergence window is defined in the SAP — typically from first dose to last dose plus a
+      follow-up period based on the drug's half-life. Events before first dose are *pre-treatment* and
+      are listed separately.
+
+      Almost every AE table in a CSR is restricted to TEAEs.
+    related: [abbr-ae, abbr-sae, abbr-saf]
+
+  - id: abbr-ae
+    term: AE
+    aliases: [Adverse Event]
+    summary: Any untoward medical occurrence in a subject, whether or not related to the study treatment.
+    body: |
+      The "whether or not related" is the important part — causality is assessed separately by the
+      investigator, and an event is recorded regardless of their judgement.
+    related: [abbr-sae, abbr-teae, abbr-meddra]
+
+  - id: abbr-sae
+    term: SAE
+    aliases: [Serious Adverse Event]
+    summary: An AE that is fatal, life-threatening, requires hospitalisation, causes disability or a congenital anomaly, or is otherwise medically important.
+    body: |
+      **"Serious" is a regulatory category, not a measure of severity.** A mild event requiring an
+      overnight hospital stay is serious; a severe headache that resolves is not. Severity (mild /
+      moderate / severe, or CTCAE grade) is recorded as a separate variable.
+
+      SAEs carry expedited reporting obligations to regulators.
+    related: [abbr-ae, abbr-teae]
+
+  - id: abbr-pd
+    term: PD
+    summary: "Two very different meanings: **progressive disease** in oncology, and **protocol deviation** in trial conduct."
+    body: |
+      In an oncology dataset, `PD` is a RECIST response category and drives the PFS endpoint.
+      In a trial-management document, a "PD log" is a list of protocol deviations.
+
+      **PD** also occasionally means *pharmacodynamics* — read from context, and when writing, spell it out.
+    related: [abbr-pfs, abbr-recist]
+
+  # ---------------- Endpoints ----------------
+  - id: abbr-pfs
+    term: PFS
+    aliases: [Progression-Free Survival]
+    summary: Time from randomization to documented disease progression or death from any cause, whichever comes first.
+    body: |
+      The most common primary endpoint in oncology trials, because it reads out faster than overall
+      survival and is not confounded by subsequent therapy.
+
+      Its weakness is that it depends on **assessment timing**: progression is only observed at scheduled
+      scans, so the measured time is interval-censored in practice, and censoring rules for missed
+      assessments and new anticancer therapy materially affect the result.
+    related: [abbr-os, abbr-orr, abbr-recist, abbr-pd]
+
+  - id: abbr-os
+    term: OS
+    aliases: [Overall Survival]
+    summary: Time from randomization to death from any cause.
+    body: |
+      The least ambiguous oncology endpoint — death is unmistakable and needs no adjudication — and the
+      slowest to mature. Often confounded by post-progression therapy, since control subjects who progress
+      frequently receive effective treatment afterwards.
+    related: [abbr-pfs, abbr-orr]
+
+  - id: abbr-orr
+    term: ORR
+    aliases: [Objective Response Rate, Overall Response Rate]
+    summary: The proportion of subjects achieving a complete or partial response, usually per RECIST.
+    body: |
+      A binary endpoint, so it is reported as a proportion with an exact (Clopper–Pearson) confidence
+      interval. Often the primary endpoint of single-arm phase II trials, because a response in a disease
+      with no spontaneous remissions is interpretable without a control arm.
+    related: [abbr-recist, abbr-pfs, abbr-dor]
+
+  - id: abbr-dor
+    term: DoR
+    aliases: [Duration of Response, DOR]
+    summary: For responders only, the time from first documented response to progression or death.
+    body: |
+      Note the denominator: **only subjects who responded** contribute. That makes it a conditional
+      quantity and means it cannot be compared between arms as though it were randomized — responders
+      are a post-randomization subgroup.
+    related: [abbr-orr, abbr-pfs]
+
+  - id: abbr-recist
+    term: RECIST
+    aliases: [Response Evaluation Criteria in Solid Tumours]
+    summary: The standard criteria for measuring tumour response in solid tumours; version 1.1 is current.
+    body: |
+      Defines target and non-target lesion selection, the sum of diameters, and the thresholds for
+      complete response (CR), partial response (PR, ≥30% decrease), progressive disease (PD, ≥20%
+      increase **and** ≥5 mm absolute) and stable disease (SD).
+    standard: official
+    related: [abbr-orr, abbr-pfs, abbr-pd]
+    source: { label: "RECIST 1.1 (Eisenhauer et al. 2009)", url: https://pubmed.ncbi.nlm.nih.gov/19097774/ }
+
+  # ---------------- Regulatory and organisational ----------------
+  - id: abbr-ich
+    term: ICH
+    aliases: [International Council for Harmonisation]
+    summary: The body that publishes the harmonised guidelines regulators and industry work to.
+    body: |
+      The ones a biostatistician needs: **E9** (statistical principles), **E9(R1)** (estimands),
+      **E3** (CSR structure), **E6** (GCP), **E10** (control groups), **M10** (bioanalytical validation).
+    related: [abbr-gcp, abbr-fda, abbr-ema]
+    source: { label: ICH guidelines, url: https://www.ich.org/page/ich-guidelines }
+
+  - id: abbr-gcp
+    term: GCP
+    aliases: [Good Clinical Practice]
+    summary: The ethical and quality standard for designing, conducting and reporting trials — ICH E6.
+    body: |
+      For biometrics, the practical content is about **data integrity**: source data attributes, audit
+      trails, and the requirement that computerised systems be validated. It is the reason you cannot
+      simply correct a value in an analysis program.
+    related: [abbr-ich, abbr-dm]
+
+  - id: abbr-fda
+    term: FDA
+    aliases: [Food and Drug Administration]
+    summary: The United States regulator. Publishes guidance documents and maintains the Data Standards Catalog.
+    body: |
+      Guidance documents state current thinking and are not legally binding in the way regulations are —
+      but in practice they set the expectations a submission is judged against.
+    related: [abbr-ema, abbr-ich, abbr-nda]
+    source: { label: FDA guidance documents, url: https://www.fda.gov/regulatory-information/search-fda-guidance-documents }
+
+  - id: abbr-ema
+    term: EMA
+    aliases: [European Medicines Agency]
+    summary: The European Union regulator. Publishes guidelines that are broadly compatible with FDA guidance but differ in places.
+    body: |
+      Notably more prescriptive than FDA on some statistical matters — its guideline on baseline covariate
+      adjustment, for example, is more explicit that the baseline value of the primary endpoint should be
+      included in the model.
+    related: [abbr-fda, abbr-ich]
+
+  - id: abbr-nda
+    term: NDA / BLA / MAA
+    aliases: [New Drug Application, Biologics License Application, Marketing Authorisation Application]
+    summary: The submissions that request approval to market a product — NDA and BLA in the US, MAA in the EU.
+    body: |
+      **NDA** for small molecules, **BLA** for biologics, both to FDA; **MAA** to EMA. All include the
+      standardised study data, define.xml, the reviewer's guides and the CSRs that biometrics produced.
+    related: [abbr-fda, abbr-ema, abbr-csr, abbr-define]
+
+  - id: abbr-cro
+    term: CRO
+    aliases: [Contract Research Organization]
+    summary: A company that runs trials, or parts of them, on behalf of a sponsor.
+    body: |
+      A large share of statistical programming and biostatistics jobs are at CROs. The work is the same
+      as sponsor-side work but typically spans more therapeutic areas and more sponsors' standards —
+      which makes it an unusually good place to learn quickly.
+    related: [abbr-sponsor]
+
+  - id: abbr-sponsor
+    term: Sponsor
+    summary: The organisation responsible for a trial — usually the pharmaceutical or biotech company developing the product.
+    body: |
+      The sponsor holds regulatory responsibility even when a CRO does the work, which is why sponsor
+      standards (shells, macros, define.xml conventions) govern the deliverables.
+    related: [abbr-cro]
+
+  - id: abbr-dm
+    term: DM
+    summary: "Two meanings: **Data Management**, the function that cleans study data; and **DM**, the SDTM demographics domain."
+    body: |
+      Context separates them cleanly — "send it to DM" is the function, "the DM domain" is the dataset.
+      Data Management raises **queries** against sites when data fails validation checks, and owns the
+      path to **database lock**.
+    related: [abbr-edc, abbr-sdtm, abbr-crf]
+
+  - id: abbr-idmc
+    term: IDMC
+    aliases: [DSMB, Data Safety Monitoring Board, DMC]
+    summary: An independent committee that reviews unblinded accumulating safety (and sometimes efficacy) data during a trial.
+    body: |
+      An **unblinded statistician** — deliberately separate from the study team — prepares its outputs.
+      The study team stays blind, which is why the unblinded statistician cannot also work on the
+      main analysis.
+    related: [abbr-sap, abbr-itt]
+
+  # ---------------- Statistical ----------------
+  - id: abbr-ancova
+    term: ANCOVA
+    aliases: [Analysis of Covariance]
+    summary: A linear model with a treatment factor and one or more continuous covariates — the default primary analysis for continuous endpoints.
+    body: |
+      In practice: `CHG ~ TREATMENT + BASELINE (+ stratification factors)`. Reports **LS means** per arm
+      and their differences with confidence intervals.
+    related: [abbr-lsmean, abbr-mmrm]
+
+  - id: abbr-lsmean
+    term: LS mean
+    aliases: [LSM, least-squares mean, estimated marginal mean, EMM]
+    summary: A model-based prediction for each treatment arm, evaluated at a common covariate value.
+    body: |
+      Not the arm's observed mean. Evaluating every arm at the same covariate value is what makes them
+      comparable — and it is why an ANCOVA table's arm rows must be LS means, or the difference row will
+      not reconcile with them.
+
+      SAS produces them with `LSMEANS`; R with the `emmeans` package.
+    related: [abbr-ancova, abbr-mmrm]
+
+  - id: abbr-mmrm
+    term: MMRM
+    aliases: [Mixed Model for Repeated Measures]
+    summary: A longitudinal model that uses all observed visits and accounts for within-subject correlation.
+    body: |
+      The standard for continuous endpoints measured at several visits. Typically fitted with treatment,
+      visit, treatment-by-visit, baseline and baseline-by-visit, with an **unstructured** covariance matrix.
+
+      Valid under **MAR** rather than requiring MCAR, which is why it is preferred to a complete-case
+      analysis when dropout is related to observed outcomes.
+    related: [abbr-ancova, abbr-mar]
+
+  - id: abbr-mar
+    term: MCAR / MAR / MNAR
+    aliases: [Missing Completely At Random, Missing At Random, Missing Not At Random]
+    summary: The three missing-data mechanisms, which determine which analyses are valid.
+    body: |
+      **MCAR** — missingness unrelated to anything. Complete-case analysis is unbiased.
+      **MAR** — missingness depends on *observed* data. MMRM and multiple imputation are valid.
+      **MNAR** — missingness depends on the *unobserved* value. No method using only observed data is
+      guaranteed unbiased, which is why regulators expect sensitivity analyses such as tipping-point or
+      jump-to-reference rather than a single number.
+
+      You cannot test which one holds, because the distinguishing information is exactly what is missing.
+    related: [abbr-mmrm, abbr-locf]
+
+  - id: abbr-locf
+    term: LOCF
+    aliases: [Last Observation Carried Forward]
+    summary: An obsolete imputation that replaces a missing value with the subject's last observed one.
+    body: |
+      Once the default, now generally unacceptable as a primary analysis. It assumes a subject's outcome
+      froze at the moment they left, understates variability, and can bias in either direction.
+
+      The 2010 National Research Council report commissioned by FDA is the usual citation for why it
+      was abandoned.
+    related: [abbr-mar, abbr-mmrm]
+    source: { label: "NRC: The Prevention and Treatment of Missing Data in Clinical Trials", url: "https://www.ncbi.nlm.nih.gov/books/NBK209904/" }
+
+  - id: abbr-cmh
+    term: CMH
+    aliases: [Cochran-Mantel-Haenszel]
+    summary: A stratified test for a binary endpoint that respects the strata subjects were randomized within.
+    body: |
+      Combines evidence across strata rather than pooling the data, and produces a common odds ratio.
+      Assumes the odds ratio is the same in every stratum — check the stratum-specific estimates before
+      quoting the pooled one.
+    related: [abbr-itt]
+
+  - id: abbr-hr
+    term: HR
+    aliases: [Hazard Ratio]
+    summary: The ratio of hazard rates between arms, estimated by a Cox model; the standard effect measure for time-to-event endpoints.
+    body: |
+      HR < 1 favours the experimental arm (lower event rate). Confidence intervals are computed on the
+      **log** scale and exponentiated, which is why they are asymmetric around the point estimate.
+
+      Interpreting an HR requires the proportional-hazards assumption — that the ratio is constant over
+      time — which is checkable and frequently violated in immuno-oncology.
+    related: [abbr-pfs, abbr-os, abbr-ph]
+
+  - id: abbr-ph
+    term: PH
+    aliases: [Proportional Hazards]
+    summary: The assumption that the hazard ratio between arms is constant over time.
+    body: |
+      Checked with Schoenfeld residuals, log(−log(S)) plots, or a time-by-treatment interaction.
+      When it fails — crossing curves, delayed effect — the Cox HR is an average of a changing quantity
+      and alternatives such as restricted mean survival time (RMST) become more informative.
+    related: [abbr-hr]
+
+  - id: abbr-ci
+    term: CI
+    summary: "**Confidence interval** in statistics; **Continuous Integration** in software; **Confidence Index** almost never."
+    body: |
+      In a biometrics context it is essentially always a confidence interval. In a repository README it is
+      essentially always continuous integration.
+    related: [abbr-sap]
+
+  - id: abbr-qc
+    term: QC
+    aliases: [Quality Control]
+    summary: The verification that an output is correct — usually by independent programming.
+    body: |
+      **Independent (double) programming** means a second programmer writes code from the specification
+      without seeing the first programmer's code, and the outputs are compared. For lower-risk outputs a
+      **review** (reading the code and checking the output) may be sufficient; the SAP or a QC plan says which.
+    related: [abbr-sap, abbr-tlf]

@@ -1,0 +1,412 @@
+items:
+  - id: sas.arrays-do-loops.index-after-loop-numeric
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.arrays]
+    lesson: sas-arrays-do-loops
+    title: The index after the loop
+    prompt: |
+      ```sas
+      do i = 1 to 6;
+        if chk{i} = 'Y' then NCHK + 1;
+      end;
+      ```
+
+      Immediately after the loop ends normally, what is the value of `i`?
+    answer: 7
+    tolerance: 0
+    hints:
+      - "The loop ends when the index exceeds the stop value — after the index has been incremented."
+      - "So write down the last two events in order: the index is incremented to some value, then that value is compared with 6 and the test fails."
+      - "That value is what `i` still holds on the next statement — and what would be written to the output dataset if you forget to drop it."
+    solution: |
+      7. The index is incremented, compared with the stop value, found to be larger, and the loop ends — so `i` keeps the out-of-range value. This surprises people who use `i` after the loop, and it is also why the index should be dropped from the output dataset.
+
+  - id: sas.arrays-do-loops.dim-mcq
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.arrays]
+    lesson: sas-arrays-do-loops
+    title: DIM()
+    prompt: |
+      ```sas
+      array lab{*} ALT AST BILI CREAT;
+      ```
+
+      What does `dim(lab)` return, and why would you use it?
+    choices:
+      - text: "4 — the number of elements; using it means the loop still works if a variable is added to the array"
+        correct: true
+        feedback: "`{*}` lets SAS count the elements and `dim()` returns that count, so the loop limit cannot get out of step with the array."
+      - text: "4 — the number of observations processed so far"
+        feedback: "DIM has nothing to do with observations; that is `_N_`."
+      - text: "The length of the longest variable in the array"
+        feedback: "That would be a length, not a dimension."
+      - text: "The number of non-missing values in the array on the current row"
+        feedback: "That would be `n(of ALT AST BILI CREAT)`."
+    solution: |
+      4. `array lab{*} …; do i = 1 to dim(lab);` is the maintainable pattern: adding a fifth test to the array automatically extends the loop, and an out-of-range subscript error becomes impossible.
+
+  - id: sas.arrays-do-loops.while-until-mcq
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.arrays]
+    lesson: sas-arrays-do-loops
+    title: DO WHILE versus DO UNTIL
+    prompt: |
+      Which statement is true?
+    choices:
+      - text: "`DO UNTIL` tests its condition after each pass, so the body always executes at least once; `DO WHILE` tests before, so the body may execute zero times"
+        correct: true
+        feedback: "Exactly — the test position is the whole difference."
+      - text: "`DO WHILE` always executes at least once"
+        feedback: "It tests the condition before the first pass, so it can execute zero times."
+      - text: "`DO UNTIL` repeats while the condition is true"
+        feedback: "It repeats *until* the condition becomes true — it stops when the condition is true."
+      - text: "They are interchangeable as long as the condition is negated"
+        feedback: "Negating the condition changes the repetition rule but not the number of guaranteed passes."
+    solution: |
+      `DO WHILE (cond)` — test first, run while true, possibly zero passes. `DO UNTIL (cond)` — run, then test, stop when true, at least one pass. Use `DO UNTIL` for "keep trying until you find it", and always make sure something in the body can change the condition.
+
+  - id: sas.arrays-do-loops.temporary-mcq
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.arrays, sas.pdv]
+    lesson: sas-arrays-do-loops
+    title: What is special about _TEMPORARY_ arrays?
+    prompt: |
+      ```sas
+      array f{4} _temporary_ (17.1 88.4 10 10);
+      ```
+
+      Which statement is true of the elements of this array?
+    choices:
+      - text: "They have no variable names, are retained across iterations, and are not written to the output dataset"
+        correct: true
+        feedback: "Exactly the properties that make temporary arrays ideal for lookup constants."
+      - text: "They are reset to missing at the start of each iteration like other created variables"
+        feedback: "Temporary array elements are automatically retained."
+      - text: "They are written to the output dataset as F1–F4"
+        feedback: "They have no variable names at all, so nothing is written."
+      - text: "They can only hold numeric values"
+        feedback: "Character temporary arrays are allowed: `array t{3} $10 _temporary_ ('A' 'B' 'C');`."
+    solution: |
+      No names, retained, not output. That is why conversion factors, limits and other constants sit comfortably in a temporary array — but genuine study data (reference ranges by sex and age, visit windows per protocol version) is better kept in a dataset you merge, where a reviewer can see it.
+
+  - id: sas.arrays-do-loops.race-code
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sas.arrays, sdtm.dm, sdtm.mapping]
+    lesson: sas-arrays-do-loops
+    title: Checkbox race fields to SDTM RACE
+    minutes: 15
+    prompt: |
+      `WORK.RAW_DM` has `SUBJECT_ID` and six checkbox variables (`RACE_WHITE`, `RACE_ASIAN`, `RACE_BLACK`, `RACE_AMIND`, `RACE_NHPI`, `RACE_OTHER`), each `'Y'` or blank.
+
+      Create `WORK.DM` with `RACE` derived per the mapping specification:
+
+      - exactly one box checked → the corresponding term (`WHITE`, `ASIAN`, `BLACK OR AFRICAN AMERICAN`, `AMERICAN INDIAN OR ALASKA NATIVE`, `NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER`, `OTHER`);
+      - more than one → `MULTIPLE`;
+      - none → `NOT REPORTED`.
+
+      Use an array and a DO loop (no six-way IF chain), and do not leave the loop index in the output.
+    starter: |
+      data dm;
+        set raw_dm;
+        length RACE $41;
+        /* array over the checkboxes, lookup array, loop, rule */
+      run;
+    hints:
+      - "Declare `RACE` long enough for the longest term (41 characters) before assigning it."
+      - "A second, `_TEMPORARY_` array holds the term for each checkbox, in the same order."
+      - "Count the checked boxes and remember the index of the last one; then apply the three rules."
+    checks:
+      - pattern: 'length\s+race\s+\$\s*41'
+        message: "Declares RACE with length 41"
+      - pattern: 'array\s+\w+\s*[{(\[]\s*(6|\*)\s*[})\]][^;]*race_white'
+        message: "Declares an array over the six checkbox variables"
+      - pattern: '_temporary_'
+        message: "Uses a _TEMPORARY_ array for the coded terms"
+      - pattern: 'do\s+\w+\s*=\s*1\s+to\s+(dim\s*\(\s*\w+\s*\)|6)'
+        message: "Loops over the array elements"
+      - pattern: '[''"]multiple[''"]'
+        message: "Assigns MULTIPLE when more than one box is checked"
+      - pattern: '[''"]not reported[''"]'
+        message: "Assigns NOT REPORTED when no box is checked"
+      - pattern: '\bdrop\b[^;]*\bi\b|drop\s*=\s*[^)]*\bi\b'
+        message: "Drops the loop index"
+    reference: |
+      data dm;
+        set raw_dm;
+        length RACE $41;
+        array chk{*} RACE_WHITE RACE_ASIAN RACE_BLACK RACE_AMIND RACE_NHPI RACE_OTHER;
+        array term{6} $41 _temporary_
+              ('WHITE' 'ASIAN' 'BLACK OR AFRICAN AMERICAN' 'AMERICAN INDIAN OR ALASKA NATIVE'
+               'NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER' 'OTHER');
+        NCHK  = 0;
+        LASTI = .;
+        do i = 1 to dim(chk);
+          if chk{i} = 'Y' then do;
+            NCHK + 1;
+            LASTI = i;
+          end;
+        end;
+        if NCHK = 0 then RACE = 'NOT REPORTED';
+        else if NCHK = 1 then RACE = term{LASTI};
+        else RACE = 'MULTIPLE';
+        drop i NCHK LASTI;
+      run;
+    solution: |
+      The two arrays must list the checkboxes and the terms in the same order — that correspondence is the first thing a reviewer checks. `NCHK` is reset on every row (the sum statement inside the loop would otherwise accumulate across subjects), and the loop index is dropped.
+
+      QC: `proc freq data=dm; tables RACE_WHITE*RACE RACE_ASIAN*RACE / list missing; run;` — every subject with a single checked box must map to that box's term, and the total must equal the number of subjects. When `RACE = 'MULTIPLE'`, the individual races belong in SUPPDM per the specification.
+
+  - id: sas.arrays-do-loops.unit-conv-numeric
+    format: numeric
+    modes: [guided]
+    difficulty: foundation
+    skills: [sas.arrays, sdtm.findings]
+    lesson: sas-arrays-do-loops
+    title: Conversion with a temporary array
+    prompt: |
+      ```sas
+      array conv{4} BILI CREAT HGB ALB;
+      array f{4} _temporary_ (17.1 88.4 10 10);
+      do i = 1 to dim(conv);
+        if not missing(conv{i}) then conv{i} = round(conv{i} * f{i}, 0.01);
+      end;
+      ```
+
+      A record reports `BILI = 0.8` mg/dL, `CREAT = 1.1` mg/dL, `HGB = 12.4` g/dL, `ALB = 4.2` g/dL.
+
+      What is `CREAT` (µmol/L) after the loop?
+    answer: 97.24
+    tolerance: 0.005
+    unit: "umol/L"
+    hints:
+      - "Which element of the factor array lines up with CREAT?"
+      - "1.1 × 88.4, rounded to two decimals."
+    solution: |
+      1.1 × 88.4 = 97.24 µmol/L. The others become BILI 13.68 µmol/L, HGB 124 g/L and ALB 42 g/L. The `not missing` test keeps missing results missing; in production you would also check the reported unit per record, because only rows in conventional units may be converted.
+
+  - id: sas.arrays-do-loops.visit-schedule-code
+    format: code
+    language: sas
+    modes: [independent]
+    difficulty: intermediate
+    skills: [sas.arrays, sas.data-step, sas.dates]
+    lesson: sas-arrays-do-loops
+    title: Generate the planned visit schedule
+    minutes: 10
+    prompt: |
+      `WORK.ADSL_MIN` has one row per subject with `USUBJID` and `RANDDT` (a numeric SAS date).
+
+      Create `WORK.PLANNED` with **one row per subject per planned cycle visit** for cycles 1 to 6, containing `USUBJID`, `CYCLE`, `VISITNUM` (10, 20, 30, …, 60) and `VISITDT`, where each cycle starts 21 days after the previous one and cycle 1 is on the randomization date. Format `VISITDT` as a date.
+    starter: |
+      data planned;
+        set adsl_min;
+        /* generate six rows per subject */
+      run;
+    hints:
+      - "A DO loop with an OUTPUT statement inside writes one observation per pass."
+      - "Cycle 1 has no offset: `RANDDT + 21 * (CYCLE - 1)`."
+      - "`VISITNUM = CYCLE * 10;`"
+    checks:
+      - pattern: 'do\s+cycle\s*=\s*1\s+to\s+6'
+        message: "Loops over cycles 1 to 6"
+      - pattern: 'visitdt\s*=\s*randdt\s*\+\s*21\s*\*\s*\(\s*cycle\s*-\s*1\s*\)'
+        message: "Computes the visit date with a 21-day cycle offset"
+      - pattern: 'visitnum\s*=\s*cycle\s*\*\s*10|visitnum\s*=\s*10\s*\*\s*cycle'
+        message: "Derives VISITNUM as CYCLE * 10"
+      - pattern: '^\s*output\s*;'
+        flags: im
+        message: "Writes one observation per cycle with OUTPUT inside the loop"
+      - pattern: 'format[^;]*visitdt'
+        message: "Applies a date format to VISITDT"
+    reference: |
+      data planned;
+        set adsl_min;
+        format VISITDT date9.;
+        do CYCLE = 1 to 6;
+          VISITNUM = CYCLE * 10;
+          VISITDT  = RANDDT + 21 * (CYCLE - 1);
+          output;
+        end;
+      run;
+    expectedOutput: |
+      NOTE: There were <n subjects> observations read from the data set WORK.ADSL_MIN.
+      NOTE: The data set WORK.PLANNED has <6 x n subjects> observations and 5 variables.
+    solution: |
+      The OUTPUT statement inside the loop writes six rows per subject; because an explicit OUTPUT exists, no row is written automatically at `run;`, which is exactly what you want here.
+
+      For a subject randomized on 11APR2022 the dates are 11APR2022, 02MAY2022, 23MAY2022, 13JUN2022, 04JUL2022 and 25JUL2022 — SAS dates 22746, 22767, 22788, 22809, 22830 and 22851. A real schedule would also stop at treatment discontinuation and allow visit windows; this dataset is the "expected visits" side of a visit-compliance check.
+
+  - id: sas.arrays-do-loops.char-array-hotspot
+    format: hotspot
+    language: sas
+    modes: [debug]
+    difficulty: intermediate
+    skills: [sas.arrays, sas.attributes, sas.log]
+    lesson: sas-arrays-do-loops
+    title: Flags that came out missing
+    minutes: 6
+    prompt: |
+      This step should set `'Y'` flags for lab values above the upper limit. `ALTFL`, `ASTFL` and `BILIFL` do not exist in `WORK.LB_WIDE`. The output has all three flags **missing and numeric**, and the log contains a character-to-numeric conversion note and invalid-data notes for the value `Y`.
+
+      Click the line that causes this.
+    code: |
+      data lb_flags;
+        set lb_wide;
+        array val{3} ALT AST BILI;
+        array flg{3} ALTFL ASTFL BILIFL;
+        array uln{3} _temporary_ (40 40 21);
+        do i = 1 to dim(val);
+          if not missing(val{i}) and val{i} > uln{i} then flg{i} = 'Y';
+        end;
+        drop i;
+      run;
+    answerLines: [4]
+    lineNotes:
+      - line: 4
+        note: "The flag variables do not exist yet, so the ARRAY statement creates them — and without `$` they are created as numeric. Write `array flg{3} $1 ALTFL ASTFL BILIFL;`."
+      - line: 7
+        note: "Assigning the character literal 'Y' to a numeric element triggers the automatic conversion and the invalid-data note; the cause is the declaration on line 4."
+    fixed: |
+      data lb_flags;
+        set lb_wide;
+        array val{3} ALT AST BILI;
+        array flg{3} $1 ALTFL ASTFL BILIFL;
+        array uln{3} _temporary_ (40 40 21);
+        do i = 1 to dim(val);
+          if not missing(val{i}) and val{i} > uln{i} then flg{i} = 'Y';
+        end;
+        drop i;
+      run;
+    hints:
+      - "Which variables in this step already exist, and which are created by an ARRAY statement?"
+      - "What type does SAS give a new variable declared in an ARRAY statement without `$`?"
+    solution: |
+      Line 4. An array that **creates** character variables must declare `$` and a length. The `val` array on line 3 needs nothing because ALT, AST and BILI already exist in the input dataset.
+    explanation:
+      objective: "Explain why new flag variables are numeric and missing."
+      given: "The step, the note about conversions and the fact that the flag variables are new."
+      relevant: "Array declarations create variables; without `$` they are numeric."
+      irrelevant: "The temporary limits array and the loop bounds are fine."
+      interpretation: "The invalid-data note points at the assignment, but the defect is the declaration."
+      changes: "If ALTFL, ASTFL and BILIFL already existed as `$1` variables in LB_WIDE, the same code would work."
+      interviewer: "That you know arrays can create variables and that type is fixed at declaration."
+
+  - id: sas.arrays-do-loops.subscript-log
+    format: log
+    modes: [debug, speed]
+    difficulty: intermediate
+    skills: [sas.arrays, sas.log, sas.debugging]
+    lesson: sas-arrays-do-loops
+    title: Array subscript out of range
+    minutes: 4
+    prompt: |
+      A seventh race checkbox was added to the raw file, and a programmer updated the array but not the loop. Click the log line that shows the defect (expected log; line and column numbers vary).
+    program: |
+      data dm;
+        set raw_dm;
+        array chk{7} RACE_WHITE RACE_ASIAN RACE_BLACK RACE_AMIND
+                     RACE_NHPI RACE_OTHER RACE_NOT_REPORTED;
+        NCHK = 0;
+        do i = 1 to 8;
+          if chk{i} = 'Y' then NCHK + 1;
+        end;
+      run;
+    log: |
+      24   data dm;
+      25     set raw_dm;
+      26     array chk{7} RACE_WHITE RACE_ASIAN RACE_BLACK RACE_AMIND
+      27                  RACE_NHPI RACE_OTHER RACE_NOT_REPORTED;
+      28     NCHK = 0;
+      29     do i = 1 to 8;
+      30       if chk{i} = 'Y' then NCHK + 1;
+      31     end;
+      32   run;
+
+      ERROR: Array subscript out of range at line 30 column 8.
+      RACE_WHITE=Y RACE_ASIAN=  RACE_BLACK=  RACE_AMIND=  RACE_NHPI=  RACE_OTHER=  RACE_NOT_REPORTED=
+      NCHK=1 i=8 _ERROR_=1 _N_=1
+      NOTE: The SAS System stopped processing this step because of errors.
+    issues: [11]
+    lineNotes:
+      - line: 6
+        note: "The loop runs to 8 while the array has 7 elements. `do i = 1 to dim(chk);` would have kept the two in step."
+      - line: 11
+        note: "The error names the line and column of the array reference; the PDV dump below shows i = 8."
+      - line: 13
+        note: "The PDV at the moment of the error — including the offending index and `_ERROR_ = 1`."
+    hints:
+      - "Compare the number of array elements with the loop's stop value."
+      - "The ERROR line names the line and column of the reference that failed; the PDV dump immediately below it tells you what the index held at that moment."
+      - "The durable fix is to stop hard-coding the bound. `do i = 1 to dim(chk);` cannot drift out of step when a race category is added to the array."
+    solution: |
+      The ERROR line. Use `do i = 1 to dim(chk);` so the loop adapts automatically, and declare the array with `{*}`. Hard-coded limits are the usual cause of subscript errors after a data change.
+    explanation:
+      objective: "Read an array subscript error and fix its cause."
+      given: "The program and its log, after a new checkbox was added."
+      relevant: "The array size, the loop limit and the PDV dump showing i = 8."
+      irrelevant: "The counter logic is correct."
+      interpretation: "A data error: SAS sets _ERROR_ = 1, dumps the PDV and stops the step."
+      changes: "With `{*}` and `dim()`, adding a checkbox to the array needs no other change."
+      interviewer: "That you write loops that cannot go out of range."
+
+  - id: sas.arrays-do-loops.interview-arrays
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [sas.arrays, communication.interviewing]
+    lesson: sas-arrays-do-loops
+    title: Arrays in clinical programming
+    prompt: |
+      **Interviewer:** "What is an array in SAS, and when have you used one?"
+    modelAnswer: |
+      An array is a temporary name for a group of variables of the same type within a DATA step — it isn't a data structure and nothing about it is stored in the dataset. It lets me apply the same operation to many columns with a DO loop, usually `array x{*} …; do i = 1 to dim(x); … end;`.
+
+      In clinical work I use arrays for checkbox fields from the EDC — race, seriousness criteria, reasons — where several columns collapse into one coded value; for repeated measurements in wide vendor files, either to convert units with a parallel `_TEMPORARY_` array of factors or to reshape wide to long with an OUTPUT inside the loop; and for flagging many tests against limits.
+
+      Things I watch: declare `$` and a length when the array creates character variables; use `{*}` and `DIM()` so the loop can't go out of range; reset per-row counters, because sum statements imply RETAIN; keep a lookup array in the same order as the variable array; and drop the loop index from the output.
+    rubric:
+      - Defines an array as a temporary grouping of same-type variables in the DATA step
+      - Gives a concrete clinical use (checkboxes, unit conversion, wide-to-long, flags)
+      - Mentions DIM() / {*} for maintainability
+      - Mentions the $ and length requirement for new character variables
+      - Mentions dropping the index or resetting counters
+    redFlags:
+      - "Describes an array as a stored data structure"
+      - "Hard-codes loop bounds without mentioning the risk"
+      - "Cannot give a real use case"
+    followUps:
+      - "How would you reshape a wide vitals form into one row per test with a DATA step?"
+      - "When would you use a lookup dataset instead of a _TEMPORARY_ array?"
+
+  - id: sas.arrays-do-loops.speed-varlist
+    format: mcq
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.arrays, sas.data-step]
+    lesson: sas-arrays-do-loops
+    title: Variable list shortcuts
+    prompt: |
+      In `array r{*} RACE_:;`, what does `RACE_:` mean?
+    choices:
+      - text: "All variables in the PDV whose names begin with `RACE_`"
+        correct: true
+        feedback: "A name-prefix list. Convenient — and risky if a new RACE_ variable appears that you did not intend to include."
+      - text: "All variables between `RACE` and the end of the dataset"
+        feedback: "That is a positional list, written `RACE_WHITE--RACE_OTHER`."
+      - text: "The variables `RACE_1` to `RACE_n`"
+        feedback: "A numbered range is written `RACE_1-RACE_6`."
+      - text: "All character variables"
+        feedback: "That is `_character_`."
+    solution: |
+      A name-prefix list. Others: `Q1-Q10` (numbered range), `ALT--BILI` (positional range, in dataset order), `_numeric_` and `_character_`. Prefix lists are handy in exploratory work; in production code, listing the variables explicitly documents what the derivation covers.

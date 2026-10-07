@@ -1,0 +1,575 @@
+items:
+  - id: sdtm.why.model-vs-ig
+    format: mcq
+    modes: [check, interview]
+    difficulty: foundation
+    skills: [sdtm.purpose, regulatory.data-standards]
+    lesson: sdtm-why-standards
+    title: SDTM or SDTMIG?
+    prompt: |
+      CBX417-301's Trial Summary domain carries two separate parameters:
+
+      | `TSPARMCD` | `TSVAL` |
+      |---|---|
+      | `SDTMVER` | `2.0` |
+      | `SDTIGVER` | `3.4` |
+
+      Why are these two different parameters rather than one?
+    choices:
+      - text: "The model and the implementation guide are separate documents that version independently; the model defines classes and roles, the IG defines the actual domains and variables."
+        correct: true
+        feedback: "Correct. SDTM v2.0 gives you the three general observation classes, the variable roles and the naming patterns; SDTMIG v3.4 gives you DM, AE, LB, EX and their variable lists with Required/Expected/Permissible core status."
+      - text: "`SDTMVER` is the version of the sponsor's mapping specification and `SDTIGVER` is CDISC's."
+        feedback: "Neither is sponsor-specific. Both name published CDISC documents. The sponsor's specification version, if recorded, would not be in TS."
+      - text: "`SDTMVER` applies to the tabulation datasets and `SDTIGVER` applies to the analysis datasets."
+        feedback: "Analysis datasets are governed by ADaM and ADaMIG, which are different standards entirely and are not what either of these parameters names."
+      - text: "They are the same thing; one is a legacy parameter kept for backward compatibility."
+        feedback: "They are genuinely different documents. A study can use SDTM v2.0 with different IG versions, which is exactly why both are recorded."
+    hints:
+      - "One of these documents contains a list of domains. The other does not contain a single domain."
+    explanation:
+      objective: "Distinguish the SDTM model from its implementation guide."
+      relevant: "That the model is abstract (classes, roles, naming patterns) and the IG is concrete (domains, variable lists, core status)."
+      interpretation: "A reviewer reads TS first partly to find out which rule book the datasets were built against."
+      interviewer: "That you can name what is in each document rather than using the two acronyms interchangeably."
+
+  - id: sdtm.why.tabulation-boundary
+    format: classify
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [sdtm.purpose, adam.purpose]
+    lesson: sdtm-why-standards
+    title: Which layer does this variable live in?
+    prompt: |
+      SDTM is a **tabulation** standard: it holds what was observed and collected. ADaM holds what you
+      decided to analyse.
+
+      Place each variable in the layer where it actually exists in CBX417-301.
+    categories: [SDTM, ADaM]
+    entries:
+      - text: "`AETERM` — the adverse event as the investigator wrote it"
+        category: SDTM
+        note: "The verbatim reported term. It is the AE domain's topic variable."
+      - text: "`TRTEMFL` — treatment-emergent flag"
+        category: ADaM
+        note: "\"Treatment-emergent\" is a SAP definition (here: first dose <= start <= last dose + 30 days). It is in ADAE's 46 columns and not in AE's 27."
+      - text: "`LBLOBXFL` — last observation before first exposure"
+        category: SDTM
+        note: "A standardized SDTM findings flag. The data determines it, not the SAP. 2,910 records carry Y."
+      - text: "`ABLFL` — analysis baseline record flag"
+        category: ADaM
+        note: "The record the SAP chose as baseline. Often the same row as LBLOBXFL, but a different variable answering a different question."
+      - text: "`AESTDY` — study day of the adverse event start"
+        category: SDTM
+        note: "Derived, but derived from collected dates against RFSTDTC with no analysis decision involved."
+      - text: "`CHG` — change from baseline"
+        category: ADaM
+        note: "A comparison between two records. SDTM never compares records to each other."
+      - text: "`AVISIT` — analysis visit"
+        category: ADaM
+        note: "Visit windowing is an analysis rule. SDTM carries VISIT/VISITNUM, the visit as conducted."
+      - text: "`EXDOSE` — dose administered in this interval"
+        category: SDTM
+        note: "An observation about what the subject received."
+    hints:
+      - "Ask: could you populate this without reading the statistical analysis plan?"
+      - "If the answer requires a decision someone wrote down in the SAP, it is ADaM."
+    solution: |
+      The dividing question is **"does populating this require an analysis decision?"**
+
+      - `AETERM`, `AESTDY`, `LBLOBXFL`, `EXDOSE` — no. They follow from what was collected and from
+        the study's own reference dates.
+      - `TRTEMFL`, `ABLFL`, `AVISIT`, `CHG` — yes. Each encodes a rule from the statistical analysis
+        plan, and a different SAP would produce different values from identical SDTM.
+
+      `LBLOBXFL` versus `ABLFL` is the pair worth memorising, because they usually land on the same
+      record and are not the same variable. When the SAP defines baseline as, for example, the mean of
+      two pre-dose assessments, they diverge — and a program that treated them as interchangeable would
+      change the analysis without anyone noticing.
+    explanation:
+      objective: "Locate the boundary between the tabulation layer and the analysis layer."
+      method: "Test each variable against whether the SAP is needed to populate it."
+      interpretation: "The boundary is what justifies having two standards instead of one."
+      changes: "Sponsors do sometimes push analysis-adjacent content into SDTM; conformance checks flag it, and it hides decisions in the wrong document."
+
+  - id: sdtm.why.lobxfl-vs-ablfl
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [sdtm.findings, adam.baseline]
+    lesson: sdtm-why-standards
+    title: LBLOBXFL and ABLFL disagree on one record
+    prompt: |
+      A QC programmer reports that for one subject and parameter, `ADLB.ABLFL = "Y"` sits on a
+      different record from `LB.LBLOBXFL = "Y"`.
+
+      What is the correct first response?
+    choices:
+      - text: "Check what the SAP defines as baseline — the two variables answer different questions and are allowed to disagree."
+        correct: true
+        feedback: "Correct. LBLOBXFL is SDTM's last-observation-before-first-exposure flag; ABLFL is ADaM's analysis baseline flag. If the SAP defines baseline as anything other than the last pre-dose value, they will differ by design."
+      - text: "Fix ADLB so that ABLFL always matches LBLOBXFL."
+        feedback: "That would overwrite the SAP's baseline definition with a data-driven one. It is the error, not the fix."
+      - text: "Fix LB so that LBLOBXFL matches ABLFL."
+        feedback: "Worse: it would push an analysis decision back into the tabulation layer and break the SDTM definition of the flag."
+      - text: "Report it as a conformance violation to Pinnacle 21."
+        feedback: "There is no conformance rule requiring the two to agree; they belong to different standards."
+    solution: |
+      **They are different variables with different definitions.**
+
+      | | `LBLOBXFL` | `ABLFL` |
+      |---|---|---|
+      | Standard | SDTM / SDTMIG v3.4 | ADaM / ADaMIG v1.3 |
+      | Question | Which is the last observation before first exposure? | Which record does the analysis treat as baseline? |
+      | Determined by | The data and `RFXSTDTC` | The statistical analysis plan |
+
+      In CBX417-301 they agree on almost every record, because the SAP happens to define baseline as the
+      last pre-dose assessment. That agreement is a property of this study, not a rule.
+
+      The genuine QC finding would be the opposite situation: `ABLFL` populated on more than one record
+      per subject and parameter, which *is* an ADaM violation. CBX417-301 passes that check — exactly one
+      `ABLFL = "Y"` per subject and parameter wherever a baseline exists.
+    explanation:
+      objective: "Decide whether a disagreement between two flags is a defect."
+      relevant: "Which standard defines each flag and what question each answers."
+      irrelevant: "Which record looks more sensible — that is the SAP's call, not the programmer's."
+      assumptions: "That the SAP has a written baseline definition; if it does not, that is the actual finding."
+      interviewer: "That you know --LOBXFL exists at all. Many candidates only know ABLFL and assume SDTM has no baseline flag."
+
+  - id: sdtm.why.fda-requirement
+    format: mcq
+    modes: [check, interview]
+    difficulty: foundation
+    skills: [regulatory.data-standards, regulatory.submission]
+    lesson: sdtm-why-standards
+    title: What "FDA requires SDTM" actually means
+    prompt: |
+      An interviewer asks you to be precise: which FDA document tells you **which version** of SDTMIG
+      applies to your study?
+    choices:
+      - text: "The Data Standards Catalog, which lists supported standards and versions with the dates each applies."
+        correct: true
+        feedback: "Correct. The Catalog is the version authority. The Study Data Technical Conformance Guide is its companion and describes the technical expectations for submitting standardized study data."
+      - text: "The Study Data Technical Conformance Guide, which names SDTMIG v3.4 as the required version."
+        feedback: "The Conformance Guide describes how to submit standardized study data; it is the Catalog that carries the supported versions and their dates. No single version is required for all studies."
+      - text: "ICH E6(R2), Good Clinical Practice."
+        feedback: "E6 governs the conduct of trials, not the format of submitted datasets."
+      - text: "21 CFR Part 11."
+        feedback: "Part 11 governs electronic records and signatures. It says nothing about SDTM domains or versions."
+    hints:
+      - "One document is a catalogue of versions and dates; the other is a technical how-to."
+    explanation:
+      objective: "Name the document that governs which SDTMIG version applies."
+      relevant: "That the version depends on the study and is published, not assumed."
+      interpretation: "This is why CBX417-301 records SDTIGVER in TS — so nobody has to guess later."
+      interviewer: "Precision. Saying \"the FDA requires SDTM\" without naming the Catalog signals second-hand knowledge."
+
+  - id: sdtm.why.shared-columns
+    format: numeric
+    modes: [guided, independent]
+    difficulty: foundation
+    skills: [sdtm.purpose, qc.data-cleaning]
+    lesson: sdtm-why-standards
+    title: How many raw column names survive into SDTM?
+    prompt: |
+      `data/oncology/raw/ae.csv` is the EDC adverse-event export with 23 columns:
+
+      ```text
+      RECORD_ID, SITE_ID, SUBJECT_ID, AE_LINE, AE_TERM, AE_START, AE_END, AE_ONGOING,
+      AE_GRADE, AE_SERIOUS, AE_SER_DEATH, AE_SER_LIFE_THREAT, AE_SER_HOSP, AE_SER_DISAB,
+      AE_SER_CONG_ANOM, AE_SER_MED_IMPORTANT, AE_REL_CBX, AE_REL_DOC, AE_ACTION_CBX,
+      AE_ACTION_DOC, AE_OUTCOME, CODED_PT, CODED_SOC
+      ```
+
+      `data/oncology/sdtm/ae.csv` is the SDTM AE domain built from it, with 27 columns.
+
+      **How many column names appear in both files?**
+    answer: 0
+    tolerance: 0
+    unit: columns
+    datasets: [oncology/raw/ae, oncology/sdtm/ae]
+    hints:
+      - "Look for any name that appears in both lists, character for character."
+      - "SDTM AE names all begin with AE, STUDYID, DOMAIN, USUBJID or EPOCH."
+    solution: |
+      **Zero.**
+
+      ```r
+      raw <- names(read.csv("data/oncology/raw/ae.csv"))
+      sdt <- names(read.csv("data/oncology/sdtm/ae.csv"))
+      length(intersect(raw, sdt))
+      ```
+
+      ```text
+      [1] 0
+      ```
+
+      `AE_TERM` becomes `AETERM`, `AE_GRADE` becomes `AETOXGR`, `AE_OUTCOME` becomes `AEOUT`,
+      `SITE_ID` + `SUBJECT_ID` become `USUBJID`, and `AE_REL_DOC` does not become an AE variable at all —
+      it becomes `SUPPAE.QVAL when QNAM = "AERELDOC"`.
+
+      Compare that with the two **SDTM** AE domains in this repository, from two unrelated studies:
+
+      ```r
+      onc <- names(read.csv("data/oncology/sdtm/ae.csv"))
+      car <- names(read.csv("data/cardio/ae.csv"))
+      length(intersect(onc, car))   # 16 of the cardio study's 17
+      ```
+
+      The only cardio column missing from oncology is `AESEV`, because CBX417-301 grades by CTCAE and
+      carries `AETOXGR` instead. **That is the whole argument for the standard in two numbers: 0 and 16.**
+    explanation:
+      objective: "Quantify how much of a raw export survives mapping."
+      given: "The two column lists."
+      calculating: "The size of the intersection."
+      numbers: "0 shared names within a study; 16 shared names across two unrelated conformant studies."
+      interpretation: "Mapping is a re-expression of meaning, not a rename. That is why a specification document is needed."
+      changes: "A study whose EDC was built from a CDASH-aligned library would share more raw names with CDASH, but still not with SDTM."
+
+  - id: sdtm.why.classify-layer
+    format: mapping
+    modes: [guided]
+    difficulty: foundation
+    skills: [sdtm.purpose, regulatory.data-standards]
+    lesson: sdtm-why-standards
+    title: Which document answers this question?
+    prompt: |
+      A new programmer keeps asking you questions. For each one, name the document that actually
+      contains the answer.
+    sourceLabel: Question
+    targetLabel: Document
+    targets:
+      - "SDTM (the model)"
+      - "SDTMIG v3.4"
+      - "NCI/CDISC controlled terminology"
+      - "FDA Data Standards Catalog"
+      - "The study's SAP"
+    pairs:
+      - source: "Is AESER Required, Expected or Permissible in the AE domain?"
+        target: "SDTMIG v3.4"
+        note: "Core status is assigned per variable per domain in the IG."
+      - source: "What are the permitted values of AEOUT?"
+        target: "NCI/CDISC controlled terminology"
+        note: "Codelist OUT (C66768), non-extensible, six submission values."
+      - source: "What is a Topic variable, and which role does AETERM have?"
+        target: "SDTM (the model)"
+        note: "Roles — Identifier, Topic, Qualifier, Timing — are defined by the model, not the IG."
+      - source: "Which version of SDTMIG may we submit for a study starting next year?"
+        target: "FDA Data Standards Catalog"
+        note: "The Catalog lists supported versions with the dates each applies."
+      - source: "Which adverse events count as treatment-emergent?"
+        target: "The study's SAP"
+        note: "Not a standards question at all. In CBX417-301 the rule is first dose <= start <= last dose + 30 days, and it produces ADAE.TRTEMFL."
+    hints:
+      - "Two of these are CDISC documents, one is NCI-published, one is FDA, and one is study-specific."
+    solution: |
+      The habit worth building is asking **"whose decision is this?"** before opening anything:
+
+      | Whose decision | Document |
+      |---|---|
+      | The abstract framework | SDTM (the model) |
+      | The concrete domain and variable list | SDTMIG v3.4 |
+      | The permitted values | NCI/CDISC controlled terminology |
+      | What the regulator will accept | FDA Data Standards Catalog |
+      | What this trial analyses | The SAP |
+
+      Almost every "is this allowed?" argument on a study team is really an argument about which of these
+      five owns the question.
+    explanation:
+      objective: "Route a standards question to the document that answers it."
+      method: "Ask whose decision the question belongs to."
+      interviewer: "That you do not treat 'CDISC' as one undifferentiated source."
+
+  - id: sdtm.why.ts-lookup
+    format: text
+    modes: [guided, speed]
+    difficulty: foundation
+    skills: [sdtm.trial-design, regulatory.data-standards]
+    lesson: sdtm-why-standards
+    title: Find the IG version from TS
+    prompt: |
+      You have been handed a submission package with no documentation and asked which SDTMIG version the
+      datasets were built against.
+
+      Which **domain** do you open, and which `TSPARMCD` do you look for? Answer as `DOMAIN.TSPARMCD`.
+    accept:
+      - "TS.SDTIGVER"
+      - "TS SDTIGVER"
+      - "SDTIGVER in TS"
+    acceptPatterns:
+      - "^\\s*ts\\W*sdtigver\\s*$"
+    monospace: true
+    datasets: [oncology/sdtm/ts]
+    hints:
+      - "The domain holds one record per trial summary parameter value."
+      - "There are two version parameters. One names the model, the other names the implementation guide."
+    solution: |
+      **`TS.SDTIGVER`.**
+
+      The Trial Summary domain is one record per trial summary parameter value, and CBX417-301's 41
+      records include both:
+
+      | `TSPARMCD` | `TSPARM` | `TSVAL` |
+      |---|---|---|
+      | `SDTIGVER` | SDTM IG Version | `3.4` |
+      | `SDTMVER` | SDTM Version | `2.0` |
+
+      `SDTMVER` is the model version. `SDTIGVER` is the implementation guide version, and it is the one
+      that tells you which domain and variable definitions apply.
+
+      While you are in TS, `DCUTDTC = "2025-03-31"` gives you the data cutoff and `DCUTDESC` says what
+      the cutoff was for ("Final PFS analysis") — the other two things you always want to know before
+      reading anybody's datasets.
+    explanation:
+      objective: "Locate the standards version inside the data itself."
+      relevant: "That TS is self-describing metadata submitted with the study."
+      interpretation: "TS is the first domain a reviewer opens, for exactly this reason."
+
+  - id: sdtm.why.compare-code
+    format: code
+    modes: [independent]
+    difficulty: intermediate
+    skills: [sdtm.purpose, r.import]
+    lesson: sdtm-why-standards
+    title: Measure the standardization yourself
+    language: r
+    prompt: |
+      Write R that reads the three adverse-event files and prints, in one data frame:
+
+      - how many column names the oncology **raw** export shares with the oncology **SDTM** AE domain;
+      - how many column names the oncology SDTM AE domain shares with the **cardio** SDTM AE domain.
+
+      Use `readr::read_csv()` and `intersect()`. The files are:
+
+      ```text
+      data/oncology/raw/ae.csv
+      data/oncology/sdtm/ae.csv
+      data/cardio/ae.csv
+      ```
+    starter: |
+      library(readr)
+
+      raw_ae <- read_csv("data/oncology/raw/ae.csv", show_col_types = FALSE)
+      # ...
+    datasets: [oncology/raw/ae, oncology/sdtm/ae, cardio/sdtm/ae]
+    checks:
+      - pattern: "read_csv\\("
+        message: "Read the files with readr::read_csv()."
+      - pattern: "intersect\\("
+        message: "Use intersect() to compare the two sets of column names."
+      - pattern: "names\\(|colnames\\("
+        message: "Compare column names, not data values."
+      - pattern: "data\\.frame\\(|tibble\\(|cat\\(|print\\("
+        message: "Print the two counts."
+      - pattern: "1\\s*-\\s*CNSR"
+        absent: true
+        message: "Nothing in this exercise involves censoring."
+    reference: |
+      library(readr)
+
+      raw_ae <- read_csv("data/oncology/raw/ae.csv",  show_col_types = FALSE)
+      onc_ae <- read_csv("data/oncology/sdtm/ae.csv", show_col_types = FALSE)
+      car_ae <- read_csv("data/cardio/ae.csv",        show_col_types = FALSE)
+
+      out <- data.frame(
+        comparison = c("raw vs SDTM (same study)", "SDTM vs SDTM (different studies)"),
+        shared     = c(length(intersect(names(raw_ae), names(onc_ae))),
+                       length(intersect(names(onc_ae), names(car_ae)))),
+        of         = c(ncol(raw_ae), ncol(car_ae))
+      )
+      print(out)
+    expectedOutput: |
+      > print(out)
+                              comparison shared of
+      1         raw vs SDTM (same study)      0 23
+      2 SDTM vs SDTM (different studies)     16 17
+    solution: |
+      The output is the argument for the standard, in two rows.
+
+      **Zero** shared names between a study's own raw export and its own SDTM domain: mapping re-expresses
+      meaning rather than renaming columns, which is why a written specification is unavoidable.
+
+      **Sixteen of seventeen** shared names between two studies that have nothing in common — different
+      sponsor, different disease, different CRO. The one that differs is `AESEV`, present in the
+      hypertension study and absent from the oncology study, which carries `AETOXGR` because its protocol
+      grades adverse events by CTCAE.
+
+      Both are conformant SDTMIG v3.4. The standard removed the accidental differences so that the real
+      one stays visible.
+    explanation:
+      objective: "Measure, rather than assert, what standardization achieves."
+      computation: "Set intersection of the column-name vectors."
+      numbers: "0 of 23 within the oncology study; 16 of 17 across the two studies."
+      interpretation: "The residual difference is clinical, not technical."
+
+  - id: sdtm.why.pooling-trap
+    format: open
+    modes: [interview, boss]
+    difficulty: advanced
+    skills: [sdtm.purpose, qc.mindset, communication.interpretation]
+    lesson: sdtm-why-standards
+    title: "\"Both studies are SDTM, so just pool the severe AEs\""
+    prompt: |
+      A medical writer asks you to produce a single table: "number of subjects with a severe adverse
+      event, pooled across CBX417-301 and VTX221-201. They're both SDTM, so it should be quick."
+
+      CBX417-301 carries `AETOXGR` with values 1–5 and no `AESEV` column. VTX221-201 carries `AESEV`
+      with `MILD` / `MODERATE` / `SEVERE` and no `AETOXGR` column.
+
+      What do you say, and what do you do?
+    modelAnswer: |
+      I would not produce the pooled column, and I would explain why in terms of the clinical question
+      rather than the datasets.
+
+      **The mechanical answer first.** The two studies record severity in different variables because
+      their protocols collect different things. CBX417-301 is an oncology study graded against CTCAE, so
+      it has `AETOXGR` with 2,466 records spread across grades 1–5 (1,175 / 789 / 378 / 96 / 28). The
+      hypertension study collects a three-level investigator severity in `AESEV`. Both are conformant
+      SDTMIG v3.4 — `AESEV` and `AETOXGR` are both legitimate AE variables and a study normally carries
+      one or the other.
+
+      **The substantive answer.** A mapping from grade 3 to "severe" is available and is used in
+      practice, but it is a clinical convention, not an identity. CTCAE grade 3 means "severe or
+      medically significant but not immediately life-threatening; hospitalization indicated" against
+      criteria specific to each term; an investigator ticking SEVERE on a hypertension CRF is making an
+      unanchored global judgement. Pooling them produces a number whose denominator mixes two different
+      questions, and nobody downstream would be able to tell.
+
+      **What I would offer instead.** Two side-by-side columns with their own headers and a footnote
+      stating the severity scale used in each study — which is what the reader actually needs, since the
+      populations, durations and background regimens differ too. If a pooled figure is genuinely required
+      for a integrated summary, then the mapping rule has to be pre-specified in the integration plan and
+      stated in the table footnote, and that is a decision for the statistician and the medical monitor,
+      not for me at request time.
+
+      I would also flag that this is a good early warning: if pooling is planned, the integration
+      specification needs to exist before anyone writes the first program, not after.
+    rubric:
+      - "Identifies that AESEV and AETOXGR are different variables that are both valid SDTM, not a defect in one study"
+      - "States that severity scales are not interchangeable, and explains why in clinical terms (CTCAE is term-specific and anchored; investigator severity is a global judgement)"
+      - "Does not simply refuse; proposes an alternative presentation that answers the underlying question"
+      - "Recognises that if a pooled figure is required, the mapping must be pre-specified and footnoted, and is a statistician/medical decision"
+      - "Notes that conformance guarantees readability, not comparability"
+    redFlags:
+      - "Mapping grade >= 3 to SEVERE on the spot and producing the pooled number without comment"
+      - "Claiming one of the studies is non-conformant or was mapped wrongly"
+      - "Refusing with 'the standard doesn't allow it' — the standard has nothing to say about pooling"
+      - "Proposing to add AESEV to the oncology SDTM to make the programs match"
+    followUps:
+      - "The statistician says 'fine, pre-specify grade >= 3 as severe'. What goes in the footnote?"
+      - "Where would this rule live for a real integrated summary of safety?"
+      - "Would your answer change if both studies were oncology studies graded by CTCAE?"
+
+  - id: sdtm.why.raw-survives
+    format: mcq
+    modes: [independent, qc]
+    difficulty: advanced
+    skills: [sdtm.purpose, sdtm.mapping]
+    lesson: sdtm-why-standards
+    title: What happened to AE_REL_DOC?
+    prompt: |
+      The raw adverse-event page collects **two** causality assessments, because every subject receives
+      two drugs:
+
+      | Raw field | Meaning |
+      |---|---|
+      | `AE_REL_CBX` | Relationship to CBX-417 / placebo |
+      | `AE_REL_DOC` | Relationship to docetaxel |
+
+      The SDTM AE domain has exactly one relationship variable, `AEREL`.
+
+      Where did the second assessment go?
+    choices:
+      - text: "`SUPPAE`, as `QNAM = \"AERELDOC\"` with `IDVAR = \"AESEQ\"` pointing back at the parent AE record."
+        correct: true
+        feedback: "Correct. SUPPAE has 4,932 rows — two qualifiers (AERELDOC and AEACNDOC) for each of the 2,466 AE records — each carrying IDVAR = AESEQ and the parent record's AESEQ in IDVARVAL."
+      - text: "It was dropped, because SDTM permits only one causality per event."
+        feedback: "Nothing is dropped for being inconvenient. Collected data that has no standard variable goes to a supplemental qualifier; discarding it would mean the submitted data no longer reflects the CRF."
+      - text: "A second AE record was created for the same event with `AEREL` holding the docetaxel assessment."
+        feedback: "That would double the event count in every safety table. One event is one record."
+      - text: "It became `AEREL` and the CBX-417 assessment went to SUPPAE instead."
+        feedback: "The convention is the reverse here: AEREL carries the relationship to the study drug under investigation, and the companion agent's assessment goes to SUPPAE. Either choice must be documented, but this study made the first one."
+    hints:
+      - "Nothing collected is thrown away. Where does SDTM put collected data with no standard variable?"
+      - "Look at the row count of `data/oncology/sdtm/suppae.csv` against the AE row count."
+    solution: |
+      **`SUPPAE`**, the supplemental qualifiers dataset for AE.
+
+      ```text
+      STUDYID     RDOMAIN  USUBJID               IDVAR  IDVARVAL  QNAM      QVAL
+      CBX417-301  AE       CBX417-301-1001-0002  AESEQ  1         AERELDOC  NOT RELATED
+      CBX417-301  AE       CBX417-301-1001-0002  AESEQ  1         AEACNDOC  DOSE NOT CHANGED
+      ```
+
+      Two qualifiers per AE record, 2,466 AE records, **4,932 SUPPAE rows** — and the arithmetic is worth
+      doing, because it is the fastest check that nothing was lost.
+
+      `IDVAR = "AESEQ"` and `IDVARVAL = "1"` are how the row rejoins its parent: match on `STUDYID`,
+      `USUBJID`, `RDOMAIN` and then `AE.AESEQ = SUPPAE.IDVARVAL`. `QVAL` is character even when the value
+      is numeric, which is the price of the vertical structure.
+
+      The same page has the same problem twice: `AE_ACTION_DOC` becomes `QNAM = "AEACNDOC"` for identical
+      reasons.
+    explanation:
+      objective: "Trace a collected field that has no standard SDTM variable."
+      given: "Two causality fields on the CRF and one AEREL variable in the domain."
+      relevant: "That SUPPQUAL is the standard destination for non-standard qualifiers."
+      computation: "2,466 AE records x 2 qualifiers = 4,932 SUPPAE rows — verifiable in one line."
+      assumptions: "That the sponsor chose AEREL for the investigational product; the opposite choice is legal if documented in the aCRF and define.xml."
+      changes: "If a third agent were added to the regimen, SUPPAE would grow by another QNAM rather than AE growing a column."
+      interviewer: "That your instinct is 'where did it go?' rather than 'I suppose it was dropped'."
+
+  - id: sdtm.why.open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [sdtm.purpose, communication.interpretation]
+    lesson: sdtm-why-standards
+    title: Explain SDTM to a non-programmer
+    prompt: |
+      A newly hired medical monitor — a physician with no data background — asks you: "Why do we spend
+      six months and a lot of money turning our database into something called SDTM? We already have the
+      data."
+
+      Answer them.
+    modelAnswer: |
+      "You do already have the data. What you don't have is data anyone outside this study can read
+      without you.
+
+      Our adverse-event export has twenty-three columns, and every one of their names was invented by
+      whoever built our EDC. `AE_GRADE`, `AE_REL_CBX`, `AE_REL_DOC`. Dates look like `13 JUL 2022`.
+      Outcome is free text with inconsistent capitalisation. None of that is wrong — it just means that
+      reading it requires you, or the build specification, or both.
+
+      A reviewer at a regulator is not reading our study. They are reading every study in the
+      application, from several CROs, each with its own database build. If each one arrives in its own
+      dialect, their first month goes on translation rather than on the actual safety question.
+
+      SDTM does that translation once, here, in a form that was agreed in advance. Same domain names —
+      AE for adverse events, LB for labs, EX for exposure. Same variable names — the reported term is
+      always `AETERM`. Same date format. Same permitted values, from a published list. The result is that
+      a program the reviewer already has runs on our study without modification, and so does ours on
+      theirs.
+
+      Two things worth knowing about what it is not. First, it holds what was *observed* — the event, its
+      grade, its dates — and deliberately not what we decided to analyse. Treatment-emergence,
+      baselines, analysis visits: those are a second layer called ADaM, built on top, so the analysis
+      decisions are visible as decisions instead of being baked invisibly into the raw data.
+
+      Second, it isn't only for the regulator. It's the only complete, stable view of what the study
+      collected, so it's what I'd query when you ask me a question about the whole study. If we treated
+      it as a box we ship at the end, it would be the one dataset nobody trusts."
+    rubric:
+      - "Leads with the reviewer's problem (many studies, many dialects) rather than with CDISC vocabulary"
+      - "Gives a concrete before/after from the actual study rather than abstractions"
+      - "States the tabulation-versus-analysis boundary and why a second layer exists"
+      - "Avoids acronym soup; explains SDTMIG/CT only if it helps the listener"
+      - "Mentions that SDTM is used internally too, not just shipped"
+    redFlags:
+      - "Answering 'because the FDA requires it' and stopping"
+      - "Reciting the three observation classes to someone who asked a business question"
+      - "Claiming SDTM improves data quality on its own — mapping does not fix bad data, cleaning does"
+    followUps:
+      - "They ask: could we skip SDTM and go straight from the database to the analysis datasets?"
+      - "They ask: does SDTM make our data better?"
+      - "They ask: why does our vendor keep talking about Pinnacle 21 findings?"

@@ -1,0 +1,458 @@
+items:
+  - id: sas.merge.inflags-mcq
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.merge]
+    lesson: sas-merge
+    title: Records without a match
+    prompt: |
+      ```sas
+      data check;
+        merge lb(in=inlb) adsl(in=insl keep=USUBJID TRT01A);
+        by USUBJID;
+        /* ??? */
+      run;
+      ```
+
+      Which statement keeps only the LB records whose subject is **not** in ADSL?
+    choices:
+      - text: "`if inlb and not insl;`"
+        correct: true
+        feedback: "The LB dataset contributed to the BY group and ADSL did not — an anti-join."
+      - text: "`if insl and not inlb;`"
+        feedback: "That is the opposite: ADSL subjects who have no lab records."
+      - text: "`if inlb;`"
+        feedback: "That keeps every LB record, matched or not (a left join)."
+      - text: "`if inlb and insl;`"
+        feedback: "That keeps only matched records (an inner join)."
+    solution: |
+      `if inlb and not insl;` — lab records of subjects missing from ADSL, for example screen failures with screening labs. In a review listing, those records should be explained, not silently dropped.
+
+  - id: sas.merge.m2m-numeric
+    format: numeric
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.merge]
+    lesson: sas-merge
+    title: Rows from a many-to-many merge
+    prompt: |
+      Subject 1012-0001 has **2** records in AE and **3** records in CM. Both datasets are sorted by `USUBJID`.
+
+      ```sas
+      data ae_cm;
+        merge ae cm;
+        by USUBJID;
+      run;
+      ```
+
+      How many observations does this step create for subject 1012-0001?
+    answer: 3
+    tolerance: 0
+    hints:
+      - "MERGE does not form every combination."
+      - "Within a BY group, SAS iterates as many times as the larger number of observations."
+    solution: |
+      3 — the larger of 2 and 3. Rows pair AE1 with CM1, AE2 with CM2, and AE2 (retained) with CM3. A SQL join on `USUBJID` would create 2 × 3 = 6 rows. The log reports `NOTE: MERGE statement has more than one data set with repeats of BY values.`
+
+  - id: sas.merge.joins-mapping
+    format: mapping
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [sas.merge, sql.joins]
+    lesson: sas-merge
+    title: IN= subsets and join types
+    prompt: |
+      In `merge lb(in=inlb) adsl(in=insl); by USUBJID;`, match each subsetting statement with the result it produces.
+    sourceLabel: Statement after the BY statement
+    targetLabel: Result
+    pairs:
+      - source: "if inlb and insl;"
+        target: "Inner join: records in both"
+      - source: "if inlb;"
+        target: "Left join: all LB records"
+      - source: "if insl;"
+        target: "Right join: all ADSL subjects"
+      - source: "(no subsetting IF)"
+        target: "Full join: everything"
+      - source: "if inlb and not insl;"
+        target: "LB records without an ADSL subject"
+      - source: "if not (inlb and insl);"
+        target: "Records present in only one dataset"
+    targets:
+      - "Inner join: records in both"
+      - "Left join: all LB records"
+      - "Right join: all ADSL subjects"
+      - "Full join: everything"
+      - "LB records without an ADSL subject"
+      - "Records present in only one dataset"
+      - "Cartesian product of both datasets"
+    hints:
+      - "An IN= flag is 1 when that dataset has observations in the current BY group."
+      - "Read each condition as a sentence about the BY group. `inlb and insl` means both sides contributed a record; `inlb` alone means the LB side did, whatever ADSL did."
+      - "One target is a decoy. A DATA step MERGE never produces a Cartesian product — that is a SQL join on repeated keys — so nothing maps to it."
+    solution: |
+      The IN= flags are the whole vocabulary of joins in a DATA step. No combination of them produces a Cartesian product — that requires PROC SQL.
+
+  - id: sas.merge.overwrite-mcq
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.merge, sas.pdv]
+    lesson: sas-merge
+    title: Which value survives?
+    prompt: |
+      `ADLB` still contains an old `TRT01A` column (`'Placebo + Docetaxel'`) for subject 1012-0001, whose corrected ADSL value is `'CBX-417 + Docetaxel'`. The subject has 3 ADLB records.
+
+      ```sas
+      data adlb2;
+        merge adlb adsl(keep=USUBJID TRT01A);
+        by USUBJID;
+      run;
+      ```
+
+      What is `TRT01A` on the subject's three output records?
+    choices:
+      - text: "CBX-417 on record 1; Placebo on records 2 and 3"
+        correct: true
+        feedback: "Iteration 1 reads ADLB then ADSL, so ADSL's value wins. On iterations 2 and 3 only ADLB is read (ADSL has no more observations for this subject), so ADLB's stale value overwrites the PDV."
+      - text: "CBX-417 on all three records, because ADSL is listed last"
+        feedback: "The rightmost dataset only wins on iterations where it is actually read. In a one-to-many merge the 'one' dataset is read once per BY group."
+      - text: "Placebo on all three records"
+        feedback: "That is what happens if ADSL is listed first: `merge adsl adlb;`."
+      - text: "The step stops with an error because TRT01A is in both datasets"
+        feedback: "Same-named variables are allowed; SAS silently overwrites."
+    solution: |
+      Only the first record gets the corrected value. The fix is to make each variable come from one dataset: `merge adlb(drop=TRT01A) adsl(keep=USUBJID TRT01A);`. `options msglevel=i;` makes SAS log an INFO message whenever a MERGE overwrites a variable.
+
+  - id: sas.merge.adsl-to-lb-code
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sas.merge, sas.sort, adam.bds]
+    lesson: sas-merge
+    title: ADSL variables onto lab records
+    minutes: 12
+    prompt: |
+      Build `WORK.ADLB0` from `SDTM.LB` and `ADAM.ADSL`:
+
+      - keep only lab records of subjects who are in ADSL;
+      - add `TRT01A`, `TRTSDT` and `SAFFL` from ADSL (no other ADSL variables);
+      - write lab records whose subject is not in ADSL to `WORK.LB_NOADSL` for review;
+      - do not modify the SDTM or ADaM libraries.
+    starter: |
+      /* sort copies of both inputs */
+
+      data adlb0 lb_noadsl;
+        /* merge with IN= flags */
+      run;
+    hints:
+      - "Sort into WORK with `OUT=` — the SDTM and ADaM libraries are read-only."
+      - "Use `KEEP=` on ADSL so that only the requested variables (plus USUBJID) come across."
+      - "`if inlb and insl then output adlb0; else if inlb then output lb_noadsl;`"
+    checks:
+      - pattern: 'proc\s+sort\s+data\s*=\s*sdtm\.lb\b[^;]*out\s*='
+        message: "Sorts SDTM.LB into a WORK copy with OUT="
+      - pattern: 'proc\s+sort\s+data\s*=\s*adam\.adsl\b[^;]*out\s*='
+        message: "Sorts ADAM.ADSL into a WORK copy with OUT="
+      - pattern: 'keep\s*=\s*[^)]*\btrt01a\b[^)]*\)'
+        message: "Restricts ADSL variables with KEEP="
+      - pattern: 'merge\s+[^;]*in\s*=\s*\w+[^;]*in\s*=\s*\w+'
+        message: "Uses IN= flags on both datasets in the MERGE"
+      - pattern: '^\s*by\s+usubjid\s*;'
+        flags: im
+        message: "Merges BY USUBJID"
+      - pattern: 'output\s+adlb0\s*;'
+        message: "Writes matched records to ADLB0"
+      - pattern: 'output\s+lb_noadsl\s*;'
+        message: "Writes unmatched LB records to LB_NOADSL"
+    reference: |
+      proc sort data=sdtm.lb out=lb;
+        by USUBJID;
+      run;
+
+      proc sort data=adam.adsl(keep=USUBJID TRT01A TRTSDT SAFFL) out=adsl;
+        by USUBJID;
+      run;
+
+      data adlb0 lb_noadsl;
+        merge lb(in=inlb) adsl(in=insl);
+        by USUBJID;
+        if inlb and insl then output adlb0;
+        else if inlb then output lb_noadsl;
+      run;
+    solution: |
+      Sort copies, restrict ADSL's variables, merge with IN= flags, route records with explicit OUTPUT statements. ADSL subjects without lab records are simply not output. Reconcile: records in `ADLB0` + records in `LB_NOADSL` = records in `SDTM.LB`, and there must be no repeats-of-BY-values note.
+
+  - id: sas.merge.full-count-numeric
+    format: numeric
+    modes: [guided]
+    difficulty: intermediate
+    skills: [sas.merge]
+    lesson: sas-merge
+    title: Count the rows of a full merge
+    prompt: |
+      Records per subject in two datasets sorted by `USUBJID`:
+
+      | USUBJID | Records in LB | Records in ADSL |
+      |---|---:|---:|
+      | 1012-0001 | 3 | 1 |
+      | 1012-0002 | 2 | 1 |
+      | 2031-0001 | 0 | 1 |
+      | 2031-0005 | 1 | 0 |
+      | 3044-0001 | 2 | 1 |
+
+      How many observations does `data all; merge lb adsl; by USUBJID; run;` create?
+    answer: 9
+    tolerance: 0
+    hints:
+      - "There is no subsetting IF, so every BY group produces output."
+      - "Each BY group produces as many rows as the larger of its two counts."
+    solution: |
+      3 + 2 + 1 + 1 + 2 = 9. Of these, 7 are matched records, 1 is an ADSL subject without labs (2031-0001) and 1 is a lab record without an ADSL subject (2031-0005).
+
+  - id: sas.merge.nobby-mcq
+    format: mcq
+    modes: [check, independent]
+    difficulty: foundation
+    skills: [sas.merge]
+    lesson: sas-merge
+    title: MERGE without BY
+    prompt: |
+      A program contains:
+
+      ```sas
+      data adlb2;
+        merge adlb adsl(keep=USUBJID TRT01A);
+      run;
+      ```
+
+      There is no BY statement. What happens?
+    choices:
+      - text: "Observations are combined by position — the first ADLB record with the first ADSL record, and so on — so treatments are attached to the wrong subjects"
+        correct: true
+        feedback: "Without BY, MERGE is a one-to-one positional merge. USUBJID from ADSL even overwrites ADLB's USUBJID on the rows where ADSL is read."
+      - text: "SAS matches on USUBJID automatically because both datasets contain it"
+        feedback: "MERGE never matches on a variable unless you name it in a BY statement."
+      - text: "The step stops with an error because BY is required"
+        feedback: "Not by default. The system option MERGENOBY=ERROR makes it an error; the default is to proceed silently."
+      - text: "SAS creates a Cartesian product of the two datasets"
+        feedback: "MERGE never creates Cartesian products."
+    solution: |
+      A positional merge. Worse, `USUBJID` exists in both datasets, so on rows where ADSL is read its `USUBJID` overwrites ADLB's — the output can look plausible while every record is mislabelled. Always use BY, and consider `options mergenoby=error;` in study setup programs.
+
+  - id: sas.merge.m2m-log
+    format: log
+    modes: [debug]
+    difficulty: advanced
+    skills: [sas.merge, sas.log, sas.debugging]
+    lesson: sas-merge
+    title: The counts look fine
+    minutes: 6
+    prompt: |
+      ADSL is supposed to contain **10** subjects, one row each. This merge attaches treatment to 25 AE records, and the output has 25 records, as expected. Click every log line that shows something is wrong.
+    program: |
+      data ae_adsl;
+        merge ae(in=inae) adsl(in=insl keep=USUBJID TRT01A TRTSDT);
+        by USUBJID;
+        if inae;
+      run;
+    log: |
+      61   data ae_adsl;
+      62     merge ae(in=inae) adsl(in=insl keep=USUBJID TRT01A TRTSDT);
+      63     by USUBJID;
+      64     if inae;
+      65   run;
+
+      NOTE: MERGE statement has more than one data set with repeats of BY values.
+      NOTE: There were 25 observations read from the data set WORK.AE.
+      NOTE: There were 11 observations read from the data set WORK.ADSL.
+      NOTE: The data set WORK.AE_ADSL has 25 observations and 12 variables.
+    issues: [7, 9]
+    lineNotes:
+      - line: 7
+        note: "AE has repeated USUBJIDs by design, so this note means ADSL also has a repeated USUBJID in at least one BY group — a many-to-many merge."
+      - line: 9
+        note: "11 observations for 10 subjects: one subject has two ADSL rows. That is the duplicate causing line 7."
+      - line: 10
+        note: "25 in, 25 out — the count looks right because a many-to-many merge produces the larger of the two counts, not the product. Counts alone would not reveal the problem."
+    hints:
+      - "Which dataset is supposed to have one row per USUBJID?"
+      - "Compare the number of ADSL observations with the number of subjects."
+    solution: |
+      Lines 7 and 9. One subject appears twice in ADSL, so that subject's AE records are paired with alternating ADSL rows — if the two rows differ (for example an outdated `TRT01A`), AE records of one subject get different treatments. Find the duplicate (`proc sort data=adsl nodupkey dupout=dups out=_null_; by USUBJID; run;`), fix ADSL at its source, and rerun.
+    explanation:
+      objective: "Detect a many-to-many merge whose output count looks normal."
+      given: "The program, the expectation of 10 ADSL subjects, and the log."
+      relevant: "The repeats-of-BY-values NOTE and the ADSL observation count."
+      irrelevant: "The variable count of the output."
+      numbers: "11 ADSL observations vs 10 subjects → 1 duplicate row. 25 AE records in and out, because a MERGE group yields max(n_AE, n_ADSL) rows."
+      interpretation: "Record counts cannot detect a many-to-many merge; the NOTE can."
+      changes: "If the duplicate subject had more ADSL rows than AE records, the output would gain rows and the count check would catch it too."
+      interviewer: "That you treat the repeats-of-BY-values note as an error and verify key uniqueness on the 'one' side."
+
+  - id: sas.merge.overwrite-hotspot
+    format: hotspot
+    language: sas
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [sas.merge, sas.pdv, sas.debugging]
+    lesson: sas-merge
+    title: Only the first record is updated
+    minutes: 7
+    prompt: |
+      After ADSL was corrected for a dispensing error, QC reports that for the affected subject only the **first** lab record in `ADLB2` shows the corrected `TRT01A`; all later records show the old treatment. `ADLB` was created last month and already contains a `TRT01A` column.
+
+      Click the line responsible.
+    code: |
+      proc sort data=adlb;
+        by USUBJID PARAMCD ADT;
+      run;
+
+      data adlb2;
+        merge adlb adsl(keep=USUBJID TRT01A TRTSDT);
+        by USUBJID;
+      run;
+    answerLines: [6]
+    lineNotes:
+      - line: 6
+        note: "TRT01A exists in both datasets. On each subject's first iteration ADSL is read after ADLB and wins; on later iterations only ADLB is read and its stale value overwrites the PDV."
+      - line: 7
+        note: "The BY statement is correct; the problem is which dataset supplies the non-BY variable TRT01A."
+    fixed: |
+      proc sort data=adlb;
+        by USUBJID PARAMCD ADT;
+      run;
+
+      data adlb2;
+        merge adlb(drop=TRT01A TRTSDT) adsl(keep=USUBJID TRT01A TRTSDT);
+        by USUBJID;
+      run;
+    hints:
+      - "Which datasets are read on the first iteration of a subject's BY group, and which on the second?"
+      - "How many datasets supply TRT01A?"
+    solution: |
+      Line 6. Drop the stale copies (`adlb(drop=TRT01A TRTSDT)`) so each variable has one source. As a standing check, `options msglevel=i;` writes an INFO line whenever a MERGE overwrites a variable.
+    explanation:
+      objective: "Explain why only the first record of each subject carries the corrected value."
+      given: "A one-to-many merge where the 'many' dataset has a stale copy of a variable supplied by the 'one' dataset."
+      relevant: "The order in which datasets are read on each iteration of a BY group."
+      irrelevant: "The sort (it is correct: USUBJID is the first key)."
+      computation: "Iteration 1: read ADLB (old TRT01A), read ADSL (new TRT01A) → new. Iterations 2+: read ADLB only → old."
+      interpretation: "The symptom (first record right, others wrong) is the fingerprint of a same-named variable in a one-to-many merge."
+      changes: "Listing ADSL first would make every record wrong, which is easier to notice but no better."
+      interviewer: "That you understand how MERGE fills the PDV and keep each variable's source unambiguous."
+
+  - id: sas.merge.filter-diff
+    format: diff
+    modes: [qc]
+    difficulty: intermediate
+    skills: [sas.merge, sas.where-if, qc.compare]
+    lesson: sas-merge
+    title: A blank treatment row
+    minutes: 6
+    prompt: |
+      Both programs count subjects in the safety population with at least one ALT record, by actual treatment. Production shows an extra row with a blank treatment. Why?
+    left:
+      title: Production
+      columns: [TRT01A, Subjects]
+      rows:
+        - ["", 1]
+        - ["CBX-417 + Docetaxel", 3]
+        - ["Placebo + Docetaxel", 2]
+    right:
+      title: QC
+      columns: [TRT01A, Subjects]
+      rows:
+        - ["CBX-417 + Docetaxel", 3]
+        - ["Placebo + Docetaxel", 2]
+    leftCode: |
+      data alt;
+        merge adlb(in=a where=(PARAMCD = 'ALT') keep=USUBJID PARAMCD AVAL)
+              adsl(keep=USUBJID TRT01A SAFFL where=(SAFFL = 'Y'));
+        by USUBJID;
+        if a;
+      run;
+    rightCode: |
+      data alt_qc;
+        merge adlb(in=a where=(PARAMCD = 'ALT') keep=USUBJID PARAMCD AVAL)
+              adsl(in=b keep=USUBJID TRT01A SAFFL where=(SAFFL = 'Y'));
+        by USUBJID;
+        if a and b;
+      run;
+    codeLanguage: sas
+    choices:
+      - text: "Production filtered ADSL with WHERE= but kept every ALT record (`if a;`), so ALT records of a non-safety subject were output with a blank TRT01A"
+        correct: true
+        feedback: "WHERE= removed that subject's ADSL row before the merge, so the ALT records had no match and their ADSL variables are missing. Only `if a and b;` enforces the population."
+      - text: "QC used an inner join and wrongly dropped a safety subject"
+        feedback: "Every safety subject with ALT records has a match in the filtered ADSL, so the inner join drops only non-safety subjects — which is the intent."
+      - text: "The blank row is a subject with a missing ALT value"
+        feedback: "Missing AVAL does not blank TRT01A; the treatment comes from ADSL."
+      - text: "The merge was many-to-many"
+        feedback: "ADSL has one row per subject; nothing indicates repeated keys on both sides."
+    hints:
+      - "The two programs differ in exactly one place. Find it before theorising about the data."
+      - "A `WHERE=` dataset option is applied as that dataset is read, so a subject excluded from ADSL still brings its ADLB records into the BY group — with every ADSL variable missing."
+      - "Ask what the blank row *is*: a subject who has ALT records but whose ADSL row did not survive the `SAFFL = 'Y'` filter. Which subsetting condition would have excluded it?"
+    solution: |
+      Filtering one side of a merge does not filter the other. Require a match with both IN= flags (`if a and b;`), or filter after the merge (`if a and SAFFL = 'Y';`). The blank row here is likely a randomized subject who was never treated but had screening labs — real data, wrong population.
+    explanation:
+      objective: "Find why production reports a treatment group that should not exist."
+      given: "Both programs and their outputs."
+      relevant: "The WHERE= option on ADSL and the subsetting IF on the IN= flags."
+      irrelevant: "The PARAMCD filter (identical in both)."
+      interpretation: "A population filter applied to one input of a merge must be enforced on the result with IN= flags."
+      interviewer: "That you can reason about what each side of a merge contributes after filtering."
+
+  - id: sas.merge.interview-merge
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [sas.merge, sql.joins, communication.interviewing]
+    lesson: sas-merge
+    title: MERGE versus SQL join
+    prompt: |
+      **Interviewer:** "Explain how a DATA step MERGE with BY works. How is it different from a SQL join, and how do you make sure a merge did what you intended?"
+    modelAnswer: |
+      Both datasets must be sorted by the BY variables. For each BY group SAS reads observations from each dataset in parallel; when a dataset runs out of observations in the group it isn't re-read, so its values are retained for the remaining iterations. That gives the natural one-to-one and one-to-many behaviour — ADSL values repeated on every lab record. IN= flags tell me which datasets contributed, so `if a and b` is an inner join, `if a` a left join, `if a and not b` an anti-join.
+
+      Differences from SQL: SQL doesn't need sorted data; for many-to-many keys SQL returns every combination, while MERGE pairs rows by position and gives the larger count, with the "repeats of BY values" note. Same-named non-BY variables are overwritten in MERGE by whichever dataset is read last on that iteration, whereas SQL keeps the first column and warns.
+
+      To make sure it worked: I check key uniqueness on the "one" side before merging, keep only needed variables with KEEP= to avoid overwriting, and after the merge reconcile counts — matched plus unmatched records equal the input — and confirm there's no repeats-of-BY-values note.
+    rubric:
+      - Mentions sorting and the BY-group read-in-parallel mechanism with retained values
+      - Explains IN= flags and at least two join types
+      - Contrasts many-to-many behaviour with SQL's Cartesian product
+      - Mentions same-named variable overwriting
+      - Describes concrete verification (key uniqueness, counts, the log note)
+    redFlags:
+      - "Says MERGE produces a Cartesian product"
+      - "Never checks the log or counts after a merge"
+      - "Cannot name an IN= pattern"
+    followUps:
+      - "Your merge output has the right number of rows but QC disagrees on some values. What would you check?"
+      - "When would you prefer PROC SQL for combining data?"
+
+  - id: sas.merge.speed-merge-note
+    format: mcq
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.merge, sas.log]
+    lesson: sas-merge
+    title: The many-to-many signal
+    prompt: |
+      Which log message signals a many-to-many merge?
+    choices:
+      - text: "`NOTE: MERGE statement has more than one data set with repeats of BY values.`"
+        correct: true
+        feedback: "The only message SAS gives — and it is just a NOTE."
+      - text: "`ERROR: BY variables are not properly sorted on data set WORK.ADSL.`"
+        feedback: "That is the unsorted-data error."
+      - text: "`WARNING: Multiple lengths were specified for the BY variable USUBJID by input data sets.`"
+        feedback: "That is about BY-variable lengths, not repeated keys."
+      - text: "`NOTE: The execution of this query involves performing one or more Cartesian product joins that can not be optimized.`"
+        feedback: "That is a PROC SQL note; MERGE never forms Cartesian products."
+    solution: |
+      The repeats-of-BY-values NOTE. Many teams' log checkers treat it as an error.

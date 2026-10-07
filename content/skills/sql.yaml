@@ -1,0 +1,44 @@
+domain: sql
+title: SQL
+description: Querying relational clinical and operational data.
+skills:
+  - id: sql.select
+    name: SELECT, WHERE, ORDER BY
+    description: Projecting and filtering rows, NULL semantics, DISTINCT, sorting.
+    weight: 3
+    tracks: [computing, programmer, analytics]
+  - id: sql.aggregate
+    name: Aggregation
+    description: COUNT(*) vs COUNT(col) vs COUNT(DISTINCT), GROUP BY, HAVING.
+    weight: 3
+    tracks: [computing, programmer, analytics]
+  - id: sql.case
+    name: CASE expressions
+    description: Deriving categories and flags, conditional aggregation.
+    weight: 2
+    tracks: [computing, programmer, analytics]
+  - id: sql.joins
+    name: Joins
+    description: INNER, LEFT, FULL (conceptually), anti-joins, join explosion and key uniqueness.
+    weight: 3
+    tracks: [computing, programmer, analytics]
+  - id: sql.set-ops
+    name: UNION and set operations
+    description: UNION vs UNION ALL, INTERSECT, EXCEPT for reconciliation.
+    weight: 1
+    tracks: [computing, programmer]
+  - id: sql.subqueries
+    name: Subqueries and CTEs
+    description: Scalar, IN and EXISTS subqueries; WITH clauses for readable multi-step logic.
+    weight: 2
+    tracks: [computing, programmer, analytics]
+  - id: sql.window
+    name: Window functions
+    description: ROW_NUMBER, RANK, LAG/LEAD, running totals, first/last record per subject.
+    weight: 2
+    tracks: [computing, programmer, analytics]
+  - id: sql.clinical-queries
+    name: Clinical data queries
+    description: Reconciliation, missing baselines, duplicate assessments, SAE listings, cross-domain checks.
+    weight: 3
+    tracks: [programmer, computing]

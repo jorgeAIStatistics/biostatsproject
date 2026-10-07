@@ -1,0 +1,602 @@
+items:
+  - id: adam.anl.why-one-record
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [adam.windows, adam.bds, tlf.denominators]
+    lesson: adam-analysis-flags
+    title: Two records, one cell
+    prompt: |
+      ```text
+      USUBJID CBX417-301-1010-0003, PARAMCD ALT, baseline 19 U/L
+
+      AVISIT         ADY  AVAL  CHG  VISIT (collected)
+      CYCLE 4 DAY 1   66   109   90  UNSCHEDULED
+      CYCLE 4 DAY 1   71    96   77  CYCLE 4 DAY 1
+      ```
+
+      Both records fall inside the Cycle 4 Day 1 window. What does the by-visit mean-change table do
+      with them?
+    choices:
+      - text: "Uses exactly one, chosen by the SAP's rule and recorded in `ANL01FL`. The other stays in the dataset, feeding the worst post-baseline summary and the listings."
+        correct: true
+        feedback: "Correct. A subject who contributes two records to one cell is weighted twice, so the selection is mandatory — and it is a SAP decision, not something the data can answer."
+      - text: "Averages them, since both are valid measurements at that visit."
+        feedback: "Averaging would create a value no assessment produced, and it would need `DTYPE` to say so. No study in this app does it, and the SAP would have to specify it."
+      - text: "Uses the worse one, since this is a safety table."
+        feedback: "That is selection on outcome. It would systematically bias toward the abnormal in whichever arm had more unscheduled draws."
+      - text: "Deletes the unscheduled record during derivation, since only scheduled visits are analysed."
+        feedback: "Deleting removes it from the worst post-baseline summary and the shift table too. ADaM flags rather than deletes."
+    explanation:
+      objective: "State what a BDS dataset does with two records in one analysis cell."
+      given: "Two real records in one subject-parameter-visit cell."
+      relevant: "That a subject contributing twice is weighted twice."
+      irrelevant: "Which value is clinically more alarming — that is selection on outcome."
+      method: "The SAP names a selection rule; ANL01FL records its result."
+      numbers: "392 cells in CBX417-301's ADLB contain two records; 11 of them are ALT at Cycle 4 Day 1."
+      interpretation: "The losing record remains available to every analysis that does not need one-per-cell."
+      changes: "Averaging would be legal ADaM but would require DTYPE and an SAP sentence."
+      interviewer: "That you say the rule comes from the SAP rather than proposing one yourself."
+
+  - id: adam.anl.flag-kinds
+    format: classify
+    modes: [check, speed]
+    difficulty: intermediate
+    skills: [adam.bds, adam.adsl, trials.populations]
+    lesson: adam-analysis-flags
+    title: Population flag, record flag, or criterion flag?
+    minutes: 5
+    prompt: |
+      Sort each variable by what kind of flag it is. The kind determines its permitted values and how you
+      are allowed to test it.
+    categories: ["Population flag (subject, Y/N)", "Record-level analysis flag (record, Y/null)", "Criterion flag (record, with criterion text)"]
+    entries:
+      - text: "`SAFFL`"
+        category: "Population flag (subject, Y/N)"
+        note: "One value per subject, never null. `SAFFL = 'N'` is a real answer."
+      - text: "`ANL01FL`"
+        category: "Record-level analysis flag (record, Y/null)"
+        note: "Marks the record representing the subject at one analysis visit."
+      - text: "`ABLFL`"
+        category: "Record-level analysis flag (record, Y/null)"
+        note: "Marks the baseline record. At most one per subject and parameter."
+      - text: "`MCRIT1` with `MCRIT1ML`"
+        category: "Criterion flag (record, with criterion text)"
+        note: "Multi-response: `MCRIT1` names the criterion, `MCRIT1ML` the level met, `MCRIT1MN` its numeric order."
+      - text: "`ONTRTFL`"
+        category: "Record-level analysis flag (record, Y/null)"
+        note: "Says the record falls inside the treatment window. Independent of whether it was selected."
+      - text: "`ITTFL`"
+        category: "Population flag (subject, Y/N)"
+        note: "The ITT denominator. 420 subjects on CBX417-301, all Y."
+      - text: "`TRTEMFL`"
+        category: "Record-level analysis flag (record, Y/null)"
+        note: "Treatment-emergent, on an ADAE record. Null, not `N`, for non-emergent events."
+      - text: "`CRIT1FL` with `CRIT1`"
+        category: "Criterion flag (record, with criterion text)"
+        note: "Binary: `CRIT1` holds the criterion's exact wording — the row label in the table — and `CRIT1FL` whether this record meets it."
+      - text: "`PPROTFL`"
+        category: "Population flag (subject, Y/N)"
+        note: "388 subjects. Classified blinded and before database lock, per SAP Section 6.2."
+      - text: "`AOCCPFL`"
+        category: "Record-level analysis flag (record, Y/null)"
+        note: "First occurrence of a preferred term per subject, in ADAE."
+    hints:
+      - "Ask first: is there one per subject, or one per record?"
+      - "A flag that can be `N` is one where 'no' is a meaningful answer about the subject."
+      - "Criterion flags always come with a companion variable holding the criterion's wording."
+    solution: |
+      **The values follow from the scope, and the safe test follows from the values.**
+
+      | Kind | Values | Safe tests | Never |
+      |---|---|---|---|
+      | Population | `Y` / `N`, never null | `== "Y"`, `== "N"` | — |
+      | Record-level analysis | `Y` / null | `== "Y"`, `is.na()` | `!= "N"` |
+      | Criterion | `Y` / `N` / null | `== "Y"` | assume it is populated everywhere |
+
+      **Why record-level flags have no `"N"`.** They answer "is this *the* record", and the records that
+      were not selected are not "no" — they simply were not chosen. Setting them to `"N"` invites
+      `where ANL01FL ne "N"`, which is true for every record and silently disables the selection.
+
+      In R, `NA != "N"` is `NA` and the condition fails closed; in SAS a missing character sorts below
+      `'N'` so the condition is true and it fails open. **Same line, opposite wrong answers.** Testing
+      `== "Y"` or `is.na()` behaves identically in both.
+    explanation:
+      objective: "Classify ADaM flags by scope so the right test is obvious."
+      relevant: "Whether the flag describes a subject, a record's selection, or a record's classification."
+      method: "Scope determines permitted values; permitted values determine the safe test."
+      interpretation: "A criterion flag classifies a record; a record-level analysis flag selects one. Both can sit on the same row."
+      changes: "Negating a record-level flag against 'N' produces opposite failures in R and SAS, and neither errors."
+
+  - id: adam.anl.two-rules
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [adam.windows, qc.discrepancy, trials.sap]
+    lesson: adam-analysis-flags
+    title: Two studies, two selection rules, one cell
+    prompt: |
+      A subject has two ALT records inside the Cycle 4 Day 1 window (target study day 64):
+
+      | `ADY` | `AVAL` | Collected as |
+      |---:|---:|---|
+      | 66 | 109 | UNSCHEDULED |
+      | 71 | 96 | CYCLE 4 DAY 1 |
+
+      CBX417-301's rule is "the scheduled record if one exists, otherwise the latest unscheduled record
+      in the window". VTX221-201's rule is "closest to the target day, ties to the later record".
+
+      Which record does each rule select, and what does that tell you?
+    choices:
+      - text: "CBX417-301 selects the 96 (scheduled); VTX221-201's rule would select the 109 (day 66 is 2 days from target, day 71 is 7). Nothing in the data says which rule applies — you have to read the SAP."
+        correct: true
+        feedback: "Correct. Both rules are common and defensible, they disagree on exactly the cells that matter, and no conformance check can tell you which one a dataset used."
+      - text: "Both select the 96, since the scheduled record is closer to the nominal visit."
+        feedback: "Closeness is measured against the target *study day*, which is 64. Day 66 is closer than day 71."
+      - text: "Both select the 109, since it is the more extreme value and this is a safety parameter."
+        feedback: "Neither rule looks at the value. A rule that did would be selecting on outcome."
+      - text: "The rules only differ when a cell contains an unscheduled record and no scheduled one."
+        feedback: "That is the case where they agree. They differ precisely when both kinds are present."
+    explanation:
+      objective: "Apply two common selection rules and see that the data cannot arbitrate between them."
+      given: "Two records in one window and two stated rules."
+      relevant: "The target study day of 64 and which record was collected as scheduled."
+      calculating: "|66 - 64| = 2 against |71 - 64| = 7."
+      method: "Apply each rule literally rather than reasoning about which value looks right."
+      assumptions: "Cycle n Day 1 targets 21(n-1) + 1, so Cycle 4 Day 1 targets day 64."
+      interpretation: "Scheduled-first protects against selection on outcome; closest-to-target protects the timing of the estimate. Different studies optimise different things."
+      changes: "A QC programmer who assumes the rule from a previous study produces a flag set that is wrong with no visible symptom."
+      interviewer: "That you name the trade-off between the two rules rather than calling one correct."
+
+  - id: adam.anl.ontrtfl
+    format: mcq
+    modes: [check, qc]
+    difficulty: advanced
+    skills: [adam.windows, adam.bds, tlf.safety-tables]
+    lesson: adam-analysis-flags
+    title: ONTRTFL and ANL01FL are not the same question
+    prompt: |
+      On CBX417-301's ADLB:
+
+      | `ANL01FL` | `ONTRTFL` | Records |
+      |---|---|---:|
+      | `Y` | `Y` | 18,174 |
+      | `Y` | null | 3,953 |
+      | null | `Y` | **406** |
+      | null | null | 2,910 |
+
+      What are the 406 records, and why does the dataset keep them?
+    choices:
+      - text: "On-treatment measurements that were not selected for a by-visit cell — 392 that lost a duplicated cell and 14 outside every window. They feed the worst post-baseline summaries and the shift tables, which use `ONTRTFL` rather than `ANL01FL`."
+        correct: true
+        feedback: "Correct. This row is the argument for flagging rather than deleting: 406 real on-treatment values that no by-visit table shows and every worst-value summary needs."
+      - text: "Records that failed a data-quality check and were retained for the listings only."
+        feedback: "A record-level flag is never a quality statement. `ANL01FL` null means 'not selected for this analysis', not 'bad'."
+      - text: "Duplicate records created by the windowing step, which should be removed."
+        feedback: "They are distinct measurements taken on different days. Removing them removes real on-treatment values from the safety analysis."
+      - text: "Records from subjects excluded from the safety population."
+        feedback: "Population membership is `SAFFL`, a separate subject-level flag. These records belong to subjects in the safety population."
+    explanation:
+      objective: "Distinguish a window flag from a selection flag by reading a cross-tabulation."
+      given: "A four-way count of the two flags."
+      relevant: "That ONTRTFL describes the record's position in time and ANL01FL its role in a by-visit table."
+      method: "Ask which outputs use which flag: by-visit summaries use ANL01FL, worst-value summaries use ONTRTFL."
+      numbers: "406 = 392 records that lost a duplicated cell + 14 records outside every analysis window."
+      assumptions: "Worst post-baseline grade is computed at reporting time over ONTRTFL = 'Y' records, as the ADRG states."
+      interpretation: "The 3,953 selected-but-off-treatment records are mostly baselines, which is the mirror image."
+      changes: "Deleting the 406 would remove a grade 1 ALT of 109 U/L from a study whose primary safety concern is hepatotoxicity."
+      interviewer: "That you can name an output that uses each flag."
+
+  - id: adam.anl.select-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: advanced
+    skills: [adam.windows, adam.bds, r.dplyr]
+    lesson: adam-analysis-flags
+    datasets: [oncology/adam/adlb]
+    title: Flag one record per cell, both rules
+    minutes: 15
+    prompt: |
+      Write `flag_analysis_record(bds, rule)` setting `ANL01FL` to `"Y"` on exactly one record per
+      subject, parameter and analysis visit.
+
+      - `rule = "scheduled-first"` — a record collected at the scheduled visit outranks an unscheduled
+        one; among equals, the later `ADY` wins.
+      - `rule = "closest-to-target"` — the record whose `ADY` is nearest `TARGETDY` wins; among equals,
+        the later `ADY` wins.
+      - Break any remaining tie with `SRCSEQ`.
+      - Only records with a non-missing `AVISIT` and a non-missing `AVAL` are eligible.
+      - **Records with no analysis visit must stay in the output**, unflagged.
+    starter: |
+      library(dplyr)
+
+      flag_analysis_record <- function(bds, rule = c("scheduled-first", "closest-to-target")) {
+        rule <- match.arg(rule)
+
+        flagged <- bds |>
+          filter(___) |>
+          group_by(USUBJID, PARAMCD, AVISIT) |>
+          arrange(___, .by_group = TRUE) |>
+          mutate(ANL01FL = ___) |>
+          ungroup()
+
+        bind_rows(flagged, ___)
+      }
+    reference: |
+      library(dplyr)
+
+      flag_analysis_record <- function(bds, rule = c("scheduled-first", "closest-to-target")) {
+        rule <- match.arg(rule)
+
+        flagged <- bds |>
+          filter(!is.na(AVISIT), !is.na(AVAL)) |>
+          group_by(USUBJID, PARAMCD, AVISIT) |>
+          arrange(
+            if (rule == "scheduled-first") as.integer(VISIT == "UNSCHEDULED")
+            else                           abs(ADY - TARGETDY),
+            desc(ADY), SRCSEQ,
+            .by_group = TRUE
+          ) |>
+          mutate(ANL01FL = if_else(row_number() == 1, "Y", NA_character_)) |>
+          ungroup()
+
+        bind_rows(flagged, bds |> filter(is.na(AVISIT) | is.na(AVAL)))
+      }
+    hints:
+      - "Both rules share their tie-breakers: `desc(ADY)` then `SRCSEQ`. Only the first sort key differs."
+      - "`.by_group = TRUE` is essential — without it `row_number()` counts across the whole dataset."
+      - "`bind_rows` the ineligible records back on, or the worst-post-baseline summaries lose them."
+      - "An `if` inside `arrange()` is fine: it evaluates to a vector, and `match.arg` has already validated the choice."
+    checks:
+      - pattern: "\\.by_group\\s*=\\s*TRUE"
+        message: "Sorts within each subject, parameter and analysis visit"
+      - pattern: "row_number\\s*\\(\\s*\\)\\s*==\\s*1"
+        message: "Flags exactly the first record of each group"
+      - pattern: "desc\\s*\\(\\s*ADY\\s*\\)\\s*,\\s*SRCSEQ"
+        message: "Applies the shared tie-breakers: later day, then source sequence"
+      - pattern: "abs\\s*\\(\\s*ADY\\s*-\\s*TARGETDY\\s*\\)"
+        message: "Implements the closest-to-target rule"
+      - pattern: "VISIT\\s*==\\s*[\"']UNSCHEDULED[\"']"
+        message: "Implements the scheduled-first rule"
+      - pattern: "bind_rows\\s*\\("
+        message: "Returns the ineligible records instead of dropping them"
+      - pattern: "slice_max\\s*\\("
+        absent: true
+        message: "Does not use slice_max, which keeps ties and drops the losing records"
+    expectedOutput: |
+      ```text
+      > out <- flag_analysis_record(adlb_win, "scheduled-first")
+      > nrow(out) == nrow(adlb_win)
+      [1] TRUE
+      > out |> filter(ANL01FL == "Y") |>
+      +   count(USUBJID, PARAMCD, AVISIT) |> pull(n) |> max()
+      [1] 1
+      > out |> count(sel = !is.na(ANL01FL), ont = !is.na(ONTRTFL))
+        sel   ont       n
+      1 FALSE FALSE  2910
+      2 FALSE TRUE     406
+      3 TRUE  FALSE   3953
+      4 TRUE  TRUE   18174
+      ```
+    solution: |
+      **The two rules differ in one expression.** Everything else — the grouping, the tie-breakers, the
+      flagging, the restoration of ineligible records — is shared, which is the right shape: the
+      study-specific decision should be one line you can point a reviewer at.
+
+      **`bind_rows` at the end is the line people forget**, and it is the expensive one. Filtering to
+      eligible records and never restoring the rest silently deletes 14 on-treatment measurements that
+      fall outside every window, plus every record with a missing value. `nrow(out) == nrow(bds)` is the
+      assertion that catches it, and it is worth writing every time a derivation filters.
+
+      **Why not `slice_max`:**
+
+      ```r
+      slice_max(ADT, n = 1) |> mutate(ANL01FL = "Y")   # WRONG
+      ```
+
+      It keeps *all* tied rows, so a cell with two records on the same day gets two flags. It *removes*
+      the losing records rather than flagging the winner. And it encodes "latest wins", which is neither
+      study's rule — CBX417-301 prefers the scheduled record even when it is later *or* earlier.
+
+      **The three assertions in the expected output** are the ones to run after any selection derivation:
+      the row count is unchanged, no cell has more than one flag, and the flag-by-window cross-tabulation
+      looks like the dataset you expect.
+    explanation:
+      objective: "Implement a configurable one-record-per-cell selection without losing records."
+      given: "Two selection rules and a BDS dataset with collected visit, analysis visit, day and target day."
+      relevant: "The shared tie-breakers, the grouping, and the requirement that ineligible records survive."
+      method: "Express the rule as a sort key, flag the first row, bind the ineligible records back."
+      numbers: "18,174 selected and on-treatment; 3,953 selected and off-treatment; 406 unselected and on-treatment; 2,910 neither."
+      assumptions: "TARGETDY is on the record, derived from the windowing step."
+      computation: "An if() inside arrange() evaluates to a vector and is a legal sort key."
+      interpretation: "Only the first sort key is study-specific, so a reviewer checks one line against the SAP."
+      changes: "Dropping bind_rows removes 14 on-treatment records with no symptom until a worst-value summary disagrees."
+      interviewer: "That you assert the row count as well as the one-flag-per-cell property."
+
+  - id: adam.anl.duplicate-cost
+    format: numeric
+    modes: [independent, qc, debug]
+    difficulty: advanced
+    skills: [adam.windows, tlf.denominators, qc.discrepancy]
+    lesson: adam-analysis-flags
+    datasets: [oncology/adam/adlb]
+    title: What the missing flag does to the treatment difference
+    prompt: |
+      ALT at Cycle 4 Day 1, CBX417-301, safety population:
+
+      | | With `ANL01FL = "Y"` | Without |
+      |---|---:|---:|
+      | CBX-417: n, mean change | 147, 5.34 | 154, 6.43 |
+      | Placebo: n, mean change | 145, 3.02 | 149, 5.73 |
+
+      By how many U/L does omitting the flag shrink the between-arm difference in mean change? Give the
+      answer to two decimal places.
+    answer: 1.62
+    tolerance: 0.02
+    unit: U/L
+    hints:
+      - "Compute the difference in mean change under each scenario."
+      - "5.34 − 3.02, then 6.43 − 5.73."
+      - "2.32 − 0.70."
+    solution: |
+      **1.62 U/L.**
+
+      | Scenario | CBX − placebo |
+      |---|---:|
+      | With the flag | `5.34 − 3.02` = **2.32** |
+      | Without | `6.43 − 5.73` = **0.70** |
+      | Shrinkage | **1.62** |
+
+      The difference falls by 70% on the strength of **11 extra records** out of roughly 300.
+
+      **The reason it moves so far is that the extra records are not random.** An unscheduled laboratory
+      draw is ordered because somebody was concerned, so those values skew toward the abnormal — the
+      worked example in the lesson has an unscheduled ALT of 109 U/L against a baseline of 19, in a study
+      whose median ALT change at this visit is 2 U/L.
+
+      **And the effect is arm-dependent.** The CBX arm gained 7 records and placebo gained 4, but the
+      placebo mean moved further (3.02 to 5.73, against 5.34 to 6.43) because a smaller arm mean is
+      easier to shift with an extreme value. The bias does not cancel in the difference.
+
+      **Nothing in the output signals it.** The n is plausible, the means are plausible, the standard
+      deviations are plausible. The only way to find it is to check which flags each table filtered on.
+    explanation:
+      objective: "Quantify the effect of omitting a record-selection flag on a treatment comparison."
+      given: "Means and counts with and without the flag, in both arms."
+      relevant: "Both arm means under both scenarios."
+      calculating: "The between-arm difference under each scenario, then their difference."
+      numbers: "5.34 - 3.02 = 2.32; 6.43 - 5.73 = 0.70; 2.32 - 0.70 = 1.62."
+      assumptions: "Every duplicated cell contains exactly two records, so 11 cells give 11 extra rows."
+      interpretation: "A 70% reduction in the apparent treatment difference from 11 records."
+      changes: "The bias is arm-specific because unscheduled draws follow toxicity, so it does not cancel in the comparison."
+      interviewer: "That you note the extra records are informative rather than treating them as extra noise."
+
+  - id: adam.anl.criterion-flag
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [adam.bds, tlf.safety-tables, regulatory.define]
+    lesson: adam-analysis-flags
+    title: Where the QTcF threshold belongs
+    prompt: |
+      Four tables, a figure, a listing and a QC program all need "subjects with a post-baseline QTcF
+      above 500 ms".
+
+      ADEG already carries `MCRIT1 = "QTcF interval category (ms)"` with `MCRIT1ML` taking `<=450`,
+      `>450 to <=480`, `>480 to <=500` and `>500`.
+
+      A programmer writes `if aval > 500` in the first table instead. What are the consequences?
+    choices:
+      - text: "The threshold is invisible to define.xml, will drift between `>` and `>=` across the six outputs, and can only be verified by reading code rather than by cross-tabulating `MCRIT1ML` against `AVAL`."
+        correct: true
+        feedback: "Correct. The general rule: if a number appears in more than one output, it belongs in the dataset. `MCRITy` exists so that the criterion's exact wording travels with the flag into the table's row label."
+      - text: "None — the code is equivalent and simpler."
+        feedback: "It is equivalent in one program. The problem is the other five, and the reviewer who cannot see the threshold at all."
+      - text: "It violates ADaMIG v1.3, which requires all thresholds to be stored as criterion flags."
+        feedback: "ADaMIG defines the `CRITy` and `MCRITy` variables; it does not forbid a table program from computing a comparison. This is a strong convention, not a conformance rule."
+      - text: "It produces the wrong answer, because `AVAL` is not the variable the criterion applies to."
+        feedback: "`AVAL` is the QTcF value and the comparison would be arithmetically right. The problem is where the rule lives, not what it computes."
+    explanation:
+      objective: "Decide where a repeated threshold belongs in the data flow."
+      given: "Six outputs needing one threshold, and a criterion flag already in the dataset."
+      relevant: "That define.xml, the ADRG and the QC program cannot see a comparison inside a table program."
+      irrelevant: "Whether the comparison itself is correct — it is."
+      method: "Ask how many places need the number, and who other than the author must be able to check it."
+      numbers: "CBX417-301's ADEG has 4 QTcF records above 500 ms and 2 in the 480-500 category."
+      assumptions: "MCRITy is the multi-response form; CRITy/CRITyFL would be used for a single binary criterion."
+      interpretation: "With MCRIT1ML in the data, verification is one cross-tabulation against AVAL."
+      changes: "The > versus >= choice differs on exactly the records the table is about."
+      interviewer: "That you generalise to 'a number used in more than one output belongs in the dataset'."
+
+  - id: adam.anl.not-deleted
+    format: order
+    modes: [guided, case]
+    difficulty: intermediate
+    skills: [adam.windows, adam.bds, tlf.safety-tables]
+    lesson: adam-analysis-flags
+    title: Where an unselected record still appears
+    minutes: 6
+    prompt: |
+      An unscheduled ALT of 109 U/L on study day 66 lost the Cycle 4 Day 1 cell to the scheduled value of
+      96 on day 71. It has `ANL01FL` null and `ONTRTFL = "Y"`.
+
+      Put the outputs in order, from the one that definitely uses this record to the one that definitely
+      does not.
+    steps:
+      - "The subject listing of all laboratory values — every record, regardless of any flag."
+      - "The shift table of baseline grade against worst post-baseline grade, which uses `ONTRTFL = \"Y\"` records."
+      - "The summary of subjects with a maximum on-treatment CTCAE grade of 3 or above, also over `ONTRTFL = \"Y\"` records."
+      - "The by-visit summary of value and change from baseline, which filters on `ANL01FL = \"Y\"`."
+    hints:
+      - "Which outputs filter on no flag at all?"
+      - "Which filter on the window flag rather than the selection flag?"
+      - "Only one of the four filters on `ANL01FL`."
+    solution: |
+      Listings use everything; worst-value summaries use `ONTRTFL`; only the by-visit summary uses
+      `ANL01FL`, and that is the one output this record is excluded from.
+
+      **That is the entire case for flagging rather than deleting.** On CBX417-301, 406 records are
+      `ANL01FL` null and `ONTRTFL = "Y"` — 392 that lost a duplicated cell and 14 that fall outside every
+      analysis window. Deleting them would remove real on-treatment measurements from the safety
+      analysis of a study whose primary safety concern is hepatotoxicity.
+
+      **And note what `ANL01FL` null does *not* mean.** It is not a quality judgement. The 109 U/L is a
+      perfectly good measurement; it simply is not the record chosen to represent that subject at that
+      visit under this study's rule. Under VTX221-201's rule it would have been chosen, and the 96 would
+      be the unflagged one.
+    explanation:
+      objective: "Trace an unselected record through the outputs that do and do not use it."
+      relevant: "Which flag each output filters on."
+      method: "Listings filter on nothing, worst-value summaries on ONTRTFL, by-visit summaries on ANL01FL."
+      numbers: "406 records on this study are ANL01FL null and ONTRTFL Y."
+      interpretation: "A record-level flag is a selection, never a quality statement."
+      changes: "Under the closest-to-target rule this record would be the selected one and the scheduled record would be unflagged."
+
+  - id: adam.anl.wrong-rule
+    format: diff
+    modes: [debug, qc, boss]
+    difficulty: expert
+    skills: [adam.windows, qc.discrepancy, qc.compare]
+    lesson: adam-analysis-flags
+    title: Production and QC disagree on eleven cells
+    minutes: 15
+    prompt: |
+      Production and QC both produce the ALT / Cycle 4 Day 1 row of Table 14.3.4.1. Both used the safety
+      population, both used `ANL01FL = "Y"`, both have the same n.
+
+      The means differ. What happened?
+    left:
+      title: "Production — ALT, Cycle 4 Day 1, mean change from baseline"
+      columns: ["Arm", "n", "Mean change", "SD"]
+      rows:
+        - ["CBX-417 + Docetaxel", 147, 5.34, 16.97]
+        - ["Placebo + Docetaxel", 145, 3.02, 21.60]
+      footnote: "ANL01FL derived with: the scheduled record if one exists, otherwise the latest unscheduled record in the window."
+    right:
+      title: "QC — ALT, Cycle 4 Day 1, mean change from baseline"
+      columns: ["Arm", "n", "Mean change", "SD"]
+      rows:
+        - ["CBX-417 + Docetaxel", 147, 6.12, 18.44]
+        - ["Placebo + Docetaxel", 145, 3.51, 22.03]
+      footnote: "ANL01FL derived with: the record closest to the target study day, ties to the later record."
+    choices:
+      - text: "The two programs used different selection rules. They agree on every cell with one record and disagree on the 11 cells with two, so the n matches exactly while the means differ."
+        correct: true
+        feedback: "Correct — and the matching n is the diagnostic. A population or windowing difference would change the counts; only a selection difference leaves them identical."
+      - text: "QC used the ITT population instead of the safety population."
+        feedback: "That would change n. Both report 147 and 145."
+      - text: "QC forgot `ANL01FL` entirely."
+        feedback: "Then QC's n would be 154 and 149. Both footnotes say the flag was used."
+      - text: "The two programs used different analysis windows."
+        feedback: "Different windows would move records between visits and change the n at this visit."
+      - text: "QC computed the change as `AVAL - BASE` rather than using the stored `CHG`."
+        feedback: "Those are equal on this dataset. Recomputing is a bad habit but not the cause here."
+    hints:
+      - "The n is identical in both arms. What kinds of difference preserve the count?"
+      - "How many cells in this group contain more than one record?"
+      - "Read the two footnotes."
+    solution: |
+      **Different selection rules, same windows, same population.**
+
+      Eleven subject-parameter-visit cells in this group contain two records. Both rules pick one record
+      from each cell, so the counts are identical — 147 and 145 either way. They pick *different* records
+      in cells where a scheduled and an unscheduled record are both present, which is all eleven.
+
+      **The identical n is the diagnostic**, and it is worth internalising:
+
+      | What differs | Symptom |
+      |---|---|
+      | Population flag | n changes |
+      | Windowing | n changes at some visits, records move between visits |
+      | **Selection rule** | **n identical, values differ** |
+      | Flag omitted entirely | n rises by the number of duplicated cells |
+
+      **Neither program is wrong.** Both rules are common and both are defensible: scheduled-first
+      protects against selection on outcome, closest-to-target protects the timing of the estimate. The
+      finding is a **specification gap** — SAP Section 5.4 has to name the rule, and if it does, one
+      program did not read it.
+
+      **Why the QC numbers are higher in both arms.** The unscheduled draws are ordered in response to a
+      concern, so they skew abnormal; the closest-to-target rule admits more of them. That direction is
+      predictable before you compute anything, which is a useful sanity check that you have diagnosed the
+      right cause.
+
+      **How to confirm in one query:** compare the `ANL01FL = "Y"` keys — subject, parameter, visit and
+      `SRCSEQ` — between the two datasets. Eleven differing `SRCSEQ` values with identical keys confirms
+      it immediately, and no comparison of means can.
+    explanation:
+      objective: "Diagnose a value discrepancy that preserves every count."
+      given: "Two tables with identical n and different means, and two stated derivation rules."
+      relevant: "The number of cells containing more than one record, and the two footnotes."
+      irrelevant: "The standard deviations, which follow the means."
+      method: "Classify the discrepancy by what it preserves: an identical n rules out population and windowing differences."
+      numbers: "11 duplicated cells in this group; 147 and 145 records either way."
+      assumptions: "Both programs windowed identically, which the matching n supports."
+      interpretation: "Neither rule is wrong; the SAP has to name one, and this is a specification finding."
+      changes: "Omitting the flag entirely would give 154 and 149 — a different symptom with the same underlying cause."
+      interviewer: "That you use what the discrepancy preserves to narrow the cause before reading any code."
+
+  - id: adam.anl.open-windowing
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [adam.windows, qc.mindset, communication.interviewing]
+    lesson: adam-analysis-flags
+    title: Specifying analysis visits and record selection
+    prompt: |
+      **Interviewer:** "You're writing the windowing and record-selection section of an ADaM
+      specification for a study with scheduled visits every three weeks. What does it need to say?"
+    modelAnswer: |
+      Four separate decisions, and a specification that makes three of them will produce two different
+      datasets.
+
+      **First, the windows themselves** — a table of analysis visits with a target study day and a range.
+      Three things make that table complete rather than approximate: whether the boundaries are
+      inclusive, that the ranges don't overlap, and what happens to a record that falls outside all of
+      them. On the study I've worked with, records outside every window keep `AVISIT` null — they aren't
+      deleted, and they still feed the worst-post-baseline summaries through `ONTRTFL`.
+
+      **Second, whether scheduled records keep their nominal visit** regardless of when they happened. If
+      a subject's Cycle 4 visit slipped to day 80 and the window is 54 to 74, does it stay Cycle 4 or
+      move? Both answers are used. The study I know keeps the nominal visit for scheduled records and
+      windows only the unscheduled ones.
+
+      **Third, the selection rule** — which record represents the subject when a cell has more than one.
+      The two common rules are "scheduled record first, otherwise the latest unscheduled in the window"
+      and "closest to the target day". They disagree on exactly the cells that have both kinds of record,
+      and there's a real trade-off: scheduled-first protects against selection on outcome, because
+      unscheduled draws are ordered in response to a concern and skew abnormal; closest-to-target protects
+      the timing of the estimate, which matters more for an efficacy endpoint defined at a timepoint.
+      Safety tables usually want the first, efficacy endpoints the second, and a study can legitimately
+      use both through `ANL01FL` and `ANL02FL`.
+
+      **Fourth, the tie-breakers.** Both rules leave ties, and the final one has to be deterministic —
+      usually `--SEQ`. Without it, two independent programs land on different records and every value in
+      those cells differs, with no error in either.
+
+      **And I'd write the checks into the specification**, because they're cheap and they are what catches
+      an ambiguity that survived review: at most one `ANL01FL = "Y"` per subject, parameter and analysis
+      visit; the record count unchanged by the derivation; and a cross-tabulation of `VISIT` against
+      `AVISIT` so a reviewer can see exactly which records were re-windowed.
+
+      **What I'd expect it to cost if we got it wrong.** On that study, 392 cells have two records. For
+      ALT at Cycle 4 alone, omitting the flag takes the between-arm difference in mean change from 2.32
+      to 0.70 U/L — and nothing in the output looks wrong.
+    rubric:
+      - Separates the window definition from the selection rule
+      - Specifies boundary inclusivity, non-overlap, and what happens outside all windows
+      - Says whether scheduled records keep their nominal visit
+      - Names both common selection rules and the trade-off between them
+      - Requires a deterministic final tie-breaker
+      - Notes that a study may need more than one ANLzzFL
+      - Proposes concrete checks, including the unchanged record count
+      - Quantifies the cost of getting it wrong
+    redFlags:
+      - "Specifies windows without a selection rule"
+      - "Leaves ties to input order"
+      - "Deletes records outside every window"
+      - "Assumes one selection rule fits both safety and efficacy outputs"
+    followUps:
+      - "A subject has an unscheduled draw that falls in two overlapping windows. What did the specification get wrong?"
+      - "The efficacy lead wants closest-to-target and the safety lead wants scheduled-first. How do you resolve it?"

@@ -1,0 +1,967 @@
+items:
+  - id: r.fun.argument-shadow
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [r.functions, r.dplyr, r.basics]
+    lesson: r-functions-and-reproducible-code
+    title: The argument that was never used
+    prompt: |
+      ```r
+      count_at_visit <- function(d, AVISITN) {
+        d |> filter(AVISITN == AVISITN) |> nrow()
+      }
+
+      count_at_visit(advs, 12)
+      #> 3082
+      ```
+
+      ADVS has 3,082 rows in total and 476 at Week 12. No error and no warning were produced.
+
+      What happened?
+    choices:
+      - text: "Inside `filter()`, dplyr resolves names in the data before the function's arguments, so both sides of the `==` are the column — the comparison is TRUE for every row and the 12 is ignored."
+        correct: true
+        feedback: "Correct. Rename the argument (`visit`) or force the environment lookup with `.env$AVISITN`. Renaming is better, because it removes the ambiguity rather than working around it."
+      - text: "`filter()` cannot compare a column to a scalar, so it fell back to returning everything."
+        feedback: "It compares columns to scalars constantly — that is its normal use. The problem is that the scalar was shadowed by a column of the same name."
+      - text: "The pipe passed `advs` into the wrong argument position."
+        feedback: "`|>` places the left-hand side as the first argument, which is `.data` for `filter()`. The piping is correct."
+      - text: "`AVISITN` is character in ADVS, so the comparison with the numeric 12 was coerced to TRUE."
+        feedback: "A type mismatch would give FALSE or an error, not all-TRUE. And the argument itself was never consulted."
+    solution: |
+      **Data masking means the column wins.**
+
+      dplyr's verbs evaluate their arguments inside a "data mask": names are looked up in the data frame
+      first, and only then in the calling environment. That is exactly what lets you write
+      `filter(AVISITN == 12)` without `advs$`.
+
+      When the argument is *also* called `AVISITN`, both sides of the comparison resolve to the column.
+      `AVISITN == AVISITN` is `TRUE` for every non-missing row, so the function returns the whole dataset
+      and the value you passed is never consulted.
+
+      **Three fixes, in order of preference:**
+
+      ```r
+      # 1. Name arguments after their role, not after a column
+      count_at_visit <- function(d, visit) d |> filter(AVISITN == visit) |> nrow()
+
+      # 2. Force the environment lookup
+      count_at_visit <- function(d, AVISITN) d |> filter(AVISITN == .env$AVISITN) |> nrow()
+
+      # 3. Pass the column itself, with embracing — a different job
+      count_by <- function(d, var) d |> summarise(n = n(), .by = {{ var }})
+      ```
+
+      Both of the first two return **476**.
+
+      **What makes this dangerous is the silence.** A function returning the whole dataset instead of a
+      subset inflates every count that uses it, and because a function is called from many places, one
+      mistake propagates everywhere at once.
+    explanation:
+      objective: "Explain why a function argument was ignored inside a dplyr verb."
+      given: "A function returning every row when asked for one visit, with no error."
+      relevant: "That the argument name collides with a column name."
+      method: "dplyr resolves names in the data mask before the calling environment."
+      numbers: "3,082 rows returned; 476 rows actually have AVISITN == 12."
+      assumptions: "AVISITN has no missing values, or the comparison would give NA rather than TRUE for those rows."
+      interpretation: "The function silently became `nrow(d)` for every input."
+      changes: "Renaming the argument to `visit` returns 476, as does `.env$AVISITN`."
+      interviewer: "That you name the data-mask lookup order, and that you prefer renaming over the `.env` workaround."
+
+  - id: r.fun.empty-max
+    format: mcq
+    modes: [check, debug, qc]
+    difficulty: intermediate
+    skills: [r.functions, r.basics, adam.bds]
+    lesson: r-functions-and-reproducible-code
+    title: The grade below grade zero
+    prompt: |
+      A worst-grade derivation runs and prints:
+
+      ```text
+      Warning message:
+      There were 406 warnings in `summarise()`.
+      The first warning was:
+      ℹ In argument: `WTOXGR = max(ATOXGR, na.rm = TRUE)`.
+      ℹ In group 4: `USUBJID = "CBX417-301-1001-0002"`, `PARAMCD = "CREAT"`.
+      Caused by warning in `max()`:
+      ! no non-missing arguments to max; returning -Inf
+      ```
+
+      Every `ATOXGR` on a creatinine record in this study is missing — creatinine is not CTCAE-graded here.
+
+      What is now in the `WTOXGR` column for those 406 rows, and why does it matter?
+    choices:
+      - text: "`-Inf`, which is a numeric value: it will sort below grade 0, survive an `is.na()` check, and can be silently swept into the lowest bucket of a `case_when`."
+        correct: true
+        feedback: "Correct. Guard the aggregation — `if (any(!is.na(x))) max(x, na.rm = TRUE) else NA_integer_` — and then assert `!any(is.infinite(WTOXGR))`."
+      - text: "`NA`, since every input was missing."
+        feedback: "`max(c(NA, NA), na.rm = TRUE)` returns `-Inf`, not `NA`. Removing all the missing values leaves an empty vector, and the maximum of an empty set is negative infinity."
+      - text: "The rows were dropped, so `WTOXGR` has 406 fewer entries."
+        feedback: "`summarise()` returns one row per group regardless; the warning is about the value, not about the group disappearing."
+      - text: "An error would have stopped the program before anything was assigned."
+        feedback: "It is a warning, not an error. dplyr collapses repeated warnings into a count and the pipeline completes."
+    solution: |
+      **`max()` of an empty vector is `-Inf`.**
+
+      ```r
+      max(c(NA, NA), na.rm = TRUE)
+      #> [1] -Inf
+      #> Warning message: no non-missing arguments to max; returning -Inf
+      ```
+
+      `na.rm = TRUE` removes both values, leaving nothing, and the maximum of an empty set is defined as
+      negative infinity. `min()` returns `Inf` for the same reason.
+
+      **Why it is worse than an `NA`:**
+
+      | | `-Inf` | `NA` |
+      |---|---|---|
+      | `is.na(x)` | `FALSE` | `TRUE` |
+      | Sorts | below grade 0 | usually last, and visibly |
+      | `x <= 0` | `TRUE` | `NA` |
+      | Renders as | `-Inf` in a cell | blank, which a reviewer queries |
+
+      A `case_when(WTOXGR <= 0 ~ "Grade 0", ...)` will classify all 406 as grade 0 — **turning "we cannot
+      grade this" into "no toxicity"**, in the direction that makes the drug look safer.
+
+      **The fix and the guard:**
+
+      ```r
+      WTOXGR = if (any(!is.na(ATOXGR))) max(ATOXGR, na.rm = TRUE) else NA_integer_
+      ...
+      stopifnot(!any(is.infinite(out$WTOXGR)))
+      ```
+
+      `NA_integer_` rather than bare `NA`, so the column keeps its integer type.
+    explanation:
+      objective: "Recognise what an aggregation over an all-missing group produces and why it is hazardous."
+      given: "A dplyr warning summary naming max() and a parameter with no derived grades."
+      relevant: "That na.rm = TRUE leaves an empty vector when every value is missing."
+      method: "max of the empty set is -Inf by definition; min is +Inf."
+      numbers: "406 subject-parameter groups affected, all of them creatinine."
+      assumptions: "The downstream table classifies grades with a numeric comparison, which -Inf satisfies."
+      interpretation: "An ungradeable parameter is reported as grade 0 — absence of evidence rendered as evidence of absence."
+      changes: "Guarding the aggregation yields NA_integer_, which downstream code and reviewers both treat as missing."
+      interviewer: "That you know -Inf passes is.na() and therefore escapes the usual missing-value handling."
+
+  - id: r.fun.seed-not-enough
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [r.functions, repro.testing, qc.discrepancy]
+    lesson: r-functions-and-reproducible-code
+    title: Same seed, different answer
+    prompt: |
+      A bootstrap 95% confidence interval for the median change from baseline is reported as
+      **−15.50 to −9.70**. A colleague reruns the identical script, with the identical `set.seed(20250331)`,
+      on the identical data, and gets **−15.00 to −9.70**.
+
+      Both scripts are unmodified. What is the most likely explanation?
+    choices:
+      - text: "A different random-number configuration — R 3.6.0 changed the default algorithm `sample()` uses, so the same seed produces a different sequence under `RNGkind()`'s \"Rounding\" and \"Rejection\" samplers."
+        correct: true
+        feedback: "Correct. A seed fixes the stream only within a fixed RNG configuration; the environment is part of the analysis and belongs in a lockfile and in sessionInfo()."
+      - text: "Floating-point differences between the two machines' processors."
+        feedback: "Floating point would move the answer in the last few digits, not by half a millimetre of mercury in a quantile."
+      - text: "The seed was set after the resampling loop started in one of the runs."
+        feedback: "Possible in principle, but the scripts are stated to be identical and unmodified — the difference has to come from outside the script."
+      - text: "The bootstrap has not converged, so 2,000 replicates is simply too few."
+        feedback: "Too few replicates would make the interval noisy across *unseeded* runs. With the same seed and the same RNG, a converged or unconverged bootstrap is equally reproducible."
+    solution: |
+      **A seed is reproducible only within a fixed random-number configuration.**
+
+      `RNGkind()` returns three components — the uniform generator, the normal generator and the
+      **sampler used by `sample()`**. R 3.6.0 changed the default for that third component from
+      `"Rounding"` to `"Rejection"`, because the old method was measurably non-uniform for large
+      populations.
+
+      On the Week 12 data for the VTX-221 20 mg arm ($n = 80$), a 2,000-replicate bootstrap of the median
+      change:
+
+      | `RNGkind()` sampler | 95% CI |
+      |---|---|
+      | `"Rejection"` (R ≥ 3.6 default) | −15.50 to −9.70 |
+      | `"Rounding"` (pre-3.6 default) | −15.00 to −9.70 |
+
+      Same seed, same data, same code, **0.5 mmHg apart**.
+
+      **What this means in practice:**
+
+      - The seed belongs in the SAP if the analysis is stochastic.
+      - The environment belongs in a lockfile (`renv.lock`) or an equivalent frozen library.
+      - `sessionInfo()` written into every log is the always-available record of what actually ran.
+
+      A script that sets a seed and does not record its R version is reproducible today and not in two
+      years, which is exactly the horizon over which a submission gets questioned.
+    explanation:
+      objective: "Explain a reproducibility failure that survives an identical seed."
+      given: "Two runs of an unmodified seeded script producing different intervals."
+      relevant: "That set.seed fixes the stream only for a given RNGkind configuration."
+      irrelevant: "The number of bootstrap replicates, which affects unseeded variability rather than reproducibility."
+      method: "R 3.6.0 changed the default sample() algorithm from Rounding to Rejection."
+      numbers: "Rejection gives -15.50 to -9.70; Rounding gives -15.00 to -9.70 from seed 20250331 on n = 80."
+      assumptions: "Both runs used the same data and the same number of replicates."
+      interpretation: "The environment is an input to the analysis, not a detail of how it was run."
+      changes: "Recording sessionInfo() and pinning versions with a lockfile makes the result durable."
+      interviewer: "That you treat the R version as part of the analysis specification, not as infrastructure."
+
+  - id: r.fun.denominator-source
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [r.functions, tlf.denominators, adam.adsl]
+    lesson: r-functions-and-reproducible-code
+    title: Where the population comes from
+    prompt: |
+      A function derives a worst post-baseline laboratory grade per subject and parameter. Two candidate
+      first lines:
+
+      ```r
+      # A
+      pop_ids <- unique(adlb$USUBJID)
+
+      # B
+      pop_ids <- adsl$USUBJID[adsl$SAFFL == "Y"]
+      ```
+
+      On CBX417-301, ADSL has 416 subjects with `SAFFL == "Y"`. Ten of them have no post-baseline
+      chemistry records at all.
+
+      Which line belongs in the function, and what goes wrong with the other?
+    choices:
+      - text: "B. Taking the population from the analysis data excludes subjects with no records, so the chemistry denominator becomes 406 instead of 416 and every chemistry percentage is overstated."
+        correct: true
+        feedback: "Correct. The population is a property of the study, defined in ADSL; the analysis dataset only says who happened to have records."
+      - text: "A, because a subject with no laboratory records cannot contribute to a laboratory table."
+        feedback: "They cannot contribute to the numerator, but they must still be in the denominator — that is what makes the percentage mean 'of the safety population'."
+      - text: "Either, since the ten subjects will produce NA rows that are dropped later anyway."
+        feedback: "Whether they are dropped is exactly the decision at stake. Making them visible rows with a zero record count is what lets the SAP's denominator rule be applied deliberately."
+      - text: "B, but only for safety tables — efficacy tables should take the population from the analysis data."
+        feedback: "No table takes its denominator from the analysis data. Efficacy tables use ITT or the efficacy population, also defined in ADSL."
+    solution: |
+      **The population is defined in ADSL. The analysis dataset tells you who had records.**
+
+      Those are different questions, and conflating them is the commonest denominator bug in clinical
+      reporting.
+
+      $$\frac{n}{406} \quad\text{versus}\quad \frac{n}{416}$$
+
+      Ten subjects with no post-baseline chemistry shrink the denominator by 2.4%, so every chemistry
+      percentage in the shift table is **about 2.5% larger than it should be, relatively**. Nothing in the
+      output reveals it; the table is internally consistent and simply wrong.
+
+      **The reliable check** is that the denominators in every table match the "N =" in the column
+      headers, which match the disposition table, which match ADSL. If any link in that chain differs,
+      someone took a population from the wrong place.
+
+      **Keeping the ten subjects visible** is the other half of the fix:
+
+      ```r
+      expand.grid(USUBJID = pop_ids, PARAMCD = params, stringsAsFactors = FALSE) |>
+        left_join(obs, by = c("USUBJID", "PARAMCD")) |>
+        mutate(n_rec = coalesce(n_rec, 0L))
+      ```
+
+      They become rows with `n_rec = 0` rather than absences, which means the SAP's decision about how to
+      count them can actually be applied.
+    explanation:
+      objective: "Choose the correct source for an analysis-population denominator."
+      given: "Two candidate population definitions and the fact that ten safety subjects have no chemistry records."
+      relevant: "That ADSL defines the population and ADLB only records who had measurements."
+      method: "Build the denominator from the population dataset, then join the observations onto it."
+      numbers: "416 safety subjects; 406 with chemistry records; a relative overstatement of about 2.5% in every chemistry percentage."
+      interpretation: "A table that is internally consistent can still have the wrong denominator throughout."
+      changes: "Building the full grid makes the ten subjects visible as zero-record rows rather than absences."
+      interviewer: "That you name the chain — table headers to disposition to ADSL — as the check, not just the rule."
+
+  - id: r.fun.grid-rows
+    format: numeric
+    modes: [check, guided, qc]
+    difficulty: foundation
+    skills: [r.functions, qc.compare, adam.bds]
+    lesson: r-functions-and-reproducible-code
+    title: How many rows should there be?
+    prompt: |
+      A worst-grade derivation should produce one row for every safety-population subject and every
+      laboratory parameter, whether or not that subject has records for it.
+
+      CBX417-301 has **416** subjects with `SAFFL == "Y"` and **7** laboratory parameters in ADLB.
+
+      A colleague's version returns **2,872** rows.
+
+      How many rows is their version missing?
+    answer: 40
+    tolerance: 0
+    unit: rows
+    hints:
+      - "How many rows should a complete subject-by-parameter frame have?"
+      - "$416 \\times 7$."
+      - "$2{,}912 - 2{,}872$."
+    solution: |
+      $$416 \times 7 = 2{,}912 \qquad 2{,}912 - 2{,}872 = \mathbf{40}$$
+
+      **Forty subject–parameter combinations are absent**, and they are not scattered: they are **10
+      subjects × 4 chemistry parameters** (ALT, AST, BILI, CREAT). Those ten subjects have no
+      post-baseline chemistry records at all.
+
+      A derivation that only summarises observed records cannot produce a row for a combination that has
+      no records, so they vanish rather than appearing as "no data". The consequence is a chemistry
+      denominator of 406 rather than 416.
+
+      ```r
+      out <- expand.grid(USUBJID = pop_ids, PARAMCD = params,
+                         stringsAsFactors = FALSE) |>
+        left_join(obs, by = c("USUBJID", "PARAMCD")) |>
+        mutate(n_rec = coalesce(n_rec, 0L))
+
+      stopifnot(nrow(out) == length(pop_ids) * length(params))
+      ```
+
+      **The assertion is the point.** `nrow(out) == 2912` is one line, it costs nothing, and it converts a
+      silently smaller denominator into an immediate failure.
+
+      **That a difference of 40 lands on a clean structure** — ten subjects, four parameters, one entire
+      panel — is itself the diagnostic. A difference scattered randomly across subjects is usually
+      arithmetic; a difference that forms a rectangle is usually a specification disagreement.
+    explanation:
+      objective: "Compute the expected size of a complete subject-by-parameter frame and locate the shortfall."
+      given: "A population size, a parameter count and an observed row count."
+      relevant: "That the derivation is specified to cover every combination, not only observed ones."
+      calculating: "The product of subjects and parameters, minus the rows produced."
+      numbers: "416 x 7 = 2,912; 2,912 - 2,872 = 40, which is 10 subjects x 4 chemistry parameters."
+      assumptions: "All seven parameters are in scope for every subject, which the specification decides."
+      interpretation: "The missing rows are combinations with no records, which become an understated denominator rather than visible gaps."
+      changes: "expand.grid() plus a left join and a row-count assertion make the shortfall impossible."
+      interviewer: "That you notice the shortfall is structured, and say what that implies about its cause."
+
+  - id: r.fun.embrace
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [r.functions, r.dplyr]
+    lesson: r-functions-and-reproducible-code
+    title: A function that takes a column name
+    minutes: 10
+    prompt: |
+      Write two small helpers that a derivation program can reuse.
+
+      `n_subjects(d, group)` — the number of distinct `USUBJID` per level of a **column the caller names**,
+      returned ungrouped, with the grouping column and a column `n`.
+
+      `records_at(d, visit)` — the rows of `d` where `AVISITN` equals a **value the caller supplies**.
+
+      The second one must not be affected by the data mask: calling it with a value must filter, not
+      return everything.
+    starter: |
+      library(dplyr)
+
+      n_subjects <- function(d, group) {
+        d |> summarise(n = ___, .by = ___)
+      }
+
+      records_at <- function(d, ___) {
+        d |> filter(___)
+      }
+    reference: |
+      library(dplyr)
+
+      n_subjects <- function(d, group) {
+        d |> summarise(n = n_distinct(USUBJID), .by = {{ group }})
+      }
+
+      records_at <- function(d, visit) {
+        d |> filter(AVISITN == visit)
+      }
+    hints:
+      - "A column passed by name needs embracing: `{{ group }}`. Without it, dplyr looks for a column literally called `group`."
+      - "For the second helper the argument is a *value*, not a column — so the only requirement is that its name does not collide with a column name."
+      - "Naming the second argument `AVISITN` would make `AVISITN == AVISITN` compare the column with itself."
+    checks:
+      - pattern: "\\{\\{\\s*group\\s*\\}\\}"
+        message: "Embraces the column argument so dplyr substitutes the caller's expression"
+      - pattern: "n_distinct\\s*\\(\\s*USUBJID\\s*\\)"
+        message: "Counts distinct subjects rather than rows"
+      - pattern: "\\.by\\s*="
+        message: "Uses .by, which returns an ungrouped result"
+      - pattern: "AVISITN\\s*==\\s*visit"
+        message: "Compares the column with the supplied value, using a non-colliding argument name"
+      - pattern: "function\\s*\\(\\s*d\\s*,\\s*AVISITN\\s*\\)"
+        absent: true
+        message: "Does not name the argument after the column it filters on"
+    expectedOutput: |
+      ```text
+      > n_subjects(advs, TRTP)
+                 TRTP  n
+      1 VTX-221 20 mg 89
+      2       Placebo 91
+      3 VTX-221 10 mg 90
+
+      > nrow(records_at(advs, 12))
+      [1] 476
+      ```
+    solution: |
+      **Two different jobs that look alike.**
+
+      `n_subjects()` receives a **column**. dplyr's verbs quote their arguments rather than evaluating
+      them, so passing a bare `TRTP` through a function needs `{{ }}` to say "substitute what the caller
+      wrote here". Without it:
+
+      ```r
+      d |> summarise(n = n_distinct(USUBJID), .by = group)
+      #> Error: object 'TRTP' not found
+      ```
+
+      That one errors, which is the good case.
+
+      `records_at()` receives a **value**. No embracing is needed — but the argument must not be called
+      `AVISITN`, because inside `filter()` dplyr resolves names in the data mask before the function
+      environment, and `AVISITN == AVISITN` compares the column with itself:
+
+      ```r
+      records_at <- function(d, AVISITN) d |> filter(AVISITN == AVISITN)
+      nrow(records_at(advs, 12))
+      #> 3082      <- every row, silently
+      ```
+
+      **The silent one is the dangerous one.** `{{ }}` failures announce themselves; shadowing failures
+      return a plausible-looking dataset that is simply the whole thing.
+
+      **`.by` rather than `group_by()`** so the result comes back ungrouped and nothing leaks into a later
+      verb at the call site.
+
+      If you must keep a colliding argument name — matching an existing API, say — `.env$AVISITN` forces
+      the environment lookup and returns 476. Renaming is still better, because it removes the ambiguity
+      rather than working around it.
+    explanation:
+      objective: "Write reusable helpers that take a column and a value respectively, without data-mask surprises."
+      given: "A BDS dataset with USUBJID, TRTP and AVISITN."
+      relevant: "That dplyr quotes column arguments and resolves names in the data before the environment."
+      method: "Embrace column arguments; give value arguments names that cannot collide with columns."
+      numbers: "91 / 90 / 89 subjects by arm; 476 Week 12 records out of 3,082."
+      computation: "{{ }} substitutes the caller's expression into the verb's quoted argument."
+      interpretation: "The embracing failure errors; the shadowing failure returns the whole dataset silently."
+      changes: "`.env$AVISITN` also works for the second helper but leaves the ambiguity in place."
+      interviewer: "That you distinguish passing a column from passing a value, and know which failure is silent."
+
+  - id: r.fun.assertions
+    format: classify
+    modes: [check, guided, qc]
+    difficulty: intermediate
+    skills: [r.functions, repro.testing, qc.mindset]
+    lesson: r-functions-and-reproducible-code
+    title: What is each assertion protecting against?
+    prompt: |
+      A derivation function opens and closes with these checks. Sort each one by the kind of failure it
+      catches.
+    categories:
+      - "Bad input handed to the function"
+      - "Wrong number of rows produced"
+      - "Wrong value produced"
+    entries:
+      - text: "`stopifnot(!any(duplicated(adsl$USUBJID)))`"
+        category: "Bad input handed to the function"
+        note: "A duplicated ADSL row would double the subject-by-parameter grid before any derivation happened. Checking the input is cheaper than diagnosing the output."
+      - text: "`stopifnot(all(c(\"USUBJID\", \"PARAMCD\", \"ATOXGR\") %in% names(adlb)))`"
+        category: "Bad input handed to the function"
+        note: "A renamed or absent column produces an error deep inside a pipeline, several frames from the cause. Checking at the door names the missing column."
+      - text: "`stopifnot(nrow(out) == length(pop_ids) * length(params))`"
+        category: "Wrong number of rows produced"
+        note: "The complete-grid assertion. 416 x 7 = 2,912; a version that summarises only observed records returns 2,872."
+      - text: "`stopifnot(!any(is.infinite(out$WTOXGR)))`"
+        category: "Wrong value produced"
+        note: "`max()` over an all-missing group returns -Inf, which passes is.na() and sorts below grade 0. This assertion is the only thing that distinguishes it from a real grade."
+      - text: "`stopifnot(all(out$WTOXGR[!is.na(out$WTOXGR)] %in% 0:4))`"
+        category: "Wrong value produced"
+        note: "NCI-CTCAE grades run 0 to 4 for these parameters. Anything else — a 5, a -1, a character '3' coerced oddly — is caught here."
+      - text: "`stopifnot(nrow(out) == n_distinct(out$USUBJID) * n_distinct(out$PARAMCD))`"
+        category: "Wrong number of rows produced"
+        note: "The grain assertion: exactly one row per subject and parameter. It catches a join that duplicated rows, which the previous row-count check alone would miss if the population were also wrong."
+      - text: "`stopifnot(pop %in% names(adsl))`"
+        category: "Bad input handed to the function"
+        note: "The population-flag argument is a string used with `[[`, and a typo would otherwise produce `NULL` and an empty population rather than an error."
+    solution: |
+      **Three places an assertion earns its line**, and a production function usually has all three.
+
+      **At the door.** Checking the inputs turns a failure several frames deep into a message that names
+      the actual problem. The duplicated-key check is the highest-value one in clinical work, because a
+      duplicated ADSL row silently doubles everything downstream and the result is internally consistent.
+
+      **On the shape.** Row counts and grain. `nrow(out) == length(pop_ids) * length(params)` says what the
+      output is *supposed to be*, which is a piece of the specification written where it will be enforced.
+      Note that the two row-count checks are not redundant: the first pins the size against the intended
+      population, the second pins one row per key regardless of population.
+
+      **On the values.** Ranges, levels, and the absence of impossible values. `is.infinite()` and a
+      `%in% 0:4` level check between them catch every way this particular column has been observed to go
+      wrong.
+
+      **What not to assert:** anything you cannot state from the specification. An assertion that encodes
+      a fact about *this extract* — `nrow(adlb) == 25443` — will fail on the next data transfer for a
+      reason that is not a defect, and assertions that cry wolf get commented out.
+    explanation:
+      objective: "Classify defensive checks by the failure mode each one addresses."
+      given: "Seven stopifnot expressions from a derivation function."
+      relevant: "Whether each check runs on the inputs, the output shape or the output values."
+      method: "Input checks fail fast and name the cause; shape checks encode the specification; value checks encode the controlled terminology."
+      numbers: "416 x 7 = 2,912 expected rows; NCI-CTCAE grades 0 to 4."
+      assumptions: "The assertions restate the specification, not the contents of one data extract."
+      interpretation: "Each check corresponds to a failure that has actually shipped in this derivation."
+      changes: "An assertion pinned to a specific row count of the source data will fail spuriously on the next transfer."
+      interviewer: "That you can say which assertion catches which bug, rather than listing checks generically."
+
+  - id: r.fun.worst-grade-code
+    format: code
+    language: r
+    modes: [independent, qc]
+    difficulty: advanced
+    skills: [r.functions, adam.bds, tlf.denominators]
+    lesson: r-functions-and-reproducible-code
+    title: The defensive derivation
+    minutes: 20
+    prompt: |
+      Write `derive_worst_grade(adlb, adsl, pop = "SAFFL")` returning one row per population subject and
+      laboratory parameter, with columns `USUBJID`, `PARAMCD`, `n_rec`, `n_grd` and `WTOXGR`.
+
+      - the population comes from **ADSL**, using the flag named by `pop`
+      - `n_rec` counts on-treatment records (`ONTRTFL == "Y"`); `n_grd` counts those with a non-missing
+        `ATOXGR`; both are `0` where the subject has no such records
+      - `WTOXGR` is the maximum `ATOXGR`, or `NA_integer_` where nothing is gradeable — **never `-Inf`**
+      - assert the input has no duplicated `USUBJID`, that the output has exactly
+        `subjects × parameters` rows, and that no `WTOXGR` is infinite
+    starter: |
+      library(dplyr)
+
+      derive_worst_grade <- function(adlb, adsl, pop = "SAFFL") {
+        stopifnot(___)
+
+        pop_ids <- ___
+        params  <- sort(unique(adlb$PARAMCD))
+
+        obs <- adlb |>
+          filter(ONTRTFL == "Y", USUBJID %in% pop_ids) |>
+          summarise(n_rec  = ___,
+                    n_grd  = ___,
+                    WTOXGR = ___,
+                    .by = c(USUBJID, PARAMCD))
+
+        out <- expand.grid(___) |>
+          left_join(obs, by = c("USUBJID", "PARAMCD")) |>
+          mutate(___)
+
+        stopifnot(___)
+        out
+      }
+    reference: |
+      library(dplyr)
+
+      derive_worst_grade <- function(adlb, adsl, pop = "SAFFL") {
+        stopifnot(
+          pop %in% names(adsl),
+          all(c("USUBJID", "PARAMCD", "ATOXGR", "ONTRTFL") %in% names(adlb)),
+          !any(duplicated(adsl$USUBJID))
+        )
+
+        pop_ids <- adsl$USUBJID[adsl[[pop]] == "Y"]
+        params  <- sort(unique(adlb$PARAMCD))
+
+        obs <- adlb |>
+          filter(ONTRTFL == "Y", USUBJID %in% pop_ids) |>
+          summarise(n_rec  = n(),
+                    n_grd  = sum(!is.na(ATOXGR)),
+                    WTOXGR = if (any(!is.na(ATOXGR))) max(ATOXGR, na.rm = TRUE)
+                             else NA_integer_,
+                    .by = c(USUBJID, PARAMCD))
+
+        out <- expand.grid(USUBJID = pop_ids, PARAMCD = params,
+                           stringsAsFactors = FALSE) |>
+          left_join(obs, by = c("USUBJID", "PARAMCD")) |>
+          mutate(n_rec = coalesce(n_rec, 0L), n_grd = coalesce(n_grd, 0L))
+
+        stopifnot(
+          nrow(out) == length(pop_ids) * length(params),
+          !any(is.infinite(out$WTOXGR)),
+          all(out$WTOXGR[!is.na(out$WTOXGR)] %in% 0:4)
+        )
+        out
+      }
+    hints:
+      - "`adsl[[pop]]` indexes by a column name held in a variable; that is why `pop` is a string rather than a bare name here."
+      - "`if (any(!is.na(ATOXGR))) max(ATOXGR, na.rm = TRUE) else NA_integer_` is the guard that prevents -Inf."
+      - "`expand.grid(..., stringsAsFactors = FALSE)` — the default turns the ids into factors, which then join badly."
+      - "`coalesce(n_rec, 0L)` after the left join: unmatched rows have NA counts, and zero is the honest value."
+    checks:
+      - pattern: "adsl\\[\\[\\s*pop\\s*\\]\\]"
+        message: "Takes the population from ADSL using the supplied flag name"
+      - pattern: "expand\\.grid\\s*\\("
+        message: "Builds the complete subject-by-parameter frame"
+      - pattern: "stringsAsFactors\\s*=\\s*FALSE"
+        message: "Keeps the identifiers as character so the join works"
+      - pattern: "left_join\\s*\\("
+        message: "Joins the observations onto the grid rather than the reverse"
+      - pattern: "NA_integer_"
+        message: "Uses a typed missing value rather than a bare NA"
+      - pattern: "is\\.infinite"
+        message: "Asserts that no -Inf survived the aggregation"
+      - pattern: "duplicated\\s*\\(\\s*adsl\\$USUBJID\\s*\\)"
+        message: "Checks the input for a duplicated subject key"
+      - pattern: "coalesce\\s*\\("
+        message: "Replaces the unmatched NA counts with zero"
+      - pattern: "nrow\\s*\\(\\s*out\\s*\\)\\s*==\\s*length\\s*\\(\\s*pop_ids\\s*\\)\\s*\\*\\s*length\\s*\\(\\s*params\\s*\\)"
+        message: "Asserts the expected row count"
+    expectedOutput: |
+      ```text
+      > wg <- derive_worst_grade(adlb, adsl)
+      > nrow(wg)
+      [1] 2912
+
+      > summarise(wg, subjects = n(), no_record = sum(n_rec == 0),
+      +               record_no_grade = sum(n_rec > 0 & n_grd == 0),
+      +               graded = sum(n_grd > 0), .by = PARAMCD)
+        PARAMCD subjects no_record record_no_grade graded
+      1     ALT      416        10               0    406
+      2     AST      416        10               0    406
+      3    BILI      416        10               0    406
+      4   CREAT      416        10             406      0
+      5     HGB      416         0               0    416
+      6    NEUT      416         0               0    416
+      7    PLAT      416         0               0    416
+
+      > table(wg$WTOXGR, useNA = "ifany")
+         0    1    2    3    4 <NA>
+      1754  443  119   86   64  446
+      ```
+    solution: |
+      **2,912 rows = 416 safety subjects × 7 parameters**, and the 446 missing grades split into two
+      situations that a single `NA` column would have merged:
+
+      | | Rows | Meaning |
+      |---|---:|---|
+      | `n_rec == 0` | **40** | No post-baseline record — 10 subjects × 4 chemistry parameters |
+      | `n_rec > 0, n_grd == 0` | **406** | Records exist; creatinine is not CTCAE-graded in this study |
+
+      Carrying `n_rec` and `n_grd` out alongside the grade is what lets a reader tell **missing data** from
+      **not applicable** without rerunning anything. They belong in different footnotes and they support
+      different conclusions.
+
+      **What each defensive element buys:**
+
+      | Element | Failure it prevents |
+      |---|---|
+      | `adsl[[pop]]` | A denominator of 406 instead of 416 |
+      | `expand.grid()` + `left_join()` | Forty combinations silently absent |
+      | the `if (any(!is.na(...)))` guard | 406 values of `-Inf` masquerading as grades |
+      | `NA_integer_` | A column that silently becomes logical or double |
+      | `stringsAsFactors = FALSE` | Factor identifiers that join badly |
+      | `coalesce(n_rec, 0L)` | `NA` counts that break a later `sum()` |
+      | the three closing assertions | All of the above, if the code is later edited |
+
+      **The naive one-liner** — `summarise(WTOXGR = max(ATOXGR, na.rm = TRUE), .by = c(USUBJID, PARAMCD))`
+      on the filtered data — returns 2,872 rows with 406 `-Inf` values and warns about the second defect
+      only. The one it does not warn about is the one that reaches the CSR.
+    explanation:
+      objective: "Write a derivation whose assumptions are enforced rather than assumed."
+      given: "A long BDS laboratory dataset, a subject-level dataset with population flags, and a specification for the output grain."
+      relevant: "The population source, the completeness of the grid, and the behaviour of max() on an all-missing group."
+      method: "Check inputs, build the frame from the population, join observations onto it, assert the result."
+      numbers: "2,912 rows; 40 with no record; 406 with records but no derivable grade; grade distribution 1754/443/119/86/64."
+      assumptions: "All seven parameters are in scope for every population subject, which the specification decides rather than the data."
+      computation: "WTOXGR = if (any(!is.na(ATOXGR))) max(ATOXGR, na.rm = TRUE) else NA_integer_."
+      interpretation: "Two distinct reasons for a missing grade, kept distinguishable in the output."
+      changes: "Summarising only observed records gives 2,872 rows and a chemistry denominator of 406."
+      interviewer: "That you separate 'no record' from 'not gradeable' and can say why they belong in different footnotes."
+
+  - id: r.fun.silent-denominator
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [r.functions, tlf.denominators, qc.discrepancy]
+    lesson: r-functions-and-reproducible-code
+    title: The derivation that lost ten subjects
+    minutes: 12
+    prompt: |
+      This produces a worst-grade dataset for the laboratory shift tables. It runs; the only console
+      output is a warning about `max()`.
+
+      The chemistry section of the resulting shift table has a denominator of **406**. ADSL has **416**
+      subjects with `SAFFL == "Y"`.
+
+      Click the line that loses the ten subjects.
+    code: |
+      library(dplyr)
+
+      worst <- adlb |>
+        filter(ONTRTFL == "Y") |>
+        summarise(
+          WTOXGR = max(ATOXGR, na.rm = TRUE),
+          .by = c(USUBJID, PARAMCD)
+        )
+
+      shift <- worst |>
+        left_join(select(adsl, USUBJID, TRTA), by = "USUBJID") |>
+        count(TRTA, PARAMCD, WTOXGR)
+    answerLines: [3]
+    lineNotes:
+      - line: 3
+        note: "The pipeline starts from `adlb`, so the set of subjects in the output is whoever has laboratory records — not the safety population. Ten subjects have no post-baseline chemistry at all, so they produce no rows for ALT, AST, BILI or CREAT and the chemistry denominator becomes 406. The population must come from ADSL: build `expand.grid(USUBJID = pop_ids, PARAMCD = params)` first and left-join the observations onto it."
+      - line: 4
+        note: "Restricting to on-treatment records is correct and is what the specification asks for. It is not what removes the subjects — they have no post-baseline chemistry records at all, flagged or otherwise."
+      - line: 6
+        note: "`max(ATOXGR, na.rm = TRUE)` is a genuine second defect — it returns -Inf for the 406 creatinine groups where every grade is missing. But it produces a warning, and it is not what changed the denominator."
+      - line: 11
+        note: "The left join brings the treatment arm across correctly. A left join from `worst` keeps whatever `worst` contained, so it preserves the loss rather than causing it."
+    fixed: |
+      library(dplyr)
+
+      pop_ids <- adsl$USUBJID[adsl$SAFFL == "Y"]
+      params  <- sort(unique(adlb$PARAMCD))
+
+      obs <- adlb |>
+        filter(ONTRTFL == "Y", USUBJID %in% pop_ids) |>
+        summarise(
+          n_grd  = sum(!is.na(ATOXGR)),
+          WTOXGR = if (any(!is.na(ATOXGR))) max(ATOXGR, na.rm = TRUE)
+                   else NA_integer_,
+          .by = c(USUBJID, PARAMCD)
+        )
+
+      worst <- expand.grid(USUBJID = pop_ids, PARAMCD = params,
+                           stringsAsFactors = FALSE) |>
+        left_join(obs, by = c("USUBJID", "PARAMCD")) |>
+        mutate(n_grd = coalesce(n_grd, 0L))
+
+      stopifnot(nrow(worst) == length(pop_ids) * length(params),
+                !any(is.infinite(worst$WTOXGR)))
+    hints:
+      - "416 - 406 = 10. What would have to be true for a subject to be absent from the output entirely?"
+      - "Which dataset does this pipeline start from, and what does that make the set of subjects in the result?"
+      - "A summarise can only produce a row for a group that has at least one record."
+    solution: |
+      **Line 3.** The pipeline starts from `adlb`, so the subjects in the output are whoever has
+      laboratory records — not the safety population.
+
+      `summarise()` produces one row per group **that exists in the data**. Ten subjects have no
+      post-baseline chemistry records at all, so they form no ALT, AST, BILI or CREAT groups and
+      contribute nothing. $10 \times 4 = 40$ rows are simply absent, and the chemistry denominator becomes
+      406 rather than 416.
+
+      **The population is a property of the study, recorded in ADSL.** The analysis dataset records who
+      had measurements, which is a different question and not the denominator.
+
+      ```r
+      pop_ids <- adsl$USUBJID[adsl$SAFFL == "Y"]
+
+      expand.grid(USUBJID = pop_ids, PARAMCD = params, stringsAsFactors = FALSE) |>
+        left_join(obs, by = c("USUBJID", "PARAMCD"))
+
+      stopifnot(nrow(worst) == length(pop_ids) * length(params))
+      ```
+
+      **Line 6 is a second, independent defect** — `max()` over the 406 all-missing creatinine groups
+      returns `-Inf` — and it is worth noticing which of the two gets found.
+
+      | Defect | Signal | Consequence |
+      |---|---|---|
+      | `max()` on an empty group | **Warns**, 406 times | `-Inf` in a grade column, visible in the output |
+      | Population taken from ADLB | **Silent** | Every chemistry percentage overstated by ~2.5% relative |
+
+      The loud one costs an afternoon. The quiet one reaches the clinical study report, because the table
+      is internally consistent and nothing in it says the denominator is wrong.
+
+      **The check that catches it outside the code:** denominators in every table must match the "N =" in
+      the column headers, which must match the disposition table, which must match ADSL.
+    explanation:
+      objective: "Trace an understated denominator to the dataset a pipeline started from."
+      given: "A shift-table denominator of 406 against a safety population of 416, and a max() warning."
+      relevant: "That summarise() cannot create a group that has no records, and that the pipeline begins at ADLB."
+      irrelevant: "The left join and the ONTRTFL filter, both of which are correct."
+      method: "A missing subject must come from a step that could omit them entirely, which a summarise over observed records can and a left join cannot."
+      numbers: "416 - 406 = 10 subjects, x 4 chemistry parameters = 40 absent rows."
+      assumptions: "The specification requires a row per population subject and parameter, which is what makes 2,912 the right count."
+      interpretation: "Two defects with opposite visibility; the silent one is the one that reaches the report."
+      changes: "Building the grid from ADSL and asserting the row count makes the loss impossible."
+      interviewer: "That you identify which of the two defects is dangerous and say why the warning-free one is worse."
+
+  - id: r.fun.derivation-diff
+    format: diff
+    modes: [qc, debug]
+    difficulty: advanced
+    skills: [r.functions, qc.compare, adam.bds]
+    lesson: r-functions-and-reproducible-code
+    title: Two derivations of the same worst grade
+    minutes: 12
+    prompt: |
+      Production and QC each derived a worst post-baseline laboratory grade per subject and parameter for
+      CBX417-301. Both programs ran without error. Their summaries differ.
+
+      ADSL has 416 subjects with `SAFFL == "Y"`; ADLB has 7 parameters.
+
+      What explains the difference?
+    codeLanguage: r
+    leftCode: |
+      worst <- adlb |>
+        filter(ONTRTFL == "Y") |>
+        summarise(WTOXGR = max(ATOXGR, na.rm = TRUE),
+                  .by = c(USUBJID, PARAMCD))
+    rightCode: |
+      pop_ids <- adsl$USUBJID[adsl$SAFFL == "Y"]
+      params  <- sort(unique(adlb$PARAMCD))
+
+      obs <- adlb |>
+        filter(ONTRTFL == "Y", USUBJID %in% pop_ids) |>
+        summarise(n_grd  = sum(!is.na(ATOXGR)),
+                  WTOXGR = if (any(!is.na(ATOXGR))) max(ATOXGR, na.rm = TRUE)
+                           else NA_integer_,
+                  .by = c(USUBJID, PARAMCD))
+
+      worst <- expand.grid(USUBJID = pop_ids, PARAMCD = params,
+                           stringsAsFactors = FALSE) |>
+        left_join(obs, by = c("USUBJID", "PARAMCD"))
+    left:
+      title: "Production — rows per parameter"
+      columns: ["PARAMCD", "Rows", "WTOXGR = -Inf", "Graded"]
+      rows:
+        - ["ALT", 406, 0, 406]
+        - ["AST", 406, 0, 406]
+        - ["BILI", 406, 0, 406]
+        - ["CREAT", 406, 406, 0]
+        - ["HGB", 416, 0, 416]
+        - ["NEUT", 416, 0, 416]
+        - ["PLAT", 416, 0, 416]
+        - ["Total", 2872, 406, 2466]
+      footnote: "Ran with a warning: 406 warnings in summarise(), no non-missing arguments to max."
+    right:
+      title: "QC — rows per parameter"
+      columns: ["PARAMCD", "Rows", "WTOXGR = NA", "Graded"]
+      rows:
+        - ["ALT", 416, 10, 406]
+        - ["AST", 416, 10, 406]
+        - ["BILI", 416, 10, 406]
+        - ["CREAT", 416, 416, 0]
+        - ["HGB", 416, 0, 416]
+        - ["NEUT", 416, 0, 416]
+        - ["PLAT", 416, 0, 416]
+        - ["Total", 2912, 446, 2466]
+      footnote: "Ran clean."
+    choices:
+      - text: "Production started from ADLB, so subjects with no post-baseline chemistry never formed a group — 10 subjects × 4 chemistry parameters = 40 absent rows. QC built the frame from the ADSL safety population first."
+        correct: true
+        feedback: "Correct. That is the 2,912 versus 2,872 difference, and it makes the chemistry denominator 406 rather than 416."
+      - text: "Production's `max(ATOXGR, na.rm = TRUE)` returned `-Inf` for the 406 creatinine groups where no grade exists; QC's guard returns `NA_integer_` instead."
+        correct: true
+        feedback: "Correct, and this is the second, independent difference — the one that warned. -Inf is numeric, passes is.na(), and sorts below grade 0."
+      - text: "The two programs used different on-treatment flags."
+        feedback: "Both filter on `ONTRTFL == \"Y\"`. The graded counts are identical in every row, which is what you would not see if the record selection differed."
+      - text: "QC included subjects who were randomized but never treated."
+        feedback: "QC used SAFFL == 'Y', which is the treated population — 416 of the 420 randomized. The extra rows are population subjects with no records, not extra subjects."
+      - text: "Rounding or a quartile-definition difference between the two implementations."
+        feedback: "Neither program computes a quantile or rounds anything. The counts differ, not a statistic."
+    solution: |
+      **Two independent differences, and the "Graded" column proves it.**
+
+      Graded counts are **identical in every row** — 406, 406, 406, 0, 416, 416, 416, totalling 2,466. The
+      two programs agree completely about which records are gradeable and what the grades are. Everything
+      that differs is about rows that have **no** gradeable record.
+
+      **Difference 1 — where the population came from.** Production summarised the observed records, so it
+      could only produce a row for a subject–parameter combination that had at least one record. Ten
+      subjects have no post-baseline chemistry at all:
+
+      $$10 \text{ subjects} \times 4 \text{ chemistry parameters} = 40 \text{ absent rows}$$
+
+      $$2{,}912 - 2{,}872 = 40$$
+
+      The consequence is a chemistry denominator of 406 rather than 416 — a relative overstatement of
+      about 2.5% in every chemistry percentage, with nothing in the output to reveal it. **This difference
+      is silent.**
+
+      **Difference 2 — what an ungradeable group produces.** `max(c(NA, NA), na.rm = TRUE)` is `-Inf`, not
+      `NA`. 406 creatinine groups hit it. `-Inf` is numeric: it fails `is.na()`, sorts below grade 0, and
+      satisfies any `<= 0` comparison. **This difference warns**, 406 times.
+
+      **Neither program is obviously wrong, which is the point.** The specification did not say whether
+      subjects with no records for a parameter should appear as rows, and it did not say what an
+      ungradeable parameter should produce. Both are findings against the SAP, and both go to the study
+      statistician rather than to a programmer.
+
+      **The reconciliation route:** notice that the difference has a *shape* — ten subjects, four
+      parameters, one whole panel. A difference that forms a rectangle is a specification disagreement. A
+      difference scattered randomly across subjects is usually arithmetic.
+    explanation:
+      objective: "Reconcile two independent derivations that disagree on row counts but not on values."
+      given: "Two per-parameter summaries with identical graded counts and different totals."
+      relevant: "That the graded counts match exactly, so the record selection and the grading agree."
+      irrelevant: "Rounding and quantile conventions, since nothing here is rounded or quantiled."
+      method: "Isolate what differs (rows with no gradeable record) from what does not (everything gradeable)."
+      numbers: "2,912 versus 2,872 rows, a difference of 40 = 10 subjects x 4 chemistry parameters; 446 NA versus 406 -Inf."
+      assumptions: "Both programs used the same ADLB extract and the same ONTRTFL flag, which the identical graded counts support."
+      interpretation: "Two specification gaps, not two bugs; one warns and one is silent."
+      changes: "If the SAP stated the output grain and the ungradeable-parameter rule, neither difference could arise."
+      interviewer: "That you use the matching column to narrow the search before proposing a cause."
+
+  - id: r.fun.open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [r.functions, repro.project-structure, repro.testing, communication.interviewing]
+    lesson: r-functions-and-reproducible-code
+    title: Making an analysis reproducible
+    prompt: |
+      **Interviewer:** "You're inheriting an R analysis from someone who has left. What would you need
+      before you'd be willing to say it's reproducible?"
+    modelAnswer: |
+      I'd want to separate three claims that get bundled together, because they need different evidence.
+
+      **Rerunnable.** Can I run it again and get the same numbers? That needs no manual steps — nothing
+      that was fixed up by hand in a spreadsheet, nothing that depends on objects left in a workspace from
+      a previous session. I'd delete the output directory and rebuild it from the programs; if anything is
+      missing afterwards, it was made by hand and the study is not reproducible. I'd also check that the
+      scripts don't depend on a saved `.RData` or on the working directory happening to be right, and that
+      any stochastic step sets a seed.
+
+      **Portable.** Does someone else get the same numbers? That is mostly package versions. A seed is not
+      enough on its own — R 3.6.0 changed the default algorithm `sample()` uses, so the same seed under a
+      different `RNGkind()` gives a different answer. On the study I've been working with, that moved a
+      bootstrap confidence interval by half a millimetre of mercury with everything else identical. So I'd
+      want a lockfile — `renv.lock` or an equivalent frozen library — and `sessionInfo()` written into
+      every log, which is the weaker but always-available record of what actually ran. `sessionInfo()`
+      lists loaded namespaces as well as attached packages, and that matters: `dplyr` does its evaluation
+      through `rlang` and its selection through `tidyselect`, and either can change behaviour without
+      `dplyr`'s own version moving.
+
+      **Re-derivable.** This is the one that actually matters and the one people skip. Can someone who has
+      never read this code produce the same numbers from the specification? That is what double
+      programming tests, and it is the only check on whether the *specification* was understood. A program
+      can be perfectly rerunnable and portable and still compute the wrong thing, correctly, every time.
+
+      Beyond that I'd want the code itself to say what it assumed. Assertions in the derivation
+      functions — row counts, one row per key, the set of levels in a categorical, no impossible values.
+      Not in a separate test suite that someone has to remember to run, but inside the function, so they
+      execute on every run including the one at eleven at night before a delivery. When two
+      implementations disagree, an assertion turns "our numbers differ" into "this program expected 2,912
+      rows and produced 2,872, and here is the line that says why."
+
+      And I'd want to know where the boundary of the analysis is. Which inputs are read-only, which
+      outputs are generated, what the data cut-off was, what the source extract was. An analysis that
+      cannot say what it read is not reproducible regardless of how clean the code is.
+
+      One practical thing I'd do first: run it. A surprising amount of inherited code does not run at all
+      on a clean machine, and that tells you more in twenty minutes than reading it for two days.
+    rubric:
+      - Distinguishes rerunnable, portable and re-derivable as separate claims
+      - Tests rerunnability by deleting and rebuilding the output directory
+      - Names package versions and a lockfile, not only a seed
+      - Knows a seed is insufficient across R versions (the sample() algorithm change)
+      - Mentions sessionInfo() and why loaded namespaces matter
+      - Frames independent re-derivation as the test of the specification, not of the code
+      - Wants assertions inside production functions rather than in a separate suite
+      - Asks what the inputs, data cut-off and source extract were
+    redFlags:
+      - "Equates reproducibility with setting a seed"
+      - "Treats a passing test suite as sufficient"
+      - "Does not distinguish a coding error from a specification misreading"
+      - "Would write the QC program by reading the production program"
+      - "Ignores package versions entirely"

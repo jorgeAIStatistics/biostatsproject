@@ -1,0 +1,425 @@
+items:
+  - id: sas.subsetting-where-if.where-new-var-mcq
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.where-if]
+    lesson: sas-subsetting-where-if
+    title: WHERE on a derived variable
+    prompt: |
+      ```sas
+      data eld;
+        set adam.adsl;
+        length AGEGR1 $4;
+        if AGE >= 65 then AGEGR1 = '>=65';
+        else if not missing(AGE) then AGEGR1 = '<65';
+        where AGEGR1 = '>=65';
+      run;
+      ```
+
+      `ADAM.ADSL` does not contain `AGEGR1`. What happens?
+    choices:
+      - text: "The step stops with an ERROR saying AGEGR1 is not on file ADAM.ADSL"
+        correct: true
+        feedback: "WHERE is applied as observations are read, so it can only use variables stored in the input dataset. AGEGR1 is created later, in the PDV."
+      - text: "The step keeps the subjects aged 65 or older"
+        feedback: "That is what `if AGEGR1 = '>=65';` would do. WHERE cannot see variables created in the step."
+      - text: "The step writes 0 observations because AGEGR1 is missing when WHERE is evaluated"
+        feedback: "SAS does not evaluate the WHERE against a missing value; it refuses to compile a WHERE on a variable that is not in the input dataset."
+      - text: "The WHERE is ignored because it appears after the IF statements"
+        feedback: "The position of a WHERE statement in the step does not matter; the problem is the variable."
+    solution: |
+      `ERROR: Variable AGEGR1 is not on file ADAM.ADSL.` Replace the WHERE with a subsetting IF placed after the derivation: `if AGEGR1 = '>=65';`.
+
+  - id: sas.subsetting-where-if.where-vs-if-classify
+    format: classify
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [sas.where-if]
+    lesson: sas-subsetting-where-if
+    title: WHERE, IF or both?
+    prompt: |
+      Classify each capability: does it belong to the `WHERE` statement only, to the subsetting `IF` only, or to both?
+    categories: [WHERE only, Subsetting IF only, Both]
+    entries:
+      - text: "Can test a variable created earlier in the same DATA step"
+        category: Subsetting IF only
+      - text: "Can be used inside PROC FREQ or PROC MEANS"
+        category: WHERE only
+      - text: "Can test `FIRST.USUBJID`"
+        category: Subsetting IF only
+      - text: "Can test `_N_`"
+        category: Subsetting IF only
+      - text: "Works on raw data read with an INPUT statement"
+        category: Subsetting IF only
+      - text: "Can use `BETWEEN … AND …`, `CONTAINS` and `LIKE`"
+        category: WHERE only
+      - text: "Rejected observations never enter the PDV"
+        category: WHERE only
+      - text: "Can use the `IN` operator, e.g. `ARMCD in ('CBX+DOC', 'PBO+DOC')`"
+        category: Both
+      - text: "Can test variables stored in the input dataset"
+        category: Both
+    hints:
+      - "Ask: does the capability need the observation to be in the PDV already?"
+      - "WHERE is evaluated by the data engine as rows are read, so it can only see variables that already exist on disk — but in exchange it gets operators the DATA step language does not have."
+      - "A subsetting IF is an ordinary statement inside the step, so it can test anything in the PDV, including a variable the step computed two lines earlier."
+    solution: |
+      WHERE acts at the door (before the PDV): only stored variables, usable in procedures, special operators, efficient. The subsetting IF acts inside the step: created variables, `_N_`, `FIRST.`/`LAST.`, raw data. Both can test stored variables and use `IN`.
+
+  - id: sas.subsetting-where-if.dsopt-order-mcq
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.where-if, sas.data-step]
+    lesson: sas-subsetting-where-if
+    title: KEEP=, RENAME= and WHERE= together
+    prompt: |
+      Which `SET` statement runs without error and reads only subjects aged 65 or older, with `AGE` renamed to `AGEBL`?
+    choices:
+      - text: "`set adsl(keep=USUBJID AGE SAFFL rename=(AGE=AGEBL) where=(AGEBL >= 65));`"
+        correct: true
+        feedback: "SAS applies KEEP= first (old names), then RENAME=, then WHERE= (new names), whatever order you type them in."
+      - text: "`set adsl(keep=USUBJID AGEBL SAFFL rename=(AGE=AGEBL));`"
+        feedback: "KEEP= is applied before RENAME=, so it must list the old name AGE; AGEBL does not exist yet when KEEP= is processed."
+      - text: "`set adsl(rename=(AGE=AGEBL) where=(AGE >= 65));`"
+        feedback: "WHERE= is applied after RENAME=, so AGE no longer exists by the time the condition is evaluated."
+      - text: "`set adsl(where=(AGEBL >= 65) keep=USUBJID AGEBL rename=(AGE=AGEBL));`"
+        feedback: "Typing WHERE= first does not change the processing order; KEEP= still sees only the old name AGE."
+    solution: |
+      For input data set options, SAS applies DROP=/KEEP= → RENAME= → WHERE=. So KEEP= uses old names and WHERE= uses new names.
+
+  - id: sas.subsetting-where-if.count-numeric
+    format: numeric
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [sas.where-if, sas.missing-values]
+    lesson: sas-subsetting-where-if
+    title: Count the rows written
+    prompt: |
+      `WORK.ADAE` contains these 10 records:
+
+      | USUBJID | AEDECOD | TRTEMFL | ATOXGRN |
+      |---|---|---|---:|
+      | 0001 | Neutropenia | Y | 3 |
+      | 0001 | Fatigue | Y | 1 |
+      | 0001 | Nausea | N | 2 |
+      | 0002 | Neutropenia | Y | 4 |
+      | 0002 | Diarrhea | Y | . |
+      | 0003 | Rash | Y | 2 |
+      | 0003 | Febrile neutropenia | Y | 3 |
+      | 0004 | Anemia | N | 3 |
+      | 0004 | Fatigue | Y | 2 |
+      | 0005 | Pneumonia | Y | 5 |
+
+      ```sas
+      data sev_teae;
+        set adae;
+        where TRTEMFL = 'Y';
+        if ATOXGRN >= 3;
+      run;
+      ```
+
+      How many observations does `WORK.SEV_TEAE` contain?
+    answer: 4
+    tolerance: 0
+    hints:
+      - "First apply the WHERE: which records have TRTEMFL = 'Y'?"
+      - "Then the IF: among those, which grades are 3 or higher? What is the result of comparing a missing grade with 3?"
+    solution: |
+      The WHERE keeps the 8 treatment-emergent records (the Nausea and Anemia records have `TRTEMFL = 'N'`). Among those, grades ≥ 3 are Neutropenia 3, Neutropenia 4, Febrile neutropenia 3 and Pneumonia 5: **4** observations. The Diarrhea record has a missing grade; `. >= 3` is false, so it is excluded — which is right here, but a table of "grade ≥3 or missing grade" would need the missing grades handled explicitly. The log would show 8 observations read and 4 written.
+
+  - id: sas.subsetting-where-if.pop-subsets-code
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sas.where-if, sas.data-step, trials.populations]
+    lesson: sas-subsetting-where-if
+    title: Two populations in one step
+    minutes: 10
+    prompt: |
+      From `ADAM.ADSL`, create **in a single DATA step**:
+
+      - `WORK.ITT` — subjects with `ITTFL = 'Y'`, keeping `USUBJID TRT01P AGE SEX ITTFL`;
+      - `WORK.SAF65` — subjects with `SAFFL = 'Y'` and `AGE >= 65`, keeping `USUBJID TRT01P AGE`.
+
+      Then explain in one sentence why a single WHERE *statement* cannot do the selection here.
+    starter: |
+      data /* two datasets with KEEP= options */;
+        set adam.adsl;
+        /* route observations */
+      run;
+    hints:
+      - "Put both datasets on the DATA statement, each with its own `KEEP=` option."
+      - "Use explicit `OUTPUT itt;` and `OUTPUT saf65;` statements with IF conditions — remember that one explicit OUTPUT switches off implicit output."
+      - "A WHERE statement filters what enters the step, so it would apply to both outputs."
+    checks:
+      - pattern: 'data\s+[^;]*\bitt\b[^;]*\bsaf65\b|data\s+[^;]*\bsaf65\b[^;]*\bitt\b'
+        message: "Creates ITT and SAF65 in the same DATA statement"
+      - pattern: 'set\s+adam\.adsl\b'
+        message: "Reads ADAM.ADSL with a two-level name"
+      - pattern: 'ittfl\s*=\s*[''"]y[''"]'
+        message: "Selects ITTFL = 'Y'"
+      - pattern: 'saffl\s*=\s*[''"]y[''"]'
+        message: "Selects SAFFL = 'Y'"
+      - pattern: 'age\s*(>=|ge)\s*65'
+        message: "Selects AGE >= 65"
+      - pattern: 'output\s+itt\s*;'
+        message: "Writes to ITT with an explicit OUTPUT"
+      - pattern: 'output\s+saf65\s*;'
+        message: "Writes to SAF65 with an explicit OUTPUT"
+      - pattern: 'keep\s*=\s*[^)]*\busubjid\b'
+        message: "Uses KEEP= to choose the variables of the output datasets"
+      - pattern: '^\s*where\s'
+        flags: im
+        absent: true
+        message: "Does not use a WHERE statement (it would restrict both outputs)"
+    reference: |
+      data itt(keep=USUBJID TRT01P AGE SEX ITTFL)
+           saf65(keep=USUBJID TRT01P AGE);
+        set adam.adsl;
+        if ITTFL = 'Y' then output itt;
+        if SAFFL = 'Y' and AGE >= 65 then output saf65;
+      run;
+    solution: |
+      Each output gets its own KEEP= and its own OUTPUT statement. A WHERE statement filters the observations that enter the step, so `where ITTFL = 'Y';` would also restrict SAF65 to ITT subjects — harmless if every safety subject is in the ITT population, but wrong in principle and wrong in studies where the populations differ (e.g., treated but not randomized subjects). Conditions that differ by output belong in IF-OUTPUT pairs.
+
+      Note that the two IF statements are independent (no ELSE): a subject can be written to both datasets.
+
+  - id: sas.subsetting-where-if.keep-option-mcq
+    format: mcq
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [sas.where-if, sas.data-step]
+    lesson: sas-subsetting-where-if
+    title: KEEP= on input versus output
+    prompt: |
+      ```sas
+      /* Program 1 */
+      data eld1(keep=USUBJID TRT01P);
+        set adam.adsl;
+        if AGE >= 65;
+      run;
+
+      /* Program 2 */
+      data eld2;
+        set adam.adsl(keep=USUBJID TRT01P);
+        if AGE >= 65;
+      run;
+      ```
+
+      Which statement is true?
+    choices:
+      - text: "Program 1 writes the subjects aged 65 or older without AGE; Program 2 writes 0 observations and notes that AGE is uninitialized"
+        correct: true
+        feedback: "An output KEEP= trims columns when writing, after the IF has used AGE. An input KEEP= stops AGE from ever entering the PDV, so AGE is a new, missing variable and `. >= 65` is false."
+      - text: "Both programs produce the same dataset"
+        feedback: "Only the output option leaves AGE available to the IF statement."
+      - text: "Program 2 fails with an ERROR because AGE is not kept"
+        feedback: "No ERROR: SAS creates a new numeric AGE (uninitialized) — a silent failure, which is worse than an error."
+      - text: "Program 1 fails because AGE is used but not kept"
+        feedback: "Variables excluded by an output KEEP= are still fully available inside the step."
+    solution: |
+      Input options control what enters the PDV; output options control what is written. Program 2 logs `NOTE: Variable AGE is uninitialized.` and writes 0 observations — read that note as an error.
+
+  - id: sas.subsetting-where-if.where-replaced-mcq
+    format: mcq
+    modes: [independent]
+    difficulty: intermediate
+    skills: [sas.where-if, sas.log]
+    lesson: sas-subsetting-where-if
+    title: Two WHERE statements
+    prompt: |
+      ```sas
+      data alt_saf;
+        set adam.adlb;
+        where PARAMCD = 'ALT';
+        where SAFFL = 'Y';
+      run;
+      ```
+
+      Which records end up in `WORK.ALT_SAF`?
+    choices:
+      - text: "All lab records of safety subjects, for every parameter"
+        correct: true
+        feedback: "A second WHERE statement replaces the first; the log says `NOTE: WHERE clause has been replaced.`"
+      - text: "ALT records of safety subjects only"
+        feedback: "That needs `where PARAMCD = 'ALT' and SAFFL = 'Y';` or a second statement written as `where also SAFFL = 'Y';`."
+      - text: "ALT records only, for all subjects"
+        feedback: "The first WHERE does not survive; the last one wins."
+      - text: "The step stops with an ERROR because WHERE may appear only once"
+        feedback: "Multiple WHERE statements are allowed; they replace each other unless you use WHERE ALSO."
+    solution: |
+      The last WHERE wins. Combine conditions with `and`, or use `where also` to augment (`NOTE: WHERE clause has been augmented.`). The log echo under "observations read" shows the WHERE clause actually applied — check it.
+
+  - id: sas.subsetting-where-if.merge-where-log
+    format: log
+    modes: [debug]
+    difficulty: intermediate
+    skills: [sas.where-if, sas.merge, sas.log]
+    lesson: sas-subsetting-where-if
+    title: WHERE in a MERGE step
+    minutes: 6
+    prompt: |
+      This step should keep lab records of safety subjects only. Click the line that identifies the problem (representative log).
+    program: |
+      data adlb_saf;
+        merge adlb(in=inlb) adsl(keep=USUBJID SAFFL TRT01A);
+        by USUBJID;
+        where SAFFL = 'Y';
+        if inlb;
+      run;
+    log: |
+      31   data adlb_saf;
+      32     merge adlb(in=inlb) adsl(keep=USUBJID SAFFL TRT01A);
+      33     by USUBJID;
+      34     where SAFFL = 'Y';
+      ERROR: Variable SAFFL is not on file WORK.ADLB.
+      35     if inlb;
+      36   run;
+
+      NOTE: The SAS System stopped processing this step because of errors.
+    issues: [5]
+    lineNotes:
+      - line: 4
+        note: "A WHERE statement applies to every dataset in the MERGE, so each of them must contain SAFFL."
+      - line: 5
+        note: "The root cause: ADLB has no SAFFL. SAS applies WHERE to each input dataset before combining, and refuses a condition on a variable that is missing from one of them."
+      - line: 9
+        note: "A consequence: nothing was produced."
+    hints:
+      - "Which datasets does a WHERE statement apply to in a MERGE step?"
+      - "Is SAFFL in both datasets?"
+    solution: |
+      Line 5. Filter only ADSL with a data set option and require a match:
+
+      ```sas
+      data adlb_saf;
+        merge adlb(in=inlb) adsl(in=insl keep=USUBJID SAFFL TRT01A where=(SAFFL = 'Y'));
+        by USUBJID;
+        if inlb and insl;
+      run;
+      ```
+
+      `if inlb and insl;` matters: with only `if inlb;`, lab records of non-safety subjects would still be written, with blank `SAFFL` and `TRT01A`, because their ADSL rows were filtered out before the merge. A subsetting IF after the merge (`if inlb and SAFFL = 'Y';`) is an equally valid fix.
+    explanation:
+      objective: "Restrict merged lab data to safety subjects without breaking the step."
+      given: "A MERGE with a WHERE statement on a variable that exists only in ADSL."
+      relevant: "The rule that a WHERE statement applies to all input datasets; the WHERE= option and IN= flags as alternatives."
+      irrelevant: "The BY statement and KEEP= list are fine."
+      method: "Apply the filter to the one dataset that has the variable (WHERE=), then require a match with IN= flags — or filter after the merge with IF."
+      interpretation: "WHERE statements filter before combining; IF filters the combined observation."
+      changes: "If ADLB also carried SAFFL, the WHERE statement would run — and filter both datasets on their own copies of SAFFL."
+      interviewer: "That you know how WHERE behaves with multiple input datasets and why IN= flags are needed after filtering one side of a merge."
+
+  - id: sas.subsetting-where-if.else-chain-hotspot
+    format: hotspot
+    language: sas
+    modes: [debug, qc]
+    difficulty: intermediate
+    skills: [sas.where-if, sas.missing-values, sas.debugging]
+    lesson: sas-subsetting-where-if
+    title: Underweight subjects classified as obese
+    minutes: 6
+    prompt: |
+      QC reports that two subjects with `BMIBL` of 17.9 **and** one subject with a missing `BMIBL` all have `BMICAT = 'OBESE'`. There are **two** defective lines. Click both.
+    code: |
+      data adsl2;
+        set adsl;
+        length BMICAT $11;
+        if BMIBL < 18.5 then BMICAT = 'UNDERWEIGHT';
+        if 18.5 <= BMIBL < 25 then BMICAT = 'NORMAL';
+        else if 25 <= BMIBL < 30 then BMICAT = 'OVERWEIGHT';
+        else BMICAT = 'OBESE';
+      run;
+    answerLines: [4, 5]
+    lineNotes:
+      - line: 4
+        note: "A missing BMIBL is smaller than every number, so `BMIBL < 18.5` is true for missing values. Missing must be tested first (`if missing(BMIBL) then …`)."
+      - line: 5
+        note: "This `if` starts a new chain. An underweight subject (17.9) fails it, fails line 6, and falls into the `else` on line 7, overwriting 'UNDERWEIGHT' with 'OBESE'. It must be `else if`."
+      - line: 7
+        note: "The final ELSE is a catch-all — it absorbs every case the chain did not anticipate."
+    fixed: |
+      data adsl2;
+        set adsl;
+        length BMICAT $11;
+        if missing(BMIBL) then BMICAT = ' ';
+        else if BMIBL < 18.5 then BMICAT = 'UNDERWEIGHT';
+        else if BMIBL < 25 then BMICAT = 'NORMAL';
+        else if BMIBL < 30 then BMICAT = 'OVERWEIGHT';
+        else BMICAT = 'OBESE';
+      run;
+    hints:
+      - "Trace a subject with BMIBL = 17.9 through every line, noting which assignments execute."
+      - "Now trace a subject with a missing BMIBL. How does SAS compare a missing value with 18.5?"
+    solution: |
+      Line 5 breaks the chain (it should be `else if`), and line 4 does not protect against missing values. In a single `if … else if … else` chain, tested from missing upwards, each subject gets exactly one category and the lower bounds are implied by the earlier conditions.
+    explanation:
+      objective: "Find why two kinds of subjects end up in the wrong category."
+      given: "The classification code and three misclassified subjects."
+      relevant: "Where each IF chain starts and ends; how missing compares with numbers."
+      irrelevant: "The LENGTH statement is correct (11 fits 'UNDERWEIGHT')."
+      computation: "BMIBL = 17.9: line 4 sets UNDERWEIGHT; line 5 is false; line 6 is false; line 7 sets OBESE. BMIBL missing: line 4 is true (missing < 18.5) → UNDERWEIGHT; lines 5–7 → OBESE."
+      interpretation: "Both symptoms end in the catch-all ELSE; one because the chain was broken, one because missing was never handled."
+      changes: "With `else if` on line 5 but no missing check, missing BMI would be UNDERWEIGHT — still wrong, just differently."
+      interviewer: "That you can trace IF-THEN/ELSE logic row by row and always handle missing values explicitly."
+
+  - id: sas.subsetting-where-if.interview-where-if
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [sas.where-if, communication.interviewing]
+    lesson: sas-subsetting-where-if
+    title: WHERE versus IF
+    prompt: |
+      **Interviewer:** "What is the difference between WHERE and IF in SAS? Can they give different results?"
+    modelAnswer: |
+      WHERE filters observations before they enter the program data vector; a subsetting IF filters after the observation is in the PDV and earlier statements have run.
+
+      Consequences: WHERE can only use variables stored in the input dataset, while IF can use variables created in the step, `_N_` and FIRST./LAST. flags. WHERE works in procedures too (e.g., `proc freq; where SAFFL = 'Y';`); IF only in the DATA step. IF works with raw data read by INPUT; WHERE does not. WHERE has extra operators — BETWEEN-AND, CONTAINS, LIKE, IS MISSING — and is usually more efficient because rejected rows are never read, and it can use indexes.
+
+      They can give different results. With BY-group processing, FIRST./LAST. are computed on the rows WHERE lets through, but on all rows when you filter with IF, so a subsetting IF placed before a FIRST. reset can corrupt per-subject counts. With MERGE, a WHERE statement filters each input dataset before combining (and its variables must exist in all of them), while an IF tests the merged observation. In clinical programs I select populations with WHERE on ADSL flags and use IF when the condition depends on something derived in the step.
+    rubric:
+      - States the timing difference (before vs after the PDV)
+      - Names what each can reference (stored variables vs created variables, _N_, FIRST./LAST.)
+      - Mentions procedures vs DATA step and raw data with INPUT
+      - Mentions efficiency and/or WHERE-only operators
+      - Gives at least one case where results differ (BY groups or MERGE)
+    redFlags:
+      - "Says they are interchangeable"
+      - "Thinks IF can be used in PROC FREQ"
+      - "Cannot give a case where the results differ"
+    followUps:
+      - "How would you keep lab records for safety subjects when SAFFL is only in ADSL?"
+      - "Why might a count per subject be wrong if you filter with IF after a BY statement?"
+
+  - id: sas.subsetting-where-if.speed-where-ops
+    format: multi
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.where-if]
+    lesson: sas-subsetting-where-if
+    title: WHERE-only operators
+    prompt: |
+      Which of these operators can be used in a WHERE statement but **not** in a subsetting IF? Select all that apply.
+    choices:
+      - text: "`AGE between 18 and 64`"
+        correct: true
+        feedback: "BETWEEN-AND is a WHERE operator."
+      - text: "`AETERM contains 'NAUSEA'`"
+        correct: true
+        feedback: "CONTAINS (or `?`) is WHERE-only; in a DATA step use `index()` or `find()`."
+      - text: "`LBSTRESN is missing`"
+        correct: true
+        feedback: "IS MISSING / IS NULL are WHERE operators; in an IF use `missing(LBSTRESN)`."
+      - text: "`AEDECOD like 'Neutro%'`"
+        correct: true
+        feedback: "LIKE with `%` and `_` wildcards is WHERE-only."
+      - text: "`ARMCD in ('CBX+DOC', 'PBO+DOC')`"
+        feedback: "IN works in both WHERE and IF."
+      - text: "`SAFFL = 'Y' and AGE >= 65`"
+        feedback: "Ordinary comparison and logical operators work in both."
+    solution: |
+      BETWEEN-AND, CONTAINS, IS MISSING/IS NULL and LIKE are WHERE-only. In IF statements use comparisons, `missing()`, and character functions such as `index()`, `find()` or `prxmatch()`.

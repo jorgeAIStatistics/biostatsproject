@@ -1,0 +1,476 @@
+items:
+  - id: sas.proc-sql.m2m-numeric
+    format: numeric
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.sql, sql.joins, sas.merge]
+    lesson: sas-proc-sql
+    title: Rows from a SQL join
+    prompt: |
+      Subject 1012-0001 has **2** records in ADAE and **3** records in ADCM.
+
+      ```sas
+      proc sql;
+        create table both as
+        select a.USUBJID, a.AEDECOD, c.CMDECOD
+        from adae as a inner join adcm as c
+          on a.USUBJID = c.USUBJID;
+      quit;
+      ```
+
+      How many rows does this produce for the subject?
+    answer: 6
+    tolerance: 0
+    hints:
+      - "A SQL join returns every pair of rows that satisfies the ON condition."
+      - "Compare with a DATA step MERGE, which pairs rows by position."
+    solution: |
+      2 × 3 = 6. A DATA step `merge adae adcm; by USUBJID;` would give 3 rows (the larger count) and a repeats-of-BY-values note. Neither result is clinically meaningful: relating adverse events to concomitant medications needs a real rule (for example overlapping dates), not a join on subject alone.
+
+  - id: sas.proc-sql.count-distinct-mcq
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.sql, sql.aggregate, tlf.denominators]
+    lesson: sas-proc-sql
+    title: Events or subjects?
+    prompt: |
+      A safety table line reads "Subjects with at least one treatment-emergent adverse event, n (%)". Which expression gives the **n**?
+    choices:
+      - text: "`count(distinct USUBJID)`"
+        correct: true
+        feedback: "Counts subjects: a subject with five events contributes 1."
+      - text: "`count(*)`"
+        feedback: "Counts rows — that is the number of adverse events, not the number of subjects."
+      - text: "`count(USUBJID)`"
+        feedback: "Counts non-missing values of USUBJID, which is again one per record."
+      - text: "`sum(TRTEMFL = 'Y')`"
+        feedback: "Counts records whose flag is 'Y', not distinct subjects."
+    solution: |
+      `count(distinct USUBJID)`, on records already restricted to treatment-emergent events. Counting events where the shell asks for subjects is one of the most common (and most visible) errors in safety tables.
+
+  - id: sas.proc-sql.clause-order
+    format: order
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sas.sql]
+    lesson: sas-proc-sql
+    title: Clause order in a query
+    prompt: |
+      Put the clauses of a PROC SQL query in the order they must be written.
+    steps:
+      - "SELECT"
+      - "FROM"
+      - "WHERE"
+      - "GROUP BY"
+      - "HAVING"
+      - "ORDER BY"
+    hints:
+      - "Filtering rows comes before grouping; filtering groups comes after."
+      - "Only two clauses are mandatory. Place those first, then fit the optional ones around them."
+      - "Sorting goes last, because you can only order rows the query has already produced — which is also why `ORDER BY` may reference a column alias that `WHERE` cannot."
+    solution: |
+      `SELECT … FROM … WHERE … GROUP BY … HAVING … ORDER BY …`. `WHERE` filters individual rows before grouping; `HAVING` filters groups using summary functions.
+
+  - id: sas.proc-sql.remerge-mcq
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.sql, sql.aggregate, sas.log]
+    lesson: sas-proc-sql
+    title: The remerge note
+    prompt: |
+      ```sas
+      proc sql;
+        create table worst as
+        select USUBJID, AEDECOD, max(ATOXGRN) as MAXGR
+        from adae
+        group by USUBJID;
+      quit;
+      ```
+
+      The log says `NOTE: The query requires remerging summary statistics back with the original data.` What does the resulting table contain?
+    choices:
+      - text: "One row per adverse-event record, each carrying that subject's maximum grade"
+        correct: true
+        feedback: "Because AEDECOD is neither grouped nor summarised, SAS computes the maximum per subject and joins it back to every record."
+      - text: "One row per subject with the worst grade"
+        feedback: "That is what you get by selecting only `USUBJID` and `max(ATOXGRN)`."
+      - text: "One row per subject and preferred term"
+        feedback: "That would need `group by USUBJID, AEDECOD`."
+      - text: "Nothing — the query fails because AEDECOD is not in the GROUP BY"
+        feedback: "Unlike many databases, PROC SQL does not reject the query; it remerges and notes it."
+    solution: |
+      Remerging repeats the group statistic on every original row. It is useful on purpose (`AVAL - mean(AVAL) as DIFF … group by USUBJID`) and a silent defect by accident. Decide every time you see the note.
+
+  - id: sas.proc-sql.grade3-code
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sas.sql, sql.joins, sql.aggregate, tlf.safety-tables]
+    lesson: sas-proc-sql
+    title: Grade 3 or higher TEAEs by arm
+    minutes: 15
+    prompt: |
+      `ADSL` has one row per subject (`USUBJID`, `TRT01A`, `SAFFL`) and `ADAE` one row per adverse event (`USUBJID`, `ATOXGRN`, `TRTEMFL`).
+
+      Create `WORK.G3` with one row per actual treatment containing:
+
+      - `N_SAF` — number of subjects in the safety population of that arm;
+      - `N_G3` — number of those subjects with **at least one** treatment-emergent adverse event of grade 3 or higher;
+      - `PCT` — `N_G3 / N_SAF * 100`.
+
+      Arms with no qualifying subject must still appear, with `N_G3 = 0`.
+    starter: |
+      proc sql;
+        create table g3 as
+        /* your query */
+      quit;
+    hints:
+      - "Start from ADSL so that every safety subject counts in the denominator."
+      - "Reduce ADAE to one row per qualifying subject first — an in-line view `(select distinct USUBJID from adae where …)` — then LEFT JOIN it."
+      - "`count(distinct …)` for the denominator; `CALCULATED` lets you reuse a column created in the same SELECT."
+    checks:
+      - pattern: 'create\s+table\s+g3\s+as'
+        message: "Creates WORK.G3"
+      - pattern: 'left\s+join'
+        message: "Uses a LEFT JOIN so subjects without qualifying events are kept"
+      - pattern: 'count\s*\(\s*distinct'
+        message: "Counts distinct subjects"
+      - pattern: 'saffl\s*=\s*[''"]y[''"]'
+        message: "Restricts to the safety population"
+      - pattern: 'trtemfl\s*=\s*[''"]y[''"]'
+        message: "Restricts to treatment-emergent events"
+      - pattern: 'atoxgrn\s*(>=|ge)\s*3'
+        message: "Restricts to grade 3 or higher"
+      - pattern: 'group\s+by\s+\w*\.?trt01a'
+        message: "Groups by actual treatment"
+      - pattern: '\bcalculated\b'
+        message: "Uses CALCULATED to reuse a column created in the same SELECT"
+    reference: |
+      proc sql;
+        create table g3 as
+        select s.TRT01A,
+               count(distinct s.USUBJID) as N_SAF,
+               count(distinct a.USUBJID) as N_G3,
+               calculated N_G3 / calculated N_SAF * 100 as PCT format=5.1
+        from adsl as s
+             left join (select distinct USUBJID
+                        from adae
+                        where TRTEMFL = 'Y' and ATOXGRN >= 3) as a
+               on s.USUBJID = a.USUBJID
+        where s.SAFFL = 'Y'
+        group by s.TRT01A
+        order by s.TRT01A;
+      quit;
+    expectedOutput: |
+      NOTE: Table WORK.G3 created, with <number of arms> rows and 4 columns.
+    solution: |
+      Reducing ADAE to a distinct subject list before the join guarantees the join cannot multiply ADSL rows; the LEFT JOIN keeps subjects with no qualifying event, and `count(distinct a.USUBJID)` ignores their missing key, giving 0.
+
+      Two checks: `N_G3` must never exceed `N_SAF`, and the sum of `N_SAF` across arms must equal the total safety population. A DATA step QC version (sort ADAE, keep `first.USUBJID` among qualifying events, merge onto ADSL, count) should reproduce both columns exactly.
+
+  - id: sas.proc-sql.into-code
+    format: code
+    language: sas
+    modes: [independent]
+    difficulty: intermediate
+    skills: [sas.sql, sas.macro-variables]
+    lesson: sas-proc-sql
+    title: Denominators into macro variables
+    minutes: 8
+    prompt: |
+      Table headers must read `CBX-417 + Docetaxel (N=xx)` and `Placebo + Docetaxel (N=xx)`, where xx is the number of subjects in the safety population of that arm.
+
+      Write a PROC SQL step that puts those two counts into macro variables `n_cbx` and `n_pbo` (no leading blanks), and a `TITLE` statement that uses `n_cbx`.
+    starter: |
+      proc sql noprint;
+        /* two queries with INTO */
+      quit;
+
+      title /* use the macro variable */;
+    hints:
+      - "`select count(distinct USUBJID) into :n_cbx trimmed from … ;`"
+      - "`NOPRINT` keeps the query result out of the output."
+      - "Macro variables resolve inside double quotes, not single quotes."
+    checks:
+      - pattern: 'proc\s+sql\s+[^;]*noprint'
+        message: "Runs PROC SQL with NOPRINT"
+      - pattern: 'into\s*:\s*n_cbx'
+        message: "Writes the CBX-417 count into the macro variable n_cbx"
+      - pattern: 'into\s*:\s*n_pbo'
+        message: "Writes the placebo count into the macro variable n_pbo"
+      - pattern: '\btrimmed\b'
+        message: "Uses TRIMMED to remove leading blanks"
+      - pattern: 'count\s*\(\s*distinct\s+usubjid\s*\)'
+        message: "Counts distinct subjects"
+      - pattern: 'saffl\s*=\s*[''"]y[''"]'
+        message: "Restricts to the safety population"
+      - pattern: 'title[^;]*&n_cbx'
+        message: "Uses the macro variable in a TITLE statement"
+    reference: |
+      proc sql noprint;
+        select count(distinct USUBJID) into :n_cbx trimmed
+        from adsl
+        where SAFFL = 'Y' and TRT01A = 'CBX-417 + Docetaxel';
+
+        select count(distinct USUBJID) into :n_pbo trimmed
+        from adsl
+        where SAFFL = 'Y' and TRT01A = 'Placebo + Docetaxel';
+      quit;
+
+      title "CBX-417 + Docetaxel (N=&n_cbx)";
+    solution: |
+      `INTO` writes query results into macro variables; `TRIMMED` removes the blanks that numeric-to-text conversion would otherwise leave (a header reading `N=          3` is a classic review finding). Double quotes are required for the macro variable to resolve. Header counts should always be derived from the data this way rather than typed.
+
+  - id: sas.proc-sql.missing-sql-mcq
+    format: mcq
+    modes: [check, independent]
+    difficulty: intermediate
+    skills: [sas.sql, sas.missing-values, sql.select]
+    lesson: sas-proc-sql
+    title: Missing values in PROC SQL
+    prompt: |
+      Two subjects have a missing `AGE`. You run
+
+      ```sas
+      proc sql;
+        select USUBJID from adsl where AGE < 18;
+      quit;
+      ```
+
+      and the same condition in a database (ANSI SQL). What happens?
+    choices:
+      - text: "PROC SQL returns the two subjects with missing AGE; the database returns none"
+        correct: true
+        feedback: "PROC SQL uses SAS semantics (missing is smaller than any number). ANSI SQL evaluates NULL < 18 as unknown, so those rows are not selected."
+      - text: "Both return the two subjects"
+        feedback: "ANSI SQL excludes NULLs from comparisons."
+      - text: "Both return none"
+        feedback: "PROC SQL follows SAS's missing-value ordering, not ANSI three-valued logic."
+      - text: "PROC SQL returns an error because AGE is missing for some rows"
+        feedback: "Missing values never cause an error in a comparison."
+    solution: |
+      PROC SQL is SAS's SQL: missing values compare as smaller than any number. When you QC a SAS query against a database (or against R), state the missing-value handling explicitly — for example `where AGE < 18 and AGE is not missing` — so both implementations answer the same question.
+
+  - id: sas.proc-sql.calculated-hotspot
+    format: hotspot
+    language: sql
+    modes: [debug]
+    difficulty: intermediate
+    skills: [sas.sql, sas.debugging]
+    lesson: sas-proc-sql
+    title: Columns not found in the contributing tables
+    minutes: 6
+    prompt: |
+      This query fails with `ERROR: The following columns were not found in the contributing tables: CHG.` (and a second error naming `PCHG`). `ADLB` contains `USUBJID`, `PARAMCD`, `AVISITN`, `AVAL` and `BASE` — but neither `CHG` nor `PCHG`.
+
+      Click the **two** lines that must change.
+    code: |
+      proc sql;
+        create table chg as
+        select USUBJID, PARAMCD, AVISITN, AVAL, BASE,
+               AVAL - BASE as CHG,
+               CHG / BASE * 100 as PCHG
+        from adlb
+        where PCHG > 20;
+      quit;
+    answerLines: [5, 7]
+    lineNotes:
+      - line: 4
+        note: "This is fine: CHG is created here from columns that exist in ADLB."
+      - line: 5
+        note: "`CHG` exists only as a column created in this SELECT, so it must be referenced as `calculated CHG`."
+      - line: 7
+        note: "Same problem in the WHERE clause: `calculated PCHG > 20`."
+    fixed: |
+      proc sql;
+        create table chg as
+        select USUBJID, PARAMCD, AVISITN, AVAL, BASE,
+               AVAL - BASE as CHG,
+               calculated CHG / BASE * 100 as PCHG
+        from adlb
+        where calculated PCHG > 20;
+      quit;
+    hints:
+      - "Which columns exist in ADLB, and which are created by this query?"
+      - "PROC SQL has a keyword for referring to a column created in the same SELECT."
+    solution: |
+      Lines 5 and 7 need `CALCULATED`. Note that `where calculated PCHG > 20` also drops records where `PCHG` is missing (no baseline) — decide whether the specification wants those listed separately.
+    explanation:
+      objective: "Fix a query that references its own computed columns."
+      given: "The query, the table's real columns and the error message."
+      relevant: "The distinction between columns from the contributing tables and columns created in the SELECT."
+      irrelevant: "The join-free FROM clause is fine."
+      method: "Mark every reference to a column created in the same SELECT with CALCULATED."
+      interpretation: "The error names the column that SAS could not find — read it literally."
+      changes: "Computing PCHG from `(AVAL - BASE) / BASE * 100` directly would also work, at the cost of repeating the expression."
+      interviewer: "That you know CALCULATED and that you think about what a WHERE on a derived value excludes."
+
+  - id: sas.proc-sql.remerge-log
+    format: log
+    modes: [debug]
+    difficulty: intermediate
+    skills: [sas.sql, sas.log, sas.debugging]
+    lesson: sas-proc-sql
+    title: One row per subject — or not
+    minutes: 5
+    prompt: |
+      You expected one row per subject (there are 6 subjects with treatment-emergent events). Click the log lines that show the query did something else.
+    program: |
+      proc sql;
+        create table worst as
+        select USUBJID, AEDECOD, max(ATOXGRN) as MAXGR
+        from adae
+        where TRTEMFL = 'Y'
+        group by USUBJID;
+      quit;
+    log: |
+      71   proc sql;
+      72     create table worst as
+      73     select USUBJID, AEDECOD, max(ATOXGRN) as MAXGR
+      74     from adae
+      75     where TRTEMFL = 'Y'
+      76     group by USUBJID;
+      NOTE: The query requires remerging summary statistics back with the original data.
+      NOTE: Table WORK.WORST created, with 9 rows and 3 columns.
+      77   quit;
+    issues: [7, 8]
+    lineNotes:
+      - line: 7
+        note: "Remerging: AEDECOD is neither in the GROUP BY nor summarised, so the per-subject maximum is joined back to every record."
+      - line: 8
+        note: "9 rows — one per treatment-emergent adverse event — instead of the 6 subjects expected."
+    hints:
+      - "Compare the number of rows created with the number of subjects."
+      - "Which column in the SELECT is neither grouped nor summarised?"
+    solution: |
+      Drop `AEDECOD` from the SELECT to get one row per subject, or add it to the GROUP BY if you want the worst grade per subject **and** preferred term. As written, the table can silently feed a table with inflated counts.
+    explanation:
+      objective: "Recognise unintended remerging from the log."
+      given: "The query, the expectation of 6 rows and the log."
+      relevant: "The remerge NOTE and the created-row count."
+      irrelevant: "The WHERE clause is correct."
+      numbers: "9 rows = treatment-emergent AE records; 6 = subjects with at least one such record."
+      interpretation: "Remerging is a feature, not an error — which is why only the row count reveals that it was unintended here."
+      interviewer: "That you check row counts against expectations and know what remerging does."
+
+  - id: sas.proc-sql.sql-vs-merge-diff
+    format: diff
+    modes: [qc]
+    difficulty: advanced
+    skills: [sas.sql, sas.merge, qc.compare]
+    lesson: sas-proc-sql
+    title: Production and QC disagree on row counts
+    minutes: 8
+    prompt: |
+      A listing pairs adverse events with concomitant medications for each subject. Production used a DATA step MERGE, QC used a PROC SQL join. For subject 1012-0001 (2 adverse events, 3 medications) they disagree. Which explanation is right?
+    left:
+      title: Production (DATA step MERGE by USUBJID)
+      columns: [USUBJID, AEDECOD, CMDECOD]
+      rows:
+        - ["1012-0001", "Nausea", "Ondansetron"]
+        - ["1012-0001", "Fatigue", "Dexamethasone"]
+        - ["1012-0001", "Fatigue", "Loperamide"]
+      footnote: "3 rows; log note: MERGE statement has more than one data set with repeats of BY values."
+    right:
+      title: QC (PROC SQL inner join on USUBJID)
+      columns: [USUBJID, AEDECOD, CMDECOD]
+      rows:
+        - ["1012-0001", "Nausea", "Ondansetron"]
+        - ["1012-0001", "Nausea", "Dexamethasone"]
+        - ["1012-0001", "Nausea", "Loperamide"]
+        - ["1012-0001", "Fatigue", "Ondansetron"]
+        - ["1012-0001", "Fatigue", "Dexamethasone"]
+        - ["1012-0001", "Fatigue", "Loperamide"]
+      footnote: "6 rows."
+    leftCode: |
+      data ae_cm;
+        merge adae adcm;
+        by USUBJID;
+      run;
+    rightCode: |
+      proc sql;
+        create table ae_cm_qc as
+        select a.USUBJID, a.AEDECOD, c.CMDECOD
+        from adae as a inner join adcm as c
+          on a.USUBJID = c.USUBJID;
+      quit;
+    codeLanguage: sas
+    choices:
+      - text: "USUBJID is not a unique key in either dataset, so MERGE pairs rows by position (3 rows) while SQL forms all combinations (6 rows) — neither output answers a sensible question"
+        correct: true
+        feedback: "Both programs are doing what they are told; the specification is the problem. Relating AEs to medications needs a rule such as overlapping dates, and the pairing must be defined before either technique is used."
+      - text: "QC duplicated rows because a WHERE clause is missing"
+        feedback: "No filter can fix a join on a non-unique key; the duplication is inherent to the relationship."
+      - text: "Production lost rows because the datasets were not sorted"
+        feedback: "Unsorted data would have produced an error, not three rows — and the MERGE note points to repeated keys."
+      - text: "PROC SQL always returns more rows than a DATA step MERGE"
+        feedback: "For one-to-one and one-to-many relationships they return the same rows; the difference appears only with repeated keys on both sides."
+    hints:
+      - "Work out the row count each method gives for this subject: 2 adverse events and 3 medications. The two numbers are not the same."
+      - "A DATA step MERGE walks both datasets in parallel within the BY group and retains the last value of whichever side runs out first. A SQL join pairs every left row with every matching right row."
+      - "Then ask the clinical question: neither 3 nor 6 answers 'which medication treated which event'. That needs a rule about overlapping dates, not a key of `USUBJID` alone."
+    solution: |
+      The datasets have a many-to-many relationship on `USUBJID`. MERGE pairs by position and yields max(2, 3) = 3 rows with meaningless pairings; SQL yields 2 × 3 = 6 rows, every combination. Escalate to the specification author: a medication listing next to adverse events is normally produced as two separate listings, or joined on a defined rule (for example medication start date within the AE window).
+    explanation:
+      objective: "Explain a production/QC discrepancy caused by the data model, not by a coding error."
+      given: "Both outputs, both programs and the record counts per subject."
+      relevant: "Key uniqueness in both datasets; the pairing rules of MERGE and of SQL joins."
+      irrelevant: "Sorting, filters."
+      numbers: "MERGE: max(2, 3) = 3 rows. SQL: 2 × 3 = 6 rows."
+      interpretation: "Agreement between two methods is only meaningful when the question is well defined; here it is not."
+      changes: "With a unique key on one side (for example one medication record per subject), both methods would agree."
+      interviewer: "That you recognise many-to-many relationships, know both behaviours, and escalate an ill-defined specification instead of picking the output you prefer."
+
+  - id: sas.proc-sql.interview-sql
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [sas.sql, sas.merge, communication.interviewing]
+    lesson: sas-proc-sql
+    title: PROC SQL versus the DATA step
+    prompt: |
+      **Interviewer:** "When do you use PROC SQL instead of a DATA step, and what differences do you have to watch out for?"
+    modelAnswer: |
+      I use PROC SQL when I want counts of distinct subjects, a join and a summary in one step; when the inputs aren't sorted; when I need denominators or lists in macro variables with INTO; and for QC, because it's a genuinely different mechanism from a production DATA step.
+
+      I stay with the DATA step when the logic depends on record order or BY groups — FIRST./LAST., RETAIN, LAG — since PROC SQL has no window functions.
+
+      Differences to watch: a SQL join returns every matching pair, so repeated keys on both sides give a Cartesian product, whereas MERGE pairs by position and gives the larger count with a note; SQL doesn't guarantee row order without ORDER BY; when two tables share a column name SQL keeps the first and warns while MERGE overwrites silently; selecting an ungrouped column next to a summary function triggers remerging; and PROC SQL uses SAS missing-value rules, so `where AGE < 18` picks up missing ages — unlike a database.
+    rubric:
+      - Names concrete situations where SQL is better (distinct counts, joins without sorting, INTO, QC)
+      - Names situations where the DATA step is required (order-dependent logic, FIRST./LAST., RETAIN, LAG)
+      - Explains the many-to-many difference between joins and MERGE
+      - Mentions ORDER BY / undefined order or same-named columns
+      - Mentions remerging or SAS missing-value semantics
+    redFlags:
+      - "Claims SQL and MERGE always give identical results"
+      - "Uses SQL for first/last record logic without a workaround"
+      - "Never mentions checking row counts after a join"
+    followUps:
+      - "How would you find the first lab record per subject in PROC SQL?"
+      - "Your SQL QC program and the production DATA step give different subject counts. How do you find out which is right?"
+
+  - id: sas.proc-sql.speed-quit
+    format: mcq
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.sql]
+    lesson: sas-proc-sql
+    title: Ending a PROC SQL step
+    prompt: |
+      How does a PROC SQL step end?
+    choices:
+      - text: "With `quit;`"
+        correct: true
+        feedback: "PROC SQL statements execute immediately as they are submitted; QUIT ends the procedure."
+      - text: "With `run;`"
+        feedback: "A RUN statement does not end PROC SQL, and SAS notes that it has no effect."
+      - text: "With a semicolon after the last SELECT"
+        feedback: "That ends the statement, not the procedure — the next statement would still be read as SQL."
+      - text: "With `end;`"
+        feedback: "`END` closes DO blocks and SELECT-WHEN blocks in the DATA step, not procedures."
+    solution: |
+      `quit;`. Because each statement runs as soon as it is submitted, you can leave PROC SQL open, run several statements and see results before quitting — handy interactively, risky in production code where an unclosed step can swallow the statements that follow.

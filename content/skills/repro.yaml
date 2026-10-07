@@ -1,0 +1,34 @@
+domain: repro
+title: Reproducibility & Git
+description: Version control, testing and reproducible workflows for scientific and regulated work.
+skills:
+  - id: repro.git-basics
+    name: Git fundamentals
+    description: Repositories, commits, staging, diffs, history, .gitignore.
+    weight: 2
+    tracks: [computing, programmer, analytics]
+  - id: repro.branching
+    name: Branches and pull requests
+    description: Feature branches, merging, pull requests, resolving conflicts, tags/releases.
+    weight: 2
+    tracks: [computing, programmer, analytics]
+  - id: repro.code-review
+    name: Reviewing changes
+    description: Reading diffs, giving actionable review comments, catching specification drift.
+    weight: 2
+    tracks: [computing, programmer]
+  - id: repro.testing
+    name: Testing principles
+    description: Unit tests, regression tests, testing data functions; pytest, testthat and SAS validation patterns.
+    weight: 2
+    tracks: [computing, analytics, programmer]
+  - id: repro.project-structure
+    name: Reproducible project structure
+    description: READMEs, folder conventions, relative paths, environment capture, run-all scripts.
+    weight: 2
+    tracks: [computing, analytics, programmer]
+  - id: repro.documentation
+    name: Documentation and audit trail
+    description: Change logs, program headers, traceable manual steps (or eliminating them).
+    weight: 1
+    tracks: [programmer, computing]

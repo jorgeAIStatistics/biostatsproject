@@ -1,0 +1,683 @@
+items:
+  - id: excel.pivot.groups-enumerated
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [excel.pivots, excel.conditional-aggregation]
+    lesson: excel-pivots-and-when-to-stop
+    title: Twelve subtotals, 379 subjects
+    prompt: |
+      An enrolment workbook lists all 42 sites with their randomized counts, and beside them a summary:
+      twelve country codes typed by hand, each with its own `SUMIFS`.
+
+      ```excel
+      =SUM(C2:C43)      → 420      every site, added up
+      =SUM(E2:E13)      → 379      the twelve country subtotals, added up
+      ```
+
+      Each of the twelve `SUMIFS` is individually correct. What is the 41?
+    choices:
+      - text: "Site rows whose country code matches none of the twelve criteria. `SUMIFS` only ever sums the groups somebody typed, and a code nobody typed is absent rather than zero."
+        correct: true
+        feedback: "Correct — and absent looks exactly like not existing. A PivotTable on the same column derives its rows from the data, so the extra codes appear as rows without being asked for."
+      - text: "Subjects at sites that were added to the extract after the summary was written."
+        feedback: "`SUMIFS` ranges here cover `$C$2:$C$43`, all 42 sites. New rows would be a real problem in general, but every row is inside the ranges."
+      - text: "Rounding, since each subtotal is rounded before it is summed."
+        feedback: "These are whole subject counts. Nothing is being rounded."
+      - text: "Screen failures, which are in the site counts but not in any country."
+        feedback: "Screen failures are not in the randomized column at all — the 420 is already the randomized population."
+    solution: |
+      **41 subjects are in the data and in none of the twelve groups.**
+
+      A set of `SUMIFS` does not partition anything. It asks twelve separate questions, and a row that
+      answers none of them simply never appears. There is no error, no blank, no marker — the only
+      evidence is that the parts do not sum to the whole.
+
+      On this workbook the 41 is two separate causes:
+
+      ```excel
+      =COUNTIF(B2:B43,"POL")      → 2      three sites are in Poland
+      =COUNTIF(B2:B43,"POL*")     → 3
+      =LEN(B28)                   → 4      site 1027's code is "POL " — 29 subjects
+      =COUNTIF(D2:D13,B21)        → 0      site 1020's code is "SPA" — 12 subjects
+      ```
+
+      $29 + 12 = 41$, and $379 + 41 = 420$. A residual of zero is what tells you there is no third cause.
+
+      **A PivotTable does not have this failure mode**, because its row labels are enumerated from the
+      distinct values in the source column. Drag `Country` to Rows and fourteen rows appear: the twelve
+      you expected, plus `POL ` and `SPA`, without anyone having asked about them.
+    explanation:
+      objective: "Attribute a subtotal shortfall to groups that were never named."
+      given: "Twelve individually correct SUMIFS that do not sum to the grand total."
+      relevant: "That SUMIFS answers about named groups and does not partition the data."
+      irrelevant: "Rounding and screen failures, neither of which is in play on whole randomized counts."
+      numbers: "420 − 379 = 41, decomposing into 29 behind a trailing space and 12 behind an unlisted code."
+      interpretation: "Absent groups, which look identical to groups that do not exist."
+      changes: "A PivotTable enumerates the groups from the data; the totals check is how you get the same protection from formulas."
+      interviewer: "That you reach for the totals reconciliation before you re-check the formulas."
+
+  - id: excel.pivot.distinct-count
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [excel.pivots, tlf.denominators]
+    lesson: excel-pivots-and-when-to-stop
+    title: 202 under a heading that means 170
+    prompt: |
+      A PivotTable is built on the AE dataset with `AEDECOD` on Rows and `USUBJID` in Values. Against
+      `Fatigue` it shows **202**.
+
+      A subject-level summary of the same dataset gives **170** subjects with at least one fatigue event,
+      and that is the quantity an adverse-event table reports.
+
+      What happened, and what does it take to get 170 out of a pivot?
+    choices:
+      - text: "`Count of USUBJID` counts records, so 202 is the event count. A distinct count is not one of the ordinary pivot summary functions — the source has to be added to the Data Model, after which `Distinct Count` becomes available in the value field settings."
+        correct: true
+        feedback: "Correct. Without that step the number under an `n (%)` heading is an event count, and it will not necessarily exceed its denominator, so it will not necessarily look wrong."
+      - text: "The pivot included non-treatment-emergent events, which the safety table excludes."
+        feedback: "That is a real distinction and a different one. The whole gap here is records versus subjects: 202 records in 170 subjects."
+      - text: "Changing the summary function from `Count` to `Count Numbers` would give 170."
+        feedback: "`Count Numbers` counts numeric cells only. `USUBJID` is text, so it would return 0."
+      - text: "The pivot should have used `AETERM` instead, which would have collapsed the duplicates."
+        feedback: "`AETERM` is the verbatim term — 195 distinct spellings on this study. Grouping on it splits fatigue into six rows rather than collapsing anything."
+    solution: |
+      **A pivot is reliably right about the groups and can be quietly wrong about the quantity.**
+
+      | | Fatigue | Nausea |
+      |---|---:|---:|
+      | Events (AE records) | 202 | 162 |
+      | Subjects with at least one | 170 | 130 |
+
+      `Count of USUBJID` counts the rows in each group. To count the distinct subjects in each group, the
+      source has to be loaded into the **Data Model**, which adds `Distinct Count` to the list of summary
+      functions. It is a separate decision someone has to have taken, and nothing in the pivot's output
+      says which one is in force beyond the heading.
+
+      The formula-based alternative is the distinct-count helper column from `excel-lookups`:
+      `=IF(COUNTIF($A$2:A2,A2)=1,1,0)`, summed. Slower, and visible — a reviewer can see which rows were
+      counted.
+
+      **This is the exact mirror image of the `SUMIFS` failure.** A hand-typed summary computes the right
+      quantity over an incomplete set of groups; a pivot covers every group and may be computing a
+      different quantity from the one the heading claims.
+    explanation:
+      objective: "Distinguish a pivot's record count from the subject count a safety table needs."
+      given: "A pivot showing 202 against a table value of 170."
+      relevant: "That Count counts rows, and that distinct count requires the Data Model."
+      irrelevant: "Treatment-emergence and the verbatim term, which move other numbers."
+      numbers: "202 fatigue records in 170 subjects; safety population 416."
+      interpretation: "A correct number under a heading that implies a different one."
+      changes: "Adding the source to the Data Model makes Distinct Count available; a helper column does it in formulas."
+      interviewer: "That you check what a pivot's value field is counting before you read the number."
+
+  - id: excel.pivot.refresh-cache
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [excel.pivots, excel.risk]
+    lesson: excel-pivots-and-when-to-stop
+    title: Two numbers in one workbook
+    prompt: |
+      A workbook contains an extract on one sheet and a PivotTable over it on another. Somebody pastes in
+      a corrected extract with four more sites in it.
+
+      The pivot's grand total does not change. The source range is `Sheet1!$A$1:$E$43`.
+
+      What are the two separate reasons, and what fixes each?
+    choices:
+      - text: "A pivot reports from a cached copy of its source, so it shows the old numbers until it is refreshed — and even after refreshing, a fixed range will not include rows past row 43. Refresh, and build the pivot on an Excel Table so the source grows."
+        correct: true
+        feedback: "Correct. Two independent failures with the same symptom, which is why refreshing once and seeing no change is so misleading."
+      - text: "Only one thing is wrong: the pivot needs refreshing, and the range will follow automatically."
+        feedback: "Refreshing re-reads the range it was given. A fixed `$A$1:$E$43` stays `$A$1:$E$43`."
+      - text: "Pasting over a pivot's source always breaks the link, and the pivot must be rebuilt."
+        feedback: "The link survives a paste. The cache and the fixed range are the issues."
+      - text: "PivotTables update automatically on any change to the source sheet, so the extract must not have been saved."
+        feedback: "They do not update automatically. The cache is refreshed on demand, or optionally on file open."
+    solution: |
+      **Two independent defects, one symptom.**
+
+      **The cache.** A PivotTable holds a copy of its source data. It does not watch the sheet. Until it
+      is refreshed it reports the data as it was when the cache was last built, which is how a workbook
+      ends up containing a summary and the data it disagrees with — both correct, as of different moments.
+
+      **The fixed range.** `Sheet1!$A$1:$E$43` is still `$A$1:$E$43` after the refresh. Rows 44 onward are
+      not in the pivot's idea of the source at all. Convert the source to an Excel Table (`Ctrl`+`T`) and
+      the range grows with the data.
+
+      The second one is the more dangerous, because refreshing *appears* to be the fix. You refresh, some
+      numbers change, none of them are the new rows, and the workbook now looks like it has been updated.
+
+      A cheap standing guard: a `=SUM()` over the source column and the pivot's grand total in adjacent
+      cells, with a third cell subtracting them. Any divergence is visible on the sheet instead of at the
+      end of the month.
+    explanation:
+      objective: "Separate a stale cache from a fixed source range."
+      given: "A pivot whose total does not move after new rows are pasted in."
+      relevant: "That the pivot caches, and that a fixed range does not extend on refresh."
+      irrelevant: "Whether the paste broke the link, which it did not."
+      method: "Ask what the pivot reads from, then ask when it last read it."
+      interpretation: "Two failures that look identical and are fixed differently."
+      changes: "An Excel Table source fixes the range; only Refresh fixes the cache."
+      interviewer: "That you name both, because fixing one leaves the workbook still wrong."
+
+  - id: excel.pivot.sum-becomes-count
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [excel.pivots, excel.risk, excel.logic]
+    lesson: excel-pivots-and-when-to-stop
+    title: The heading changed and the number moved
+    prompt: |
+      A PivotTable over 42 sites has read `Sum of Randomized`, grand total 420, for weeks. After this
+      week's import it reads **`Count of Randomized`**, grand total **42**.
+
+      Nothing else about the pivot was touched. What happened?
+    choices:
+      - text: "At least one cell in the `Randomized` column is no longer numeric — it holds text, or is blank. Excel defaults a value field to `Sum` only when the field is entirely numeric, and to `Count` otherwise."
+        correct: true
+        feedback: "Correct, and the grand total of exactly 42 is the tell: 42 sites, counted rather than summed."
+      - text: "The pivot lost its Data Model connection and fell back to counting."
+        feedback: "The Data Model affects the availability of Distinct Count, not the default summary function."
+      - text: "The source became an Excel Table, and Tables default every numeric field to Count."
+        feedback: "Tables do not change a pivot's summary function. The field's contents do."
+      - text: "Somebody changed the number format of the column to Text, which changes the display only."
+        feedback: "Changing a *format* to Text does not convert existing numbers. A cell has to actually hold text — which is what an import can produce."
+    solution: |
+      **The default summary function is decided by the field's contents, not by you.**
+
+      Excel uses `Sum` when every value in a value field is numeric, and `Count` when the field contains
+      text or blanks. One imported cell holding `"12"` instead of `12` is enough to flip it.
+
+      The grand total of **42** is the diagnostic. Forty-two sites, counted. The number is not a corrupted
+      total; it is a different question's answer, and the only warning is a word in the heading that
+      changes from `Sum` to `Count`.
+
+      Find the offender with the pair of counting functions:
+
+      ```excel
+      =COUNT(C2:C43)      numbers
+      =COUNTA(C2:C43)     anything non-empty
+      ```
+
+      The gap between them is the number of cells that look like data and are not. Setting the summary
+      function back to `Sum` manually will then produce a total that is short by however many cells are
+      text — because `Sum` skips them, exactly as `SUM` does.
+
+      **The durable fix is upstream**: import through Power Query with the column's type declared, so the
+      same file produces numbers every month rather than sometimes producing text.
+    explanation:
+      objective: "Diagnose a pivot's summary function changing by itself."
+      given: "A heading that changed from Sum to Count and a total of 42 against 42 sites."
+      relevant: "That the default is Sum only for an entirely numeric field."
+      irrelevant: "The Data Model and the Table conversion, neither of which sets the summary function."
+      numbers: "42 = the number of site rows; 420 = their sum."
+      method: "Read the grand total as an answer to a different question, then find the non-numeric cells."
+      interpretation: "A type problem in one cell, reported as a changed heading."
+      changes: "Declaring the column type in a Power Query import stops it recurring."
+      interviewer: "That you recognise the heading as the warning rather than looking for a broken total."
+
+  - id: excel.pivot.close-the-41
+    format: numeric
+    modes: [guided, qc]
+    difficulty: intermediate
+    skills: [excel.pivots, excel.conditional-aggregation, qc.compare]
+    lesson: excel-pivots-and-when-to-stop
+    title: Where the rest of the gap is
+    prompt: |
+      Forty-two sites randomized **420** subjects. The twelve hand-typed country subtotals sum to **379**.
+
+      One cause is already identified: site 1027's country code carries a trailing space, so 29 subjects
+      fall out of the Poland subtotal.
+
+      ```excel
+      =SUMIFS(C2:C43,B2:B43,"POL*")-SUMIFS(C2:C43,B2:B43,"POL")    → 29
+      ```
+
+      A single other site accounts for all the rest. How many subjects are at it?
+    answer: 12
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "Work out the whole gap first."
+      - "420 − 379 = 41, and 29 of those are already explained."
+      - "41 − 29."
+    solution: |
+      $$420 - 379 - 29 = 12$$
+
+      Site 1020's country code is `SPA`, which is not one of the twelve codes anybody typed into the
+      summary, so its 12 subjects are in no subtotal at all:
+
+      ```excel
+      =COUNTIF(D2:D13,B21)          → 0      the code appears in no summary row
+      =SUMIFS(C2:C43,B2:B43,B21)    → 12
+      ```
+
+      and $379 + 29 + 12 = 420$ exactly.
+
+      **The zero residual is the result**, not the 12. It means there is no third cause hiding in the
+      arithmetic. Had it come out at 11, there would be a thirteenth site somewhere contributing one more
+      subject to no group at all, and the only way to know that is to have done the subtraction.
+
+      The two causes need different fixes. `POL ` is malformed — `=LEN()` returns 4 where 3 is expected,
+      and any tool will treat it as its own value. `SPA` is well formed and outside the code list, which
+      no structural check finds; only a comparison against the codes the study actually uses does.
+    explanation:
+      objective: "Finish decomposing a subtotal gap and confirm nothing is left over."
+      given: "A grand total of 420, subtotals of 379, and one cause worth 29."
+      relevant: "That the residual after the known cause is the size of the unknown one."
+      calculating: "Grand total minus the subtotal sum, minus the explained part."
+      numbers: "420 − 379 = 41; 41 − 29 = 12."
+      assumptions: "That a single site accounts for the remainder — which the zero residual then confirms."
+      interpretation: "A closed decomposition, so the finding list is complete."
+      changes: "Any non-zero residual is a third group nobody named."
+      interviewer: "That you treat the residual as the check rather than the leftover."
+
+  - id: excel.pivot.two-defects
+    format: mapping
+    modes: [guided, check, speed]
+    difficulty: intermediate
+    skills: [excel.pivots, excel.risk, qc.mindset]
+    lesson: excel-pivots-and-when-to-stop
+    title: Which check finds which defect
+    prompt: |
+      Six things that go wrong in a spreadsheet summary. Match each to the single check that identifies
+      it.
+    sourceLabel: The defect
+    targetLabel: What finds it
+    pairs:
+      - source: "A country code entered as `POL ` with a trailing space"
+        target: "`=LEN(B28)` returns 4 where every other code returns 3"
+        note: "Malformed, and a structural check finds it with no knowledge of the study. Every other tool will also treat it as its own value."
+      - source: "A country code entered as `SPA` where the study uses `ESP`"
+        target: "`=COUNTIF(D2:D13,B21)` returns 0 against the list of codes the summary uses"
+        note: "Well formed and outside the code list. No structural test can see it — only a comparison against the terminology."
+      - source: "A group nobody wrote a `SUMIFS` for"
+        target: "The subtotals do not add up to the grand total"
+        note: "The general form of the check. It catches both of the above and anything else you have not thought of."
+      - source: "A summary built before this week's extract was pasted in"
+        target: "Refreshing the PivotTable changes the numbers"
+        note: "A pivot reports from a cached copy of its source. If refreshing moves anything, the numbers on screen were not current."
+      - source: "A pivot heading reading `Count of Randomized`"
+        target: "`COUNTA` exceeds `COUNT` over the value column"
+        note: "The default summary is Sum only when the field is entirely numeric. The gap between COUNTA and COUNT is the number of text cells that flipped it."
+      - source: "`Count of USUBJID` read as a subject count"
+        target: "202 events against 170 subjects — it needs Distinct Count via the Data Model"
+        note: "A pivot counts records. Distinct count is not an ordinary summary function."
+    solution: |
+      **Five specific checks and one general one.**
+
+      The general one — subtotals against the grand total — is the only check in the list that catches
+      things you have not thought of. The other five each catch exactly one known failure, and are worth
+      running because each has a distinct fix and a distinct owner.
+
+      Two pairs are worth holding onto because they are the ones people conflate:
+
+      **Malformed against well formed.** `POL ` and `SPA` produce the same symptom. `LEN` separates them
+      in one formula, and they go to different people — a trailing space is usually something that
+      happened in transfer, a wrong-but-valid-looking code is usually something a person entered.
+
+      **Groups against quantities.** A hand-typed summary computes the right quantity over an incomplete
+      set of groups. A PivotTable covers every group and may be computing a different quantity from the
+      one its heading claims. They are opposite failures, and a workbook can have both.
+    explanation:
+      objective: "Attach each failure to the one check that identifies it."
+      given: "Six defects spanning formulas, pivots and imports."
+      relevant: "Whether the defect is structural, terminological, or about staleness."
+      method: "For each defect, ask what would have to be true for the check to fire."
+      interpretation: "Most checks are specific; only the totals reconciliation is general."
+      changes: "The general check is the one to run when you do not know what is wrong."
+
+  - id: excel.pivot.rungs
+    format: classify
+    modes: [guided, case]
+    difficulty: advanced
+    skills: [excel.risk, repro.documentation, qc.mindset]
+    lesson: excel-pivots-and-when-to-stop
+    title: Which rung does this work belong on
+    prompt: |
+      Seven pieces of real work. Place each where it belongs — and note that "this belongs in code" is not
+      the answer to all of them.
+    categories:
+      - "Excel, as it stands — reading, not producing"
+      - "Excel with recorded steps — a PivotTable or a Power Query"
+      - "Code, in version control"
+    entries:
+      - text: "A medical monitor asks in a meeting how many German subjects are still on treatment."
+        category: "Excel, as it stands — reading, not producing"
+        note: "One value, one question, now. Nothing is produced and nothing is re-run. A script tomorrow is the wrong answer to a question asked today."
+      - text: "A statistician re-derives one cell of the demographics table by hand, by a different route, as a QC check."
+        category: "Excel, as it stands — reading, not producing"
+        note: "The independence is the point. Using the same tool that produced the number would defeat the check."
+      - text: "The Monday enrolment summary, rebuilt every week from a fresh extract."
+        category: "Excel with recorded steps — a PivotTable or a Power Query"
+        note: "Re-run on new data, so the steps have to exist somewhere. A pivot on a Table plus a typed Power Query import removes most of what goes wrong, in an afternoon."
+      - text: "A monthly reconciliation against a central lab file that always arrives in the same format."
+        category: "Excel with recorded steps — a PivotTable or a Power Query"
+        note: "Power Query's Merge step names its join kind — Left Anti and Right Anti are the two directions of the reconciliation, as named steps that refresh."
+      - text: "Deriving the analysis dataset behind the primary efficacy table."
+        category: "Code, in version control"
+        note: "It has to be reproducible from source by a second person who was not there, and independently programmed. No spreadsheet supports either."
+      - text: "A subject-level listing that goes into the clinical study report."
+        category: "Code, in version control"
+        note: "A number in a document somebody signs. The requirement is traceability back to source, not convenience."
+      - text: "Two people need to change the same summary in the same week."
+        category: "Code, in version control"
+        note: "Workbooks do not merge. Whoever saves second wins, and nothing records that anything was lost."
+    solution: |
+      **Four of the seven are not \"move it to code\", and the module would be dishonest if they were.**
+
+      The dividing question is what the output is *for*:
+
+      | | Reading | Producing |
+      |---|---|---|
+      | Run once | Excel as it stands | Excel with recorded steps |
+      | Run repeatedly | Excel with recorded steps | Code |
+      | Goes in a document | — | Code |
+
+      **The practical move is usually one rung, not four.** Most clinical spreadsheet work is sitting on
+      typed values and hand-written formulas and would be substantially safer as a pivot on a Table and a
+      Power Query import — a real reduction in risk that costs an afternoon and no new language.
+
+      **The last rung is a different decision.** Code in version control is not a better spreadsheet; it
+      is a different trade-off. Slower to start, reviewable by someone who was not there, testable,
+      diffable, re-runnable by a person who has never seen the study. You take it when the output has to
+      be *defended* rather than merely produced.
+    explanation:
+      objective: "Apply the reading-versus-producing test to real tasks."
+      given: "Seven tasks spanning ad-hoc questions, weekly reporting and submission deliverables."
+      relevant: "Whether the output is re-run, signed, or independently verified."
+      irrelevant: "Data volume, which decides almost nothing here."
+      method: "Ask what the output is for before asking how big it is."
+      interpretation: "A ladder, not a binary — most work needs one step up, not four."
+      changes: "A one-off exploratory answer that starts being pasted into a weekly deck has changed rung."
+      interviewer: "That you defend Excel for the cases where it is genuinely right."
+
+  - id: excel.pivot.group-by
+    format: sql
+    db: oncology
+    modes: [independent, check]
+    difficulty: intermediate
+    skills: [excel.pivots, sql.aggregate]
+    lesson: excel-pivots-and-when-to-stop
+    minutes: 6
+    title: The summary that enumerates its own groups
+    prompt: |
+      Write the query the hand-typed summary was trying to be: the number of **randomized** subjects per
+      country, most subjects first, with ties broken alphabetically by country.
+
+      A subject is randomized if `ARMCD` is populated — screen failures have a DM record with `ARMCD`
+      empty.
+
+      Twelve rows, summing to 420.
+    starter: |
+      SELECT   COUNTRY, ___ AS subjects
+      FROM     dm
+      WHERE    ___
+      GROUP BY ___
+      ORDER BY ___;
+    reference: |
+      SELECT   COUNTRY, COUNT(*) AS subjects
+      FROM     dm
+      WHERE    ARMCD IS NOT NULL AND ARMCD <> ''
+      GROUP BY COUNTRY
+      ORDER BY subjects DESC, COUNTRY;
+    orderMatters: true
+    hints:
+      - "Counting rows within a group is `COUNT(*)`."
+      - "`ARMCD` is empty rather than absent for screen failures, so test for both NULL and the empty string."
+      - "Two countries tie on 20, so the tie-break in ORDER BY is not optional."
+    solution: |
+      ```sql
+      SELECT   COUNTRY, COUNT(*) AS subjects
+      FROM     dm
+      WHERE    ARMCD IS NOT NULL AND ARMCD <> ''
+      GROUP BY COUNTRY
+      ORDER BY subjects DESC, COUNTRY;
+      ```
+
+      | | | | |
+      |---|---:|---|---:|
+      | USA | 70 | ITA | 33 |
+      | POL | 67 | KOR | 24 |
+      | DEU | 56 | ESP | 23 |
+      | JPN | 45 | FRA | 20 |
+      | CAN | 38 | TWN | 20 |
+      | | | GBR | 14 |
+      | | | AUS | 10 |
+
+      Twelve rows, summing to 420.
+
+      **`GROUP BY` enumerates its groups from the data**, exactly as a PivotTable does. A thirteenth
+      country code appearing next month produces a thirteenth row, unasked. A code entered as `SPA`
+      produces a row labelled `SPA`. Neither can silently fall out of the summary the way a hand-typed
+      `SUMIFS` list allows.
+
+      Two other things this version does that the spreadsheet did not. **The population is defined in the
+      query** — `WHERE ARMCD IS NOT NULL AND ARMCD <> ''` — rather than assumed by whoever prepared the
+      extract. And the whole thing is five lines in a file that can be diffed, reviewed and re-run by
+      someone who was not there, which is the only property on this page that no spreadsheet feature
+      provides.
+    explanation:
+      objective: "Write the grouped summary the spreadsheet was approximating."
+      given: "DM with 468 subjects, ARMCD empty for screen failures."
+      relevant: "That GROUP BY derives its groups from the data."
+      method: "Filter to the randomized population first, then group."
+      numbers: "12 countries, 420 randomized subjects; USA 70 is the largest, AUS 10 the smallest."
+      assumptions: "That empty ARMCD identifies screen failures, which matches the 468 − 420 = 48 in DM."
+      interpretation: "The same protection a pivot gives, in a form that can be reviewed."
+      changes: "A new country code adds a row here and adds nothing to a hand-typed summary."
+
+  - id: excel.pivot.stale-summary
+    format: diff
+    modes: [qc, debug]
+    difficulty: advanced
+    skills: [excel.pivots, excel.conditional-aggregation, qc.compare]
+    lesson: excel-pivots-and-when-to-stop
+    title: Two summaries of the same 42 sites
+    prompt: |
+      Both of these summarise the same extract of 42 sites. The workbook's twelve country subtotals sum
+      to 379; the programmer's query returns 420 across twelve rows.
+
+      Two of the country figures are shown. What accounts for the difference?
+    left:
+      title: The Monday workbook
+      columns: [Row, Randomized]
+      rows:
+        - ['POL', 38]
+        - ['ESP', 11]
+        - ['Sum of the twelve subtotals', 379]
+      footnote: "E2 = SUMIFS($C$2:$C$43,$B$2:$B$43,D2), filled down beside twelve hand-typed country codes."
+    right:
+      title: GROUP BY over the same rows
+      columns: [Country, Subjects]
+      rows:
+        - ['POL', 67]
+        - ['ESP', 23]
+        - ['All twelve countries', 420]
+      footnote: "SELECT COUNTRY, COUNT(*) FROM dm WHERE ARMCD IS NOT NULL AND ARMCD <> '' GROUP BY COUNTRY."
+    choices:
+      - text: "One Polish site's code carries a trailing space and one Spanish site's code is spelled `SPA`, so 29 and 12 subjects match none of the twelve typed criteria. The query groups on the raw values and puts them somewhere; the `SUMIFS` list has nowhere to put them."
+        correct: true
+        feedback: "Correct — 38 + 29 = 67 and 11 + 12 = 23, and 379 + 41 = 420. Note the query is not *cleaning* anything; it simply cannot drop a row."
+      - text: "The query is counting screen failures and the workbook is not."
+        feedback: "The query's WHERE clause excludes them, and both totals would then exceed 420 rather than fall short."
+      - text: "The workbook's `SUMIFS` ranges stop short of the last site rows."
+        feedback: "The ranges cover `$C$2:$C$43` — all 42 sites. Every row is inside them; some rows match no criterion."
+      - text: "The query counts rows and the workbook sums a column, so they answer different questions."
+        feedback: "Here they answer the same question: one site is one DM row per subject in the query, and one site's count in the workbook. The totals agree on clean codes."
+    solution: |
+      **Neither number is computed wrongly. They differ in what can fall out.**
+
+      | | Workbook | Query |
+      |---|---:|---:|
+      | POL | 38 | 67 |
+      | ESP | 11 | 23 |
+      | Total | 379 | 420 |
+
+      Site 1027's code is `"POL "` — 29 subjects — and site 1020's is `SPA` — 12. `SUMIFS` with the
+      criterion `"POL"` does not match `"POL "`, because criteria are not trimmed against the data, and
+      no criterion at all was written for `SPA`.
+
+      $38 + 29 = 67$. $11 + 12 = 23$. $379 + 41 = 420$.
+
+      **The query is not tidying anything.** It would happily report a row labelled `POL ` and a row
+      labelled `SPA` — which is the correct behaviour, because both are things that are genuinely in the
+      data and need fixing at source. What it cannot do is lose them.
+
+      A PivotTable behaves identically: fourteen rows instead of twelve, with the two offenders visible
+      the first time anyone looks. **The protection is not cleanliness, it is that the groups come from
+      the data rather than from somebody's memory.**
+    explanation:
+      objective: "Explain a subtotal shortfall against a GROUP BY over the same rows."
+      given: "Two country figures and two totals from the same 42 site rows."
+      relevant: "That SUMIFS criteria are not trimmed and that no criterion existed for SPA."
+      irrelevant: "Screen failures and range extent, neither of which is in play."
+      numbers: "POL 38 + 29 = 67; ESP 11 + 12 = 23; 379 + 41 = 420."
+      interpretation: "A summary that cannot represent a group it was not told about."
+      changes: "A pivot or a GROUP BY shows both offenders as extra rows without cleaning them."
+      interviewer: "That you say the query is not fixing the data, only refusing to drop it."
+
+  - id: excel.pivot.when-to-stop
+    format: hotspot
+    language: text
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [excel.risk, repro.documentation, qc.mindset]
+    lesson: excel-pivots-and-when-to-stop
+    minutes: 8
+    title: The step that leaves no record
+    prompt: |
+      The weekly procedure for the enrolment summary, as it is actually carried out.
+
+      Click the step that leaves a number in the workbook with no derivation behind it and no record
+      anywhere that it was changed.
+    code: |
+      Step 1  Download dm_2025-03-31.csv from the EDC export queue.
+      Step 2  Open it by double-clicking; save as enrolment_wk14.xlsx.
+      Step 3  Site 1020's country reads SPA. Type ESP over it.
+      Step 4  Copy last week's summary block into the new file.
+      Step 5  Extend the twelve SUMIFS ranges down to the new last row.
+      Step 6  Paste the summary into the Monday slide deck.
+    answerLines: [3]
+    lineNotes:
+      - line: 2
+        note: "A real defect — a double-click import applies the machine's locale and type guesses, which is what `excel-import-pitfalls` is about — but it damages values in a way that is at least reproducible from the source file. Power Query with declared column types removes it."
+      - line: 3
+        note: "The step that has no record. The workbook now holds `ESP` for a site whose EDC record says `SPA`; nothing in the file says the value was changed, by whom, or why; the summary reconciles because it was made to; and next week's extract still says `SPA`, so the same edit has to be remembered again. The finding needed to go to the site as a query, not into this cell."
+      - line: 5
+        note: "Manual and error-prone — this is what an Excel Table removes, since a Table's ranges grow with the data — but it is visible in the formulas afterwards. A reviewer can see what the ranges are."
+      - line: 6
+        note: "The moment the workbook stops being a working file and becomes a source of numbers other people rely on. Everything above it should be held to a higher standard from here on."
+    fixed: |
+      Step 1  Power Query: connect to dm_2025-03-31.csv, columns typed explicitly.
+      Step 2  Applied step: filter to randomized subjects.
+      Step 3  Applied step: group by COUNTRY, count subjects.
+      Step 4  Site 1020's country reads SPA: raise a query to the site. Do not edit the value.
+      Step 5  PivotTable on the loaded Table; SPA appears as its own row until the site answers.
+      Step 6  Refresh next week. No step is repeated by hand.
+    hints:
+      - "Four of these six are imperfect. Only one destroys information."
+      - "After which step could nobody reconstruct what the file originally contained?"
+      - "Which step changes a value rather than a formula?"
+    solution: |
+      **Step 3.** Typing `ESP` over `SPA` does four things at once, and all of them are bad.
+
+      **It destroys the evidence.** The workbook now holds a value that is in no source file. Nothing in
+      the cell, the sheet or the file records that it was changed, by whom or why — a spreadsheet has no
+      audit trail, and no SOP creates one.
+
+      **It makes the summary reconcile for the wrong reason.** The twelve subtotals now add to the grand
+      total because the data was bent to fit the list of groups. The check that would have caught a
+      thirteenth code has been disabled.
+
+      **It fixes nothing upstream.** EDC still says `SPA`. Next week's extract says `SPA`. The analysis
+      dataset built from EDC says `SPA`. The workbook is now the only artefact in the study that
+      disagrees with the database, which is exactly backwards.
+
+      **And it was a finding.** `SPA` is not the ISO 3166-1 alpha-3 code for Spain, so it is a
+      controlled-terminology discrepancy that belongs in a query to the site. Correcting it locally is how
+      a real data issue gets absorbed into a spreadsheet and never reported.
+
+      The other three flagged steps are genuinely imperfect. Step 2's double-click import applies locale
+      and type guesses; step 5's hand-extended ranges are what an Excel Table exists to remove; step 6 is
+      the point at which the file acquires an audience. All three are fixable and all three leave evidence
+      behind. Step 3 does not.
+    explanation:
+      objective: "Identify the step that removes traceability rather than merely being awkward."
+      given: "A six-step weekly procedure, most of whose steps are imperfect."
+      relevant: "Whether a step changes a value or a formula, and whether it can be reconstructed afterwards."
+      irrelevant: "The difficulty of each step, which is not what distinguishes them."
+      method: "Ask which step leaves the file unable to explain itself."
+      interpretation: "A local correction that suppresses a real data finding and disables a check."
+      changes: "Raising the query and letting SPA show as its own row keeps both the evidence and the check."
+      interviewer: "That you name overwriting a value as categorically different from the other imperfections."
+
+  - id: excel.pivot.open-judgement
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [excel.risk, repro.documentation, communication.interviewing]
+    lesson: excel-pivots-and-when-to-stop
+    title: When does the work belong in code
+    prompt: |
+      **Interviewer:** "We have a lot of Excel in this group. When would you tell someone a piece of work
+      has outgrown a spreadsheet — and when would you leave it alone?"
+    modelAnswer: |
+      I'd answer it as four questions about the output rather than as a rule about the tool, because a
+      good deal of the work genuinely belongs in Excel and saying otherwise gets you ignored.
+
+      Will it be run again on new data? If yes, the steps have to exist somewhere other than in somebody's
+      hands. That does not have to mean code — Power Query records every transformation as an ordered,
+      named applied step and re-runs all of them on refresh, and a PivotTable built on a Table grows with
+      the data instead of pointing at a range that stopped being right.
+
+      Does a number from it end up in a document somebody signs? Then I want it reproducible from source
+      by a second person, which in practice means code in version control. Not because Excel computes
+      wrongly — it doesn't — but because a workbook has no diff, no review and no record of a cell that
+      was typed over.
+
+      Does anyone have to verify it independently? This is the one I'd weigh most heavily. A reviewer can
+      check a formula. They cannot check a value that was typed, and looking at the sheet they cannot tell
+      the two apart. The moment a workbook contains hand-entered corrections, independent QC of it is not
+      really possible.
+
+      And does it need a compound key, or a key that repeats? That is where a spreadsheet stops having a
+      native answer — concatenated helper columns work up to a point and then quietly stop.
+
+      Where I'd push back is on exploratory work and on checking. A medical monitor asking a question in a
+      meeting is better served in thirty seconds in Excel than in a script tomorrow. A statistician
+      checking one cell of a table by hand should deliberately use a different tool from the one that
+      produced it, because the independence of the route is the whole value of the check. Those uses share
+      a property: the spreadsheet is reading, not producing.
+
+      I'd also say that the useful move is usually one rung rather than four. Most spreadsheet work I've
+      seen is on typed values and hand-written formulas, and would be much safer as a typed Power Query
+      import and a pivot on a Table — an afternoon's change, no new language, and it removes whole classes
+      of failure. On the workbook I've been looking at, twelve typed country subtotals summed to 379
+      against a study total of 420: one country code with a trailing space, one code nobody had typed into
+      the summary. A pivot shows both as extra rows immediately, because it enumerates its groups from the
+      data instead of from somebody's memory.
+
+      The thing I would not accept in any version is correcting data inside the workbook. If a country
+      code is wrong, that is a query to the site, not a cell you type over — because the edit leaves no
+      record, it makes the summary reconcile for the wrong reason, and next week's extract will contain it
+      again.
+    rubric:
+      - Frames the decision around the output rather than around the tool or the data volume
+      - Names repeatability, signed documents, independent verification and key structure as the tests
+      - Distinguishes recorded steps (Power Query, PivotTable on a Table) from code as separate rungs
+      - Explains that a reviewer cannot distinguish a typed value from a derived one
+      - Defends Excel explicitly for exploratory questions and for independent checking
+      - Notes that a check should use a different tool from the one that produced the number
+      - Identifies version control, diffing and review as the properties code adds
+      - Says the practical improvement is usually one rung, not four
+      - Refuses to correct source data inside the workbook and says what to do instead
+    redFlags:
+      - "Says spreadsheets should never be used in clinical work"
+      - "Defends a spreadsheet purely on the grounds that it has always worked"
+      - "Uses row count or file size as the deciding criterion"
+      - "Treats a PivotTable and Power Query as equivalent to code for traceability"
+      - "Would type a correction into the workbook rather than query the site"

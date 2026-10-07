@@ -1,0 +1,664 @@
+items:
+  - id: sdtm.dy.no-day-zero
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sdtm.dates]
+    lesson: sdtm-iso8601-and-study-day
+    title: The event that started on dosing day
+    prompt: |
+      Subject `CBX417-301-1001-0002` has `RFSTDTC = "2022-07-08T10:41"`.
+
+      An adverse event starts on `2022-07-08`, the same day as the first dose.
+
+      What is `AESTDY`?
+    answer: 1
+    tolerance: 0
+    unit: days
+    datasets: [oncology/sdtm/ae]
+    hints:
+      - "The reference date is study day 1."
+    solution: |
+      **1.**
+
+      ```text
+      AESTDY = (date − RFSTDTC) + 1   when date >= RFSTDTC
+             = 0 + 1
+             = 1
+      ```
+
+      The reference date is study day 1, not study day 0. The day before it is −1, and −1 is immediately
+      followed by 1.
+
+      CBX417-301 has **16** adverse events with `AESTDY = 1`, all in the `TREATMENT` epoch, and **none**
+      with `AESTDY = 0` — because no such day exists.
+
+      Note that the time in `RFSTDTC` is irrelevant. `--DY` compares calendar dates; an event starting at
+      08:00 on the dosing day, two hours before the first dose at 10:41, is still study day 1.
+    explanation:
+      objective: "Apply the forward branch of the --DY formula at its boundary."
+      relevant: "That the reference date is day 1."
+      irrelevant: "The time component of RFSTDTC — --DY is a date calculation."
+      calculating: "Difference in days, plus one."
+      interpretation: "A --DY of 0 anywhere in any domain is an arithmetic error, and this is the boundary where it appears."
+
+  - id: sdtm.dy.partial-null
+    format: mcq
+    modes: [check, debug]
+    difficulty: foundation
+    skills: [sdtm.dates]
+    lesson: sdtm-iso8601-and-study-day
+    title: Twelve null study days
+    prompt: |
+      In CBX417-301's AE domain, 2,454 records have a populated `AESTDY` and **12** are null.
+
+      Those 12 records have `AESTDTC` values like `2023-06` and `2024`.
+
+      Is this a defect?
+    choices:
+      - text: "No. The start date is partial, so no exact study day exists. SDTM does not impute, so `AESTDY` is correctly null."
+        correct: true
+        feedback: "Correct. The same pattern holds exactly in CM: all 501 records with a partial CMSTDTC have a null CMSTDY, and all 3,039 complete ones have it populated."
+      - text: "Yes. `AESTDY` is Expected in the AE domain and must be populated for every record."
+        feedback: "Expected means the variable must be present in the dataset, not that every record must have a value. A null with a documented reason is conformant."
+      - text: "Yes. The partial dates should be imputed to the first of the month so that `AESTDY` can be derived."
+        feedback: "Imputation in SDTM would put a value nobody observed into a dataset of observations, with nothing marking it. Imputation belongs in ADaM, flagged — ADAE.ASTDTF does exactly that."
+      - text: "No, but only because these are adverse events. A partial date in EX would have to be queried."
+        feedback: "The principle does not vary by domain. A partial date stays partial wherever it occurs; what varies is how often it occurs."
+    hints:
+      - "Can a number express 'some day in June 2023'?"
+    explanation:
+      objective: "Decide whether a null derived value is a defect."
+      relevant: "That --DY is numeric and a partial date has no exact day."
+      method: "Check whether the null is explained by the source value's precision."
+      numbers: "12 partial AESTDTC values, 12 null AESTDY; 501 partial CMSTDTC, 501 null CMSTDY."
+      interpretation: "The null is information: it tells the reader the date was not known to the day."
+
+  - id: sdtm.dy.ongoing-pair
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sdtm.dates, sdtm.events]
+    lesson: sdtm-iso8601-and-study-day
+    title: An event that had not ended
+    prompt: |
+      312 of CBX417-301's 2,466 AE records have a null `AEENDTC`. On those records:
+
+      ```text
+      AEENRTPT = "ONGOING"
+      AEENTPT  = "DATA CUTOFF"   or   "END OF STUDY"
+      ```
+
+      Why is `AEENDTC` not populated with the data cutoff date, 2025-03-31?
+    choices:
+      - text: "Because the event did not end on that date. Writing it in would fabricate a resolution that did not occur; the relative-timing pair records ongoing status without inventing a date."
+        correct: true
+        feedback: "Correct. --ENRTPT uses the non-extensible codelist STENRF (C66728) and --ENTPT names the reference point, so the record says 'still ongoing as of the data cutoff' exactly."
+      - text: "Because `AEENDTC` may only contain dates before the cutoff, and 2025-03-31 is the cutoff itself."
+        feedback: "Dates on the cutoff date are perfectly valid. The issue is that no end occurred, not that the date is out of range."
+      - text: "Because the cutoff date belongs in `DM.RFENDTC` instead."
+        feedback: "RFENDTC is the subject's end of participation and is a different variable answering a different question. Neither substitutes for an event end date."
+      - text: "Because ADaM will impute it, so SDTM leaves it blank."
+        feedback: "ADaM's imputation is a consequence, not the reason. SDTM leaves it blank because the event did not end — and some ADaM analyses deliberately leave ongoing events unimputed."
+    hints:
+      - "What would a reader conclude from AEENDTC = 2025-03-31?"
+    solution: |
+      **The event did not end.** An `AEENDTC` of 2025-03-31 would say it resolved on the day of the data
+      cutoff, which is a clinical claim nobody made.
+
+      SDTM's mechanism for this is a pair of relative timing variables:
+
+      | Variable | Value | Says |
+      |---|---|---|
+      | `AEENDTC` | *(null)* | no end date was recorded |
+      | `AEENRTPT` | `ONGOING` | the event's end is after the reference point |
+      | `AEENTPT` | `DATA CUTOFF` / `END OF STUDY` | which reference point |
+
+      `--ENRTPT` uses **STENRF (C66728)**, non-extensible, eight terms. The same pattern appears in `CM`
+      for medications that had not stopped and in `MH` for conditions that had not resolved.
+
+      **The consequence downstream** is that duration cannot be computed for those 312 events, and the
+      SAP has to say what happens: most commonly they are censored at the cutoff for a duration analysis,
+      and counted as unresolved in an outcome table. `AEOUT` in this study records that separately — 295
+      records are `NOT RECOVERED/NOT RESOLVED` and 16 are `RECOVERING/RESOLVING`.
+    explanation:
+      objective: "Explain the relative-timing mechanism for open-ended events."
+      relevant: "That SDTM does not fabricate dates for things that did not happen."
+      assumptions: "That the reference point named in --ENTPT is meaningful to the reader, which is why it is a separate variable rather than implied."
+      interpretation: "312 ongoing events is a fact about follow-up, and burying it in a fabricated end date would hide it."
+
+  - id: sdtm.dy.impute-layer
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [sdtm.dates, adam.purpose]
+    lesson: sdtm-iso8601-and-study-day
+    title: Where imputation is allowed
+    prompt: |
+      A partial adverse-event start date, `2023-06`, has to become a usable date because the analysis
+      needs to know whether the event was treatment-emergent.
+
+      Where does the imputation happen, and what makes it acceptable there?
+    choices:
+      - text: "In ADaM: `ASTDT` holds the imputed date and `ASTDTF` flags which component was imputed, so a reviewer can identify and exclude imputed values."
+        correct: true
+        feedback: "Correct. The rule is not 'never impute' but 'never impute invisibly'. ADAE in this study carries both ASTDT and ASTDTF."
+      - text: "In SDTM, provided the imputation rule is documented in the cSDRG."
+        feedback: "Documentation does not make an imputed value an observation. SDTM holds what was collected, and there is no SDTM flag variable to mark an imputed --DTC."
+      - text: "In the EDC, by querying the site for the exact day."
+        feedback: "The site does not know. A subject recalling a diagnosis in 2019 will not produce a day, and a query that forces one produces a fabricated answer with a clean audit trail — the worst combination."
+      - text: "In the analysis program, without storing the imputed value anywhere."
+        feedback: "That hides the decision inside code rather than in data. Anyone re-running the analysis differently gets different numbers with nothing to compare."
+    hints:
+      - "What variable would tell a reviewer that a date was imputed?"
+    explanation:
+      objective: "Locate imputation in the right layer and say why."
+      relevant: "That ADaM has a flag variable for it and SDTM does not."
+      method: "Ask whether a reviewer could tell the value was constructed."
+      interpretation: "The flag is what makes the imputation auditable, which is the whole justification."
+      interviewer: "That you state the rule as 'never invisibly' rather than 'never', which is what practitioners actually do."
+
+  - id: sdtm.dy.calc-forward
+    format: numeric
+    modes: [guided, speed]
+    difficulty: foundation
+    skills: [sdtm.dates]
+    lesson: sdtm-iso8601-and-study-day
+    title: Study day of an on-treatment event
+    prompt: |
+      Subject `CBX417-301-1001-0002`, `RFSTDTC = "2022-07-08T10:41"`.
+
+      An adverse event starts on `2022-07-13` and ends on `2022-07-25`.
+
+      What is `AEENDY`?
+    answer: 18
+    tolerance: 0
+    unit: days
+    datasets: [oncology/sdtm/ae]
+    hints:
+      - "Use the date part of RFSTDTC only."
+      - "Count the days between 8 July and 25 July, then apply the forward branch."
+    solution: |
+      **18.**
+
+      ```text
+      2022-07-25 − 2022-07-08 = 17 days
+      AEENDY = 17 + 1 = 18
+      ```
+
+      And for completeness, the same record's start:
+
+      ```text
+      2022-07-13 − 2022-07-08 = 5 days
+      AESTDY = 5 + 1 = 6
+      ```
+
+      Both match the delivered domain. This is `AESEQ = 1` for that subject — the diarrhoea that led to
+      `AEACN = "DRUG INTERRUPTED"`, visible in `EX` as a four-day gap between `EXSEQ = 1` (ending
+      2022-07-12) and `EXSEQ = 3` (starting 2022-07-17).
+
+      The time in `RFSTDTC` plays no part. `--DY` is a calendar-date calculation, and stripping the time
+      with `substr(rfstdtc, 1, 10)` is the explicit way to say so.
+    explanation:
+      objective: "Compute --ENDY with the forward branch."
+      given: "A reference datetime and an event end date."
+      relevant: "The date portion of RFSTDTC only."
+      calculating: "Day difference plus one."
+      numbers: "17 + 1 = 18; the same record's start gives 5 + 1 = 6."
+      interpretation: "The event spans study days 6 to 18, and EX shows the corresponding dosing gap."
+
+  - id: sdtm.dy.calc-backward
+    format: numeric
+    modes: [guided, debug]
+    difficulty: intermediate
+    skills: [sdtm.dates]
+    lesson: sdtm-iso8601-and-study-day
+    title: An event that resolved before dosing
+    prompt: |
+      Subject `CBX417-301-1015-0014` reported nausea during screening:
+
+      | Variable | Value |
+      |---|---|
+      | `RFSTDTC` | first dose on `2023-11-15` |
+      | `AESTDTC` | `2023-11-12` |
+      | `AEENDTC` | `2023-11-14` |
+
+      The delivered domain has `AESTDY = -3`.
+
+      What is `AEENDY`?
+    answer: -1
+    tolerance: 0
+    unit: days
+    datasets: [oncology/sdtm/ae]
+    hints:
+      - "The end date is before the reference date, so the backward branch applies — no +1."
+      - "14 November is the day before 15 November."
+    solution: |
+      **−1.**
+
+      ```text
+      2023-11-14 − 2023-11-15 = −1 day
+      date < RFSTDTC, so the backward branch applies: AEENDY = −1
+      ```
+
+      The event resolved on the day **immediately before** first dose. The next day is study day 1 —
+      there is nothing in between, because there is no day 0.
+
+      Check the start the same way: `2023-11-12 − 2023-11-15 = −3`, and the backward branch adds
+      nothing, giving `AESTDY = −3`. Both match.
+
+      **This is the record that exposes a single-branch derivation.** A program using
+      `date − RFSTDTC + 1` unconditionally would report `AEENDY = 0`, which looks like a plausible "day
+      of dosing" value and is not a day at all.
+
+      CBX417-301 has **10** AE records with a negative `AEENDY` — events that both began and resolved
+      before the first dose. All of them are in the `SCREENING` epoch, and all 39 records with a negative
+      `AESTDY` are too, which is what makes the sign of the study day a usable treatment-emergence signal
+      at a glance.
+    explanation:
+      objective: "Apply the backward branch of the --DY formula."
+      given: "A reference date and an end date one day earlier."
+      relevant: "That the backward branch adds nothing."
+      calculating: "A signed day difference with no offset."
+      numbers: "14 Nov minus 15 Nov = -1; the start gives -3."
+      assumptions: "That both dates are complete, which they are here — the same subject's partial-date neighbours have null --STDY."
+      interpretation: "Day -1 is adjacent to day 1; a 0 in this position is the signature of a single-branch derivation."
+      changes: "If the event had ended on 15 November, AEENDY would be 1, not 0."
+
+  - id: sdtm.dy.convert-code
+    format: code
+    modes: [independent]
+    difficulty: intermediate
+    skills: [sdtm.dates, r.dates]
+    lesson: sdtm-iso8601-and-study-day
+    title: Raw EDC date to --DTC and --DY
+    language: r
+    prompt: |
+      The EDC exports dates as `DD MON YYYY`, with `UN` for an unknown day and `UNK` for an unknown
+      month:
+
+      ```text
+      "13 JUL 2022"    complete
+      "UN OCT 2019"    day unknown
+      "UN UNK 2013"    day and month unknown
+      ```
+
+      Write two R functions:
+
+      1. `to_dtc(x)` — returns the ISO 8601 `--DTC` value at the right precision: `"2022-07-13"`,
+         `"2019-10"`, `"2013"`.
+      2. `study_day(dtc, ref)` — returns the `--DY` using **both branches**, and `NA` when `dtc` is not a
+         complete date. `ref` may carry a time (`"2022-07-08T10:41"`).
+
+      Then show them working on the three examples above against `ref = "2022-07-08T10:41"`.
+    starter: |
+      to_dtc <- function(x) {
+        # split into day / month / year tokens and rebuild at the known precision
+      }
+
+      study_day <- function(dtc, ref) {
+        # two branches; NA unless dtc is a complete date
+      }
+    datasets: [oncology/raw/ae, oncology/sdtm/ae]
+    checks:
+      - pattern: "nchar\\(dtc\\)\\s*==\\s*10|nchar\\(x\\)|nchar\\("
+        message: "Test the precision of the --DTC string before converting it."
+      - pattern: "substr\\(ref"
+        message: "Strip the time from the reference value explicitly rather than relying on the parser."
+      - pattern: ">=\\s*r|>=\\s*ref"
+        message: "Implement both branches of the --DY formula."
+      - pattern: "NA_integer_|NA_character_|NA"
+        message: "Return NA for a partial date rather than a number."
+      - pattern: "UNK"
+        message: "Handle the unknown-month token."
+      - pattern: "as\\.Date\\(dtc\\)\\s*-\\s*as\\.Date\\(ref\\)\\s*\\+\\s*1\\s*$"
+        absent: true
+        message: "A single unconditional +1 is the off-by-one this exercise exists to prevent."
+    reference: |
+      MON <- c(JAN = "01", FEB = "02", MAR = "03", APR = "04", MAY = "05", JUN = "06",
+               JUL = "07", AUG = "08", SEP = "09", OCT = "10", NOV = "11", DEC = "12")
+
+      to_dtc <- function(x) {
+        vapply(x, function(v) {
+          if (is.na(v) || !nzchar(v)) return(NA_character_)
+          p <- strsplit(trimws(v), " +")[[1]]
+          day <- p[1]; mon <- toupper(p[2]); yr <- p[3]
+          if (mon == "UNK") return(yr)
+          m <- unname(MON[mon])
+          if (is.na(m)) stop("unrecognised month token: ", mon)
+          if (day == "UN") return(paste(yr, m, sep = "-"))
+          paste(yr, m, day, sep = "-")
+        }, character(1), USE.NAMES = FALSE)
+      }
+
+      study_day <- function(dtc, ref) {
+        ok <- !is.na(dtc) & nchar(dtc) == 10 & !is.na(ref)
+        d  <- as.Date(ifelse(ok, dtc, NA_character_))
+        r  <- as.Date(substr(ref, 1, 10))
+        ifelse(ok, as.integer(d - r) + as.integer(d >= r), NA_integer_)
+      }
+
+      raw <- c("13 JUL 2022", "UN OCT 2019", "UN UNK 2013")
+      dtc <- to_dtc(raw)
+      print(data.frame(raw, dtc, dy = study_day(dtc, "2022-07-08T10:41")))
+    expectedOutput: |
+      > print(data.frame(raw, dtc, dy = study_day(dtc, "2022-07-08T10:41")))
+                raw        dtc dy
+      1 13 JUL 2022 2022-07-13  6
+      2 UN OCT 2019    2019-10 NA
+      3 UN UNK 2013       2013 NA
+    solution: |
+      Four design decisions, each of which is a place programs go wrong.
+
+      **Precision is the string length, and the function builds it rather than truncating it.**
+      `UN UNK 2013` produces `"2013"` because that is what is known. Producing `"2013-01-01"` and
+      remembering to treat it as a year later is the alternative, and it always ends with somebody
+      forgetting.
+
+      **`study_day` tests `nchar(dtc) == 10` before converting.** `as.Date("2019-10")` throws in R and
+      `input("2019-10", yymmdd10.)` returns missing with a note in SAS — in both cases the program cannot
+      distinguish "partial date, correctly null" from "conversion failed, investigate". Testing first
+      makes that distinction explicit.
+
+      **`substr(ref, 1, 10)` strips the time deliberately.** `as.Date("2022-07-08T10:41")` happens to
+      parse in R. `input(rfstdtc, yymmdd10.)` happens to work in SAS. Both are accidents, and in this
+      study `RFSTDTC` is 16 characters for 416 subjects and 10 for the four who were randomized and never
+      dosed.
+
+      **`as.integer(d >= r)` is the two-branch formula**, adding 1 on or after the reference and nothing
+      before it. An unconditional `+ 1` gives `0` for the day before the anchor; no `+ 1` gives `0` for
+      the anchor itself. Both produce a study day 0, which does not exist.
+
+      A production version would also `stop()` on an unrecognised month token rather than returning `NA`,
+      which the reference does — an unmapped month is a data problem, not a partial date.
+    explanation:
+      objective: "Convert EDC dates to --DTC and derive --DY safely."
+      method: "Rebuild the string at the known precision; test precision before converting; strip the time; implement both branches."
+      computation: "nchar() for precision, substr() for the anchor, as.integer(d >= r) for the branch."
+      numbers: "13 JUL 2022 against 2022-07-08 gives 5 + 1 = 6; the two partial dates give NA."
+      assumptions: "That UN marks an unknown day and UNK an unknown month, which is this EDC's convention and is documented in the data specification."
+      interpretation: "Each of the four decisions prevents a specific silent failure rather than a crash."
+      changes: "A study whose EDC used a different unknown token would change only the parsing, not the precision logic."
+
+  - id: sdtm.dy.partial-count
+    format: numeric
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [sdtm.dates, qc.data-cleaning]
+    lesson: sdtm-iso8601-and-study-day
+    title: How many MH start dates are partial?
+    prompt: |
+      CBX417-301's `MH` domain has **1,292** records. `MHSTDTC` string lengths:
+
+      | Length | Records |
+      |---:|---:|
+      | 10 (`2019-10-14`) | 704 |
+      | 7 (`2019-10`) | 380 |
+      | 4 (`2019`) | 208 |
+
+      How many `MH` records have a partial start date?
+    answer: 588
+    tolerance: 0
+    unit: records
+    datasets: [oncology/sdtm/mh]
+    hints:
+      - "Anything shorter than 10 characters is partial."
+    solution: |
+      **588** — 380 year-month plus 208 year-only, which is **45%** of the domain.
+
+      Compare that with the other domains:
+
+      | Domain | Records | Partial start dates | % |
+      |---|---:|---:|---:|
+      | `MH` | 1,292 | 588 | 45% |
+      | `CM` | 3,540 | 501 | 14% |
+      | `AE` | 2,466 | 12 | 0.5% |
+
+      **The pattern is about when the event was recorded, not about data quality.** An adverse event is
+      reported while it is happening. A medical-history condition is recalled at screening — "sometime in
+      2019" — and no query will produce a day that the subject does not know.
+
+      This is why `MH` has **no `MHSTDY` column at all** in this study. A study-day variable that is null
+      for 45% of records invites readers to treat the populated 55% as a comparable subset, which they
+      are not: the subjects who remember exact diagnosis dates are not a random sample.
+
+      **The practical lesson for testing.** If you want to know whether your date handling is correct,
+      run it against `MH`. Testing against `LB` or `EX`, where dates are essentially always complete,
+      tells you nothing.
+    explanation:
+      objective: "Quantify partial-date prevalence and interpret the variation between domains."
+      given: "String-length counts for MHSTDTC."
+      calculating: "380 + 208."
+      numbers: "588 of 1,292 records, 45%; against 14% in CM and 0.5% in AE."
+      relevant: "When each kind of event is recorded relative to when it occurred."
+      assumptions: "That all lengths other than 10 are partial, which holds because SDTM expresses reduced precision by truncation."
+      interpretation: "The absence of MHSTDY is a design response to the prevalence, not an omission."
+      changes: "A study collecting diagnosis dates from medical records rather than subject recall would have far fewer partials."
+
+  - id: sdtm.dy.offbyone-hotspot
+    format: hotspot
+    modes: [debug, qc, boss]
+    difficulty: advanced
+    skills: [sdtm.dates, qc.code-review]
+    lesson: sdtm-iso8601-and-study-day
+    title: Find the off-by-one
+    prompt: |
+      This SAS step derives `AESTDY` and `AEENDY`. It passes a first read, the output looks reasonable,
+      and every pre-treatment adverse event in the study is wrong by one day.
+
+      Click the line responsible. (Line 1 is `data ae;`.)
+    language: sas
+    code: |
+      data ae;
+        set work.ae_raw;
+        length aestdtc aeendtc $19;
+
+        aestdtc = put(input(ae_start, date9.), yymmdd10.);
+        aeendtc = put(input(ae_end,   date9.), yymmdd10.);
+
+        _ref = input(substr(rfstdtc, 1, 10), yymmdd10.);
+        _st  = input(aestdtc, yymmdd10.);
+        _en  = input(aeendtc, yymmdd10.);
+
+        if n(_st, _ref) = 2 then aestdy = _st - _ref + 1;
+        if n(_en, _ref) = 2 then aeendy = _en - _ref + (_en >= _ref);
+
+        drop _:;
+      run;
+    answerLines: [12]
+    lineNotes:
+      - line: 12
+        note: "`+ 1` unconditionally. Correct for every date on or after the reference, and wrong by one for every date before it — turning study day -1 into 0 and -25 into -24."
+      - line: 13
+        note: "Correct. `(_en >= _ref)` evaluates to 1 or 0, implementing both branches in one expression. Compare it with the line above."
+      - line: 8
+        note: "Correct: substr() strips the time from RFSTDTC explicitly instead of relying on the informat stopping in the right place."
+      - line: 9
+        note: "This converts silently. A partial date such as 2023-06 returns missing with a NOTE, which is indistinguishable from a genuine conversion failure — worth a precision test, though it is not the defect being asked about."
+    fixed: |
+        if n(_st, _ref) = 2 then aestdy = _st - _ref + (_st >= _ref);
+        if n(_en, _ref) = 2 then aeendy = _en - _ref + (_en >= _ref);
+    hints:
+      - "Compare the two derivation lines with each other."
+      - "Which records are on the wrong side of the reference date?"
+    solution: |
+      **Line 12.** `aestdy = _st - _ref + 1` applies the forward branch to every record, including the
+      ones before the anchor.
+
+      | Date | Difference | Correct `--DY` | This program |
+      |---|---:|---:|---:|
+      | 25 days before | −25 | **−25** | −24 |
+      | 1 day before | −1 | **−1** | **0** |
+      | Same day | 0 | 1 | 1 |
+      | 1 day after | +1 | 2 | 2 |
+
+      Line 13 does it correctly: `(_en >= _ref)` is 1 or 0 in SAS, so the expression adds 1 only on the
+      forward side. **The two lines sitting next to each other is what makes this findable** — and in
+      real code they usually do not.
+
+      **Why it survives review.** 2,415 of the 2,466 AE records are on or after the reference date and
+      come out correct. The 39 with a negative `AESTDY` are pre-treatment events, in the `SCREENING`
+      epoch, that almost nobody looks at — and their values are still negative, just wrong by one.
+
+      **The signature is a study day of zero.** One record in this study — subject `1015-0014`'s nausea,
+      ending the day before first dose — would come out as `AESTDY = -2` (correct: −3) and, for any event
+      starting the day before dosing, as `0`.
+
+      The check to run before anyone else does:
+
+      ```sas
+      proc sql;
+        select count(*) from ae where aestdy = 0 or aeendy = 0;
+      quit;
+      ```
+
+      Any non-zero answer, in any domain, is this bug.
+    explanation:
+      objective: "Locate an off-by-one that is correct for 98% of records."
+      given: "Two adjacent derivation lines, one correct and one not."
+      relevant: "Which side of the reference date each record falls on."
+      irrelevant: "The date conversion itself, which is correct here."
+      method: "Compare the two lines against each other; then ask which population the difference affects."
+      computation: "(_st >= _ref) is 1 or 0 in SAS and implements both branches in one expression."
+      numbers: "39 AE records have a negative AESTDY and 10 a negative AEENDY; all would shift by one."
+      interpretation: "The visible symptom is a --DY of 0, which cannot legitimately occur."
+      changes: "A study with no pre-treatment adverse events would never expose this line, which is how the habit travels between studies."
+      interviewer: "That you check the minority population rather than the modal one, and that you know the zero-day check."
+
+  - id: sdtm.dy.endy-negative
+    format: mcq
+    modes: [independent, qc]
+    difficulty: advanced
+    skills: [sdtm.dates, qc.discrepancy]
+    lesson: sdtm-iso8601-and-study-day
+    title: Null start day, populated end day
+    prompt: |
+      Subject `CBX417-301-1029-0005` has this AE record:
+
+      | Variable | Value |
+      |---|---|
+      | `AETERM` | Nauseous |
+      | `AESTDTC` | `2023-03` |
+      | `AESTDY` | *(null)* |
+      | `AEENDTC` | `2023-03-20` |
+      | `AEENDY` | `-1` |
+
+      A QC programmer flags it: "a record cannot have an end study day without a start study day."
+
+      Is the record correct?
+    choices:
+      - text: "Yes. `--STDY` and `--ENDY` are derived independently against the same anchor. The start date is partial so `AESTDY` is null; the end date is complete so `AEENDY` is derived."
+        correct: true
+        feedback: "Correct. Each --DY depends only on its own --DTC and on RFSTDTC. The subject's first dose was 2023-03-21, so an event ending 2023-03-20 is day -1."
+      - text: "No. If the start date is partial, both study days should be null for consistency."
+        feedback: "That would discard a correctly derivable value. AEENDY = -1 is a fact: the event had resolved before the first dose."
+      - text: "No. `AEENDY` cannot be negative when `AESTDY` is unknown, because the event might have started after the reference date."
+        feedback: "The start is unknown, but the end is known and precedes the reference date. An event cannot end before it starts, so the start is also before the anchor — nothing is inconsistent."
+      - text: "No. `AESTDY` should be imputed from the partial date so that both are populated."
+        feedback: "SDTM does not impute. That step belongs in ADaM with an imputation flag."
+    hints:
+      - "What does each --DY depend on?"
+      - "Can an event end before it starts?"
+    solution: |
+      **The record is correct, and it is a good illustration of how `--DY` derivation actually works.**
+
+      Each study day is a function of its own date and the anchor:
+
+      ```text
+      AESTDY = f(AESTDTC, RFSTDTC)   AESTDTC = "2023-03"     -> partial -> null
+      AEENDY = f(AEENDTC, RFSTDTC)   AEENDTC = "2023-03-20"  -> complete -> -1
+      ```
+
+      There is no dependency between them. A record can have either, both or neither.
+
+      **What the record actually says**, read properly: the subject reported nausea at some point in
+      March 2023, it resolved on 20 March, and their first dose was on 21 March. So this is a
+      pre-treatment event that had already resolved before treatment began — clinically unambiguous,
+      even though one of its two dates is imprecise.
+
+      **The QC finding is a good instinct applied to the wrong rule.** The real consistency check is
+      `AEENDTC >= AESTDTC` where both are populated and comparable — and this study has it. Four raw
+      records had an end date before the start date, and the answer key documents them as
+      `END DATE BEFORE START DATE`, resolved before mapping.
+
+      Comparing a partial date with a complete one needs care: `"2023-03"` and `"2023-03-20"` compare
+      correctly as strings here, but `"2023"` against `"2022-12-31"` does not tell you anything useful,
+      and the check has to say so rather than producing a false finding.
+    explanation:
+      objective: "Judge whether an asymmetric pair of derived values is a defect."
+      given: "A partial start date, a complete end date, and a QC challenge."
+      relevant: "That each --DY depends only on its own --DTC."
+      irrelevant: "The apparent asymmetry, which is a consequence of the source precision."
+      method: "Trace each derived value to its own inputs before assuming a relationship between them."
+      assumptions: "That the anchor is the same for both, which it is — RFSTDTC."
+      interpretation: "Read together, the two values still answer the clinical question: the event resolved before treatment started."
+      changes: "The genuine check is AEENDTC >= AESTDTC among comparable precisions; this study had four raw records that failed it, corrected before mapping."
+      interviewer: "That you can defend a record against a plausible-sounding but wrong QC finding, with the derivation as the argument."
+
+  - id: sdtm.dy.open-partial-strategy
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [sdtm.dates, adam.baseline, communication.documentation]
+    lesson: sdtm-iso8601-and-study-day
+    title: Partial dates and treatment emergence
+    prompt: |
+      Your study's SAP defines a treatment-emergent adverse event as one starting on or after the first
+      dose and no later than 30 days after the last dose.
+
+      Twelve adverse events have a partial start date: ten are `YYYY-MM` and two are `YYYY`.
+
+      How do you decide whether each is treatment-emergent, and what do you insist goes on paper?
+    modelAnswer: |
+      "Nothing in SDTM changes. The partial date stays partial in `AESTDTC` and `AESTDY` stays null —
+      twelve null study days, matching the twelve partial dates exactly. The decision happens in ADaM.
+
+      **In ADaM I need a date, so I impute, and the imputation has to be visible.** `ASTDT` holds the
+      imputed date and `ASTDTF` says which component was supplied — `D` for an imputed day, `M` for an
+      imputed month and day. A reviewer can then count them, list them, and run the safety table without
+      them.
+
+      **Which direction to impute is the actual question, and it is a SAP decision, not mine.** The
+      common convention for a partial start date is the earliest possible date — first of the month, first
+      of January — because it is conservative for treatment emergence: it makes the event as likely as
+      possible to fall inside the treatment window, so the safety profile is not understated. But it is
+      only conservative in that direction. If the partial date falls in the month the subject started
+      treatment, imputing to the first of the month pushes the event *before* first dose and makes it
+      non-emergent, which is the opposite of conservative. Some SAPs handle that by imputing to the first
+      dose date when the partial date is in the same month, precisely to avoid it.
+
+      So the rule I would want written down has to say what happens in each case, not just 'impute to the
+      first of the month'.
+
+      **The two `YYYY`-only records are the ones I would raise explicitly.** Imputing a day and a month
+      from a bare year spans twelve months of uncertainty. With only two records I would want them listed
+      for the medical monitor rather than decided by a rule, and I would want the SAP to say whether a
+      sensitivity analysis excludes them. Two records will not move a safety table, and that is exactly
+      why it is cheap to handle them honestly.
+
+      **What goes on paper:** the imputation rule in the SAP with the flag variable named; the rule
+      restated in the ADaM specification; the flag populated in ADAE; and the ADRG describing what was
+      done and how many records it affected. If a reviewer asks 'how many of your treatment-emergent
+      events depend on an imputed date', that has to be answerable in one query.
+
+      **And the check I would run regardless:** how many of the twelve change treatment-emergence status
+      under the opposite imputation. If the answer is zero, the whole discussion is documentation. If it
+      is not zero, it is a sensitivity analysis."
+    rubric:
+      - "Keeps SDTM unchanged and locates the decision in ADaM"
+      - "Names ASTDT and ASTDTF, and explains that the flag is what makes imputation acceptable"
+      - "Identifies the earliest-date convention as conservative for treatment emergence, and names the case where it is not"
+      - "Treats the rule as a SAP decision rather than a programming preference"
+      - "Handles the two year-only records separately rather than applying the same rule blindly"
+      - "Names the downstream documentation: SAP, ADaM spec, ADRG"
+      - "Proposes the sensitivity check: how many records change status under the opposite imputation"
+    redFlags:
+      - "Imputing in SDTM"
+      - "Imputing without a flag variable"
+      - "Stating 'always impute to the first of the month' with no awareness of the same-month case"
+      - "Querying the site for an exact date the subject cannot know"
+      - "Deciding the rule alone without the statistician"
+    followUps:
+      - "A partial start date falls in the same month as the first dose. What does your rule give?"
+      - "How would you report the number of treatment-emergent events that depend on an imputed date?"
+      - "Would you use the same convention for a partial end date?"

@@ -1,0 +1,119 @@
+sheets:
+  - id: lab-reconciliation
+    title: Reconciling a lab extract against EDC
+    description: >-
+      Baseline ALT for the first subjects of CBX417-301, as recorded in EDC (columns A and B) and as
+      delivered by the central laboratory (columns C and D). The values are real rows from
+      `oncology/sdtm/lb.csv`; the discrepancies are planted, and there are four of them.
+
+      The two totals differ by 67.4 U/L. Your job is not to make them agree — it is to explain the
+      difference completely, so that every unit of it is attributed to a named cause. A reconciliation
+      that ends with "close enough" is not a reconciliation.
+
+      Both extracts are sorted by subject, which is exactly what makes this dangerous: the rows *look*
+      aligned, and from row 12 onward they are not.
+    columns: [EDC Subject, EDC ALT, Vendor Subject, Vendor ALT]
+    formats:
+      B: '0.0'
+      D: '0.0'
+    rows:
+      - ['1001-0002', 25, '1001-0002', 25]
+      - ['1001-0003', 22, '1001-0003', 22]
+      - ['1001-0004', 9, '1001-0004 ', 9]
+      - ['1001-0005', 21, '1001-0005', 21]
+      - ['1001-0006', 16, '1001-0006', '16']
+      - ['1001-0008', 32, '1001-0008', 32]
+      - ['1001-0010', 7, '1001-0010', 7]
+      - ['1001-0011', 46, '1001-0011', 4.6]
+      - ['1001-0012', 15, '1001-0012', 15]
+      - ['1001-0014', 12, '1001-0014', 12]
+      - ['1001-0016', 34, '1001-0017', 28]
+      - ['1001-0017', 28, '1002-0001', 18]
+      - ['1002-0001', 18, '1002-0003', 19]
+      - ['1002-0003', 19, '1002-0007', 24]
+    tasks:
+      - prompt: >-
+          Total the EDC values in `B2:B15`.
+        cell: F2
+        expected: 304
+        hint: Fourteen subjects, one value each.
+        solution: '=SUM(B2:B15)'
+      - prompt: >-
+          Now total the vendor values in `D2:D15`. Before you run it, predict the answer by adding the
+          column yourself — the arithmetic is 25+22+9+21+16+32+7+4.6+15+12+28+18+19+24 = 252.6.
+
+          `SUM` disagrees. Put what `SUM` actually returns in `F3`.
+        cell: F3
+        expected: 236.6
+        tolerance: 0.001
+        hint: '`SUM` silently skips any cell holding text. One of these fourteen cells is not a number.'
+        solution: '=SUM(D2:D15)'
+      - prompt: >-
+          Find the cell `SUM` ignored. How many of the fourteen vendor cells actually contain a
+          **number**?
+        cell: F4
+        expected: 13
+        hint: '`COUNT` counts numbers; `COUNTA` counts anything non-empty. The gap between them is the answer.'
+        solution: '=COUNT(D2:D15)'
+      - prompt: >-
+          Confirm it: is `D6` — the vendor ALT for subject 1001-0006 — stored as text?
+        cell: F5
+        expected: true
+        hint: '`ISTEXT` answers directly. It looks identical to the cell above it on screen.'
+        solution: '=ISTEXT(D6)'
+      - prompt: >-
+          Here is the trap this sheet is really built around. Compare `D6` to `B6` with `=D6=B6`. They
+          both display `16`.
+
+          Excel's comparison operators do not convert between types — it orders numbers before text and
+          never treats them as equal. What does the comparison return?
+        cell: F6
+        expected: false
+        hint: >-
+          This is why "the values look the same but my check says they differ" is such a common
+          reconciliation complaint. The values *are* different: one is a number, the other is a label.
+        solution: '=D6=B6'
+      - prompt: >-
+          Subject 1001-0004 appears in both extracts, but a lookup for it fails. Count how many times the
+          EDC id in `A4` appears in the vendor id column `C2:C15`.
+        cell: F7
+        expected: 0
+        hint: Look very carefully at the end of `C4`.
+        solution: '=COUNTIF(C2:C15,A4)'
+      - prompt: >-
+          Prove what the difference is: does `A4` exactly equal `C4`, and does it equal `C4` once
+          trailing spaces are stripped? Put the result of the **second** test in `F8`.
+        cell: F8
+        expected: true
+        hint: '`TRIM` removes leading and trailing spaces; `EXACT` is a case-sensitive, space-sensitive comparison.'
+        solution: '=EXACT(A4,TRIM(C4))'
+      - prompt: >-
+          Subject 1001-0016 is in EDC. Look up its vendor value, and return `Missing` when there is none.
+        cell: F9
+        expected: Missing
+        hint: '`IFNA` catches the `#N/A` a failed `XLOOKUP` returns.'
+        solution: '=IFNA(XLOOKUP(A12,C2:C15,D2:D15),"Missing")'
+      - prompt: >-
+          Subject 1001-0011 is in both, with different values. How large is the discrepancy, to two
+          decimals?
+        cell: F10
+        expected: 41.4
+        tolerance: 0.001
+        hint: A decimal point in the wrong place. 46 became 4.6.
+        solution: '=ROUND(ABS(B9-D9),2)'
+      - prompt: >-
+          **Close the reconciliation.** Start from the EDC total of 304 and apply the four findings:
+
+          - subject 1001-0016 (34 U/L) is absent from the vendor file
+          - subject 1002-0007 (24 U/L) is in the vendor file only
+          - subject 1001-0011 is 41.4 lower in the vendor file
+          - subject 1001-0006 (16 U/L) is text, so `SUM` skipped it
+
+          If your explanation is complete, the result equals the vendor total exactly.
+        cell: F11
+        expected: 236.6
+        tolerance: 0.001
+        hint: >-
+          304 − 34 + 24 − 41.4 − 16. Landing on the vendor total to the last decimal is what tells you
+          nothing is left unexplained — not that the numbers are close.
+        solution: '=304-34+24-41.4-16'

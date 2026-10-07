@@ -1,0 +1,672 @@
+items:
+  - id: sdtm.ct.extensible-meaning
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sdtm.ct]
+    lesson: sdtm-controlled-terminology
+    title: What extensible actually permits
+    prompt: |
+      `LBTESTCD` uses codelist **LBTESTCD (C65047)**, which is extensible and publishes 2,505 terms.
+      `AEACN` uses codelist **ACN (C66767)**, which is non-extensible and publishes 8 terms.
+
+      Your study collects a laboratory test that is not in the published list, and an action-taken value
+      ("dose delayed") that is not in the published list either.
+
+      What may you do?
+    choices:
+      - text: "Add a sponsor term for the laboratory test and document it in define.xml; map \"dose delayed\" onto an existing ACN term, or carry the detail in SUPPAE."
+        correct: true
+        feedback: "Correct. Extensible means you may add when nothing published fits, with the extension documented. Non-extensible means the list is closed regardless of how reasonable the new value looks."
+      - text: "Add a sponsor term to both, since a documented extension is always acceptable."
+        feedback: "Non-extensible means non-extensible. A ninth ACN value is a conformance error even if define.xml describes it."
+      - text: "Map both onto the closest published term, since neither list may be extended."
+        feedback: "That loses a real laboratory test. LBTESTCD is extensible precisely so a study measuring something new can submit it."
+      - text: "Leave both variables null and put the values in SUPPQUAL."
+        feedback: "A null LBTESTCD would leave a Findings record with no topic variable, which is not a record at all."
+    hints:
+      - "Two different flags, two different answers."
+    explanation:
+      objective: "Apply the extensibility flag correctly in both directions."
+      relevant: "Which of the two codelists is closed."
+      method: "Extensible: extend only when nothing published fits, and document. Non-extensible: map, or move the detail elsewhere."
+      interpretation: "The asymmetry exists because a complete list of AE actions is possible and a complete list of laboratory tests is not."
+
+  - id: sdtm.ct.synonym-trap
+    format: mcq
+    modes: [check, debug, speed]
+    difficulty: foundation
+    skills: [sdtm.ct]
+    lesson: sdtm-controlled-terminology
+    title: The CRF says "Unknown"
+    prompt: |
+      The CT package entry for `AEOUT`:
+
+      ```text
+      OUT  [C66768]  extensible=No
+         FATAL                              (synonyms: 5; FATAL; Grade 5)
+         NOT RECOVERED/NOT RESOLVED
+         RECOVERED/RESOLVED
+         RECOVERED/RESOLVED WITH SEQUELAE
+         RECOVERING/RESOLVING
+         UNKNOWN                            (synonyms: U; UNK; Unknown)
+      ```
+
+      The CRF collected `Unknown`. What goes in `AEOUT`?
+    choices:
+      - text: "`UNKNOWN` — the submission value. The synonyms exist to help you find it, not to be submitted."
+        correct: true
+        feedback: "Correct. Submission values are what appears in the dataset; synonyms are lookup aids published alongside them."
+      - text: "`Unknown` — it is a published synonym, so it is a permitted value."
+        feedback: "Synonyms are not permitted values. On a non-extensible codelist this is a conformance error on every affected row."
+      - text: "`U` — the shortest synonym, to save storage."
+        feedback: "Also a synonym, also not submittable. Storage is not a consideration here."
+      - text: "Leave it null, since the outcome is genuinely unknown."
+        feedback: "UNKNOWN is a real value carrying real information — the investigator answered the question. A null says the question was never answered."
+    hints:
+      - "Which column of the CT package is the submission value?"
+    explanation:
+      objective: "Distinguish a submission value from a published synonym."
+      relevant: "That synonyms are indexed for lookup and are not permitted values."
+      interpretation: "CBX417-301 has exactly one AEOUT = UNKNOWN record out of 2,466, which is precisely the kind of low-frequency value that slips through untested."
+      interviewer: "That you know synonyms exist and what they are for, rather than thinking the codelist is just a list of strings."
+
+  - id: sdtm.ct.no-codelist
+    format: classify
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [sdtm.ct, regulatory.define]
+    lesson: sdtm-controlled-terminology
+    title: Who owns this variable's values?
+    prompt: |
+      For each variable in CBX417-301, say which kind of terminology governs its values.
+    categories: [CDISC/NCI controlled terminology, External licensed dictionary, Sponsor-defined]
+    entries:
+      - text: "`AEOUT` — outcome of the event"
+        category: CDISC/NCI controlled terminology
+        note: "Codelist OUT (C66768), non-extensible, 6 terms."
+      - text: "`AEDECOD` — the coded preferred term"
+        category: External licensed dictionary
+        note: "MedDRA. No CDISC codelist; define.xml records the dictionary and its version."
+      - text: "`ARMCD` — planned arm code"
+        category: Sponsor-defined
+        note: "CBX+DOC and PBO+DOC. Must be consistent with the TA domain, which has six records across two arms."
+      - text: "`LBTESTCD` — laboratory test code"
+        category: CDISC/NCI controlled terminology
+        note: "C65047, extensible, 2,505 terms. This study uses seven: ALT, AST, BILI, CREAT, HGB, NEUT, PLAT."
+      - text: "`CMDECOD` — the coded medication name"
+        category: External licensed dictionary
+        note: "WHODrug, with its own release cycle and codes."
+      - text: "`AEREL` — relationship to study treatment"
+        category: Sponsor-defined
+        note: "SDTMIG v3.4 has no codelist for it. This study uses RELATED / NOT RELATED; a five-level scale is equally conformant."
+      - text: "`AETOXGR` — CTCAE grade"
+        category: External licensed dictionary
+        note: "CTCAE is an external grading system, published by NCI but separate from CDISC CT. The grade meaning is term-specific."
+      - text: "`EXDOSU` — dose unit"
+        category: CDISC/NCI controlled terminology
+        note: "UNIT (C71620), extensible, 950 terms. This study uses one: mg."
+      - text: "`VSPOS` — position during measurement"
+        category: CDISC/NCI controlled terminology
+        note: "POSITION (C71148), extensible, 17 terms. This study uses SITTING on the 10,179 blood-pressure and pulse records."
+    hints:
+      - "Three of these have no CDISC codelist at all."
+      - "Two of the three are licensed dictionaries with their own versions."
+    solution: |
+      The three kinds behave completely differently, and all three appear in define.xml as "codelists",
+      which is why they get conflated.
+
+      | | You may add terms | Versioned by | Recorded in define.xml as |
+      |---|---|---|---|
+      | **CDISC/NCI CT** | only if extensible | NCI EVS, quarterly | a codelist with its terms |
+      | **External dictionary** | never | the dictionary owner | the dictionary **name and version** |
+      | **Sponsor-defined** | freely | you | a sponsor codelist with its terms |
+
+      **`AEREL` is the one that surprises people.** SDTMIG v3.4 does not publish a codelist for it. A
+      study using `RELATED`/`NOT RELATED` and a study using a five-level scale are both conformant, and
+      any analysis that assumes one study's levels will silently mis-summarise the other's. CBX417-301
+      uses the two-level version: 1,412 `NOT RELATED`, 1,051 `RELATED`, 3 null.
+
+      **`AETOXGR` is the other one.** CTCAE is published by NCI, but it is a grading system rather than a
+      CDISC codelist, and the meaning of a grade is defined per term — grade 3 diarrhoea and grade 3
+      neutropenia are defined by different criteria.
+    explanation:
+      objective: "Attribute each variable's values to the right authority."
+      method: "Ask who publishes the list, and whether you could add to it."
+      interpretation: "The answer determines what define.xml has to say about the variable — terms, or a dictionary version."
+      changes: "CT and dictionary versions both move; a study locked against one package cannot use terms added later."
+
+  - id: sdtm.ct.meddra-not-ct
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [sdtm.ct, regulatory.define]
+    lesson: sdtm-controlled-terminology
+    title: What define.xml records for AEDECOD
+    prompt: |
+      `AEDECOD` in CBX417-301 holds preferred terms such as `Fatigue` and `Upper respiratory tract
+      infection`.
+
+      What does define.xml record for this variable?
+    choices:
+      - text: "The dictionary name and version — MedDRA and its release — rather than a list of permitted terms."
+        correct: true
+        feedback: "Correct. MedDRA has tens of thousands of terms and is licensed; define.xml names the dictionary and version so a reviewer knows which release produced these terms."
+      - text: "The full list of preferred terms used in the study, as a sponsor codelist."
+        feedback: "Some sponsors do list the terms that occurred, but the required metadata is the dictionary and version. Listing 56 terms says nothing about which MedDRA release defined them."
+      - text: "The NCI C-code for the AEDECOD codelist."
+        feedback: "There is no CDISC codelist for AEDECOD. MedDRA is an external dictionary with its own governance."
+      - text: "Nothing — coded terms need no metadata because they come from a standard dictionary."
+        feedback: "The opposite: because the dictionary changes twice a year, the version is exactly what a reviewer needs in order to interpret the terms."
+    hints:
+      - "How many preferred terms does MedDRA contain? Would you list them?"
+      - "What changes between MedDRA releases?"
+    explanation:
+      objective: "Identify what metadata an externally coded variable requires."
+      relevant: "That MedDRA is licensed, large and versioned twice a year."
+      interpretation: "A preferred term that exists in one release may not exist in another; the version makes the terms interpretable."
+      interviewer: "That you separate CDISC terminology from dictionary coding, which are run by different teams on different schedules."
+
+  - id: sdtm.ct.map-outcome
+    format: mapping
+    modes: [guided, speed]
+    difficulty: foundation
+    skills: [sdtm.ct, sdtm.mapping]
+    lesson: sdtm-controlled-terminology
+    title: Collected value to submission value
+    prompt: |
+      Map each collected value from CBX417-301's adverse-event page to the value that goes into the SDTM
+      variable. Codelists: **OUT (C66768)**, non-extensible, and **ACN (C66767)**, non-extensible.
+    sourceLabel: Collected value
+    targetLabel: Submission value
+    targets:
+      - "RECOVERED/RESOLVED"
+      - "NOT RECOVERED/NOT RESOLVED"
+      - "RECOVERED/RESOLVED WITH SEQUELAE"
+      - "FATAL"
+      - "DRUG INTERRUPTED"
+      - "DOSE REDUCED"
+      - "NOT APPLICABLE"
+      - "DOSE DELAYED"
+    pairs:
+      - source: "`Recovered/Resolved` (2,127 raw records)"
+        target: "RECOVERED/RESOLVED"
+        note: "A pure case-fold. 2,123 records survive into SDTM."
+      - source: "`Not recovered/Not resolved` (297 raw records)"
+        target: "NOT RECOVERED/NOT RESOLVED"
+        note: "295 in SDTM."
+      - source: "`Recovered/Resolved with sequelae` (3 raw records)"
+        target: "RECOVERED/RESOLVED WITH SEQUELAE"
+        note: "Low-frequency values are where unmapped spellings hide."
+      - source: "`Fatal` (28 raw records)"
+        target: "FATAL"
+        note: "All 28 also have AETOXGR = 5 and AESDTH = Y in this study."
+      - source: "`Drug interrupted` (303 raw records)"
+        target: "DRUG INTERRUPTED"
+        note: "300 in SDTM. ACN has eight published terms; this study uses five of them."
+      - source: "`Dose reduced` (74 raw records)"
+        target: "DOSE REDUCED"
+        note: "Distinct from DOSE RATE REDUCED, which ACN also publishes and this study does not use."
+      - source: "`Not applicable` (177 raw records)"
+        target: "NOT APPLICABLE"
+        note: "A real ACN term with synonyms NA and Not Applicable. 176 in SDTM."
+    hints:
+      - "Every one of these is a case-fold. One target in the list is a distractor that no collected value maps to."
+    solution: |
+      Every collected value case-folds onto a published submission value. The distractor is **`DOSE
+      DELAYED`**, which is *not* in ACN — the eight published terms are:
+
+      ```text
+      DOSE INCREASED   DOSE NOT CHANGED   DOSE RATE REDUCED   DOSE REDUCED
+      DRUG INTERRUPTED DRUG WITHDRAWN     NOT APPLICABLE      UNKNOWN
+      ```
+
+      A study that collects "dose delayed" has to map it to `DRUG INTERRUPTED` — or, if the distinction
+      genuinely matters clinically, carry the detail in `SUPPAE`. It cannot become a ninth ACN term,
+      because ACN is non-extensible.
+
+      **The raw-versus-SDTM counts differ slightly** (2,127 against 2,123, 303 against 300) because six
+      raw records were not mapped: five exact duplicate rows from a double EDC export, and one adverse
+      event that started before informed consent. Comparing the codelist distribution before and after
+      mapping is a real check — the proportions should hold, and a shift means records disappeared
+      somewhere you did not expect.
+    explanation:
+      objective: "Perform a codelist mapping and notice what has no home."
+      relevant: "That both codelists are closed, so an unmapped value is an error rather than an extension."
+      numbers: "ACN publishes 8 terms; this study uses 5."
+      interpretation: "Using part of a codelist is normal; needing a term outside it is a design problem to solve elsewhere."
+
+  - id: sdtm.ct.count-sex
+    format: numeric
+    modes: [independent, qc]
+    difficulty: foundation
+    skills: [sdtm.ct, qc.data-cleaning]
+    lesson: sdtm-controlled-terminology
+    title: How many rows would fail validation?
+    prompt: |
+      Raw `SEX` values across CBX417-301's 468 demographics records:
+
+      | Value | n | Value | n |
+      |---|---:|---|---:|
+      | `M` | 262 | `F` | 176 |
+      | `Male` | 9 | `Female` | 6 |
+      | `MALE` | 2 | `female` | 1 |
+      | `1` | 7 | `f` | 1 |
+      | | | `2` | 4 |
+
+      If these values were loaded into `DM.SEX` unmapped, how many records would fail the
+      non-extensible SEX (C66731) codelist check?
+    answer: 30
+    tolerance: 0
+    unit: records
+    datasets: [oncology/raw/demographics, oncology/sdtm/dm]
+    hints:
+      - "Which values are already permitted submission values?"
+      - "468 minus the ones that already pass."
+    solution: |
+      **30.**
+
+      ```text
+      468 total
+      -262  already "M"
+      -176  already "F"
+      ----
+       30   would fail: Male (9), MALE (2), 1 (7), Female (6), female (1), f (1), 2 (4)
+      ```
+
+      Note that `f` fails. Codelist checks are case-sensitive on the submission value, so a lowercase
+      `f` is as much a finding as `Female`.
+
+      After mapping, DM has `M = 280` and `F = 188`:
+
+      ```text
+      M:  262 + 9 + 2 + 7  = 280
+      F:  176 + 6 + 1 + 1 + 4 = 188
+      ```
+
+      **The numeric codes are the dangerous ones.** `1 = male, 2 = female` is this study's EDC
+      convention and appears nowhere in CDISC. Reverse it and the mapping still runs, `SEX` still passes
+      validation, and 11 subjects are the wrong sex in every demographics table and every sex-specific
+      reference range in `LB` — which in this study means different normal ranges for ALT, AST,
+      creatinine and haemoglobin.
+    explanation:
+      objective: "Quantify a conformance finding before fixing it."
+      given: "The raw value distribution and the target codelist."
+      calculating: "Records whose value is not already a submission value."
+      numbers: "468 - 262 - 176 = 30 failing; after mapping, 280 M and 188 F."
+      assumptions: "That 1 = male and 2 = female, which comes from the EDC build specification."
+      interpretation: "A reversed numeric mapping produces a clean validation report and wrong data, which is the worse outcome."
+      changes: "If the numeric codes had not been collected, the mapping would be a pure case-fold with no external assumption at all."
+
+  - id: sdtm.ct.lookup-workflow
+    format: order
+    modes: [guided]
+    difficulty: foundation
+    skills: [sdtm.ct]
+    lesson: sdtm-controlled-terminology
+    title: The three questions, in order
+    prompt: |
+      You are mapping a collected field and need to decide what value to submit. Put the questions in
+      the order that makes each answer useful.
+    steps:
+      - "Does a CDISC codelist govern this SDTM variable at all, or is it sponsor-defined or externally coded?"
+      - "If a codelist governs it: is the codelist extensible or non-extensible?"
+      - "Which published submission value does my collected value correspond to? Search the terms, then the synonyms."
+      - "If nothing fits: extend (documenting it in define.xml) when the codelist is extensible, or map to the nearest term and carry the detail in SUPPQUAL when it is not."
+    hints:
+      - "The first question decides whether the other three apply at all."
+    solution: |
+      The order matters because each answer changes what the next question means.
+
+      **Question 1 is the one people skip.** `AEREL` has no CDISC codelist in SDTMIG v3.4, and `AEDECOD`
+      is MedDRA. Searching the CT package for a relationship value or a preferred term returns nothing,
+      and the natural conclusion — "so it's a sponsor extension" — is wrong in the second case. A
+      variable with no codelist is not a variable with an empty codelist.
+
+      **Question 2 before question 3**, because it changes what "nothing fits" means. On an extensible
+      list, nothing fitting is a documented extension. On a closed list, nothing fitting is a design
+      problem you solve elsewhere.
+
+      **Question 3 searches synonyms too.** That is what they are published for. A CRF saying `UNK` maps
+      to `UNKNOWN` because `UNK` is listed as its synonym, and the lookup is what tells you so.
+
+      The tool that answers all of this locally:
+
+      ```bash
+      python3 scripts/tools/ct_lookup.py OUT            # by short name
+      python3 scripts/tools/ct_lookup.py --term QTCFAG  # which codelist contains this value
+      python3 scripts/tools/ct_lookup.py --search Race  # find a codelist by name
+      ```
+    explanation:
+      objective: "Establish a repeatable lookup order."
+      method: "Establish authority, then extensibility, then the value, then the fallback."
+      interpretation: "Skipping question 1 is what produces sponsor extensions to codelists that do not exist."
+
+  - id: sdtm.ct.ct-code
+    format: code
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [sdtm.ct, qc.data-cleaning, r.dplyr]
+    lesson: sdtm-controlled-terminology
+    title: A mapping that stops instead of producing nulls
+    language: r
+    prompt: |
+      Write an R mapping for `AEOUT` from the raw adverse-event export.
+
+      The target codelist is **OUT (C66768)**, non-extensible, with these six submission values:
+
+      ```text
+      FATAL
+      NOT RECOVERED/NOT RESOLVED
+      RECOVERED/RESOLVED
+      RECOVERED/RESOLVED WITH SEQUELAE
+      RECOVERING/RESOLVING
+      UNKNOWN
+      ```
+
+      Requirements:
+
+      - Normalise the raw value (trim, upper-case) before mapping — coded text in this study contains
+        case and whitespace variants.
+      - Validate the result against the codelist and **stop** with the offending values named if any
+        record fails.
+      - Print the resulting distribution.
+    starter: |
+      library(readr); library(dplyr)
+
+      raw <- read_csv("data/oncology/raw/ae.csv", show_col_types = FALSE,
+                      col_types = cols(.default = col_character()))
+      # ...
+    datasets: [oncology/raw/ae, oncology/sdtm/ae]
+    checks:
+      - pattern: "trimws\\(|str_trim\\("
+        message: "Trim the raw value — coded text in this study has trailing-space variants."
+      - pattern: "toupper\\(|str_to_upper\\("
+        message: "Upper-case before comparing, so that 'Fatal' and 'FATAL' behave the same."
+      - pattern: "stop\\(|stopifnot\\("
+        message: "The program must stop on an unmapped value rather than producing a null."
+      - pattern: "RECOVERED/RESOLVED WITH SEQUELAE"
+        message: "Include all six OUT submission values in the permitted set."
+      - pattern: "table\\(|count\\("
+        message: "Print the resulting distribution."
+    reference: |
+      library(readr); library(dplyr)
+
+      raw <- read_csv("data/oncology/raw/ae.csv", show_col_types = FALSE,
+                      col_types = cols(.default = col_character()))
+
+      out_cl <- c("FATAL",
+                  "NOT RECOVERED/NOT RESOLVED",
+                  "RECOVERED/RESOLVED",
+                  "RECOVERED/RESOLVED WITH SEQUELAE",
+                  "RECOVERING/RESOLVING",
+                  "UNKNOWN")
+
+      ae <- raw |> mutate(AEOUT = toupper(trimws(AE_OUTCOME)))
+
+      unmapped <- setdiff(unique(ae$AEOUT), out_cl)
+      if (length(unmapped)) {
+        stop("AEOUT values outside codelist OUT (C66768): ",
+             paste(unmapped, collapse = " | "))
+      }
+
+      print(table(ae$AEOUT))
+    expectedOutput: |
+      > print(table(ae$AEOUT))
+
+                                 FATAL       NOT RECOVERED/NOT RESOLVED
+                                    28                              297
+                    RECOVERED/RESOLVED RECOVERED/RESOLVED WITH SEQUELAE
+                                  2127                                3
+                  RECOVERING/RESOLVING                          UNKNOWN
+                                    16                                1
+    solution: |
+      The mapping itself is a case-fold, because this study's raw outcome values are title-case versions
+      of the submission values. Three things make the program production-quality rather than a script.
+
+      **`trimws` before `toupper`.** This study's raw files contain thirteen documented case-and-whitespace
+      variants in coded text — `Constipation ` with a trailing space, `ALOPECIA`, `general disorders and
+      administration site conditions`. A trailing space is invisible in every viewer you would check in
+      and breaks every exact comparison.
+
+      **`stop()` with the offending values named.** The failure mode this prevents is a silent `NA`. A
+      `case_when` with no `TRUE ~` branch, or a named-vector lookup with a missing key, produces `NA` and
+      the program completes. `AEOUT` is non-extensible, so every such row is a conformance error — and
+      you find it in a validation report the day before delivery instead of the day you wrote the code.
+      Naming the values matters too: "3 records failed" sends you back to the data, while
+      `"DOSE DELAYED"` tells you the answer.
+
+      **Printing the distribution.** The raw counts here (2,127 / 297 / 28 / 16 / 3 / 1, summing to
+      2,472) should match the SDTM domain's after accounting for records deliberately not mapped. `AE`
+      has 2,466 records — six fewer, being five exact duplicate rows from a double EDC export and one
+      event that started before informed consent. A difference you cannot account for means records went
+      missing somewhere other than where you think.
+    explanation:
+      objective: "Write a codelist mapping that fails loudly."
+      method: "Normalise, map, validate against the permitted set, report."
+      computation: "setdiff() between the observed values and the codelist is the whole validation."
+      numbers: "2,472 raw records; 2,466 in SDTM; the six-record difference is documented in the answer key."
+      assumptions: "That the raw values are title-case versions of the submission values, which holds here and would not on a study collecting free text."
+      interpretation: "The stop() is the difference between finding this yourself and being told by a validation report."
+      changes: "On an extensible codelist, the same structure would branch: known extension, or genuinely new and needing a define.xml entry."
+
+  - id: sdtm.ct.wrong-source
+    format: mcq
+    modes: [independent, debug, boss]
+    difficulty: advanced
+    skills: [sdtm.ct, sdtm.mapping, sdtm.interventions]
+    lesson: sdtm-controlled-terminology
+    title: Six spellings of the study drug
+    prompt: |
+      `raw/ex_study_drug.csv` records what the site typed into the drug-name field. Across 4,131
+      records:
+
+      | `DRUG_NAME_ENTERED` | n |
+      |---|---:|
+      | `CBX-417/Placebo` | 2,539 |
+      | `CBX-417 or placebo` | 728 |
+      | `Study drug` | 537 |
+      | `CBX417/PBO` | 322 |
+      | `PLB` | 3 |
+      | `CBX-471` | 2 |
+
+      A programmer proposes a mapping table from these six values to `EXTRT`, treating `CBX-471` as a
+      misspelling of `CBX-417`.
+
+      What is wrong with this plan?
+    choices:
+      - text: "The field is not authoritative. The study is double-blind, so the site does not know what the subject received; `EXTRT` is derived from the kit number in `EXREFID` against the IxRS kit list."
+        correct: true
+        feedback: "Correct. All six values describe the blinded bottle, not its contents. The answer key states the free-text values are ignored for mapping because actual treatment comes from the kit list."
+      - text: "Nothing is wrong, but `CBX-471` should be queried to the site before mapping."
+        feedback: "A query would be wasted effort on a field that is not used at all. The misspelling is real and irrelevant."
+      - text: "`EXTRT` is non-extensible, so sponsor product names are not permitted values."
+        feedback: "EXTRT has no CDISC codelist — it carries the sponsor's treatment names, which in this study are CBX-417, PLACEBO and DOCETAXEL."
+      - text: "The mapping should target `EXDOSFRM` rather than `EXTRT`."
+        feedback: "EXDOSFRM is the dosage form (TABLET / INJECTION, SOLUTION, CONCENTRATE) and comes from the protocol, not from a free-text name field."
+    hints:
+      - "In a double-blind study, does the site know which arm the subject is in?"
+      - "Which column in EX identifies the physical product the subject received?"
+    solution: |
+      **The source column is wrong, and no amount of careful mapping fixes that.**
+
+      The study is double-blind. Every one of those six strings is the coordinator describing the bottle
+      in front of them — `CBX-417/Placebo`, `Study drug` — because the bottle's label says exactly that.
+      None of them is evidence of what the subject actually received.
+
+      `EXTRT` is derived from the **kit number**:
+
+      ```text
+      EX.EXREFID   = 850669            (the kit dispensed, recorded on the dosing page)
+      kit_list     = "CBX-417 50 mg tablets"  (IxRS, unblinded)
+      -> EXTRT     = "CBX-417"
+      ```
+
+      3,936 distinct kits across 4,138 CBX-417 and placebo records. The same link derives `DM.ACTARM`,
+      which is why one subject's actual arm differs from their planned arm and two subjects have no
+      `ACTARM` at all.
+
+      The resulting `EXTRT` values are `CBX-417` (2,344 records), `PLACEBO` (1,794) and `DOCETAXEL`
+      (2,932). Note that the docetaxel records have `EXREFID` null — docetaxel is open-label supply with
+      no kit, so it does not need the indirection.
+
+      **The generalisable question** to ask before writing any mapping table: *is this column
+      authoritative for the thing I am mapping?* A blinded drug-name field, a site-entered unit when a
+      central laboratory reports one, a verbatim term when coding has already run — in each case the
+      obvious mapping is from the wrong column, and the tidier the mapping table looks the more
+      convincing the mistake is.
+    explanation:
+      objective: "Recognise a non-authoritative source column."
+      given: "Six free-text spellings of a blinded product name."
+      relevant: "That the study is double-blind and that EX carries a kit identifier."
+      irrelevant: "The misspelling CBX-471, which is real and has no consequence."
+      method: "Ask what the source of truth is before building the lookup."
+      assumptions: "That the kit list is available to the SDTM build, which requires unblinded access or a post-lock build."
+      interpretation: "A mapping table here would produce a clean-looking EXTRT that is uninformative about actual treatment."
+      changes: "In an open-label study the collected drug name would be authoritative and the mapping table would be the right answer."
+      interviewer: "That you interrogate the source rather than the values."
+
+  - id: sdtm.ct.closed-list-problem
+    format: open
+    modes: [interview, boss]
+    difficulty: advanced
+    skills: [sdtm.ct, sdtm.supp, communication.documentation]
+    lesson: sdtm-controlled-terminology
+    title: The value the codelist does not have
+    prompt: |
+      A protocol amendment changes how CBX417-301 records action taken with study treatment. The new CRF
+      offers five options:
+
+      ```text
+      Dose not changed | Dose reduced | Dose delayed | Drug interrupted | Drug withdrawn
+      ```
+
+      "Dose delayed" and "Drug interrupted" are clinically different in this protocol: a delay means the
+      next cycle starts late, an interruption means dosing stopped mid-cycle and resumed.
+
+      `AEACN` uses **ACN (C66767)**, non-extensible, eight terms: `DOSE INCREASED`, `DOSE NOT CHANGED`,
+      `DOSE RATE REDUCED`, `DOSE REDUCED`, `DRUG INTERRUPTED`, `DRUG WITHDRAWN`, `NOT APPLICABLE`,
+      `UNKNOWN`.
+
+      What do you do?
+    modelAnswer: |
+      **First, establish that the list really is closed.** ACN is non-extensible in the CT package the
+      study declared, so a ninth term is not available regardless of how reasonable it is. I'd confirm
+      the study's declared CT version rather than the current one, because that is what validation runs
+      against.
+
+      **Then separate the two questions.** There is a mapping question — what goes in `AEACN` — and a
+      data-preservation question — where does the delay-versus-interruption distinction live. They have
+      different answers and conflating them is how people end up arguing for an illegal codelist
+      extension.
+
+      **The mapping.** Both "dose delayed" and "drug interrupted" map to `DRUG INTERRUPTED`. It is the
+      closest published term for both, and it is honest: in both cases the subject did not receive
+      treatment when planned and later resumed. `AEACN` then loses a distinction, which is acceptable
+      because `AEACN`'s job is cross-study comparability, not protocol-specific nuance.
+
+      **The preservation.** The distinction goes to `SUPPAE` as a new `QNAM` — something like `AEACNDTL`
+      with `QLABEL` "Action Taken Detail" — with `IDVAR = "AESEQ"` pointing at the parent record. The
+      study already has two `SUPPAE` qualifiers, `AERELDOC` and `AEACNDOC`, so the structure and the
+      programming pattern exist.
+
+      **Check whether it is already recorded elsewhere first**, though, because duplicating it would be
+      worse than losing it. This study records dose modifications in `EX`: `EXADJ` carries free text like
+      *"Cycle delayed 1 week due to neutropenia"* and *"Resumed after interruption for diarrhea"*, and
+      the constant-dose-interval structure already shows a gap in dates for an interruption and a later
+      start for a delay. If the analysis need is "how often did neutropenia delay a cycle", `EX` may
+      answer it better than a new AE qualifier would, and I'd ask what the actual analysis question is
+      before adding anything.
+
+      **What has to change once decided.** The SDTM specification's `AEACN` row gains the collapsing
+      rule; the aCRF annotates the new option; define.xml gains the `SUPPAE` `QNAM` and its sponsor
+      codelist if one is added; and the cSDRG explains that two collected options map to one `AEACN`
+      value, because a reviewer comparing the CRF with the data will otherwise see information
+      disappear.
+
+      **What I would not do** is extend ACN, add a non-standard `AEACNOTH` variable to the AE domain, or
+      leave `AEACN` null for the delayed records. The last one is tempting and is the worst of the three:
+      `AEACN` null means the question was not asked, and it was.
+    rubric:
+      - "Confirms the codelist is closed in the study's declared CT version, not the current one"
+      - "Separates the mapping question from the data-preservation question"
+      - "Maps both collected values to DRUG INTERRUPTED with a stated justification"
+      - "Proposes SUPPAE with IDVAR = AESEQ for the lost distinction, noting the study already has two SUPPAE qualifiers"
+      - "Checks whether EX already records the distinction (EXADJ, dose-interval gaps) before adding anything"
+      - "Names the downstream artifacts: SDTM spec, aCRF, define.xml, cSDRG"
+      - "Explicitly rejects extending a non-extensible codelist and rejects leaving AEACN null"
+    redFlags:
+      - "Proposing a ninth ACN term on the grounds that define.xml will document it"
+      - "Adding a non-standard variable to the AE domain"
+      - "Leaving AEACN null for the delayed records"
+      - "Not asking what analysis the distinction is for"
+    followUps:
+      - "The medical monitor says the distinction drives a safety analysis. Does that change anything?"
+      - "EXADJ already carries 'Cycle delayed 1 week due to neutropenia'. Is SUPPAE now redundant?"
+      - "What would you write in the cSDRG about the collapsing?"
+
+  - id: sdtm.ct.open-ct-strategy
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [sdtm.ct, regulatory.define, communication.documentation]
+    lesson: sdtm-controlled-terminology
+    title: Managing CT versions across a long study
+    prompt: |
+      An interviewer asks: "Our study started three years ago and locks next quarter. CDISC has
+      published twelve CT packages since we started. What's your position on which version we use, and
+      what would make you change it?"
+    modelAnswer: |
+      "My default position is: the version the study declared, which is in define.xml, and I would need
+      a specific reason to move.
+
+      The reason for the default is that changing CT version is not a metadata edit. A submission value
+      that changed between packages means re-mapping the affected data, re-running every downstream ADaM
+      dataset that reads it, and re-validating. Terms are occasionally retired or replaced, and a value
+      that was correct in the declared package can become a finding in a later one. So the cost is real
+      and it lands entirely at the end of the study, which is the worst time for it.
+
+      What would make me change it:
+
+      **The regulator's expectation.** FDA's Data Standards Catalog names supported versions with dates.
+      If the declared version has fallen outside what is supported for a study with our start date, that
+      is not a preference, and I'd want that confirmed by whoever owns the submission rather than
+      inferred by me.
+
+      **A term we genuinely need that does not exist in the declared package.** That happens when a
+      protocol amendment adds an assessment. The alternative is a sponsor extension on an extensible
+      codelist, documented in define.xml — which is usually cheaper and is a legitimate answer rather
+      than a workaround. On a non-extensible codelist there is no alternative, and then the version
+      question becomes forced.
+
+      **A value in the declared package that turns out to be wrong for what we collected.** Rarer, and
+      it is a mapping problem rather than a version problem most of the time.
+
+      Two things I'd want to be careful about either way.
+
+      First, CT version and dictionary version are separate decisions on separate schedules. MedDRA is
+      released twice a year and CT quarterly, and a study typically re-codes adverse events to a recent
+      MedDRA version before lock while leaving CT where it is. Those are different conversations with
+      different teams, and people conflate them.
+
+      Second, whatever we decide has to be the *same* in define.xml, in the validation run, and in the
+      standards library the mapping programs read. The failure I'd expect is not a wrong decision, it's
+      three places disagreeing about what the decision was — validation running against the current
+      package while the mappings were built against the declared one, which produces a long report of
+      findings that are all the same finding."
+    rubric:
+      - "Defaults to the declared version and explains the cost of changing: re-mapping, re-running ADaM, re-validating"
+      - "Names the Data Standards Catalog as the external constraint on version choice"
+      - "Recognises a sponsor extension on an extensible codelist as the cheaper alternative to a version bump"
+      - "Separates CT version from dictionary (MedDRA/WHODrug) version, which move on different schedules"
+      - "Raises the consistency risk: define.xml, validation configuration and mapping programs must agree"
+      - "Treats the decision as owned by the submission team rather than by the programmer"
+    redFlags:
+      - "Always use the latest version"
+      - "It doesn't matter, the values are mostly the same"
+      - "Treating MedDRA version and CT version as one decision"
+      - "Not knowing where the declared version is recorded"
+    followUps:
+      - "Where is the declared CT version recorded, and who reads it?"
+      - "A term you need was added two packages after ours. What are your options?"
+      - "How would you detect that validation is running against a different package from the mappings?"

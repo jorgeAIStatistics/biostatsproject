@@ -1,0 +1,64 @@
+domain: python
+title: Python
+description: Python for data analysis, validation and automation — pandas, NumPy, SciPy, statsmodels, scikit-learn and testing.
+skills:
+  - id: python.basics
+    name: Python fundamentals
+    description: Types, lists/dicts, control flow, functions, modules, exceptions, f-strings.
+    weight: 3
+    tracks: [analytics, computing]
+  - id: python.numpy
+    name: NumPy
+    description: Arrays, vectorized operations, broadcasting, NaN handling, linear algebra basics.
+    weight: 2
+    tracks: [analytics, computing]
+  - id: python.pandas
+    name: pandas data manipulation
+    description: DataFrames, selection, filtering, assign, groupby/agg, sorting, missing data.
+    weight: 3
+    tracks: [analytics, computing, programmer]
+  - id: python.merge
+    name: pandas merges and reshaping
+    description: merge with validate= and indicator=, concat, pivot_table, melt.
+    weight: 3
+    tracks: [analytics, computing, programmer]
+  - id: python.dates
+    name: Dates and times in pandas
+    description: to_datetime, errors="coerce", format strings, Timedelta, partial and ambiguous dates.
+    weight: 2
+    tracks: [analytics, computing]
+  - id: python.io
+    name: Files, CSV and Excel I/O
+    description: pathlib, reading many files, dtype control, encodings, Excel read/write, avoiding hard-coded paths.
+    weight: 2
+    tracks: [analytics, computing]
+  - id: python.validation
+    name: Data validation in Python
+    description: Schema checks, range checks, duplicate detection, discrepancy reports.
+    weight: 3
+    tracks: [analytics, computing, programmer]
+  - id: python.stats
+    name: SciPy and statsmodels
+    description: Hypothesis tests in scipy.stats, statsmodels formula API for OLS/logit/GLM and reading summaries.
+    weight: 2
+    tracks: [analytics, biostatistician]
+  - id: python.sklearn
+    name: scikit-learn
+    description: Pipelines, preprocessing, train/test split, cross-validation, GroupKFold, metrics.
+    weight: 2
+    tracks: [analytics]
+  - id: python.plotting
+    name: matplotlib plotting
+    description: Figures and axes, scientific plots, labeling, saving figures reproducibly.
+    weight: 2
+    tracks: [analytics, computing]
+  - id: python.automation
+    name: Automation pipelines
+    description: Batch processing of instrument files, logging, idempotent outputs, command-line scripts.
+    weight: 2
+    tracks: [analytics, computing]
+  - id: python.testing
+    name: Testing with pytest
+    description: Unit tests for data functions, fixtures, testing edge cases and regressions.
+    weight: 2
+    tracks: [analytics, computing]

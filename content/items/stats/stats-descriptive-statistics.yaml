@@ -1,0 +1,376 @@
+items:
+  - id: stats.desc.sas-default-type
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [stats.descriptive, r.sas-translation]
+    lesson: stats-descriptive-statistics
+    title: R equivalent of the SAS quartile default
+    prompt: |
+      Your QC program in R must reproduce the Q1 and Q3 that PROC MEANS prints with its default settings. Which call does that?
+    choices:
+      - text: "`quantile(x, c(0.25, 0.75), type = 2)`"
+        correct: true
+        feedback: "Type 2 is the 'empirical distribution function with averaging' definition, the same rule as SAS QNTLDEF=5 / PCTLDEF=5, the SAS default."
+      - text: "`quantile(x, c(0.25, 0.75))`"
+        feedback: "Without `type=`, R uses type 7 (linear interpolation). It agrees with SAS in many cells but not all — exactly the mismatch QC keeps finding."
+      - text: "`quantile(x, c(0.25, 0.75), type = 6)`"
+        feedback: "Type 6 matches SAS PCTLDEF=4 and Excel QUARTILE.EXC — not the SAS default."
+      - text: "`summary(x)`"
+        feedback: "`summary()` reports quartiles with the type 7 default."
+    solution: |
+      `type = 2`. SAS: "if $np$ is an integer, average $x_{(np)}$ and $x_{(np+1)}$; otherwise take $x_{(\lceil np \rceil)}$". R type 2 implements the same rule; in NumPy use `method="averaged_inverted_cdf"`.
+
+  - id: stats.desc.median-even
+    format: numeric
+    modes: [check]
+    difficulty: foundation
+    skills: [stats.descriptive]
+    lesson: stats-descriptive-statistics
+    title: Median of an even number of values
+    prompt: |
+      Fasting glucose (mmol/L) for eight subjects, sorted:
+
+      `4.1, 4.4, 4.9, 5.0, 5.6, 6.2, 7.3, 9.8`
+
+      What is the median?
+    answer: 5.3
+    tolerance: 0.001
+    unit: mmol/L
+    hints:
+      - "With an even number of values there is no single middle value."
+      - "Average the 4th and 5th sorted values."
+    solution: |
+      $n = 8$, so the median is the average of the 4th and 5th values: $(5.0 + 5.6)/2 = 5.3$ mmol/L. Every common quantile definition (SAS default, R type 7, type 2, type 6) gives the same median here.
+
+  - id: stats.desc.skewed-summary
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [stats.descriptive, tlf.summary-stats]
+    lesson: stats-descriptive-statistics
+    title: Summarizing a right-skewed lab
+    prompt: |
+      Baseline hs-CRP (mg/L) in 120 subjects: mean 6.8, SD 11.4, median 2.9, Q1 1.3, Q3 6.1, min 0.2, max 88.0.
+
+      Which summary best describes a typical subject in the baseline characteristics table?
+    choices:
+      - text: "Median (Q1, Q3): 2.9 (1.3, 6.1) mg/L"
+        correct: true
+        feedback: "The mean is more than twice the median and the SD exceeds the mean — a long right tail. Median and quartiles describe the middle of the distribution without being dragged by the few very high values. A geometric mean would also be reasonable if the SAP specifies it."
+      - text: "Mean (SD): 6.8 (11.4) mg/L"
+        feedback: "Mean ± 1 SD would run from −4.6 to 18.2 mg/L; negative CRP is impossible. The mean is pulled up by a few very high values (max 88)."
+      - text: "Mean ± 2 SD: −16.0 to 29.6 mg/L"
+        feedback: "The '±2 SD covers about 95%' rule assumes a roughly symmetric, bell-shaped distribution. Here it produces an impossible lower bound."
+      - text: "Minimum and maximum only: 0.2 to 88.0 mg/L"
+        feedback: "The range is determined by the two most extreme subjects; it says nothing about the typical subject."
+    solution: |
+      Use median (Q1, Q3) — or a geometric mean with geometric CV% if the SAP prefers log-scale summaries. Mean far above median and SD larger than the mean are the two red flags for right skew.
+
+  - id: stats.desc.mean-outlier
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [stats.descriptive]
+    lesson: stats-descriptive-statistics
+    title: One long hospital stay
+    prompt: |
+      Five subjects were hospitalized for 3, 5, 6, 8 and 40 days. What is the mean length of stay?
+    answer: 12.4
+    tolerance: 0.01
+    unit: days
+    hints:
+      - "Add the five values and divide by 5."
+    solution: |
+      $(3 + 5 + 6 + 8 + 40)/5 = 62/5 = 12.4$ days. The median is 6 days: four of the five subjects stayed 8 days or less, yet the mean is 12.4 because one 40-day stay pulls it up. For length of stay, report the median (and quartiles) alongside or instead of the mean.
+
+  - id: stats.desc.q1-sas
+    format: numeric
+    modes: [guided]
+    difficulty: intermediate
+    skills: [stats.descriptive, sas.means]
+    lesson: stats-descriptive-statistics
+    title: Q1 with the SAS default definition
+    prompt: |
+      Using the same eight fasting glucose values (mmol/L):
+
+      `4.1, 4.4, 4.9, 5.0, 5.6, 6.2, 7.3, 9.8`
+
+      What Q1 does PROC MEANS report with its default `QNTLDEF=5`?
+    answer: 4.65
+    tolerance: 0.001
+    unit: mmol/L
+    hints:
+      - "Compute $np$ for $p = 0.25$."
+      - "$np = 8 \\times 0.25 = 2$ — an integer, so $g = 0$."
+      - "When $g = 0$ the SAS rule averages $x_{(j)}$ and $x_{(j+1)}$, here the 2nd and 3rd sorted values."
+    solution: |
+      $np = 2$ exactly, so $Q_1 = \tfrac{1}{2}(x_{(2)} + x_{(3)}) = (4.4 + 4.9)/2 = 4.65$ mmol/L. R reproduces it with `quantile(x, 0.25, type = 2)`.
+
+  - id: stats.desc.q1-type7
+    format: numeric
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [stats.descriptive, r.basics]
+    lesson: stats-descriptive-statistics
+    title: Q1 with the R default definition
+    prompt: |
+      For the same eight values (`4.1, 4.4, 4.9, 5.0, 5.6, 6.2, 7.3, 9.8`), what does R's `quantile(x, 0.25)` (type 7) return? Give three decimals.
+    answer: 4.775
+    tolerance: 0.001
+    unit: mmol/L
+    hints:
+      - "Type 7 uses $h = (n - 1)p + 1$."
+      - "$h = 7 \\times 0.25 + 1 = 2.75$: three quarters of the way from $x_{(2)}$ to $x_{(3)}$."
+    solution: |
+      $h = 2.75$, so $Q_1 = x_{(2)} + 0.75\,(x_{(3)} - x_{(2)}) = 4.4 + 0.75 \times 0.5 = 4.775$ mmol/L — versus 4.65 with the SAS default. The difference (0.125) is a fraction of the gap between two adjacent order statistics, the typical size of a definition mismatch.
+
+  - id: stats.desc.geometric-mean
+    format: numeric
+    modes: [independent]
+    difficulty: intermediate
+    skills: [stats.descriptive]
+    lesson: stats-descriptive-statistics
+    title: Geometric mean
+    prompt: |
+      Three subjects have plasma concentrations of 10, 20 and 80 ng/mL. Compute the geometric mean (two decimals).
+    answer: 25.2
+    tolerance: 0.01
+    unit: ng/mL
+    hints:
+      - "Average the natural logs, then exponentiate."
+      - "Equivalently, take the cube root of the product $10 \\times 20 \\times 80$."
+    solution: |
+      $\ln 10 = 2.3026$, $\ln 20 = 2.9957$, $\ln 80 = 4.3820$; their mean is 3.2268 and $e^{3.2268} = 25.20$ ng/mL. Equivalently $\sqrt[3]{16{,}000} = 25.20$. The arithmetic mean is 36.67 ng/mL — pulled up by the 80. Geometric means are standard for PK parameters such as Cmax and AUC.
+
+  - id: stats.desc.r-summary-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [stats.descriptive, r.dplyr, tlf.summary-stats]
+    lesson: stats-descriptive-statistics
+    title: Baseline age summary by arm in R
+    minutes: 10
+    prompt: |
+      `adsl` is `data/cardio/adsl.csv` read into R. Write dplyr code that returns, for the ITT population (`ITTFL == "Y"`) and for each planned treatment (`TRT01P`, ordered by `TRT01PN`), the n, mean, SD, median, Q1 and Q3 of `AGE`, with quartiles that match SAS PROC MEANS defaults.
+    starter: |
+      library(dplyr)
+      adsl <- read.csv("data/cardio/adsl.csv")
+
+      age_summary <- adsl |>
+        # your code
+    hints:
+      - "Filter first, then `group_by(TRT01PN, TRT01P)` so the arms come out in numeric order."
+      - "Inside `summarise()`, use `n()`, `mean()`, `sd()`, `median()` and `quantile(AGE, 0.25, type = 2)`."
+    checks:
+      - pattern: 'filter\s*\(\s*ITTFL\s*==\s*"Y"'
+        message: Restricts to the ITT population
+      - pattern: 'group_by\s*\([^)]*TRT01P'
+        message: Groups by treatment
+      - pattern: 'summari[sz]e\s*\('
+        message: Uses summarise()
+      - pattern: 'sd\s*\(\s*AGE'
+        message: Computes the SD with sd()
+      - pattern: 'quantile\s*\(\s*AGE\s*,\s*0?\.25\s*,\s*type\s*=\s*2'
+        message: Q1 uses type = 2 (SAS-compatible)
+      - pattern: 'quantile\s*\(\s*AGE\s*,\s*0?\.75\s*,\s*type\s*=\s*2'
+        message: Q3 uses type = 2 (SAS-compatible)
+    reference: |
+      library(dplyr)
+      adsl <- read.csv("data/cardio/adsl.csv")
+
+      age_summary <- adsl |>
+        filter(ITTFL == "Y") |>
+        group_by(TRT01PN, TRT01P) |>
+        summarise(
+          n      = n(),
+          mean   = mean(AGE),
+          sd     = sd(AGE),
+          median = median(AGE),
+          q1     = quantile(AGE, 0.25, type = 2),
+          q3     = quantile(AGE, 0.75, type = 2),
+          .groups = "drop"
+        )
+    expectedOutput: |
+      # A tibble: 3 x 8
+        TRT01PN TRT01P            n  mean    sd median    q1    q3
+      1       0 Placebo          91  56.7  9.78     56    49    64
+      2       1 VTX-221 10 mg    90  54.9 10.4      55    47    63
+      3       2 VTX-221 20 mg    89  55.5  9.96     55    50    62
+    solution: |
+      Filter, group, summarise — with `type = 2` in both `quantile()` calls. With the R default (type 7) placebo Q3 would be 63.5 and 10 mg Q1 47.25 instead of 64 and 47.
+
+  - id: stats.desc.quartile-qc
+    format: diff
+    modes: [qc]
+    difficulty: intermediate
+    skills: [stats.descriptive, qc.discrepancy, r.sas-translation]
+    lesson: stats-descriptive-statistics
+    title: Production and QC disagree on quartiles
+    minutes: 6
+    prompt: |
+      Production (SAS) and QC (R) summaries of age (years) in the ITT population. What is the most likely root cause of the differences?
+    left:
+      title: Production — PROC MEANS (defaults)
+      columns: [Arm, n, Mean, Median, Q1, Q3]
+      rows:
+        - [Placebo, 91, 56.7, 56.0, 49.00, 64.00]
+        - [VTX-221 10 mg, 90, 54.9, 55.0, 47.00, 63.00]
+        - [VTX-221 20 mg, 89, 55.5, 55.0, 50.00, 62.00]
+    right:
+      title: QC — R quantile() defaults
+      columns: [Arm, n, Mean, Median, Q1, Q3]
+      rows:
+        - [Placebo, 91, 56.7, 56.0, 49.00, 63.50]
+        - [VTX-221 10 mg, 90, 54.9, 55.0, 47.25, 63.00]
+        - [VTX-221 20 mg, 89, 55.5, 55.0, 50.00, 62.00]
+    choices:
+      - text: "The programs use different quantile definitions (SAS QNTLDEF=5 vs R type 7)"
+        correct: true
+        feedback: "n, mean and median agree everywhere, and each disagreement is less than one gap between adjacent sorted ages. That pattern is the signature of a definition difference, not a data difference."
+      - text: "QC used a different population (for example SAFFL instead of ITTFL)"
+        feedback: "A different population would change n (the two never-dosed subjects would disappear from the safety population) and very likely the means. n and means are identical."
+      - text: "Missing ages were handled differently"
+        feedback: "n matches in every arm, so both programs used the same non-missing values."
+      - text: "Rounding: R rounds 47.25 down while SAS rounds it up"
+        feedback: "A rounding difference would appear in the last displayed decimal. 63.50 vs 64.00 is a genuinely different value, not a rounding artifact."
+    solution: |
+      Rerun QC with `quantile(x, p, type = 2)`: it reproduces 64 and 47. Then write the definition into the programming specification so the next QC round does not rediscover it.
+    explanation:
+      objective: "Decide whether a production/QC mismatch is a real error or a definitional difference."
+      given: "Two summaries of the same variable with identical n, mean and median and a few different quartiles."
+      relevant: "Which statistics agree (n, mean, median) and the size of the disagreement (less than one gap between sorted ages)."
+      irrelevant: "The arms where Q1/Q3 happen to agree — the definitions coincide whenever the quantile position lands on the same order statistic."
+      method: "Eliminate data causes first: identical n rules out population and missing-value differences; identical median rules out sorting or duplicate problems."
+      numbers: "Placebo Q3: $np = 91 \\times 0.75 = 68.25$ → SAS takes $x_{(69)} = 64$; type 7 uses $h = 68.5$ → halfway between $x_{(68)} = 63$ and $x_{(69)} = 64$, i.e. 63.5."
+      interpretation: "Neither program is wrong; they implement different documented definitions."
+      changes: "If n or the median also differed, the cause would be data (population, missing values, duplicates), not the definition."
+      interviewer: "That you triage discrepancies systematically and know the SAS/R quantile defaults by name."
+
+  - id: stats.desc.ddof-hotspot
+    format: hotspot
+    language: python
+    modes: [debug]
+    difficulty: intermediate
+    skills: [stats.descriptive, python.numpy, qc.discrepancy]
+    lesson: stats-descriptive-statistics
+    title: The SDs are slightly too small
+    minutes: 5
+    prompt: |
+      QC reports that every SD from this Python summary is about 0.5% smaller than the SAS table (placebo baseline SBP: 9.80 vs 9.85 mmHg); n, mean and median match. Click the line that causes it.
+    code: |
+      import numpy as np
+      import pandas as pd
+
+      adsl = pd.read_csv("data/cardio/adsl.csv")
+      itt = adsl[adsl["ITTFL"] == "Y"]
+      rows = []
+      for arm, d in itt.groupby("TRT01P"):
+          x = d["SBPBL"].to_numpy()
+          rows.append({"arm": arm, "n": len(x), "mean": x.mean(),
+                       "sd": np.std(x),
+                       "median": np.median(x)})
+      print(pd.DataFrame(rows).round(2))
+    answerLines: [10]
+    lineNotes:
+      - line: 10
+        note: "`np.std()` divides by $n$ (population SD) unless `ddof=1` is given. SAS, R `sd()` and pandas `.std()` divide by $n - 1$. With $n = 91$ the ratio is $\\sqrt{90/91} = 0.9945$, which turns 9.851 into 9.797."
+      - line: 9
+        note: "`x.mean()` is fine — the mean does not depend on the variance divisor."
+    fixed: |
+      import numpy as np
+      import pandas as pd
+
+      adsl = pd.read_csv("data/cardio/adsl.csv")
+      itt = adsl[adsl["ITTFL"] == "Y"]
+      rows = []
+      for arm, d in itt.groupby("TRT01P"):
+          x = d["SBPBL"].to_numpy()
+          rows.append({"arm": arm, "n": len(x), "mean": x.mean(),
+                       "sd": np.std(x, ddof=1),
+                       "median": np.median(x)})
+      print(pd.DataFrame(rows).round(2))
+    hints:
+      - "The error is proportional and the same in every arm — think about a divisor."
+      - "Which NumPy function has a `ddof` argument, and what is its default?"
+    solution: |
+      Line 10. Use `np.std(x, ddof=1)` (or `d["SBPBL"].std()`). The sample SD divides the sum of squared deviations by $n - 1$ because one degree of freedom is used to estimate the mean.
+    explanation:
+      objective: "Find why a Python QC program produces systematically smaller SDs."
+      given: "Matching n, mean and median; SDs about 0.5% lower in every arm."
+      relevant: "The SD calculation and its divisor."
+      irrelevant: "The grouping and the median — they agree with production."
+      numbers: "Placebo: $9.851 \\times \\sqrt{90/91} = 9.797$, displayed as 9.80. The ratio $\\sqrt{(n-1)/n}$ is closer to 1 for larger arms, which is why the discrepancy is small but systematic."
+      computation: "$s = \\sqrt{\\sum (x_i - \\bar{x})^2/(n-1)}$ versus NumPy's default $\\sqrt{\\sum (x_i - \\bar{x})^2/n}$."
+      interpretation: "A proportional, arm-size-dependent SD difference points to the divisor, not the data."
+      interviewer: "That you know NumPy's `ddof=0` default and why the sample SD uses $n - 1$."
+
+  - id: stats.desc.decimals
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [tlf.summary-stats, stats.descriptive]
+    lesson: stats-descriptive-statistics
+    title: Decimal places in a summary table
+    prompt: |
+      Age is collected in whole years. The sponsor's table standard follows a common **convention**: mean and median with one more decimal than collected, SD with two more, min and max as collected. Which row follows it? (Values from the VTX-221 ITT population: mean 55.711, SD 10.038, median 55, min 30, max 80.)
+    choices:
+      - text: "55.7 (10.04) | 55.0 | 30, 80"
+        correct: true
+        feedback: "Mean and median to one decimal, SD to two decimals, min and max as collected (integers)."
+      - text: "55.71 (10.038) | 55 | 30.0, 80.0"
+        feedback: "Too many decimals on the mean and SD, too few on the median, and extra decimals on min/max."
+      - text: "56 (10) | 55 | 30, 80"
+        feedback: "Rounding the mean and SD to the collected precision loses information the convention keeps."
+      - text: "55.7 (10.0) | 55.0 | 30.0, 80.0"
+        feedback: "The SD gets two extra decimals under this convention, and min/max are shown as collected."
+    solution: |
+      "55.7 (10.04) | 55.0 | 30, 80". Remember this is a sponsor convention, not a regulatory rule — the table standard or SAP defines it.
+    explanation:
+      objective: "Apply a documented display convention consistently."
+      given: "Full-precision statistics and the convention."
+      relevant: "The precision of the collected variable (whole years)."
+      computation: "Mean 55.711 → 55.7; SD 10.038 → 10.04; median 55 → 55.0; min/max 30 and 80 unchanged."
+      interviewer: "That you round only at display time and know decimal rules come from sponsor standards."
+
+  - id: stats.desc.interview-median
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [stats.descriptive, communication.interviewing]
+    lesson: stats-descriptive-statistics
+    title: Mean or median?
+    prompt: |
+      **Interviewer:** "In a baseline table, when would you present the median and interquartile range instead of the mean and standard deviation? And why might your SAS and R quartiles not match?"
+    modelAnswer: |
+      For variables that are clearly skewed or have outliers — liver enzymes, CRP, triglycerides, time since diagnosis, length of stay — the mean is pulled toward the tail and mean ± SD can even include impossible negative values, so median with Q1 and Q3 describes a typical subject better. For positive, roughly log-normal quantities such as PK parameters, a geometric mean with geometric CV is the usual choice. Many shells show both mean (SD) and median (Q1, Q3) for continuous variables, and I'd follow the SAP.
+
+      On quartiles: "quartile" has several definitions. SAS PROC MEANS and UNIVARIATE default to QNTLDEF/PCTLDEF=5, which averages two order statistics when $np$ is an integer and otherwise takes the next one; R, NumPy and pandas default to linear interpolation (R type 7). They agree on the median but can differ by up to one gap between sorted values at Q1 and Q3. In R I'd use `quantile(type = 2)` to match SAS and document the definition in the spec.
+    rubric:
+      - Links the choice of summary to skewness or outliers
+      - Mentions that mean ± SD can be misleading or impossible for skewed positive data
+      - Mentions geometric mean for log-normal data (e.g., PK)
+      - Knows SAS and R use different default quartile definitions and names them
+      - Says the SAP or shell determines what is displayed
+    redFlags:
+      - "Says quartiles always match if the code is correct"
+      - "Says the median is always better than the mean"
+    followUps:
+      - "What does it mean if the mean is lower than the median?"
+      - "How would you reproduce the SAS quartile default in Python?"
+
+  - id: stats.desc.speed-pctldef
+    format: text
+    modes: [speed]
+    difficulty: foundation
+    skills: [stats.descriptive, sas.stat-procs]
+    lesson: stats-descriptive-statistics
+    title: Name the option
+    prompt: |
+      Which PROC UNIVARIATE option selects the definition used to compute percentiles? (Type the option name.)
+    accept: ["PCTLDEF", "PCTLDEF=", "pctldef=5"]
+    acceptPatterns: ['^pctldef\s*=?\s*\d?$']
+    monospace: true
+    solution: |
+      `PCTLDEF=` (default 5). In PROC MEANS and PROC SUMMARY the same choice is `QNTLDEF=` (alias `PCTLDEF=`).

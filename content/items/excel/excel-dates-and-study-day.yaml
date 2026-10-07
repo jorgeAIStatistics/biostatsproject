@@ -1,0 +1,626 @@
+items:
+  - id: excel.dates.no-day-zero
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [excel.logic, sdtm.dates]
+    lesson: excel-dates-and-study-day
+    title: The value that should never appear
+    prompt: |
+      A QC programmer opens a study-day column and runs one check before anything else:
+
+      ```excel
+      =COUNTIF(AESTDY_range,0)
+      ```
+
+      Why is that the first check, and what does a non-zero result mean?
+    choices:
+      - text: "There is no Day 0 — the day of first dose is Day 1 and the day before is Day −1 — so any zero means the two-branch rule was not applied."
+        correct: true
+        feedback: "Correct. Across the 2,466 AE records on this study there are 39 negative study days and not one zero."
+      - text: "A zero would mean the event date equals the anchor date, which is valid and should be common."
+        feedback: "The event date equalling the anchor gives Day **1** under the convention. A zero means somebody subtracted without the +1."
+      - text: "Zeros indicate missing dates, which should be null rather than zero."
+        feedback: "A missing date produces a very large or very negative value, not a zero, because a blank is read as the serial number 0."
+      - text: "It checks for duplicate records, which would both land on the same day."
+        feedback: "Duplicates share a study day, but that day can be any value. This check is about one specific impossible value."
+    solution: |
+      **Day 0 does not exist.**
+
+      ```text
+      first dose − 1 day    →  Day −1
+      first dose            →  Day  1
+      first dose + 1 day    →  Day  2
+      ```
+
+      The scale jumps straight from −1 to 1, so a single zero anywhere in a `--DY` column means the
+      derivation used a plain subtraction instead of
+
+      ```excel
+      =IF(D2>=B2, D2-B2+1, D2-B2)
+      ```
+
+      **What makes this check so valuable is how the error distributes.** Plain subtraction is *exactly
+      right* for every pre-treatment event and off by one for every event on or after dosing. A spot-check
+      that happens to land on pre-treatment rows finds nothing wrong.
+
+      On CBX417-301 there are 39 negative study days, 16 records with `AESTDY = 1` — events on the dosing
+      day itself — and no zeros. Those 16 are the ones a plain subtraction would turn into zeros, and a
+      downstream program treating "day ≥ 1" as treatment-emergent would drop all sixteen.
+    explanation:
+      objective: "Use the impossibility of Day 0 as a one-formula check on a derivation."
+      given: "A study-day column and a COUNTIF for zero."
+      relevant: "That the clinical convention skips zero."
+      irrelevant: "Duplicates and missing dates, which have different signatures."
+      numbers: "2,466 AE records: 39 negative, 16 equal to 1, none equal to 0."
+      interpretation: "A zero is not an unusual value; it is an impossible one."
+      changes: "Plain subtraction is correct for pre-treatment events, so a sample of those reveals nothing."
+      interviewer: "That you have a check that needs no knowledge of the specific study."
+
+  - id: excel.dates.serial
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [excel.logic, sdtm.dates]
+    lesson: excel-dates-and-study-day
+    title: What number is 8 July 2022
+    prompt: |
+      Excel stores a date as the number of whole days since **1899-12-30**.
+
+      Subject 1001-0002 was first dosed on `2022-07-08`. Referencing that cell in a plain-number cell shows
+      the underlying value.
+
+      What number is it?
+    answer: 44750
+    tolerance: 0
+    hints:
+      - "Roughly 122 years of days."
+      - "122 × 365.25 is about 44,560, and the date is in July."
+      - "It is 44,750."
+    solution: |
+      **44750.**
+
+      Formatting is a costume, not a type. `=B2` returns the stored value; the cell's number format decides
+      whether you see `2022-07-08` or `44750`. Everything else in this lesson follows from that:
+
+      - Dates subtract because numbers subtract.
+      - A number dropped into a date-formatted column becomes a plausible date instantly.
+      - A **partial** date cannot be stored at all, because no number means "some day in January".
+
+      **The epoch is 1899-12-30 rather than 1899-12-31 for a specific reason.** Excel treats 1900 as a leap
+      year — it is not, since a century year needs to be divisible by 400 — because Lotus 1-2-3 did, and
+      file exchange mattered more than correctness. Excel therefore has a serial number for 29 February
+      1900, a day that never existed, and setting the epoch a day earlier cancels the resulting shift.
+      Every date from **1900-03-01** onwards is correct.
+
+      **Serial numbers do not travel.** SAS counts days from 1960-01-01, R's `Date` from 1970-01-01, and
+      neither has the phantom day. Move dates between systems as ISO 8601 text.
+    explanation:
+      objective: "Recall that a date is a day count and state the epoch."
+      given: "The epoch 1899-12-30 and the date 2022-07-08."
+      calculating: "Whole days between the epoch and the date."
+      numbers: "44750."
+      assumptions: "Excel's 1900 leap-year compatibility bug, which is why the epoch is 1899-12-30."
+      interpretation: "The date format is a display choice over a stored number."
+      changes: "The same calendar date has a different serial number in SAS and in R."
+
+  - id: excel.dates.datedif
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [excel.logic, sdtm.dates]
+    lesson: excel-dates-and-study-day
+    title: Why DATEDIF gives 128 and the formula gives 129
+    prompt: |
+      For the same pair of dates:
+
+      ```excel
+      =DATEDIF(B2,D6,"D")         → 128
+      =IF(D6>=B2,D6-B2+1,D6-B2)   → 129
+      ```
+
+      Which statement is correct?
+    choices:
+      - text: "`DATEDIF` returns elapsed days — the plain subtraction with no convention applied — so it is one lower than the study day for anything on or after the anchor, and in real Excel it errors when the end date is earlier than the start."
+        correct: true
+        feedback: "Correct. It is not wrong; it answers a different question, and it cannot express a pre-treatment study day at all."
+      - text: "`DATEDIF` excludes the end date, so adding 1 to it always gives the study day."
+        feedback: "Adding 1 happens to work here, and it would be wrong for every pre-treatment event — where the study day is the plain subtraction with no +1."
+      - text: "`DATEDIF` is unreliable and its result varies between Excel versions."
+        feedback: "Its `\"D\"` result is stable. The complaints about DATEDIF concern the `\"MD\"` unit and the fact that it is undocumented in the function list."
+      - text: "`DATEDIF` rounds down when a time component is present, which loses a day here."
+        feedback: "There is no time component on these dates. The difference is the study-day convention, not truncation."
+    solution: |
+      **Elapsed days against study day.**
+
+      $$\texttt{DATEDIF} = \text{days that passed} \qquad \texttt{--DY} = \text{days that passed} + 1 \ \text{(on or after the anchor)}$$
+
+      Two further facts before reaching for it:
+
+      **It is undocumented in Excel's function list.** `DATEDIF` exists for Lotus compatibility. There is
+      no autocomplete, no argument tooltip, and Microsoft's own documentation warns that the `"MD"` unit
+      can return a negative number.
+
+      **It refuses a negative interval.** If the end date is before the start date, real Excel returns
+      `#NUM!`. So `DATEDIF` cannot produce a pre-treatment study day at all — it errors on exactly the rows
+      where the sign matters. On this study that is 39 adverse events.
+
+      "Just add 1 to `DATEDIF`" is therefore wrong in two ways at once: it is wrong for every pre-treatment
+      row, and on those rows it never gets the chance, because the function has already errored.
+    explanation:
+      objective: "Distinguish elapsed days from the study-day convention."
+      given: "Two results differing by one on the same pair of dates."
+      relevant: "That DATEDIF applies no convention."
+      irrelevant: "Version differences and time truncation, neither of which is involved."
+      numbers: "128 elapsed days, 129 study day."
+      assumptions: "Both dates are complete and the event is after the anchor."
+      interpretation: "Two correct answers to two different questions."
+      changes: "For a pre-treatment event the two branches diverge, and DATEDIF returns #NUM! rather than a negative number."
+      interviewer: "That you know the #NUM! behaviour, which rules DATEDIF out of a study-day derivation entirely."
+
+  - id: excel.dates.partial
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [sdtm.dates, qc.data-cleaning]
+    lesson: excel-dates-and-study-day
+    title: 2023-01 is not a date
+    prompt: |
+      An adverse event was recorded with a start date of `2023-01` — the site knew the month but not the
+      day.
+
+      ```excel
+      =ISNUMBER(D12)     → FALSE
+      ```
+
+      What is the right thing to put in the study-day column?
+    choices:
+      - text: "A visible reason such as `Partial date`, produced with `IFERROR`, and no study day — because a day was never recorded and inventing one is a decision nobody authorised."
+        correct: true
+        feedback: "Correct. On this study AESTDY is null on exactly the 12 records with an incomplete date and on no others."
+      - text: "The first of the month, so the column is uniform and everything downstream computes."
+        feedback: "That produces a number where there is no measurement. Imputation rules are legitimate, but they belong in the SAP with an imputation flag in the data — ADaM has ASTDTF for exactly this."
+      - text: "Zero, to mark it as unknown."
+        feedback: "Zero is a study day that cannot exist under the convention, so it would fail the most basic check on the column."
+      - text: "The study day of the previous record for that subject, carried forward."
+        feedback: "That invents a date and hides it inside a real-looking value. Nothing in the cell would record that it was carried forward."
+    solution: |
+      **SDTM stores dates as ISO 8601 character strings precisely so that a partial date is
+      representable:**
+
+      ```text
+      2022-11-07T09:51    complete date and time
+      2022-11-07          date only
+      2022-11             month and year, day unknown
+      2022                year only
+      ```
+
+      A numeric date type cannot hold "some day in January", so Excel leaves the cell as text and
+      `ISNUMBER` returns `FALSE`.
+
+      ```excel
+      =IFERROR(D12-B12,"Partial date")
+      ```
+
+      **CBX417-301 has 12 such adverse-event records** — ten with a month and no day, two with a year
+      alone — and `AESTDY` is null on exactly those twelve. That correspondence is itself a check: a null
+      study day beside a complete date means something failed, and a study day beside an incomplete date
+      means a day was imputed.
+
+      Imputation is legitimate when it is specified. A SAP will state the rule, and ADaM carries
+      `ASTDTF` and `AENDTF` to record which part of the date was imputed. **The rule belongs in the SAP
+      and the flag belongs in the data.** A spreadsheet has neither, so it should show the reason and
+      stop.
+    explanation:
+      objective: "Decide what a study-day column should contain for an incomplete date."
+      given: "An AE start date of 2023-01 and ISNUMBER returning FALSE."
+      relevant: "That a day was never collected, so no study day exists."
+      irrelevant: "The convenience of a uniform numeric column."
+      assumptions: "Imputation rules exist and are specified in the SAP, not chosen at the spreadsheet."
+      numbers: "12 partial AESTDTC values on this study, and AESTDY null on exactly those 12."
+      interpretation: "A visible reason rather than an invented measurement."
+      changes: "With a SAP rule and an ASTDTF flag, imputation is correct and traceable; without them it is undocumented."
+      interviewer: "That you name ASTDTF, since it shows you know imputation is meant to be recorded rather than avoided."
+
+  - id: excel.dates.pretreatment
+    format: numeric
+    modes: [guided, check]
+    difficulty: foundation
+    skills: [excel.logic, sdtm.dates]
+    lesson: excel-dates-and-study-day
+    title: An event before the first dose
+    prompt: |
+      Subject 1001-0004 reported back pain starting `2022-11-04`. The subject was first dosed on
+      `2022-11-07`.
+
+      Apply the study-day rule. What is the study day?
+    answer: -3
+    tolerance: 0
+    hints:
+      - "Which branch of the rule applies when the event is before the anchor?"
+      - "Before the anchor, the plain subtraction is already correct — no +1."
+      - "2022-11-04 minus 2022-11-07."
+    solution: |
+      $$44869 - 44872 = -3$$
+
+      ```excel
+      =IF(D8>=B8, D8-B8+1, D8-B8)     → -3
+      ```
+
+      The event is before the anchor, so the second branch applies and the subtraction stands. **A negative
+      study day is not an error** — it is a pre-treatment event, which for the safety analysis is medical
+      history rather than a treatment-emergent adverse event.
+
+      This is also the row that explains why the formula needs an `IF` rather than always adding 1. The
+      scale runs
+
+      ```text
+      … −3, −2, −1, 1, 2, 3 …
+      ```
+
+      with no zero, so the two sides of the anchor follow different arithmetic.
+
+      **Note what `DATEDIF` does here.** In real Excel, `DATEDIF` with an end date earlier than the start
+      returns `#NUM!`. It cannot express this row at all, which rules it out of a study-day derivation
+      regardless of the off-by-one.
+
+      Across this study 39 adverse events have a negative study day, and the minimum is −25.
+    explanation:
+      objective: "Apply the pre-treatment branch of the study-day rule."
+      given: "An AE start three days before first dose."
+      relevant: "That the +1 applies only on or after the anchor."
+      calculating: "The plain difference in days."
+      numbers: "Serial 44869 minus 44872 = -3. The study has 39 negative study days, minimum -25."
+      interpretation: "A pre-treatment event, not a data error."
+      changes: "Always adding 1 would give -2 and shift every pre-treatment day by one."
+
+  - id: excel.dates.dosing-day
+    format: numeric
+    modes: [guided, check]
+    difficulty: foundation
+    skills: [excel.logic, sdtm.dates, tlf.safety-tables]
+    lesson: excel-dates-and-study-day
+    title: An event on the day of first dose
+    prompt: |
+      Subject 1001-0004 reported emesis starting `2022-11-07` — the same day as first dose.
+
+      What study day does the rule give?
+    answer: 1
+    tolerance: 0
+    hints:
+      - "The dates are equal, so which branch applies?"
+      - "`>=` includes equality."
+      - "0 + 1."
+    solution: |
+      **Day 1.** The dates are equal, so `D9 >= B9` is true and the first branch applies:
+
+      $$44872 - 44872 + 1 = 1$$
+
+      **This is the row the whole convention exists for.** The day of first dose is Day 1, not Day 0, and
+      a plain subtraction would give 0 — a value the scale does not contain.
+
+      On CBX417-301, **16 adverse events** started on the day of first dose. Under a plain subtraction all
+      sixteen become Day 0, and a downstream program defining treatment-emergence as "study day ≥ 1" would
+      drop every one of them from the safety analysis.
+
+      That is the shape of the danger worth remembering: the off-by-one is not a cosmetic slip in a
+      derived column. It moves records across a clinical boundary, and the records it moves are the ones
+      closest to dosing.
+    explanation:
+      objective: "Apply the boundary case of the study-day rule."
+      given: "An AE starting on the anchor date."
+      relevant: "That the comparison is >= rather than >."
+      calculating: "Difference plus one."
+      numbers: "44872 - 44872 + 1 = 1. Sixteen AE records on this study have AESTDY = 1."
+      interpretation: "The dosing day is Day 1, which is what no Day 0 means."
+      changes: "A plain subtraction gives 0, and any rule keyed on day >= 1 then drops those sixteen records."
+      interviewer: "That you can say what breaks downstream, not only that the number is one out."
+
+  - id: excel.dates.blank-anchor
+    format: numeric
+    modes: [debug, qc]
+    difficulty: intermediate
+    skills: [excel.logic, qc.data-cleaning]
+    lesson: excel-dates-and-study-day
+    title: The study day of forty-five thousand
+    prompt: |
+      A study-day column is built as `=D2-B2`, where `D` is the event date and `B` is the anchor. On one
+      row the anchor cell is **empty** and the event date is `2023-06-15`.
+
+      What does the formula return?
+    answer: 45092
+    tolerance: 0
+    hints:
+      - "An empty cell is 0 in arithmetic."
+      - "So the formula returns the event date's own serial number."
+      - "What number is 2023-06-15?"
+    solution: |
+      **45092** — the serial number of 2023-06-15, because an empty cell is 0 and $x - 0 = x$.
+
+      As a date, 0 is 1899-12-30. So the formula is faithfully reporting the number of days from the epoch
+      to the event, which is about **123 years**.
+
+      **That version is easy to catch.** A study day of 45,092 is absurd on sight and fails any range
+      check.
+
+      **The reverse is the dangerous one.** If the *event* date is missing and the anchor is real, the
+      formula gives roughly **−44,750** — large and negative. Pre-treatment study days are legitimately
+      negative, so it lands in a column where negative values are expected and a range check has to be
+      looking at magnitude rather than sign.
+
+      Guard both:
+
+      ```excel
+      =IF(OR(ISBLANK(B2),ISBLANK(D2)),"Missing date",IF(D2>=B2,D2-B2+1,D2-B2))
+      ```
+
+      It costs nothing and removes the whole class. On this study `AESTDY` runs from **−25 to 865**, so any
+      value outside a few thousand is a missing date rather than a long follow-up.
+    explanation:
+      objective: "Recognise the numeric signature of a missing date in day arithmetic."
+      given: "A plain subtraction with an empty anchor cell."
+      relevant: "That a blank cell evaluates to 0 and 0 is the epoch."
+      calculating: "The event date's serial number."
+      numbers: "45092 for 2023-06-15; about -44,750 if the event date is the missing one."
+      interpretation: "A study day of 123 years, reported without any error."
+      changes: "A missing event date gives a large negative, which hides among legitimate pre-treatment negatives."
+      interviewer: "That you name the reverse case, which is the one that survives a naive range check."
+
+  - id: excel.dates.datetime-fraction
+    format: mcq
+    modes: [debug, qc]
+    difficulty: intermediate
+    skills: [excel.logic, sdtm.dates, qc.data-cleaning]
+    lesson: excel-dates-and-study-day
+    title: The study day of 20.9
+    prompt: |
+      A lab study-day column comes out as `20.9`, `34.2`, `7.6` instead of whole numbers. The source values
+      are `LBDTC = 2022-06-17T08:51` and `RFSTDTC = 2022-07-08T10:41`.
+
+      What is happening, and what is the fix?
+    choices:
+      - text: "Both values carry a time, so Excel stores a fractional serial where the fraction is the time of day. Wrap both sides in `INT` to truncate to the start of the day."
+        correct: true
+        feedback: "Correct. All 25,450 lab dates on this study carry a time, so this is the common case rather than an exception."
+      - text: "The dates were imported with a decimal separator problem and need re-importing."
+        feedback: "The fractions are the times of day, not a separator artefact. 08:51 is about 0.37 of a day."
+      - text: "`ROUND` should be applied to the result to give a whole study day."
+        feedback: "Rounding can move a record to the wrong day. Truncating each date to its own start of day is the correct operation, and it also matches what a study day means."
+      - text: "The study-day formula is missing its `IF` branch, which produces non-integers."
+        feedback: "The IF branch changes the value by exactly 1; it cannot produce a fraction."
+    solution: |
+      **A datetime is a fractional serial number.** The whole part is the day, the fraction is the time:
+      08:51 is roughly 0.37 of a day. Subtract two of them and you get a non-integer.
+
+      ```excel
+      =IF(INT(D2)>=INT(B2), INT(D2)-INT(B2)+1, INT(D2)-INT(B2))
+      ```
+
+      `INT` truncates each value to the start of its own day *before* the comparison and the subtraction,
+      which is what makes it correct. Rounding the final answer is not equivalent — it can move a record
+      to the wrong day depending on the two times.
+
+      **This is the normal case on this study, not an edge case.** All 25,450 `LBDTC` values carry a time,
+      and so does `RFSTDTC` for every treated subject.
+
+      There is a clinical point underneath the mechanics. A study day is a **calendar-day** comparison, not
+      a 24-hour-elapsed one. A dose at 22:00 and an event at 01:00 the next morning are three hours apart
+      and one study day apart, and one study day apart is the answer the convention wants.
+    explanation:
+      objective: "Diagnose fractional study days from datetime arithmetic."
+      given: "Non-integer study days and source values carrying times."
+      relevant: "That the fractional part of a serial number is the time of day."
+      irrelevant: "Import separators and the IF branch, neither of which produces fractions."
+      method: "Truncate each date with INT before comparing or subtracting."
+      numbers: "All 25,450 LBDTC values on this study carry a time component."
+      interpretation: "Study day is a calendar-day comparison, so truncation is the correct operation rather than a workaround."
+      changes: "Rounding the result instead of truncating the inputs can land a record on the wrong day."
+
+  - id: excel.dates.hotspot
+    format: hotspot
+    language: text
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [excel.logic, sdtm.dates, qc.discrepancy]
+    lesson: excel-dates-and-study-day
+    title: Three defects in one column
+    minutes: 10
+    prompt: |
+      A study-day column built in Excel beside an AE listing, with the values it produced on five rows.
+      The published `AESTDY` values are 6, 1, −3, 129 and null.
+
+      Click every line that produces a wrong value.
+    code: |
+      F2:  =D2-B2                              →  5      (published AESTDY 6)
+      F3:  =DATEDIF(B3,D3,"D")+1               →  1      (published AESTDY 1)
+      F4:  =DATEDIF(B4,D4,"D")+1               →  #NUM!  (published AESTDY -3)
+      F5:  =IF(D5>=B5,D5-B5+1,D5-B5)           →  129    (published AESTDY 129)
+      F6:  =IF(D6>=B6,D6-B6+1,D6-B6)           →  44409  (published AESTDY null)
+    answerLines: [1, 3, 5]
+    lineNotes:
+      - line: 1
+        note: "Plain subtraction. Off by one for every event on or after first dose, and exactly right for every event before it — which is why a spot-check on pre-treatment rows finds nothing. Needs the two-branch rule."
+      - line: 2
+        note: "DATEDIF + 1 happens to give the right answer here, because this event is on or after the anchor. It is right for the wrong reason: the +1 is unconditional and the convention's is not."
+      - line: 3
+        note: "The same formula on a pre-treatment event. Real Excel returns #NUM! because DATEDIF refuses an end date earlier than the start, so this approach cannot produce a negative study day at all. Even if it could, the unconditional +1 would give -2 instead of -3."
+      - line: 4
+        note: "Correct. The two-branch rule on a complete pair of dates, well after the anchor."
+      - line: 5
+        note: "The formula is right and the data is not: the AE start date is partial, so D6 is text and evaluates as 0 in the arithmetic. The result is the negative of the anchor's serial number. Guard with ISNUMBER or IFERROR and return `Partial date`."
+    fixed: |
+      F2:  =IF(ISNUMBER(D2)*ISNUMBER(B2),IF(D2>=B2,D2-B2+1,D2-B2),"Partial or missing date")
+      F3:  =IF(ISNUMBER(D3)*ISNUMBER(B3),IF(D3>=B3,D3-B3+1,D3-B3),"Partial or missing date")
+      F4:  =IF(ISNUMBER(D4)*ISNUMBER(B4),IF(D4>=B4,D4-B4+1,D4-B4),"Partial or missing date")
+      F5:  =IF(ISNUMBER(D5)*ISNUMBER(B5),IF(D5>=B5,D5-B5+1,D5-B5),"Partial or missing date")
+      F6:  =IF(ISNUMBER(D6)*ISNUMBER(B6),IF(D6>=B6,D6-B6+1,D6-B6),"Partial or missing date")
+    hints:
+      - "Compare each result against the published AESTDY beside it."
+      - "One row is right by accident — check whether the same formula survives the row below it."
+      - "The last row's formula is correct. Look at what is in the cells it reads."
+    solution: |
+      **Three of the five are wrong, and each for a different reason.**
+
+      **Line 1 — plain subtraction.** Gives 5 where the published value is 6. Off by one for every event on
+      or after first dose and exactly right for every event before it, which is what lets it survive a
+      spot-check.
+
+      **Line 3 — `DATEDIF` on a pre-treatment event.** Real Excel returns `#NUM!`, because `DATEDIF`
+      refuses an end date earlier than the start. Line 2 uses the identical formula and looks fine, which
+      is the trap: it is right by accident, on a row where the unconditional `+1` happens to match the
+      convention. The approach cannot produce a negative study day at all.
+
+      **Line 5 — a correct formula on a partial date.** `D6` holds `2023-01`, which is text, and text
+      evaluates as 0 in arithmetic. The result is minus the anchor's serial number. Nothing about the
+      formula is wrong; the guard is missing.
+
+      **Line 4 is correct** — the two-branch rule on a complete pair of dates.
+
+      The fix adds one guard around the rule. `ISNUMBER(D)*ISNUMBER(B)` is 1 only when both are real dates,
+      and the fallback names the reason rather than producing a number that looks like data.
+
+      **The general lesson is in which rows each defect hits.** Plain subtraction is wrong on
+      post-treatment rows. `DATEDIF` fails on pre-treatment rows. The missing guard fails on partial dates.
+      Any sample of five rows can easily contain none of the failing cases.
+    explanation:
+      objective: "Attribute three distinct defects in one derived column."
+      given: "Five rows of formulas with their results and the published values."
+      relevant: "The branch each row exercises and whether its dates are complete."
+      method: "Compare each result against the published value and ask which rows the formula would get right."
+      numbers: "Published AESTDY 6, 1, -3, 129 and null; the sheet gives 5, 1, #NUM!, 129 and 44409."
+      assumptions: "Real Excel's DATEDIF returns #NUM! when the end date precedes the start."
+      interpretation: "One row is right by accident, which is what keeps the wrong approach alive."
+      changes: "A guard on ISNUMBER handles the partial date; the two-branch rule handles both other cases."
+      interviewer: "That you notice line 2 being right for the wrong reason rather than counting it as correct."
+
+  - id: excel.dates.qc-diff
+    format: diff
+    modes: [qc, debug]
+    difficulty: advanced
+    skills: [sdtm.dates, qc.compare, tlf.safety-tables]
+    lesson: excel-dates-and-study-day
+    title: Sixteen adverse events that vanished
+    prompt: |
+      A safety summary is produced twice. The programmed output uses the SDTM `AESTDY`; the spreadsheet
+      check derives study day with `=D2-B2` and then filters to treatment-emergent events as `study day ≥ 1`.
+
+      What explains the difference?
+    left:
+      title: Spreadsheet check
+      columns: [Category, Records]
+      rows:
+        - ['Treatment-emergent (day >= 1)', 2394]
+        - ['Pre-treatment (day < 1)', 60]
+        - ['No study day', 12]
+        - [Total, 2466]
+    right:
+      title: Programmed output
+      columns: [Category, Records]
+      rows:
+        - ['Treatment-emergent (day >= 1)', 2410]
+        - ['Pre-treatment (day < 1)', 44]
+        - ['No study day', 12]
+        - [Total, 2466]
+    choices:
+      - text: "The plain subtraction gives Day 0 for the 16 events that started on the day of first dose, and the `>= 1` filter then classifies them as pre-treatment."
+        correct: true
+        feedback: "Correct — 2394 + 16 = 2410 and 60 − 16 = 44. The off-by-one only moves records that sit exactly on the boundary, which is the worst place for it."
+      - text: "The programmed output includes the 12 partial dates as treatment-emergent."
+        feedback: "Both sides report 12 records with no study day. Those are unchanged."
+      - text: "The spreadsheet dropped 16 duplicate records."
+        feedback: "Both totals are 2,466. Nothing was dropped; 16 records changed category."
+      - text: "The two used different anchors — `RFSTDTC` against `TRTSDT`."
+        feedback: "On this study those are the same date for every treated subject, so the anchor cannot account for it."
+    solution: |
+      **The plain subtraction puts sixteen events on Day 0, and Day 0 fails a `≥ 1` test.**
+
+      $$2394 + 16 = 2410 \qquad 60 - 16 = 44$$
+
+      Those sixteen adverse events started **on the day of first dose**. Under the convention they are Day
+      1 and unambiguously treatment-emergent. Under a plain subtraction they are Day 0, which the filter
+      reads as pre-treatment.
+
+      **Consider where this error lands.** The off-by-one affects every event on or after dosing, but
+      almost all of them are far enough from the boundary that being one day out does not change any
+      classification. The only records that move are the ones sitting exactly on the boundary — and those
+      are the events that started on the day the subject was first dosed, which are among the most
+      clinically interesting in a safety review.
+
+      Everything else looks fine. The totals reconcile. The partial dates match. The pre-treatment count is
+      a plausible number. A reviewer comparing only totals would pass it.
+
+      **The one-formula check that catches it before any of this:** `=COUNTIF(study_day_range,0)`. There is
+      no Day 0, so any zero means the two-branch rule was not applied.
+    explanation:
+      objective: "Trace a category-level discrepancy to an off-by-one at the boundary."
+      given: "Two classifications of the same 2,466 records differing by 16."
+      relevant: "That plain subtraction produces Day 0 for events on the anchor date."
+      irrelevant: "The partial dates and the anchor choice, both of which are identical across the two."
+      method: "Check whether the size of the discrepancy matches the number of boundary records."
+      numbers: "16 AE records have AESTDY = 1; 2394 + 16 = 2410 and 60 - 16 = 44."
+      assumptions: "RFSTDTC and TRTSDT coincide for treated subjects on this study."
+      interpretation: "The only records the error can move are the ones on the boundary, and those are clinically significant."
+      changes: "A COUNTIF for zero on the study-day column catches it in one formula."
+      interviewer: "That you explain why the error is invisible everywhere except at the boundary."
+
+  - id: excel.dates.open-partial
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [sdtm.dates, qc.data-cleaning, communication.interviewing]
+    lesson: excel-dates-and-study-day
+    title: What to do with a partial date
+    prompt: |
+      **Interviewer:** "A site reports an adverse event as starting in 'June 2023' — month and year, no
+      day. The analysis needs a study day. What happens to that record?"
+    modelAnswer: |
+      The first thing is that this is a normal occurrence, not a data error. Sites genuinely do not always
+      know a day, particularly for an event a subject reports retrospectively, and SDTM is built for it —
+      dates are ISO 8601 character strings precisely so that `2023-06` is representable. A numeric date
+      type could not hold it at all.
+
+      So in SDTM, `AESTDTC` is `2023-06` and `AESTDY` is **null**. That is correct and it is not a gap to
+      be filled. On the study I've worked with there are twelve such records out of 2,466 — ten with a
+      month and no day, two with a year alone — and `AESTDY` is null on exactly those twelve and nowhere
+      else. That correspondence is a check in itself: a null study day next to a complete date means
+      something failed, and a study day next to an incomplete date means somebody imputed a day.
+
+      In ADaM it is different, because ADaM has to support the analysis. `ASTDT` is a numeric date, so if
+      the analysis needs one, a day gets imputed — and ADaM carries `ASTDTF` specifically to record which
+      component was imputed. The rule itself comes from the SAP, not from the programmer. A common one is
+      to impute the first of the month for a start date and the last for an end date, because that is
+      conservative for treatment-emergence: it makes the event window as wide as the uncertainty allows.
+
+      Which direction is conservative depends on what the date is used for, and that is the part worth
+      saying out loud. For a start date being compared against first dose, imputing early makes an event
+      more likely to be classified pre-treatment; imputing late makes it more likely treatment-emergent.
+      Those are opposite biases on a safety conclusion, so the SAP has to choose deliberately rather than
+      leave it to whoever writes the code.
+
+      There's also a case where imputation is unnecessary. If the whole month of June 2023 falls after
+      first dose, the event is treatment-emergent regardless of which day it was, and the classification is
+      certain even though the study day is not. I'd rather establish that than impute, because it answers
+      the question without adding an assumption.
+
+      What I would not do is fill in a day in a spreadsheet to make a column compute. That turns an
+      estimate into something indistinguishable from a measurement, with nothing recording that it
+      happened. In a spreadsheet the honest output is `Partial date` — `=IFERROR(D2-B2,"Partial date")` —
+      and a query to the site, because a partial date stays partial until somebody answers it.
+
+      And I'd count them. Twelve out of 2,466 is fine. If it were two hundred, the finding is not about
+      imputation at all — it is that a site or a form is systematically collecting incomplete dates, and
+      that is a data management issue to fix at source.
+    rubric:
+      - States that a partial date is normal and that SDTM represents it deliberately
+      - Says AESTDY is null in SDTM and that this is correct
+      - Distinguishes SDTM from ADaM and names ASTDTF as the imputation flag
+      - Places the imputation rule in the SAP rather than with the programmer
+      - Explains which direction of imputation is conservative and why it depends on the use
+      - Notes that classification can sometimes be certain without imputing
+      - Refuses to fill in a day in a spreadsheet to make arithmetic work
+      - Treats a high rate of partial dates as a data-collection finding
+    redFlags:
+      - "Imputes the first of the month without reference to a specification"
+      - "Treats a partial date as a data error to be corrected"
+      - "Cannot say where the imputation rule comes from"
+      - "Does not mention that imputation must be flagged"

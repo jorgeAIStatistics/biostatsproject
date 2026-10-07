@@ -1,0 +1,722 @@
+items:
+  - id: sdtm.ae.severity-vs-serious
+    format: mcq
+    modes: [check, interview]
+    difficulty: foundation
+    skills: [sdtm.events, trials.safety]
+    lesson: sdtm-ae-domain
+    title: Severe is not serious
+    prompt: |
+      In CBX417-301:
+
+      - **150** records have `AESER = "Y"`.
+      - **502** records have `AETOXGR` of 3 or higher.
+      - **140** records are in both sets.
+
+      A colleague says "so 502 severe events, of which 140 were serious — the rest were just severe".
+
+      What is wrong with that sentence?
+    choices:
+      - text: "Nothing about the arithmetic, but it misses that 10 serious records are grade 1 or 2 — seriousness is a regulatory classification, not a severity threshold."
+        correct: true
+        feedback: "Correct. 150 - 140 = 10 serious events below grade 3, typically overnight admissions for observation. Neither set contains the other."
+      - text: "502 is wrong; grade 3 and above should be 378."
+        feedback: "378 is grade 3 alone. Grade 4 (96) and grade 5 (28) are also 3 or higher, giving 502."
+      - text: "Serious and severe are the same thing, so all 502 should be serious."
+        feedback: "They are different concepts. Seriousness has six enumerated regulatory criteria; severity is a clinical intensity judgement."
+      - text: "`AETOXGR` should not be used for seriousness at all, so the comparison is meaningless."
+        feedback: "The comparison is meaningful and is a standard cross-check. What is wrong is the implied hierarchy."
+    hints:
+      - "150 - 140 = 10. What are those ten?"
+    solution: |
+      **Ten serious records are below grade 3**, and that is the point of having two variables.
+
+      ```text
+      150  serious (AESER = Y)
+      502  grade >= 3
+      140  both
+       10  serious and grade 1 or 2
+      362  grade >= 3 and not serious
+      ```
+
+      | | Serious | Not serious |
+      |---|---:|---:|
+      | Grade >= 3 | 140 | 362 |
+      | Grade 1-2 | 10 | 1,954 |
+
+      **Seriousness** is a regulatory classification met by any of six criteria — death,
+      life-threatening, hospitalization, disability, congenital anomaly, other medically important event.
+      A grade 2 event requiring an overnight admission meets the hospitalization criterion and is
+      serious.
+
+      **Severity** is clinical intensity. A grade 3 event managed as an outpatient — 362 of them here —
+      is severe and not serious.
+
+      Seriousness triggers expedited reporting timelines. That is why it is enumerated rather than left
+      to judgement, and why the two words are not interchangeable in a safety meeting.
+    explanation:
+      objective: "Separate two variables that are routinely conflated."
+      given: "Counts for each set and their intersection."
+      calculating: "The two exclusive cells of a 2x2."
+      numbers: "150 serious, 502 grade >= 3, 140 both, so 10 serious below grade 3 and 362 severe but not serious."
+      interpretation: "Neither set contains the other, which is the whole argument for two variables."
+      interviewer: "That you know seriousness is a defined regulatory category with reporting consequences, not a synonym for severe."
+
+  - id: sdtm.ae.no-trtemfl
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sdtm.events, adam.occds]
+    lesson: sdtm-ae-domain
+    title: Where is the treatment-emergent flag?
+    prompt: |
+      A statistician asks for the number of treatment-emergent adverse events. You search the AE
+      domain's 27 columns and there is no `TRTEMFL`.
+
+      What do you tell them?
+    choices:
+      - text: "Treatment emergence is a SAP definition, so the flag is `ADAE.TRTEMFL`. SDTM carries the dates and `EPOCH`; the rule that turns them into a flag is an analysis decision."
+        correct: true
+        feedback: "Correct. In this study the rule is first dose <= start <= last dose + 30 days, and it produces TRTEMFL in ADAE's 46 columns."
+      - text: "It is missing from the domain and should be added."
+        feedback: "Adding a non-standard variable to a published domain is not permitted, and it would hide an analysis decision inside a tabulation dataset."
+      - text: "Use `EPOCH = \"TREATMENT\"` instead — it is the same thing."
+        feedback: "Close but not equivalent. EPOCH is bounded by RFXSTDTC and RFXENDTC; treatment-emergence in this study extends 30 days past the last dose, so 99 FOLLOW-UP records may still be treatment-emergent."
+      - text: "Filter `AESTDY >= 1`, which is the definition."
+        feedback: "That captures the start of the window and not the end. It would include every event through the whole follow-up period, including deaths years after the last dose."
+    hints:
+      - "Could you populate the flag without reading the SAP?"
+      - "What are the boundaries of EPOCH = TREATMENT, and what are the boundaries of treatment emergence?"
+    solution: |
+      **`ADAE.TRTEMFL`.** Treatment emergence is defined by the SAP, and in CBX417-301 the rule is:
+
+      ```text
+      TRTSDT <= ASTDT <= TRTEDT + 30
+      ```
+
+      first dose to last dose plus 30 days.
+
+      **Why `EPOCH = "TREATMENT"` is not a substitute.** `EPOCH` is derived from `RFXSTDTC` and
+      `RFXENDTC` — first dose to last dose, with no 30-day tail. An event starting 10 days after the last
+      dose is `EPOCH = "FOLLOW-UP"` and *is* treatment-emergent under this SAP. This study has 99
+      `FOLLOW-UP` records, and the two classifications disagree on some of them by design.
+
+      This is the boundary the whole SDTM/ADaM split exists to protect. Change the SAP's tail from 30
+      days to 28 and `TRTEMFL` changes; `EPOCH` does not, because `EPOCH` describes where the subject was
+      in the trial and not what the analysis counts.
+    explanation:
+      objective: "Locate an analysis flag and explain why it is not in SDTM."
+      relevant: "That treatment emergence has a SAP-defined window with a tail past the last dose."
+      irrelevant: "The number of AE columns — the variable is absent by design, not by omission."
+      method: "Compare EPOCH's boundaries with the SAP's window."
+      interpretation: "The two disagree on follow-up events, which is exactly why one is tabulation and one is analysis."
+      changes: "A different 30-day tail changes TRTEMFL and leaves EPOCH untouched."
+
+  - id: sdtm.ae.second-drug
+    format: numeric
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [sdtm.events, sdtm.supp]
+    lesson: sdtm-ae-domain
+    title: How many SUPPAE rows should there be?
+    prompt: |
+      Every subject in CBX417-301 receives two drugs, and the adverse-event CRF collects a relationship
+      and an action taken **for each**. SDTM's AE domain has one `AEREL` and one `AEACN`.
+
+      The CBX-417 assessments go in AE. The docetaxel assessments go to `SUPPAE` as
+      `QNAM = "AERELDOC"` and `QNAM = "AEACNDOC"`.
+
+      The AE domain has **2,466** records. How many rows should `SUPPAE` have?
+    answer: 4932
+    tolerance: 0
+    unit: rows
+    datasets: [oncology/sdtm/ae, oncology/sdtm/suppae]
+    hints:
+      - "Two qualifiers per AE record."
+    solution: |
+      **4,932** — and `data/oncology/sdtm/suppae.csv` has exactly that.
+
+      ```text
+      2,466 AE records x 2 qualifiers = 4,932
+      ```
+
+      **This arithmetic is the check.** A SUPPQUAL build that drops records where the value was null, or
+      that fails to emit a row for one of the two qualifiers, shows up here and essentially nowhere else
+      — every individual row still looks correct.
+
+      Each row carries `IDVAR = "AESEQ"` and the parent record's `AESEQ` in `IDVARVAL`, plus
+      `QEVAL = "INVESTIGATOR"` recording who made the assessment and `QORIG = "Collected"`.
+
+      **The two assessments disagree substantially**, which is why keeping both matters:
+
+      | | `AEREL` (CBX-417 or placebo) | `AERELDOC` (docetaxel) |
+      |---|---:|---:|
+      | `RELATED` | 1,051 | 1,350 |
+      | `NOT RELATED` | 1,412 | 1,116 |
+
+      More events are attributed to docetaxel than to the investigational product, which is what you
+      would expect when half the subjects receive placebo. A "related adverse events" table built from
+      `AEREL` alone answers a different question from one built from either assessment, and the SAP has
+      to say which.
+    explanation:
+      objective: "Predict a SUPPQUAL row count from the parent domain."
+      given: "The AE record count and the number of qualifiers per record."
+      calculating: "2,466 x 2."
+      numbers: "4,932, matching the delivered dataset exactly."
+      assumptions: "That a row is emitted even when the value is null — which is what makes the arithmetic exact."
+      interpretation: "The count is the only structural check on a SUPPQUAL build."
+
+  - id: sdtm.ae.grade5-triple
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [sdtm.events, qc.data-cleaning]
+    lesson: sdtm-ae-domain
+    title: Three variables, one fact
+    prompt: |
+      In CBX417-301, exactly 28 AE records have `AETOXGR = "5"`, exactly 28 have `AEOUT = "FATAL"`, and
+      exactly 28 have `AESDTH = "Y"` — and they are the same 28 records.
+
+      Why does the study carry all three, and what would a disagreement mean?
+    choices:
+      - text: "They come from different CRF fields answering different questions; a disagreement means a site ticked inconsistently and is a standard edit check."
+        correct: true
+        feedback: "Correct. AETOXGR is the CTCAE grade, AEOUT is the event outcome, AESDTH is one of the six seriousness criteria. Perfect agreement here is a result, not a guarantee."
+      - text: "Two of the three are redundant and should be dropped before submission."
+        feedback: "All three are published SDTMIG variables serving different purposes, and each is read by a different downstream consumer."
+      - text: "`AESDTH` is derived from `AEOUT`, so agreement is automatic."
+        feedback: "Both are Collected in this study's metadata. Deriving one from the other would destroy the cross-check."
+      - text: "A disagreement would be impossible because CTCAE defines grade 5 as death."
+        feedback: "CTCAE does define grade 5 as death, which is exactly why a disagreement signals a data-entry problem rather than an impossibility."
+    hints:
+      - "Where on the CRF does each of the three come from?"
+    solution: |
+      **Three CRF fields, three questions, one underlying fact — which is what makes the cross-check
+      useful.**
+
+      | Variable | Question | Source |
+      |---|---|---|
+      | `AETOXGR = "5"` | What CTCAE grade? | The grading field |
+      | `AEOUT = "FATAL"` | How did the event end? | The outcome field |
+      | `AESDTH = "Y"` | Did it meet the death seriousness criterion? | The seriousness criteria page |
+
+      Studies routinely find records with `AEOUT = "FATAL"` and a grade below 5, or `AESDTH = "Y"` with
+      an outcome of `RECOVERED/RESOLVED`. All 28 agree here, which is a result of the data being clean,
+      not a structural guarantee.
+
+      **What the 28 does not tell you.** The study has **356 deaths**. Most subjects died of progressive
+      disease, which in an oncology trial is the efficacy endpoint rather than an adverse event. Those
+      deaths are in `DS` (`DSDECOD = "DEATH"`, 356 records) and `DD` (`DDSTRESC = "PROGRESSIVE DISEASE"`
+      for 285 of them).
+
+      **AE, DS and DD are three different views and they are not supposed to balance.** Reconciling them
+      is a named task, and the expected relationship is that every fatal AE corresponds to a death record
+      while the converse does not hold.
+    explanation:
+      objective: "Explain apparent redundancy between three variables."
+      relevant: "That each comes from a different CRF field."
+      method: "Treat agreement as a check result rather than a structural property."
+      numbers: "28 fatal AEs against 356 deaths, 285 of which DD attributes to progressive disease."
+      interpretation: "The gap between 28 and 356 is the oncology endpoint, not missing adverse events."
+      changes: "In a non-oncology study the two numbers would be much closer."
+
+  - id: sdtm.ae.count-serious-subjects
+    format: numeric
+    modes: [independent]
+    difficulty: intermediate
+    skills: [sdtm.events, tlf.denominators]
+    lesson: sdtm-ae-domain
+    title: Events or subjects?
+    prompt: |
+      A medical monitor asks how many serious adverse events the study has. You report **150** records
+      with `AESER = "Y"`.
+
+      They come back: "No — how many *subjects*?"
+
+      CBX417-301's serious records belong to subjects such that 72 are in the CBX-417 arm and 65 in the
+      placebo arm by actual treatment.
+
+      How many subjects had at least one serious adverse event?
+    answer: 137
+    tolerance: 0
+    unit: subjects
+    datasets: [oncology/sdtm/ae, oncology/sdtm/dm]
+    hints:
+      - "The two arm counts are subject counts, not event counts."
+      - "Every subject with a serious event has an ACTARM in this study."
+    solution: |
+      **137** — 72 plus 65.
+
+      ```text
+      150  records with AESER = "Y"
+      137  distinct USUBJID among them
+      ```
+
+      Thirteen subjects had more than one serious adverse event.
+
+      **Safety tables count subjects, not events**, and the reason is the denominator. "34.4% of subjects
+      had a serious TEAE" is a rate over a population. "150 serious events" has no denominator at all —
+      it does not divide by anything meaningful, and a subject with five events would inflate it.
+
+      The counting rule extends downward: in a table by preferred term, a subject with three separate
+      episodes of neutropenia is counted **once** in the neutropenia row. Getting that wrong produces
+      percentages above 100%, which is the visible symptom.
+
+      **Note where the arm came from.** AE has no treatment variable. The 72/65 split required a join to
+      `DM` on `USUBJID` and then a choice between `ARM` and `ACTARM` — which differ for one subject and
+      leave two subjects with no `ACTARM` at all.
+    explanation:
+      objective: "Convert an event count into the subject count a safety table needs."
+      given: "150 records and the per-arm subject counts."
+      relevant: "That the two arm figures are subject counts."
+      calculating: "72 + 65."
+      numbers: "137 subjects across 150 records, so 13 subjects had more than one."
+      assumptions: "That every subject with a serious event has a populated ACTARM, which holds here."
+      interpretation: "The denominator is subjects, which is why the subject count is the reportable number."
+      changes: "Counting by planned arm instead of actual would move one subject between columns."
+
+  - id: sdtm.ae.map-one-record
+    format: mapping
+    modes: [guided]
+    difficulty: intermediate
+    skills: [sdtm.events, sdtm.mapping, sdtm.ct]
+    lesson: sdtm-ae-domain
+    title: Map the adverse-event page
+    prompt: |
+      Raw record `AE-000001` from CBX417-301's EDC export. Send each field to its destination.
+    sourceLabel: Raw field
+    targetLabel: Destination
+    targets:
+      - "AE.AETERM"
+      - "AE.AEDECOD"
+      - "AE.AETOXGR"
+      - "AE.AEREL"
+      - "AE.AEACN"
+      - "AE.AEOUT"
+      - "SUPPAE QNAM = AERELDOC"
+      - "SUPPAE QNAM = AEACNDOC"
+      - "AE.AESPID"
+      - "Not submitted in SDTM"
+    pairs:
+      - source: "`AE_TERM = \"Diarrhea\"`"
+        target: "AE.AETERM"
+        note: "The topic variable. Verbatim, unchanged, even when it equals the coded term."
+      - source: "`CODED_PT = \"Diarrhea\"`"
+        target: "AE.AEDECOD"
+        note: "A synonym qualifier. Trimmed and case-standardised — the study has 13 raw records that differ from their dictionary term only by case or whitespace."
+      - source: "`AE_GRADE = \"2\"`"
+        target: "AE.AETOXGR"
+        note: "CTCAE grade. This study has no AESEV column at all."
+      - source: "`AE_REL_CBX = \"Related\"`"
+        target: "AE.AEREL"
+        note: "Case-folded to RELATED. AEREL has no CDISC codelist; the values are sponsor-defined."
+      - source: "`AE_ACTION_CBX = \"Drug interrupted\"`"
+        target: "AE.AEACN"
+        note: "Mapped to DRUG INTERRUPTED, codelist ACN (C66767), non-extensible."
+      - source: "`AE_OUTCOME = \"Recovered/Resolved\"`"
+        target: "AE.AEOUT"
+        note: "Mapped to RECOVERED/RESOLVED, codelist OUT (C66768), non-extensible."
+      - source: "`AE_REL_DOC = \"Not related\"`"
+        target: "SUPPAE QNAM = AERELDOC"
+        note: "No standard AE variable for a second drug's causality."
+      - source: "`AE_ACTION_DOC = \"Dose not changed\"`"
+        target: "SUPPAE QNAM = AEACNDOC"
+        note: "Same reason. 2,466 x 2 = 4,932 SUPPAE rows."
+      - source: "`AE_LINE = 1`"
+        target: "AE.AESPID"
+        note: "The site's own line number. Distinct from AESEQ, which the sponsor assigns — they differ on 20 records in this study."
+      - source: "`RECORD_ID = \"AE-000001\"`"
+        target: "Not submitted in SDTM"
+        note: "An EDC export artifact. It survives in the lineage file, which links every SDTM record to the raw rows behind it."
+    hints:
+      - "Two fields have no standard AE variable because the regimen has two drugs."
+      - "One field is an artifact of the export rather than collected data."
+    solution: |
+      Three destinations, and the reason for each is different:
+
+      **AE variables** for anything with a published SDTMIG home.
+
+      **`SUPPAE`** for the docetaxel assessments, because the AE domain has exactly one `AEREL` and one
+      `AEACN` and the protocol gives every subject two drugs. That the sponsor put CBX-417 in `AEREL` and
+      docetaxel in `SUPPAE` — rather than the reverse — is a documented decision, annotated on the aCRF.
+
+      **Nothing** for `RECORD_ID`, which is an EDC export artifact with no clinical content. It is not
+      lost: `data/oncology/lineage/sdtm_raw_map.csv` links every SDTM record to its contributing raw rows
+      by `RECORD_ID`, which is how a "trace this value" exercise works.
+
+      One field on this page has no entry above and is worth noting: `AE_ONGOING = "N"` does not become a
+      variable when the event has ended. For the 312 records where it is `Y`, `AEENDTC` stays null and the
+      pair `AEENRTPT = "ONGOING"` / `AEENTPT = "DATA CUTOFF"` carries it.
+    explanation:
+      objective: "Route every field on a CRF page to its destination."
+      method: "Standard variable first, SUPPQUAL when none exists, nothing when the field is an artifact."
+      relevant: "That the regimen has two drugs and the domain has one causality variable."
+      interpretation: "The RECORD_ID entry is the reminder that 'not submitted' is a legitimate destination."
+
+  - id: sdtm.ae.supp-arithmetic
+    format: code
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [sdtm.events, sdtm.supp, qc.data-cleaning, r.joins]
+    lesson: sdtm-ae-domain
+    title: Rejoin SUPPAE and compare the two causalities
+    language: r
+    prompt: |
+      Write R that reads `AE` and `SUPPAE`, rejoins the `AERELDOC` qualifier to its parent AE record,
+      and prints a cross-tabulation of `AEREL` (CBX-417 or placebo) against `AERELDOC` (docetaxel).
+
+      `SUPPAE` stores `IDVAR = "AESEQ"` and the parent record's sequence number in `IDVARVAL`. Note that
+      `IDVARVAL` is character.
+
+      Assert that the join produces exactly one `AERELDOC` value per AE record.
+    starter: |
+      library(readr); library(dplyr); library(tidyr)
+
+      ae   <- read_csv("data/oncology/sdtm/ae.csv",     show_col_types = FALSE)
+      supp <- read_csv("data/oncology/sdtm/suppae.csv", show_col_types = FALSE)
+      # ...
+    datasets: [oncology/sdtm/ae, oncology/sdtm/suppae]
+    checks:
+      - pattern: "QNAM\\s*==\\s*[\"']AERELDOC"
+        message: "Select the AERELDOC qualifier before joining."
+      - pattern: "IDVARVAL"
+        message: "Join on IDVARVAL, which holds the parent record's AESEQ."
+      - pattern: "as\\.(character|integer|numeric)\\("
+        message: "IDVARVAL is character and AESEQ is numeric — convert one of them before joining."
+      - pattern: "left_join\\(|inner_join\\("
+        message: "Join SUPPAE back to AE."
+      - pattern: "stopifnot\\("
+        message: "Assert exactly one AERELDOC per AE record."
+      - pattern: "table\\("
+        message: "Print the cross-tabulation."
+      - pattern: "AESPID"
+        absent: true
+        message: "SUPPAE points at AESEQ, not AESPID — they differ on 20 records in this study."
+    reference: |
+      library(readr); library(dplyr); library(tidyr)
+
+      ae   <- read_csv("data/oncology/sdtm/ae.csv",     show_col_types = FALSE)
+      supp <- read_csv("data/oncology/sdtm/suppae.csv", show_col_types = FALSE)
+
+      reldoc <- supp |>
+        filter(QNAM == "AERELDOC") |>
+        transmute(USUBJID, AESEQ = as.integer(IDVARVAL), AERELDOC = QVAL)
+
+      stopifnot(nrow(reldoc) == nrow(ae))
+
+      joined <- ae |>
+        select(USUBJID, AESEQ, AEDECOD, AEREL) |>
+        left_join(reldoc, by = c("USUBJID", "AESEQ"))
+
+      stopifnot(!any(is.na(joined$AERELDOC)))
+
+      print(table(AEREL = joined$AEREL, AERELDOC = joined$AERELDOC, useNA = "ifany"))
+    expectedOutput: |
+      > print(table(AEREL = joined$AEREL, AERELDOC = joined$AERELDOC, useNA = "ifany"))
+                   AERELDOC
+      AEREL         NOT RELATED RELATED
+        NOT RELATED         635     777
+        RELATED             481     570
+        <NA>                  0       3
+    solution: |
+      **`as.integer(IDVARVAL)` is the line that matters.** `IDVARVAL` is character because one column has
+      to hold key values from different `IDVAR` variables with different types. Joining a character
+      column to a numeric `AESEQ` fails — silently producing zero matches in some tools, and an error in
+      others. Neither is a good way to find out.
+
+      **Two assertions, not one.** `nrow(reldoc) == nrow(ae)` catches a SUPPQUAL build that dropped rows.
+      `!any(is.na(joined$AERELDOC))` catches a join that ran but matched nothing — a different failure
+      with the same appearance if you only look at the row count.
+
+      **What the table shows.** The two assessments agree on 1,205 records (635 both not related, 570
+      both related) and **disagree on 1,258** — more than half the domain:
+
+      - **777** attributed to docetaxel but not to CBX-417 or placebo
+      - **481** attributed to CBX-417 or placebo but not to docetaxel
+
+      Docetaxel is attributed 1,350 events in total against CBX-417's 1,051, which is what you would
+      expect when half the subjects receive placebo.
+
+      **The three `<NA>` rows in `AEREL`** are the study's documented missing-causality records. All three
+      have an `AERELDOC` value — the investigator answered for docetaxel and not for the study drug.
+
+      **The practical consequence:** a "drug-related adverse events" table means something different
+      depending on which column it uses, and "related to either" gives a third answer again. The SAP has
+      to say.
+    explanation:
+      objective: "Rejoin a supplemental qualifier and use it."
+      given: "AE keyed on USUBJID + AESEQ, and SUPPAE storing that key as IDVAR/IDVARVAL."
+      relevant: "That IDVARVAL is character and AESEQ is numeric."
+      method: "Filter to one QNAM, convert the key type, join, assert, tabulate."
+      computation: "as.integer(IDVARVAL) before the join; two assertions around it."
+      numbers: "1,205 agreements, 1,258 disagreements, 3 records with a null AEREL."
+      assumptions: "That every AE record has exactly one AERELDOC row, which the first assertion tests."
+      interpretation: "Docetaxel attracts 1,350 attributions against 1,051 for the investigational product, because half the subjects are on placebo."
+      changes: "A three-drug regimen would add a third QNAM and the same pattern would repeat."
+
+  - id: sdtm.ae.join-code
+    format: numeric
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [sdtm.events, sdtm.dm, tlf.denominators]
+    lesson: sdtm-ae-domain
+    title: Which denominator for a by-arm AE table?
+    prompt: |
+      You are building an adverse-event table by actual treatment. The AE domain has no treatment
+      variable, so you join to DM on `USUBJID`.
+
+      In DM:
+
+      - 420 subjects are randomized
+      - 416 were treated
+      - **414** have `ACTARM` populated (2 received a mixture matching no planned arm)
+      - 414 subjects have at least one AE record
+
+      A colleague proposes using 420 as the denominator because "that's the ITT population and every
+      randomized subject could have had an adverse event".
+
+      How many subjects should the denominator of a **safety** table by actual treatment be?
+    answer: 416
+    tolerance: 0
+    unit: subjects
+    datasets: [oncology/sdtm/dm, oncology/sdtm/ae]
+    hints:
+      - "A safety table's population is subjects who received treatment."
+      - "Do not confuse 'has ACTARM populated' with 'was treated'."
+    solution: |
+      **416** — the treated (safety) population.
+
+      Four numbers compete and each is wrong in a specific way:
+
+      | Number | What it is | Why not the safety denominator |
+      |---:|---|---|
+      | 420 | Randomized (ITT) | Includes 4 subjects who were never dosed and could not have a treatment-emergent event |
+      | **416** | **Treated** | **Correct** |
+      | 414 | `ACTARM` populated | Excludes the 2 unplanned-treatment subjects, who *were* treated |
+      | 414 | Subjects with at least one AE | A denominator can never be defined by the numerator |
+
+      **The last one is the instructive error.** Using "subjects with at least one AE" as the denominator
+      makes every incidence rate a proportion of the subjects who had events, which is meaningless and
+      always produces high-looking percentages.
+
+      **The 414-versus-416 problem is real and needs a decision.** Two treated subjects have a null
+      `ACTARM` because they received a mixture matching no planned arm. They belong in the safety
+      population, and the SAP has to say which column they appear in. Common answers: the arm they were
+      randomized to, the treatment they received for the longest period, or a separate footnote. Dropping
+      them silently — which is what a straight join on `ACTARM` does — is not one of the acceptable
+      answers.
+
+      Verify in the data: subjects with at least one AE is 414, and the six randomized subjects with no
+      AE records at all are the four never-treated plus two treated subjects who genuinely reported none.
+    explanation:
+      objective: "Choose the denominator for a safety table."
+      given: "Four competing counts from DM and AE."
+      relevant: "That a safety population is defined by treatment received."
+      irrelevant: "The number of subjects with AE records, which is the numerator's population."
+      calculating: "Identifying the treated population rather than deriving anything."
+      numbers: "420 randomized, 416 treated, 414 with ACTARM populated, 414 with at least one AE."
+      assumptions: "That the SAP defines the safety population as treated, which is near-universal."
+      interpretation: "The 414/416 gap is two real subjects who need a column assignment rather than a silent drop."
+      changes: "An ITT-based AE table would use 420 and would report zero events for the four never-treated subjects."
+
+  - id: sdtm.ae.belongs-elsewhere
+    format: classify
+    modes: [independent, boss]
+    difficulty: advanced
+    skills: [sdtm.events, sdtm.mapping]
+    lesson: sdtm-ae-domain
+    title: Does this belong in AE?
+    prompt: |
+      A data manager sends you six records from CBX417-301's adverse-event page, asking which should be
+      mapped to `AE`.
+    categories: [Map to AE, Map to another domain, Do not submit]
+    entries:
+      - text: "\"Chronic lower back pain\", start 14 FEB 2023 — the subject's informed consent date is 11 MAY 2023"
+        category: Map to another domain
+        note: "A condition predating study entry is medical history, not an adverse event. This is the one real case in the study: it is why subject 1027-0019's AESPID runs 2-8 while AESEQ runs 1-7."
+      - text: "\"Worsening of pre-existing hypertension\", start study day 42"
+        category: Map to AE
+        note: "The worsening is the event, even though the condition predates the study. Investigators are trained to phrase it this way."
+      - text: "An exact duplicate of the line above it, identical in every field except RECORD_ID"
+        category: Do not submit
+        note: "One of 17 exact duplicate rows created by a double EDC export, 5 of them in ae.csv. That is why raw has 2,472 rows and AE has 2,466."
+      - text: "\"Neutropenia\", grade 4, requiring hospitalization"
+        category: Map to AE
+        note: "AESER = Y with AESHOSP = Y. Grade 4 and serious — both, independently."
+      - text: "\"Alanine aminotransferase increased\", grade 3, the investigator having judged the laboratory abnormality clinically significant"
+        category: Map to AE
+        note: "The laboratory value itself is in LB. The investigator's judgement that it is an adverse event creates a separate AE record — both exist, and they are not duplicates."
+      - text: "\"Death due to progressive disease\", the subject having died of the disease under study"
+        category: Map to another domain
+        note: "Disease progression is the efficacy endpoint, not an adverse event. It goes to DS (DSDECOD = DEATH) and DD (DDSTRESC = PROGRESSIVE DISEASE, 285 records)."
+    hints:
+      - "Two of these predate or fall outside the definition of an adverse event."
+      - "One is not a record at all."
+    solution: |
+      The definitional test: **an untoward medical occurrence in a subject administered a pharmaceutical
+      product, during the study.**
+
+      **Pre-existing conditions** fail the "during the study" part and belong in `MH`. But their
+      **worsening** passes, because the worsening occurred during the study — which is why investigators
+      are trained to write "worsening of…".
+
+      **Duplicates** are not records. Five in this study's `ae.csv`, deleted before mapping, which is the
+      difference between 2,472 raw rows and 2,466 SDTM records.
+
+      **Laboratory abnormalities** are the case that confuses people. The value lives in `LB` whether or
+      not anyone thinks it is an adverse event. If the investigator judges it clinically significant and
+      reports it as an AE, an `AE` record also exists. **Both are correct and they are not duplicates** —
+      they answer different questions, and the SAP says which one drives the laboratory safety analysis.
+
+      **Disease progression** is the subtlest. In an oncology trial the disease under study is the
+      efficacy endpoint, and reporting its progression as an adverse event would double-count it and
+      distort the safety profile. CBX417-301 has 28 fatal adverse events and 356 deaths, 285 of which
+      `DD` attributes to progressive disease. Protocols state this rule explicitly, because otherwise
+      sites report it both ways.
+    explanation:
+      objective: "Apply the adverse-event definition to borderline records."
+      method: "Test each against 'untoward medical occurrence, in a treated subject, during the study'."
+      relevant: "Timing relative to consent, and whether the occurrence is the study endpoint."
+      irrelevant: "Which CRF page the record arrived on — all six are on the AE page."
+      assumptions: "That the protocol states the disease-progression rule, which oncology protocols do."
+      interpretation: "Three of the six are AE records; the other three each fail for a different reason."
+      changes: "In a study where the disease under study is not the endpoint, progression would be a reportable adverse event."
+
+  - id: sdtm.ae.reconcile-deaths
+    format: open
+    modes: [interview, qc, boss]
+    difficulty: advanced
+    skills: [sdtm.events, qc.discrepancy, trials.safety]
+    lesson: sdtm-ae-domain
+    title: 28 fatal events, 356 deaths
+    prompt: |
+      A reviewer asks: "Your AE domain has 28 records with a fatal outcome. Your DS domain has 356
+      subjects with `DSDECOD = "DEATH"`. Explain the difference."
+
+      CBX417-301 is a study in previously treated advanced NSCLC. `DD` attributes primary cause of death
+      as: progressive disease 285, adverse event 28, other 28, unknown 15.
+
+      Answer the reviewer, and describe the reconciliation you would run to defend the answer.
+    modelAnswer: |
+      **The difference is the disease.** This is an advanced NSCLC population with a median progression-free
+      survival measured in months. 285 of the 356 deaths are attributed to progressive disease, which is
+      the efficacy endpoint of the study rather than an adverse event. Protocols in oncology state this
+      explicitly, because otherwise sites report disease progression both as the endpoint and as an
+      adverse event, which double-counts it and distorts the safety profile.
+
+      So the three domains are three different views, and they are not supposed to balance:
+
+      | Domain | What it holds | n |
+      |---|---|---:|
+      | `DS` | Disposition: the subject died | 356 |
+      | `DD` | Primary cause of death | 356 |
+      | `AE` | Adverse events with a fatal outcome | 28 |
+
+      The expected relationship is a **one-way** one: every fatal adverse event should correspond to a
+      death record, and the converse should not hold. 28 plus 285 plus 28 plus 15 is 356, and the 28
+      attributed to an adverse event is exactly the AE count — so the two domains agree on the subset
+      where they should.
+
+      **The reconciliation I would run**, and I would run it before a reviewer asks:
+
+      1. **Every subject with a fatal AE has a `DS` death record.** A fatal adverse event with no
+         disposition record is an unambiguous defect in one of the two domains.
+      2. **Every subject with `DD.DDSTRESC = "ADVERSE EVENT"` has a fatal AE**, and the counts match —
+         28 and 28 here.
+      3. **The death date agrees across `DM.DTHDTC`, `DS.DSSTDTC`, `DD.DDDTC` and `AE.AEENDTC`** for the
+         fatal events. Dates arriving from four sources through different forms is where discrepancies
+         actually live.
+      4. **`DM.DTHFL = "Y"` exactly when `DTHDTC` is populated** — 356 and 356.
+      5. **No subject has a `DS` death record and post-death data** in any other domain, which is a
+         different class of finding and worth checking at the same time.
+
+      **What I would also say to the reviewer**, because they are likely to ask next: the 28 "other"
+      causes in `DD` are worth their attention more than the arithmetic. Those are deaths attributed
+      neither to the disease nor to an adverse event — sudden death, myocardial infarction, stroke, a
+      fall — and whether any of them should have been reported as adverse events is a medical judgement
+      the monitor makes, not a programming one. The count I would give them is that `DD` has 11 sudden
+      deaths, 7 myocardial infarctions, 6 strokes and 4 other, and that each was reviewed.
+
+      **Where I would be careful:** I would not present the reconciliation as a validation that "passes".
+      It is a set of expected relationships, some of which are one-way, and describing them as balance
+      checks invites exactly the reviewer question that started this.
+    rubric:
+      - "Explains the 28-versus-356 gap as the oncology endpoint rather than as missing adverse events"
+      - "States the relationship is one-way: every fatal AE implies a death, not the converse"
+      - "Uses the DD breakdown to show the arithmetic closes: 285 + 28 + 28 + 15 = 356, with the 28 matching the AE count"
+      - "Lists concrete reconciliation checks across DM, DS, DD and AE, including date agreement"
+      - "Raises the 'other' causes as the substantive question rather than the arithmetic"
+      - "Avoids presenting one-way relationships as balance checks"
+    redFlags:
+      - "Claiming the AE domain is missing 328 fatal events"
+      - "Proposing to add AE records for progression deaths"
+      - "Treating the relationship as a two-way balance check"
+      - "Not knowing which domains carry death information"
+    followUps:
+      - "A subject has DS.DSDECOD = DEATH and a laboratory result dated after it. What has happened?"
+      - "How would you check the death date across four domains?"
+      - "One of the 'other' deaths was a myocardial infarction on treatment. Should it have been an AE?"
+
+  - id: sdtm.ae.open-sae
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [sdtm.events, trials.safety, communication.documentation]
+    lesson: sdtm-ae-domain
+    title: SAE reconciliation
+    prompt: |
+      An interviewer says: "You'll be asked to do SAE reconciliation in your first month. What is it,
+      what do you actually compare, and what do you do when the two sources disagree?"
+    modelAnswer: |
+      "Serious adverse events go to the sponsor twice, by two routes, on two schedules.
+
+      One route is the clinical database: the site enters the event on the AE CRF page, it flows through
+      the EDC into SDTM, and it appears in `AE` with `AESER = 'Y'`. On the study I've been working with
+      that's 150 records across 137 subjects.
+
+      The other route is expedited safety reporting: the site also completes an SAE form that goes
+      directly to pharmacovigilance, usually within 24 hours, because serious events have regulatory
+      reporting timelines. That lands in a separate safety database, which is not the clinical database.
+
+      Two independent entry paths for the same event, so they drift. Reconciliation is the recurring task
+      of making them agree before database lock.
+
+      **What I compare**, per event: subject identifier, verbatim term, onset date, the seriousness
+      criteria, outcome, and whether it was fatal. The seriousness criteria are the ones that drift most,
+      because a site ticks 'hospitalization' on one form and 'life-threatening' on the other, or ticks
+      serious on the CRF front page and leaves the criteria page blank. On that study all 150 serious
+      records have at least one criterion set to `Y` — which is exactly the check that catches the blank
+      criteria page.
+
+      **The discrepancy types** are roughly: in one source and not the other; present in both with
+      different dates; present in both with different seriousness criteria; and present in both but coded
+      to different preferred terms, which happens when the two systems are on different MedDRA versions.
+
+      **What I do about it** — and this is the part where the answer has to be right. I produce the
+      discrepancy listing. I do not resolve it. Resolution is a data-management and pharmacovigilance
+      decision, because it usually means querying the site, and which source is authoritative is not a
+      programming judgement. My job is to make the listing unambiguous enough that someone can act on it
+      without coming back to me: both values side by side, the subject, the event, the dates, and which
+      source each came from.
+
+      **What I'd also flag** is that matching the two sources is itself non-trivial. You can't join on
+      `AESEQ`, because it's a surrogate key assigned when the SDTM domain is built and the safety database
+      has never seen it. The match is on subject plus verbatim term plus onset date, which is fuzzy —
+      terms are free text and dates get corrected. So the listing has a category for 'probable match, one
+      field differs', and someone reads it."
+    rubric:
+      - "Identifies two independent routes — clinical database and expedited safety reporting — as the cause"
+      - "Names the fields compared: subject, verbatim term, onset date, seriousness criteria, outcome, fatality"
+      - "Identifies seriousness criteria as the field that drifts most, with a concrete failure mode"
+      - "States that the programmer produces the listing and does not resolve discrepancies"
+      - "Raises the matching problem: --SEQ is unusable across systems, so the match is on a fuzzy natural key"
+      - "Mentions MedDRA version differences as a source of coding discrepancies"
+    redFlags:
+      - "Proposing to overwrite the clinical database from the safety database or vice versa"
+      - "Joining the two sources on AESEQ"
+      - "Describing it as a one-off pre-lock activity"
+      - "Not knowing why two sources exist"
+    followUps:
+      - "The safety database has an event the clinical database does not. What are the possible explanations?"
+      - "How would you match events when the verbatim terms differ slightly?"
+      - "Why can't you use AESEQ as the match key?"

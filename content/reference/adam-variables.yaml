@@ -1,0 +1,399 @@
+category: adam-variables
+title: ADaM variables
+description: >-
+  The variables you will derive, merge and argue about. Each entry gives the definition, the naming
+  rule it follows, and the mistake that most often gets made with it. Anything marked "official" is
+  stated in ADaMIG v1.3; conventions are marked as such.
+entries:
+  # ---------------- Identifiers and treatment ----------------
+  - id: adam-usubjid
+    term: USUBJID
+    aliases: [Unique Subject Identifier]
+    summary: The identifier that is unique across the entire submission, not just within one study.
+    syntax: "USUBJID = STUDYID || '-' || SITEID || '-' || SUBJID"
+    body: |
+      `SUBJID` is only unique within a site, so it cannot be the key. The concatenation above is the
+      usual construction, and the separator is a sponsor convention rather than a rule.
+
+      **It must be identical in SDTM and ADaM.** A subject whose `USUBJID` differs between the two is
+      untraceable, which defeats the entire point of ADaM.
+    standard: official
+    related: [adam-studyid, adam-subjid]
+    source: { label: ADaMIG v1.3, url: https://www.cdisc.org/standards/foundational/adam }
+
+  - id: adam-studyid
+    term: STUDYID
+    summary: The study identifier, identical on every record of every dataset in the submission.
+    standard: official
+    related: [adam-usubjid]
+
+  - id: adam-subjid
+    term: SUBJID
+    summary: The subject identifier as used at the site — unique within a site, not across the study.
+    body: |
+      Useful for talking to sites and for listings a monitor will read. Never use it as a merge key.
+    standard: official
+    related: [adam-usubjid]
+
+  - id: adam-trt01p
+    term: TRT01P / TRT01A
+    aliases: [TRTxxP, TRTxxA, planned treatment, actual treatment]
+    summary: Planned (`P`) and actual (`A`) treatment for period 01; the `xx` is the period number.
+    body: |
+      **`TRT01P` is what the subject was randomized to; `TRT01A` is what they actually received.**
+      They differ when a dosing error occurs, and the distinction drives which population a subject
+      appears in:
+
+      - Efficacy analyses use **planned** treatment (ITT preserves randomization)
+      - Safety analyses use **actual** treatment (you attribute an event to the drug given)
+
+      Each has a numeric companion (`TRT01PN`, `TRT01AN`) used for sorting and for `CLASS` statements,
+      because relying on alphabetical order of a character variable is how treatment coefficients end up
+      attached to the wrong arm.
+
+      In BDS datasets the per-record analogues are `TRTP` and `TRTA`.
+    standard: official
+    related: [adam-ittfl, adam-saffl, adam-trtsdt]
+
+  - id: adam-trtsdt
+    term: TRTSDT / TRTEDT
+    aliases: [treatment start date, treatment end date]
+    summary: Dates of first and last dose of study treatment, as numeric SAS or ISO dates.
+    body: |
+      `TRTSDT` is the anchor for **study day** and for the treatment-emergent window. `TRTSDTM`/`TRTEDTM`
+      are the datetime versions, needed when labs are drawn pre-dose on Day 1 and the time matters for
+      deciding what counts as baseline.
+
+      A subject randomized but never dosed has a missing `TRTSDT`, which is exactly why `SAFFL` is
+      derived from it.
+    standard: official
+    related: [adam-ady, adam-trtemfl, adam-saffl]
+
+  # ---------------- Population flags ----------------
+  - id: adam-ittfl
+    term: ITTFL
+    aliases: [Intent-to-Treat flag, FASFL]
+    summary: "`Y` for subjects in the intention-to-treat population — normally all randomized subjects."
+    body: |
+      Population flags are `Y`/`N` character variables on ADSL, never numeric. The rule is
+      **derive once on ADSL and merge outward** — re-deriving a population inside a table program is how
+      two tables end up with different denominators.
+
+      Some sponsors use `FASFL` (Full Analysis Set) instead; the SAP defines which and how it differs
+      from strict ITT.
+    standard: official
+    related: [adam-saffl, adam-efffl, adam-trt01p]
+
+  - id: adam-saffl
+    term: SAFFL
+    aliases: [Safety population flag]
+    summary: "`Y` for subjects who received at least one dose of study treatment."
+    syntax: "SAFFL = 'Y' if TRTSDT is not missing"
+    body: |
+      Note the two differences from `ITTFL`: **dosed** rather than randomized, and paired with
+      **actual** rather than planned treatment. A subject randomized to placebo who received drug is in
+      the drug arm of every safety table.
+    standard: official
+    related: [adam-ittfl, adam-trt01p, adam-trtsdt]
+
+  - id: adam-efffl
+    term: EFFFL / PPROTFL
+    aliases: [efficacy population, per-protocol flag]
+    summary: Flags for the efficacy and per-protocol analysis sets, defined by the SAP.
+    body: |
+      Both involve post-randomization exclusions (missing baseline, no post-baseline assessment, major
+      protocol deviations), so both can break the comparability randomization created. They belong in
+      sensitivity analyses, with the primary analysis on ITT.
+
+      The exclusion criteria must be applied **blind** — decided before unblinding, not after seeing who
+      it removes.
+    related: [adam-ittfl, adam-saffl]
+
+  - id: adam-randfl
+    term: RANDFL / COMPLFL / DCSREAS
+    summary: Disposition variables — randomized, completed the study, and the reason for discontinuation.
+    body: |
+      `DCSREAS` is the free-text or coded reason (adverse event, lack of efficacy, withdrawal by subject,
+      lost to follow-up, death). It drives the disposition table and, more importantly, the
+      **missing-data discussion**: if discontinuation for lack of efficacy is concentrated in one arm,
+      a complete-case analysis is biased.
+    related: [adam-ittfl]
+
+  # ---------------- BDS core ----------------
+  - id: adam-paramcd
+    term: PARAMCD / PARAM / PARAMN
+    summary: What is being measured on each BDS record — short code, full description, and display order.
+    syntax: |
+      PARAMCD = 'SYSBP'
+      PARAM   = 'Systolic Blood Pressure (mmHg)'
+      PARAMN  = 1
+    body: |
+      `PARAMCD` is used in code and `WHERE` clauses; `PARAM` is what the reader of a table sees;
+      `PARAMN` controls ordering without relying on alphabetisation.
+
+      **`PARAM` must fully describe the value, including units and any transformation.** A `PARAM` of
+      "Blood Pressure" on rows holding both systolic and diastolic values is a conformance problem,
+      not a cosmetic one — the reader cannot tell what they are looking at. If a parameter is log-transformed
+      or expressed as a ratio, that belongs in `PARAM` too.
+
+      `PARAMCD` is limited to 8 characters, which is why parameter codes look cramped.
+    standard: official
+    related: [adam-aval, adam-avisit, adam-base]
+
+  - id: adam-aval
+    term: AVAL / AVALC
+    aliases: [Analysis Value]
+    summary: The numeric (`AVAL`) or character (`AVALC`) analysis value for the record.
+    body: |
+      One row holds one value. If the value is fundamentally categorical (a response category, a
+      shift category), `AVALC` carries the text and `AVAL` carries a numeric code for it.
+
+      **Do not populate both with unrelated content.** When both are present they must represent the
+      same result — `AVALC = 'PR'` with `AVAL = 2` is fine; `AVALC = 'PR'` with `AVAL = 47.3` is not.
+    standard: official
+    related: [adam-paramcd, adam-base, adam-chg]
+
+  - id: adam-avisit
+    term: AVISIT / AVISITN
+    aliases: [Analysis Visit]
+    summary: The analysis visit label and its numeric order — the *analysis* timepoint, not necessarily the CRF visit.
+    body: |
+      `VISIT`/`VISITNUM` come from SDTM and record what actually happened. `AVISIT`/`AVISITN` are
+      **derived for analysis** and may differ: unscheduled visits get windowed into the nearest scheduled
+      timepoint, repeats get collapsed, and the windowing rule comes from the SAP.
+
+      A common derivation: `AVISIT = 'Week 12'` for any assessment with `ADY` between 71 and 105.
+      The windowing rule is a SAP decision, not a standard.
+    standard: official
+    related: [adam-ady, adam-anl01fl, adam-paramcd]
+
+  - id: adam-ady
+    term: ADY
+    aliases: [Analysis Day, study day]
+    summary: Study day of the analysis date, relative to the treatment start date.
+    syntax: |
+      ADY = ADT - TRTSDT + 1   if ADT >= TRTSDT
+      ADY = ADT - TRTSDT       if ADT <  TRTSDT
+    body: |
+      **There is no Day 0.** The day before first dose is Day −1 and the day of first dose is Day 1,
+      which is why the formula has two branches. Subtracting naively produces a Day 0 that does not
+      exist and shifts every pre-treatment day by one.
+
+      The same rule governs SDTM's `--DY` variables.
+    standard: official
+    related: [adam-trtsdt, adam-avisit]
+    source: { label: SDTMIG v3.4, url: https://www.cdisc.org/standards/foundational/sdtmig }
+
+  - id: adam-base
+    term: BASE / BASEC
+    aliases: [Baseline Value]
+    summary: The baseline value for that subject and parameter, repeated on **every** record for that subject/parameter.
+    body: |
+      Note "repeated on every record" — `BASE` is not only on the baseline row. It is copied to all rows
+      so that `CHG` can be computed and so the value is available at analysis time without a self-join.
+
+      On the baseline record itself, `BASE = AVAL` and `CHG = 0`. Whether to populate `CHG` on the
+      baseline row at all is a sponsor convention.
+    standard: official
+    related: [adam-ablfl, adam-chg, adam-aval]
+
+  - id: adam-ablfl
+    term: ABLFL
+    aliases: [Baseline Record Flag]
+    summary: "`Y` on the single record used as baseline for each subject and parameter."
+    body: |
+      The definition is a SAP decision — most commonly **the last non-missing value on or before the
+      first dose**. Ties need a documented tie-breaker (collection time, then sequence number).
+
+      **QC check:** at most one `ABLFL = 'Y'` per subject per parameter. More than one is a hard error,
+      and it happens whenever the tie-breaker is missing and two assessments share a date.
+    standard: official
+    related: [adam-base, adam-lobxfl]
+
+  - id: adam-lobxfl
+    term: "--LOBXFL"
+    aliases: [Last Observation Before Exposure Flag]
+    summary: An SDTM-level flag marking the last observation before first exposure — distinct from ADaM's ABLFL.
+    body: |
+      Introduced in SDTMIG v3.4 to carry a sponsor-defined "last before exposure" flag in the tabulation
+      data. **It is not the same as `ABLFL`**, which is an ADaM analysis decision and may use a different
+      rule for a particular analysis.
+
+      When they coincide, `ABLFL` can be derived from `--LOBXFL`, and that derivation is excellent
+      traceability. When the SAP defines baseline differently, they legitimately differ — and the ADRG
+      should say so.
+    standard: official
+    related: [adam-ablfl, adam-base]
+
+  - id: adam-chg
+    term: CHG / PCHG
+    aliases: [Change from Baseline, Percent Change from Baseline]
+    summary: Absolute and percentage change from baseline.
+    syntax: |
+      CHG  = AVAL - BASE
+      PCHG = (AVAL - BASE) / BASE * 100
+    body: |
+      Only populated for **post-baseline** records (and, by convention, set to 0 or left missing on the
+      baseline row itself — the SAP decides).
+
+      `PCHG` is undefined when `BASE = 0` and unstable when `BASE` is near zero — a real problem for
+      parameters like tumour burden or cell counts. Many SAPs use absolute change for exactly this reason.
+
+      Note also that analysing `CHG` with `BASE` as a covariate gives the **identical** treatment effect
+      to analysing `AVAL` with `BASE` as a covariate; only the baseline coefficient differs, by 1.
+    standard: official
+    related: [adam-base, adam-aval]
+
+  - id: adam-anl01fl
+    term: ANL01FL
+    aliases: [Analysis Flag 01, ANLzzFL]
+    summary: A flag selecting exactly the records that feed one specific analysis.
+    body: |
+      Its purpose is to make record selection **explicit and traceable** instead of hidden in a `WHERE`
+      clause inside a table program. Typical use: when a subject has both a scheduled and an unscheduled
+      assessment windowed into the same `AVISIT`, `ANL01FL = 'Y'` marks the one the analysis uses.
+
+      The `zz` allows several: `ANL01FL` for the primary analysis, `ANL02FL` for a sensitivity analysis
+      with different selection rules.
+
+      **The rule must be documented in define.xml and the ADRG** — the flag itself says *which* record,
+      not *why*.
+    standard: official
+    related: [adam-avisit, adam-paramcd]
+
+  # ---------------- Time to event ----------------
+  - id: adam-cnsr
+    term: CNSR
+    aliases: [Censoring indicator]
+    summary: "`0` = the event occurred; `1` (or higher) = censored. **The opposite of the usual statistical convention.**"
+    body: |
+      This is the single most common source of a sign error when moving between CDISC and general
+      statistical software. R's `survival` package and most textbooks use `event = 1`; ADaM uses
+      `CNSR = 0` for an event.
+
+      ```r
+      # Converting ADaM to R's convention
+      adtte$event <- as.integer(adtte$CNSR == 0)   # correct
+      adtte$event <- 1 - adtte$CNSR                # WRONG if CNSR > 1 is used
+      ```
+
+      ADaM permits values greater than 1 to distinguish **censoring reasons** (new anticancer therapy,
+      two or more missed assessments, no adequate baseline). When a study uses them, `1 - CNSR` produces
+      negative values and silently corrupts the analysis — always test `CNSR == 0`.
+    standard: official
+    related: [adam-evntdesc, adam-adt, adam-aval]
+    source: { label: "CDISC ADaM Structure for Time-to-Event Analyses", url: https://www.cdisc.org/standards/foundational/adam }
+
+  - id: adam-evntdesc
+    term: EVNTDESC / CNSDTDSC
+    aliases: [Event description, Censoring description]
+    summary: Text describing what the event was, or why and at what date the subject was censored.
+    body: |
+      `EVNTDESC` describes the event (`DISEASE PROGRESSION`, `DEATH`); `CNSDTDSC` describes the censoring
+      date rule (`LAST ADEQUATE ASSESSMENT`, `RANDOMIZATION DATE`).
+
+      These two variables are how a reviewer checks that the SAP's censoring rules were actually applied,
+      so they should be populated from the derivation logic rather than written by hand.
+    standard: official
+    related: [adam-cnsr, adam-adt]
+
+  - id: adam-adt
+    term: ADT / STARTDT
+    aliases: [Analysis Date]
+    summary: For a time-to-event record, the date of the event or of censoring; `STARTDT` is the origin.
+    syntax: "AVAL = ADT - STARTDT + 1   (days)"
+    body: |
+      `STARTDT` is usually the randomization date for PFS and OS — **not** the treatment start date,
+      because the ITT principle anchors on randomization.
+
+      `AVALU` records the unit (`DAYS`, `MONTHS`). Mixing units across parameters in one dataset without
+      `AVALU` is a reliable way to produce a Kaplan–Meier plot with a nonsensical x-axis.
+    standard: official
+    related: [adam-cnsr, adam-aval]
+
+  # ---------------- Occurrence (AE) ----------------
+  - id: adam-trtemfl
+    term: TRTEMFL
+    aliases: [Treatment-Emergent Flag]
+    summary: "`Y` for adverse events that started, or worsened, on or after first dose."
+    syntax: "TRTEMFL = 'Y' if ASTDT >= TRTSDT and ASTDT <= TRTEDT + follow-up window"
+    body: |
+      The follow-up window comes from the SAP and is usually based on the drug's half-life (commonly
+      30 days). Events before first dose are pre-treatment and are listed separately, not counted in
+      the AE tables.
+
+      **Partial dates are the hard part.** An AE with only a month and year recorded needs an imputation
+      rule — typically conservative (assume treatment-emergent when it cannot be ruled out) — and that
+      rule belongs in the SAP, not in a programmer's judgement.
+    standard: official
+    related: [adam-trtsdt, adam-aoccfl, adam-atoxgr]
+
+  - id: adam-aoccfl
+    term: AOCCFL / AOCCSFL / AOCCPFL
+    aliases: [Analysis Occurrence Flags]
+    summary: Flags marking the first (or worst) occurrence per subject, per SOC, or per preferred term.
+    body: |
+      Adverse-event tables count **subjects, not events**. A subject with three episodes of nausea
+      contributes one to the nausea row. These flags mark which single record represents that subject
+      for each level of the table, so the counting is explicit rather than buried in a `SELECT DISTINCT`.
+
+      `AOCCFL` = first occurrence overall, `AOCCSFL` = per SOC, `AOCCPFL` = per preferred term.
+      For a maximum-severity table you flag the **worst** rather than the first — the flag name stays
+      the same and the derivation differs, which is why the ADRG has to explain it.
+    standard: official
+    related: [adam-trtemfl, adam-atoxgr]
+
+  - id: adam-atoxgr
+    term: ATOXGR / ASEV
+    aliases: [Analysis Toxicity Grade, Analysis Severity]
+    summary: Severity of an adverse event — a CTCAE grade (`ATOXGR`) or a mild/moderate/severe rating (`ASEV`).
+    body: |
+      **Severity is not seriousness.** `AESER` is the regulatory seriousness flag and is independent:
+      a mild event requiring overnight hospitalisation is serious but not severe.
+
+      Oncology studies grade with CTCAE 1–5; other therapeutic areas often use mild/moderate/severe.
+      `ATOXGRN` is the numeric companion used for computing a maximum.
+    related: [adam-trtemfl, adam-aoccfl]
+
+  # ---------------- Covariates and stratification ----------------
+  - id: adam-strat
+    term: STRATxR / STRATxV
+    aliases: [randomization stratum]
+    summary: The stratification factor value **as randomized** (`R`) versus **as verified** on the CRF (`V`).
+    body: |
+      Subjects are randomized within strata using the value known at randomization, which is sometimes
+      later corrected. The primary analysis uses the **as-randomized** value, because that is what
+      defined the randomization; a sensitivity analysis uses the corrected value.
+
+      Getting this backwards is a subtle and genuine error. It is also exactly the kind of detail that
+      distinguishes a programmer who has read the SAP from one who has read only the data.
+
+      The variable naming here is a sponsor convention; ADaM does not mandate `STRAT1R`.
+    standard: convention
+    related: [adam-ittfl, adam-trt01p]
+    source: { label: ICH E9 §5.7, url: https://database.ich.org/sites/default/files/E9_Guideline.pdf }
+
+  - id: adam-agegr1
+    term: AGEGR1 / AGEGR1N
+    summary: A grouped version of age used for subgroup tables and summaries.
+    body: |
+      The grouping is a SAP decision (`<65` / `>=65` is common). Always paired with a numeric companion
+      so the display order is controlled rather than alphabetical — otherwise "≥65" sorts before "<65"
+      in some collations and the table rows come out reversed.
+    standard: convention
+    related: [adam-trt01p]
+
+  - id: adam-dtype
+    term: DTYPE
+    aliases: [Derivation Type]
+    summary: Marks a record whose value was **imputed or derived** rather than observed.
+    body: |
+      When a record is added or modified by a derivation rule — LOCF, a worst-case imputation, an
+      average of replicates — `DTYPE` records which rule produced it, and the original observed record
+      is normally retained alongside with `DTYPE` missing.
+
+      This is the mechanism that keeps imputation **visible**: an analysis using only observed data
+      selects records where `DTYPE` is missing, and one using imputed data does not. Hiding an
+      imputation by overwriting the observed value is what `DTYPE` exists to prevent.
+    standard: official
+    related: [adam-anl01fl, adam-aval]

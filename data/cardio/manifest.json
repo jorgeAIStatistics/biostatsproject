@@ -1,0 +1,677 @@
+{
+  "study": "cardio",
+  "title": "VTX221-201 — 12-week antihypertensive dose-ranging trial (synthetic)",
+  "description": "Fictional randomized, double-blind, placebo-controlled trial of VTX-221 10 mg and 20 mg once daily versus placebo in adults with essential hypertension (sponsor: Halden Therapeutics, fictional). Primary endpoint: change from baseline in seated systolic blood pressure at Week 12. Designed for teaching ANCOVA, repeated-measures (MMRM) analysis, missing data and safety summaries.",
+  "synthetic": true,
+  "generator": "scripts/data/cardio/generate.ts",
+  "seed": 44,
+  "datasets": [
+    {
+      "id": "cardio/adam/adsl",
+      "layer": "adam",
+      "name": "ADSL",
+      "label": "Subject-Level Analysis Dataset",
+      "file": "adsl.csv",
+      "rows": 270,
+      "keys": [
+        "USUBJID"
+      ],
+      "structure": "One record per randomized subject",
+      "description": "All randomized subjects (screen failures excluded): demographics, baseline characteristics, stratification, treatment, dates, disposition and population flags.",
+      "columns": [
+        {
+          "name": "STUDYID",
+          "label": "Study Identifier",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Assigned"
+        },
+        {
+          "name": "USUBJID",
+          "label": "Unique Subject Identifier",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Assigned",
+          "derivation": "STUDYID || \"-\" || SUBJID."
+        },
+        {
+          "name": "SUBJID",
+          "label": "Subject Identifier for the Study",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Assigned",
+          "derivation": "SITEID || \"-\" || three-digit sequence number within site (in order of randomization)."
+        },
+        {
+          "name": "SITEID",
+          "label": "Study Site Identifier",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Assigned",
+          "notes": "12 fictional sites: 101–109 in the USA, 110–112 in Canada."
+        },
+        {
+          "name": "COUNTRY",
+          "label": "Country",
+          "type": "char",
+          "role": "Demographic",
+          "origin": "Assigned",
+          "codelist": "ISO 3166-1 alpha-3"
+        },
+        {
+          "name": "AGE",
+          "label": "Age",
+          "type": "num",
+          "role": "Demographic",
+          "origin": "Collected",
+          "notes": "Age in years at informed consent (inclusion: 30–80 years in this simulation)."
+        },
+        {
+          "name": "AGEU",
+          "label": "Age Units",
+          "type": "char",
+          "role": "Demographic",
+          "origin": "Assigned",
+          "codelist": "AGEU"
+        },
+        {
+          "name": "AGEGR1",
+          "label": "Pooled Age Group 1",
+          "type": "char",
+          "role": "Subgroup",
+          "origin": "Derived",
+          "derivation": "\"<65\" if AGE < 65; \">=65\" if AGE >= 65."
+        },
+        {
+          "name": "AGEGR1N",
+          "label": "Pooled Age Group 1 (N)",
+          "type": "num",
+          "role": "Subgroup",
+          "origin": "Derived",
+          "derivation": "1 if AGEGR1 = \"<65\"; 2 if AGEGR1 = \">=65\"."
+        },
+        {
+          "name": "SEX",
+          "label": "Sex",
+          "type": "char",
+          "role": "Demographic",
+          "origin": "Collected",
+          "codelist": "SEX (M, F)"
+        },
+        {
+          "name": "RACE",
+          "label": "Race",
+          "type": "char",
+          "role": "Demographic",
+          "origin": "Collected",
+          "codelist": "Classic SDTM RACE values",
+          "notes": "Race/ethnicity terminology has been evolving in recent CDISC CT releases (RACEC/ETHNICC \"as collected\" codelists); the classic submission values are used here."
+        },
+        {
+          "name": "ETHNIC",
+          "label": "Ethnicity",
+          "type": "char",
+          "role": "Demographic",
+          "origin": "Collected",
+          "codelist": "Classic SDTM ETHNIC values"
+        },
+        {
+          "name": "HEIGHTBL",
+          "label": "Baseline Height (cm)",
+          "type": "num",
+          "role": "Baseline characteristic",
+          "origin": "Collected",
+          "notes": "Measured at screening."
+        },
+        {
+          "name": "WEIGHTBL",
+          "label": "Baseline Weight (kg)",
+          "type": "num",
+          "role": "Baseline characteristic",
+          "origin": "Collected",
+          "notes": "Measured at screening."
+        },
+        {
+          "name": "BMIBL",
+          "label": "Baseline BMI (kg/m2)",
+          "type": "num",
+          "role": "Baseline characteristic",
+          "origin": "Derived",
+          "derivation": "WEIGHTBL / (HEIGHTBL/100)**2, rounded to 1 decimal."
+        },
+        {
+          "name": "DIABFL",
+          "label": "Type 2 Diabetes at Baseline Flag",
+          "type": "char",
+          "role": "Baseline characteristic",
+          "origin": "Derived",
+          "codelist": "NY (Y, N)",
+          "derivation": "\"Y\" if the medical history records type 2 diabetes mellitus at screening, else \"N\" (medical history not included in this teaching dataset)."
+        },
+        {
+          "name": "SBPBL",
+          "label": "Baseline Seated Systolic BP (mmHg)",
+          "type": "num",
+          "role": "Baseline characteristic",
+          "origin": "Derived",
+          "derivation": "ADVS.AVAL where PARAMCD = \"SYSBP\" and ABLFL = \"Y\" (Day 1 pre-dose value, mean of 3 seated readings)."
+        },
+        {
+          "name": "DBPBL",
+          "label": "Baseline Seated Diastolic BP (mmHg)",
+          "type": "num",
+          "role": "Baseline characteristic",
+          "origin": "Derived",
+          "derivation": "ADVS.AVAL where PARAMCD = \"DIABP\" and ABLFL = \"Y\"."
+        },
+        {
+          "name": "SBPGR1",
+          "label": "Baseline SBP Group 1",
+          "type": "char",
+          "role": "Subgroup",
+          "origin": "Derived",
+          "derivation": "\"<150 mmHg\" if SBPBL < 150; \">=150 mmHg\" otherwise. Derived from the analysis baseline — compare with STRAT1R (stratum as randomized)."
+        },
+        {
+          "name": "SBPGR1N",
+          "label": "Baseline SBP Group 1 (N)",
+          "type": "num",
+          "role": "Subgroup",
+          "origin": "Derived",
+          "derivation": "1 if SBPGR1 = \"<150 mmHg\"; 2 otherwise."
+        },
+        {
+          "name": "STRAT1R",
+          "label": "Stratum 1 as Randomized",
+          "type": "char",
+          "role": "Stratification",
+          "origin": "Assigned",
+          "derivation": "Baseline SBP stratum recorded in the IxRS at randomization (\"<150 mmHg\" / \">=150 mmHg\"). Three subjects were stratified in error (STRAT1R differs from SBPGR1)."
+        },
+        {
+          "name": "STRAT1RN",
+          "label": "Stratum 1 as Randomized (N)",
+          "type": "num",
+          "role": "Stratification",
+          "origin": "Derived",
+          "derivation": "1 if STRAT1R = \"<150 mmHg\"; 2 otherwise."
+        },
+        {
+          "name": "RANDNO",
+          "label": "Randomization Number",
+          "type": "num",
+          "role": "Identifier",
+          "origin": "Assigned",
+          "derivation": "Stratum number × 1000 + sequence within stratum (from the IxRS randomization list)."
+        },
+        {
+          "name": "TRT01P",
+          "label": "Planned Treatment for Period 01",
+          "type": "char",
+          "role": "Treatment",
+          "origin": "Assigned",
+          "derivation": "Treatment assigned by the IxRS: \"Placebo\", \"VTX-221 10 mg\" or \"VTX-221 20 mg\" (permuted blocks of 6 within stratum, 1:1:1)."
+        },
+        {
+          "name": "TRT01PN",
+          "label": "Planned Treatment for Period 01 (N)",
+          "type": "num",
+          "role": "Treatment",
+          "origin": "Derived",
+          "derivation": "0 = Placebo, 1 = VTX-221 10 mg, 2 = VTX-221 20 mg."
+        },
+        {
+          "name": "TRT01A",
+          "label": "Actual Treatment for Period 01",
+          "type": "char",
+          "role": "Treatment",
+          "origin": "Derived",
+          "derivation": "Equal to TRT01P for treated subjects (no dispensing errors occurred); missing for subjects never dosed."
+        },
+        {
+          "name": "TRT01AN",
+          "label": "Actual Treatment for Period 01 (N)",
+          "type": "num",
+          "role": "Treatment",
+          "origin": "Derived",
+          "derivation": "Numeric code of TRT01A."
+        },
+        {
+          "name": "RANDDT",
+          "label": "Date of Randomization",
+          "type": "date",
+          "role": "Timing",
+          "origin": "Collected",
+          "notes": "ISO 8601 text in the CSV; a SAS dataset would store a numeric date with a DATE9. format."
+        },
+        {
+          "name": "TRTSDT",
+          "label": "Date of First Exposure to Treatment",
+          "type": "date",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "Date of first dose. First dose is taken on Day 1, the randomization day. Missing if never dosed."
+        },
+        {
+          "name": "TRTEDT",
+          "label": "Date of Last Exposure to Treatment",
+          "type": "date",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "Date of last dose (dosing diary). Completers: the day before the Week 12 trough visit. Missing if never dosed."
+        },
+        {
+          "name": "TRTDURD",
+          "label": "Total Treatment Duration (Days)",
+          "type": "num",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "TRTEDT − TRTSDT + 1."
+        },
+        {
+          "name": "COMPLPCT",
+          "label": "Treatment Compliance (%)",
+          "type": "num",
+          "role": "Compliance",
+          "origin": "Derived",
+          "derivation": "100 × tablets taken / tablets expected over the treatment period, from drug accountability (accountability records are not included — simplification)."
+        },
+        {
+          "name": "EOSSTT",
+          "label": "End of Study Status",
+          "type": "char",
+          "role": "Disposition",
+          "origin": "Derived",
+          "derivation": "\"COMPLETED\" if the subject attended the Week 12 visit; otherwise \"DISCONTINUED\"."
+        },
+        {
+          "name": "EOSDT",
+          "label": "End of Study Date",
+          "type": "date",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "Completers: Week 12 visit date. Discontinued: early-termination date, or last visit date for subjects lost to follow-up."
+        },
+        {
+          "name": "DCSREAS",
+          "label": "Reason for Discontinuation from Study",
+          "type": "char",
+          "role": "Disposition",
+          "origin": "Collected",
+          "codelist": "NCOMPLT",
+          "derivation": "Primary reason recorded on the disposition CRF; missing for completers."
+        },
+        {
+          "name": "ITTFL",
+          "label": "Intent-To-Treat Population Flag",
+          "type": "char",
+          "role": "Population flag",
+          "origin": "Derived",
+          "codelist": "NY",
+          "derivation": "\"Y\" for every randomized subject (analyzed as randomized)."
+        },
+        {
+          "name": "SAFFL",
+          "label": "Safety Population Flag",
+          "type": "char",
+          "role": "Population flag",
+          "origin": "Derived",
+          "codelist": "NY",
+          "derivation": "\"Y\" if the subject took at least one dose of study drug (TRTSDT not missing)."
+        },
+        {
+          "name": "PPROTFL",
+          "label": "Per-Protocol Population Flag",
+          "type": "char",
+          "role": "Population flag",
+          "origin": "Derived",
+          "codelist": "NY",
+          "derivation": "\"Y\" if ITTFL = \"Y\", SAFFL = \"Y\", COMPLFL = \"Y\" and 80 <= COMPLPCT <= 120 (SAP rule for this teaching study)."
+        },
+        {
+          "name": "COMPLFL",
+          "label": "Completers Population Flag",
+          "type": "char",
+          "role": "Population flag",
+          "origin": "Derived",
+          "codelist": "NY",
+          "derivation": "\"Y\" if EOSSTT = \"COMPLETED\" (Week 12 visit attended)."
+        }
+      ]
+    },
+    {
+      "id": "cardio/adam/advs",
+      "layer": "adam",
+      "name": "ADVS",
+      "label": "Vital Signs Analysis Dataset",
+      "file": "advs.csv",
+      "rows": 3082,
+      "keys": [
+        "USUBJID",
+        "PARAMCD",
+        "ADT",
+        "VISITNUM"
+      ],
+      "structure": "BDS: one record per subject, parameter and assessment",
+      "description": "Seated systolic (SYSBP) and diastolic (DIABP) blood pressure at screening, baseline (Day 1) and Weeks 2, 4, 8 and 12, plus early-termination and unscheduled assessments, with analysis windows (AVISIT), baseline, change from baseline and a one-record-per-visit analysis flag (ANL01FL).",
+      "columns": [
+        {
+          "name": "STUDYID",
+          "label": "Study Identifier",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Predecessor"
+        },
+        {
+          "name": "USUBJID",
+          "label": "Unique Subject Identifier",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Predecessor"
+        },
+        {
+          "name": "SITEID",
+          "label": "Study Site Identifier",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Predecessor",
+          "derivation": "ADSL.SITEID."
+        },
+        {
+          "name": "TRTP",
+          "label": "Planned Treatment",
+          "type": "char",
+          "role": "Treatment",
+          "origin": "Derived",
+          "derivation": "ADSL.TRT01P (single-period study)."
+        },
+        {
+          "name": "TRTPN",
+          "label": "Planned Treatment (N)",
+          "type": "num",
+          "role": "Treatment",
+          "origin": "Derived",
+          "derivation": "ADSL.TRT01PN: 0 = Placebo, 1 = VTX-221 10 mg, 2 = VTX-221 20 mg."
+        },
+        {
+          "name": "ITTFL",
+          "label": "Intent-To-Treat Population Flag",
+          "type": "char",
+          "role": "Population flag",
+          "origin": "Predecessor",
+          "derivation": "ADSL.ITTFL."
+        },
+        {
+          "name": "PARAMCD",
+          "label": "Parameter Code",
+          "type": "char",
+          "role": "Parameter",
+          "origin": "Assigned",
+          "codelist": "VSTESTCD (SYSBP, DIABP)"
+        },
+        {
+          "name": "PARAM",
+          "label": "Parameter",
+          "type": "char",
+          "role": "Parameter",
+          "origin": "Assigned",
+          "derivation": "\"Systolic Blood Pressure (mmHg)\" or \"Diastolic Blood Pressure (mmHg)\"."
+        },
+        {
+          "name": "PARAMN",
+          "label": "Parameter (N)",
+          "type": "num",
+          "role": "Parameter",
+          "origin": "Assigned",
+          "derivation": "1 = SYSBP, 2 = DIABP."
+        },
+        {
+          "name": "VISIT",
+          "label": "Visit Name",
+          "type": "char",
+          "role": "Timing",
+          "origin": "Predecessor",
+          "derivation": "Collected visit: SCREENING, BASELINE, WEEK 2, WEEK 4, WEEK 8, WEEK 12, EARLY TERMINATION or UNSCHEDULED."
+        },
+        {
+          "name": "VISITNUM",
+          "label": "Visit Number",
+          "type": "num",
+          "role": "Timing",
+          "origin": "Predecessor",
+          "derivation": "SCREENING 1, BASELINE 2, WEEK 2 3, WEEK 4 4, WEEK 8 5, WEEK 12 6, EARLY TERMINATION 99; UNSCHEDULED = preceding scheduled VISITNUM + 0.01 (a common convention, not a CDISC rule)."
+        },
+        {
+          "name": "AVISIT",
+          "label": "Analysis Visit",
+          "type": "char",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "SCREENING and BASELINE as collected. Post-baseline records are assigned by ADY to analysis windows: WEEK 2 = Days 2–21, WEEK 4 = Days 22–42, WEEK 8 = Days 43–70, WEEK 12 = Days 71–99 (so early-termination and unscheduled records get an analysis visit)."
+        },
+        {
+          "name": "AVISITN",
+          "label": "Analysis Visit (N)",
+          "type": "num",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "SCREENING -1, BASELINE 0, then the week number (2, 4, 8, 12)."
+        },
+        {
+          "name": "ADT",
+          "label": "Analysis Date",
+          "type": "date",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "Date of the blood-pressure assessment."
+        },
+        {
+          "name": "ADY",
+          "label": "Analysis Relative Day",
+          "type": "num",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "ADT − TRTSDT + 1 if ADT >= TRTSDT, else ADT − TRTSDT (no Day 0). For the two never-dosed subjects RANDDT is the reference date."
+        },
+        {
+          "name": "AVAL",
+          "label": "Analysis Value",
+          "type": "num",
+          "role": "Analysis value",
+          "origin": "Derived",
+          "derivation": "Mean of three seated readings taken at the visit, rounded to 0.1 mmHg (individual readings not included)."
+        },
+        {
+          "name": "BASE",
+          "label": "Baseline Value",
+          "type": "num",
+          "role": "Baseline",
+          "origin": "Derived",
+          "derivation": "AVAL of the record with ABLFL = \"Y\" for the same USUBJID and PARAMCD."
+        },
+        {
+          "name": "CHG",
+          "label": "Change from Baseline",
+          "type": "num",
+          "role": "Analysis value",
+          "origin": "Derived",
+          "derivation": "AVAL − BASE for post-baseline records (AVISITN > 0); missing for screening and baseline records (sponsor convention)."
+        },
+        {
+          "name": "PCHG",
+          "label": "Percent Change from Baseline",
+          "type": "num",
+          "role": "Analysis value",
+          "origin": "Derived",
+          "derivation": "100 × CHG / BASE, rounded to 2 decimals; post-baseline records only."
+        },
+        {
+          "name": "ABLFL",
+          "label": "Baseline Record Flag",
+          "type": "char",
+          "role": "Flag",
+          "origin": "Derived",
+          "derivation": "\"Y\" on the last non-missing value on or before first dose (Day 1 pre-dose); for never-dosed subjects, on or before RANDDT."
+        },
+        {
+          "name": "ANL01FL",
+          "label": "Analysis Flag 01",
+          "type": "char",
+          "role": "Flag",
+          "origin": "Derived",
+          "derivation": "\"Y\" on the baseline record and on one record per subject, parameter and post-baseline AVISIT: the record closest to the target day (15, 29, 57, 85); ties go to the later record. Blank for screening and for records not selected."
+        }
+      ]
+    },
+    {
+      "id": "cardio/sdtm/ae",
+      "layer": "sdtm",
+      "name": "AE",
+      "label": "Adverse Events",
+      "file": "ae.csv",
+      "rows": 142,
+      "keys": [
+        "USUBJID",
+        "AESEQ"
+      ],
+      "structure": "Events: one record per adverse event per subject",
+      "description": "SDTM-like adverse events for treated subjects (plus a few events that started between screening and the first dose). Join to ADSL on USUBJID for treatment and population flags.",
+      "columns": [
+        {
+          "name": "STUDYID",
+          "label": "Study Identifier",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Assigned"
+        },
+        {
+          "name": "DOMAIN",
+          "label": "Domain Abbreviation",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Assigned"
+        },
+        {
+          "name": "USUBJID",
+          "label": "Unique Subject Identifier",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Assigned"
+        },
+        {
+          "name": "AESEQ",
+          "label": "Sequence Number",
+          "type": "num",
+          "role": "Identifier",
+          "origin": "Derived",
+          "derivation": "Sequential within USUBJID after sorting by AESTDTC, AEDECOD."
+        },
+        {
+          "name": "AETERM",
+          "label": "Reported Term for the Adverse Event",
+          "type": "char",
+          "role": "Topic",
+          "origin": "Collected",
+          "notes": "Verbatim text as entered at the site (varies in case and wording)."
+        },
+        {
+          "name": "AEDECOD",
+          "label": "Dictionary-Derived Term",
+          "type": "char",
+          "role": "Synonym Qualifier",
+          "origin": "Assigned",
+          "notes": "MedDRA-like preferred term, illustrative only (US spelling, no MedDRA codes)."
+        },
+        {
+          "name": "AEBODSYS",
+          "label": "Body System or Organ Class",
+          "type": "char",
+          "role": "Record Qualifier",
+          "origin": "Assigned",
+          "notes": "MedDRA-like system organ class, illustrative only."
+        },
+        {
+          "name": "AESEV",
+          "label": "Severity/Intensity",
+          "type": "char",
+          "role": "Record Qualifier",
+          "origin": "Collected",
+          "codelist": "AESEV (MILD, MODERATE, SEVERE)"
+        },
+        {
+          "name": "AESER",
+          "label": "Serious Event",
+          "type": "char",
+          "role": "Record Qualifier",
+          "origin": "Collected",
+          "codelist": "NY"
+        },
+        {
+          "name": "AEREL",
+          "label": "Causality",
+          "type": "char",
+          "role": "Record Qualifier",
+          "origin": "Collected",
+          "notes": "Sponsor-defined two-level scale (RELATED / NOT RELATED); CDISC does not publish a single codelist for causality."
+        },
+        {
+          "name": "AEACN",
+          "label": "Action Taken with Study Treatment",
+          "type": "char",
+          "role": "Record Qualifier",
+          "origin": "Collected",
+          "codelist": "ACN"
+        },
+        {
+          "name": "AEOUT",
+          "label": "Outcome of Adverse Event",
+          "type": "char",
+          "role": "Record Qualifier",
+          "origin": "Collected",
+          "codelist": "OUT"
+        },
+        {
+          "name": "EPOCH",
+          "label": "Epoch",
+          "type": "char",
+          "role": "Timing",
+          "origin": "Derived",
+          "codelist": "EPOCH",
+          "derivation": "\"SCREENING\" if AESTDTC is before the first dose, else \"TREATMENT\"."
+        },
+        {
+          "name": "AESTDTC",
+          "label": "Start Date/Time of Adverse Event",
+          "type": "date",
+          "role": "Timing",
+          "origin": "Collected",
+          "notes": "Complete ISO 8601 dates in this teaching dataset (no partial dates)."
+        },
+        {
+          "name": "AEENDTC",
+          "label": "End Date/Time of Adverse Event",
+          "type": "date",
+          "role": "Timing",
+          "origin": "Collected",
+          "notes": "Missing when the event was ongoing at the end of the subject's participation."
+        },
+        {
+          "name": "AESTDY",
+          "label": "Study Day of Start of Adverse Event",
+          "type": "num",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "AESTDTC − RFSTDTC + 1 if on/after RFSTDTC (first dose), else AESTDTC − RFSTDTC (no Day 0)."
+        },
+        {
+          "name": "AEENDY",
+          "label": "Study Day of End of Adverse Event",
+          "type": "num",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "Same rule as AESTDY applied to AEENDTC."
+        }
+      ]
+    }
+  ]
+}

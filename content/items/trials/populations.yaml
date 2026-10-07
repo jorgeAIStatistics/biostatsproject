@@ -1,0 +1,286 @@
+items:
+  - id: trials.populations.safety-n
+    format: numeric
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.populations]
+    lesson: trials-analysis-populations
+    title: Size of the safety population
+    prompt: |
+      CBX417-301 screened 468 subjects; 48 failed screening; 4 randomized subjects never received any study drug. How many subjects are in the safety population?
+    answer: 416
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "Randomized = screened − screen failures."
+      - "Safety = randomized subjects who received at least one dose."
+    solution: |
+      468 − 48 = 420 randomized; 420 − 4 = **416** treated (`SAFFL = "Y"`).
+
+  - id: trials.populations.fas-definition
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.populations, regulatory.ich]
+    lesson: trials-analysis-populations
+    title: The full analysis set
+    prompt: |
+      According to ICH E9, what is the full analysis set?
+    choices:
+      - text: "The set of subjects as close as possible to the intention-to-treat ideal of including all randomized subjects"
+        correct: true
+        feedback: "That is the ICH E9 concept. Minimal, justified exclusions (for example, subjects with no data at all in some settings) may be allowed if prespecified."
+      - text: "All subjects who completed the study without major deviations"
+        feedback: "That describes a per-protocol set."
+      - text: "All subjects who received at least one dose"
+        feedback: "That is the usual safety population definition."
+      - text: "All screened subjects"
+        feedback: "Screen failures were never randomized and cannot be part of a randomized comparison."
+    solution: |
+      The FAS approximates ITT: all randomized subjects, with only minimal, prespecified exclusions. In CBX417-301 the ITT population is all 420 randomized subjects.
+
+  - id: trials.populations.analysis-map
+    format: mapping
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.populations, tlf.denominators]
+    lesson: trials-analysis-populations
+    title: Population and treatment variable for each output
+    prompt: |
+      For each CBX417-301 output, choose the population flag and treatment variable the SAP requires.
+    sourceLabel: Output
+    targetLabel: Population / treatment variable
+    pairs:
+      - { source: "Demographics and baseline characteristics", target: "ITTFL = Y by TRT01P" }
+      - { source: "Primary PFS analysis", target: "ITTFL = Y by TRT01P" }
+      - { source: "TEAEs by SOC and PT", target: "SAFFL = Y by TRT01A (TRTA in ADAE)" }
+      - { source: "Lab shift table", target: "SAFFL = Y by TRT01A (TRTA in ADLB)" }
+      - { source: "PFS sensitivity analysis excluding major deviations", target: "PPROTFL = Y by TRT01P" }
+    targets:
+      - "ITTFL = Y by TRT01P"
+      - "SAFFL = Y by TRT01A (TRTA in ADAE)"
+      - "SAFFL = Y by TRT01A (TRTA in ADLB)"
+      - "PPROTFL = Y by TRT01P"
+      - "SAFFL = Y by TRT01P"
+    solution: |
+      Efficacy and baseline description: ITT by planned treatment. Safety: safety population by actual treatment. "SAFFL by TRT01P" is a common error that puts dispensing-error subjects in the wrong column.
+
+  - id: trials.populations.speed-trt01a
+    format: text
+    modes: [speed]
+    difficulty: foundation
+    skills: [trials.populations, adam.adsl]
+    lesson: trials-analysis-populations
+    title: Actual treatment variable
+    prompt: |
+      Which ADSL variable holds the **actual** treatment for period 01 (character)?
+    accept: ["TRT01A"]
+    monospace: true
+    solution: |
+      `TRT01A` (numeric companion `TRT01AN`). The planned treatment is `TRT01P`/`TRT01PN`. In BDS and OCCDS datasets, record-level `TRTA`/`TRTP` are copied from these.
+
+  - id: trials.populations.actual-cbx-n
+    format: numeric
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.populations, adam.adsl]
+    lesson: trials-analysis-populations
+    title: How many subjects are analyzed as CBX-417 for safety?
+    prompt: |
+      210 subjects were randomized to each arm; 2 per arm were never treated. Three dispensing errors occurred: 2 placebo-randomized subjects received at least one CBX-417 kit, and 1 CBX-417-randomized subject received only placebo kits. The SAP rule: any CBX-417 kit → analyzed as CBX-417. How many subjects have `TRT01A = "CBX-417 + Docetaxel"`?
+    answer: 209
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "Start from treated subjects randomized to CBX-417: 210 − 2 = 208."
+      - "Remove the 1 who received only placebo, then add the 2 placebo-randomized subjects who received CBX-417."
+    solution: |
+      208 − 1 + 2 = **209**. Placebo actual = 208 − 2 + 1 = 207. Total 416. The AE table headers are therefore N = 209 and N = 207, while the PFS table headers are N = 210 and N = 210.
+
+  - id: trials.populations.ni-population
+    format: mcq
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.populations, trials.design]
+    lesson: trials-analysis-populations
+    title: Populations in a non-inferiority trial
+    prompt: |
+      In a **non-inferiority** trial, why is the full analysis (ITT) set not automatically the conservative choice, as it usually is in a superiority trial?
+    choices:
+      - text: "Non-compliance and deviations tend to make arms look more similar, which biases toward concluding non-inferiority"
+        correct: true
+        feedback: "In superiority trials dilution works against the claim (conservative); in non-inferiority it works for the claim. Results in both FAS and PP sets are therefore examined."
+      - text: "ITT cannot be defined in non-inferiority trials"
+        feedback: "ITT is defined the same way; the issue is its direction of bias."
+      - text: "The per-protocol set always has more subjects"
+        feedback: "The per-protocol set is a subset of ITT."
+      - text: "Regulators require only the safety population in non-inferiority trials"
+        feedback: "Efficacy conclusions still rely on FAS and PP analyses."
+    hints:
+      - "What does diluting the treatment effect do to a test of superiority versus a test of non-inferiority?"
+    solution: |
+      Dilution pushes estimates toward "no difference". That is conservative for superiority and anti-conservative for non-inferiority, so ICH E9 asks for both analysis sets to support a non-inferiority conclusion.
+
+  - id: trials.populations.saffl-code
+    format: code
+    language: sas
+    modes: [independent]
+    difficulty: intermediate
+    skills: [trials.populations, adam.adsl, sas.data-step]
+    lesson: trials-analysis-populations
+    title: Derive SAFFL and TRT01A
+    minutes: 12
+    prompt: |
+      `WORK.ADSL0` has one row per randomized subject (`USUBJID`, `TRT01P`, `TRT01PN`). `WORK.EXKIT` has one row per treated subject with `N_CBX_KITS` (number of CBX-417 kits dispensed) and `TRTSDT`. Write a DATA step creating `WORK.ADSL` that keeps **all** randomized subjects and derives:
+
+      - `SAFFL` = `'Y'` for subjects with exposure, otherwise `'N'` (never blank);
+      - `TRT01A`/`TRT01AN` using the rule: any CBX-417 kit → `'CBX-417 + Docetaxel'`/1; otherwise `'Placebo + Docetaxel'`/2; missing for never-treated subjects.
+
+      Both input datasets are sorted by `USUBJID`.
+    starter: |
+      data adsl;
+        /* merge and derive */
+      run;
+    hints:
+      - "Use MERGE with IN= flags and keep only subjects present in ADSL0."
+      - "SAFFL depends on the IN= flag of EXKIT (and a non-missing TRTSDT)."
+      - "Derive TRT01A only inside `if SAFFL = 'Y' then do; … end;` so never-treated subjects stay missing."
+    checks:
+      - pattern: "merge\\s+adsl0\\s*\\(\\s*in\\s*=\\s*\\w+\\s*\\)\\s+exkit\\s*\\(\\s*in\\s*=\\s*\\w+\\s*\\)"
+        message: "Merges ADSL0 and EXKIT with IN= flags"
+      - pattern: "\\bby\\s+usubjid\\s*;"
+        message: "Merges BY USUBJID"
+      - pattern: "if\\s+\\w+\\s*;"
+        message: "Keeps randomized subjects with a subsetting IF on the ADSL0 IN= flag"
+      - pattern: "saffl\\s*=\\s*['\"]n['\"]|ifc\\s*\\("
+        message: "Assigns SAFFL = 'N' explicitly (never blank)"
+      - pattern: "n_cbx_kits\\s*>=?\\s*[01]"
+        message: "Uses the number of CBX-417 kits to derive actual treatment"
+      - pattern: "trt01an\\s*=\\s*2"
+        message: "Sets TRT01AN = 2 for placebo actual"
+    reference: |
+      data adsl;
+        merge adsl0(in=inrand) exkit(in=intrt);
+        by USUBJID;
+        if inrand;
+        length SAFFL $1 TRT01A $40;
+        if intrt and not missing(TRTSDT) then SAFFL = 'Y';
+        else SAFFL = 'N';
+        if SAFFL = 'Y' then do;
+          if N_CBX_KITS >= 1 then do;
+            TRT01A = 'CBX-417 + Docetaxel';
+            TRT01AN = 1;
+          end;
+          else do;
+            TRT01A = 'Placebo + Docetaxel';
+            TRT01AN = 2;
+          end;
+        end;
+      run;
+    expectedOutput: |
+      Expected log notes, given the study design (420 randomized, 416 treated):
+      NOTE: There were 420 observations read from the data set WORK.ADSL0.
+      NOTE: There were 416 observations read from the data set WORK.EXKIT.
+      NOTE: The data set WORK.ADSL has 420 observations and ... variables.
+    solution: |
+      The subsetting `if inrand;` keeps all 420 randomized subjects, including the 4 without exposure. `SAFFL` is `'N'` for them, and `TRT01A` stays missing because it is only assigned inside the `SAFFL = 'Y'` block. QC with `proc freq; tables TRT01P*TRT01A / missing;` — expect 207/1/2 and 2/206/2 per the design.
+
+  - id: trials.populations.ae-denominator-qc
+    format: diff
+    modes: [qc]
+    difficulty: advanced
+    skills: [trials.populations, tlf.denominators, qc.discrepancy]
+    lesson: trials-analysis-populations
+    title: AE overview headers disagree
+    prompt: |
+      Production and QC versions of the TEAE overview table disagree in their column headers and some percentages. Identify the root cause(s). Counts of subjects with events are illustrative.
+    left:
+      title: "Production — Overview of TEAEs (Safety population)"
+      columns: ["", "CBX-417 + Docetaxel (N=209)", "Placebo + Docetaxel (N=207)"]
+      rows:
+        - ["Any TEAE, n (%)", "205 (98.1)", "199 (96.1)"]
+      footnote: "Denominator: SAFFL = 'Y', by TRTA."
+    right:
+      title: "QC — Overview of TEAEs"
+      columns: ["", "CBX-417 + Docetaxel (N=210)", "Placebo + Docetaxel (N=210)"]
+      rows:
+        - ["Any TEAE, n (%)", "204 (97.1)", "200 (95.2)"]
+      footnote: "Denominator: ITTFL = 'Y', by TRT01P."
+    choices:
+      - text: "QC used the ITT population as denominator (including 4 never-treated subjects)"
+        correct: true
+        feedback: "N = 210/210 is the ITT count. The safety table must use SAFFL = 'Y' (416 subjects)."
+      - text: "QC grouped subjects by planned instead of actual treatment, moving the dispensing-error subjects' events"
+        correct: true
+        feedback: "The event counts shift by one in each arm (205 vs 204, 199 vs 200) — consistent with a subject who has TEAEs switching columns between TRTA and TRT01P."
+      - text: "Production double-counted subjects with several TEAEs"
+        feedback: "Subject counts at or below N are plausible in both; the pattern is explained by population and treatment variable."
+      - text: "Production and QC used different MedDRA versions"
+        feedback: "An 'any TEAE' row is insensitive to coding versions."
+    solution: |
+      Two causes: the ITT denominator and grouping by planned treatment. Production follows the SAP (safety population, actual treatment). This is a very common QC finding — which is why the population and treatment variable belong in every shell footnote.
+    explanation:
+      objective: "Explain differing headers and counts in a safety overview."
+      given: "Two versions of one row with their N values and footnotes."
+      relevant: "N values (209/207 vs 210/210) and the footnotes naming the population and treatment variable."
+      irrelevant: "The absolute size of the percentages."
+      calculating: "205/209 = 98.1%, 199/207 = 96.1% (production); 204/210 = 97.1%, 200/210 = 95.2% (QC)."
+      method: "Explain the denominators first (population), then the numerators (treatment grouping)."
+      interpretation: "Safety summaries attribute events to the treatment actually received, in treated subjects only."
+      changes: "If there were no dispensing errors, only the denominator issue would remain."
+      interviewer: "That you check the N in headers against ADSL before comparing cells."
+
+  - id: trials.populations.mitt-debug
+    format: mcq
+    modes: [debug]
+    difficulty: advanced
+    skills: [trials.populations]
+    lesson: trials-analysis-populations
+    title: ITT defined as randomized and treated
+    prompt: |
+      A programmer's ADSL derives `ITTFL = 'Y'` when `RANDFL = 'Y' and SAFFL = 'Y'`. The CBX417-301 SAP defines ITT as all randomized subjects. What is the effect on the primary PFS analysis?
+    choices:
+      - text: "4 randomized subjects (2 per arm) are dropped, turning the ITT analysis into an unplanned modified-ITT analysis"
+        correct: true
+        feedback: "The never-treated subjects must be included from randomization; their PFS is followed like everyone else's."
+      - text: "No effect, because never-treated subjects cannot progress"
+        feedback: "Untreated subjects can progress or die, and their follow-up time counts in ITT."
+      - text: "The dispensing-error subjects are removed"
+        feedback: "Those 3 subjects were treated; the condition removes only never-treated subjects."
+      - text: "The stratified log-rank test cannot be computed"
+        feedback: "It can be computed; it is computed on the wrong population."
+    solution: |
+      `ITTFL` must equal `RANDFL` in this study. Fix the derivation, and add a QC check that `count(ITTFL = 'Y') = 420`.
+    explanation:
+      objective: "Find the effect of a wrong ITT derivation."
+      given: "A derivation tying ITT to treatment exposure, and the SAP definition."
+      relevant: "The 4 randomized, never-treated subjects."
+      method: "Compare the coded definition with the SAP definition subject by subject."
+      interpretation: "Even a few exclusions change the population from 'as randomized' to a post-randomization subset."
+      changes: "If the SAP defined mITT as randomized and treated, the derivation would be correct — for an mITT flag with its own name."
+      interviewer: "That you implement population definitions literally from the SAP and verify counts."
+
+  - id: trials.populations.interview-itt-pp
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [trials.populations, communication.interviewing]
+    lesson: trials-analysis-populations
+    title: Choosing populations
+    prompt: |
+      **Interviewer:** "A subject was randomized to placebo but received one kit of active drug by mistake. How is that subject handled in the efficacy and safety analyses, and why?"
+    modelAnswer: |
+      For efficacy, the subject stays in the ITT population in the placebo arm, because ITT analyzes subjects as randomized — that preserves the comparison created by randomization, and any dilution is conservative in a superiority trial. For safety, the subject is analyzed by actual treatment; with a rule like "any exposure to active drug counts as active", they go in the active column so that potential drug-related harms aren't hidden in the placebo column.
+
+      In ADSL that means `TRT01P = placebo` and `TRT01A = active`, with ADAE's `TRTA` taken from `TRT01A`. The rule must be written in the SAP, the subject should be identified in the dispensing/deviation listings, and the CSR and ADRG should mention the handling.
+    rubric:
+      - ITT by randomized treatment with rationale
+      - Safety by actual treatment with the conservative attribution rationale
+      - Names TRT01P/TRT01A (and TRTA)
+      - Mentions documenting the rule in the SAP and the case in listings/CSR
+    redFlags:
+      - "Excludes the subject from ITT"
+      - "Analyzes safety by planned treatment"
+    followUps:
+      - "What if the subject received active drug for most of the study?"
+      - "How would you QC the planned vs actual derivation?"

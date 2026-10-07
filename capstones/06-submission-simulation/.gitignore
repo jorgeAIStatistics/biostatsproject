@@ -1,0 +1,16 @@
+# Reproducible outputs — regenerate by rerunning the pipeline.
+output/
+!output/.gitkeep
+
+# Language artefacts
+__pycache__/
+*.pyc
+.Rhistory
+.RData
+.Rproj.user/
+*.lst
+*.log
+renv/library/
+.venv/
+.ipynb_checkpoints/
+.DS_Store

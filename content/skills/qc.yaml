@@ -1,0 +1,34 @@
+domain: qc
+title: QC & Validation
+description: Independent programming and the investigative mindset that makes outputs trustworthy.
+skills:
+  - id: qc.mindset
+    name: QC mindset and independent programming
+    description: Double programming, risk-based QC levels, what independence means, documenting findings.
+    weight: 3
+    tracks: [programmer]
+  - id: qc.compare
+    name: Dataset comparison
+    description: PROC COMPARE and equivalent tools; reading value, attribute and observation differences.
+    weight: 3
+    tracks: [programmer]
+  - id: qc.discrepancy
+    name: Discrepancy investigation
+    description: Tracing disagreements to denominators, populations, baseline selection, windows, duplicates, joins or rounding.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: qc.data-cleaning
+    name: Clinical data cleaning checks
+    description: Detecting impossible dates, duplicates, unit issues, inconsistent coding and reconciliation failures.
+    weight: 3
+    tracks: [programmer, computing]
+  - id: qc.code-review
+    name: Code review
+    description: Reviewing another programmer’s code for correctness, clarity and specification adherence.
+    weight: 2
+    tracks: [programmer, computing]
+  - id: qc.ai-review
+    name: Reviewing AI-generated code
+    description: Detecting subtle errors (joins, leakage, censoring, denominators, baselines) in generated code.
+    weight: 2
+    tracks: [programmer, computing, analytics]

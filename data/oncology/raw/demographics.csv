@@ -1,0 +1,469 @@
+RECORD_ID,SITE_ID,SUBJECT_ID,BIRTH_YEAR,AGE,SEX,RACE_WHITE,RACE_ASIAN,RACE_BLACK,RACE_AMIND,RACE_NHPI,RACE_OTHER,RACE_OTHER_SP,RACE_NOT_REPORTED,ETHNICITY,COUNTRY
+DEM-000001,1001,1001-0001,1957,64,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000002,1001,1001-0002,1962,59,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000003,1001,1001-0003,1967,54,M,Y,,,,,,,,Hispanic or Latino,United States
+DEM-000004,1001,1001-0004,1959,63,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000005,1001,1001-0005,1966,55,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000006,1001,1001-0006,1966,56,F,,,Y,,,,,,Not Hispanic or Latino,United States
+DEM-000007,1001,1001-0007,1958,64,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000008,1001,1001-0008,1975,47,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000009,1001,1001-0009,1951,71,F,,,Y,,,,,,Not Hispanic or Latino,United States
+DEM-000010,1001,1001-0010,1959,64,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000011,1001,1001-0011,1963,60,M,Y,,,,,,,,Hispanic or Latino,United States
+DEM-000012,1001,1001-0012,1971,52,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000013,1001,1001-0013,1966,56,"f ",Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000014,1001,1001-0014,1956,66,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000015,1001,1001-0015,1963,60,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000016,1001,1001-0016,1953,70,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000017,1001,1001-0017,1968,54,F,Y,,,,,,,,Hispanic or Latino,United States
+DEM-000018,1002,1002-0001,1963,59,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000019,1002,1002-0002,1960,62,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000020,1002,1002-0003,1964,58,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000021,1002,1002-0004,1950,72,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000022,1002,1002-0005,1965,56,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000023,1002,1002-0006,1958,64,M,Y,,,,,,,,Hispanic or Latino,United States
+DEM-000024,1002,1002-0007,1958,64,M,,,,Y,,,,,Not Hispanic or Latino,United States
+DEM-000025,1002,1002-0008,1967,54,M,,,Y,,,,,,Not Hispanic or Latino,United States
+DEM-000026,1002,1002-0009,1960,61,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000027,1002,1002-0010,1955,67,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000028,1002,1002-0011,1953,70,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000029,1002,1002-0012,1970,53,MALE,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000030,1002,1002-0013,1948,74,F,,,Y,,,,,,Not Hispanic or Latino,United States
+DEM-000031,1002,1002-0014,1959,64,M,Y,,Y,,,,,,Not Hispanic or Latino,United States
+DEM-000032,1002,1002-0015,1968,54,M,,,Y,,,,,,Not Hispanic or Latino,United States
+DEM-000033,1002,1002-0016,1969,53,M,,,Y,,,,,,Not Hispanic or Latino,United States
+DEM-000034,1002,1002-0017,1961,62,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000035,1003,1003-0001,1952,71,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000036,1003,1003-0002,1989,34,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000037,1003,1003-0003,1955,67,M,Y,,,,,,,,Hispanic or Latino,United States
+DEM-000038,1003,1003-0004,1959,63,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000039,1003,1003-0005,1955,67,M,Y,,,,,,,,Hispanic or Latino,United States
+DEM-000040,1003,1003-0006,1949,74,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000041,1004,1004-0001,1953,68,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000042,1004,1004-0002,1967,55,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000043,1004,1004-0003,1961,61,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000044,1005,1005-0001,1964,58,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000045,1005,1005-0002,1961,61,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000046,1005,1005-0003,1954,67,M,Y,,,,,,,,Hispanic or Latino,United States
+DEM-000047,1005,1005-0004,1953,69,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000048,1005,1005-0005,1958,64,F,,,Y,,,,,,Hispanic or Latino,United States
+DEM-000049,1005,1005-0006,1953,69,F,,,Y,,,,,,Not Hispanic or Latino,United States
+DEM-000050,1005,1005-0007,1962,59,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000051,1005,1005-0008,1943,78,F,,,Y,,,,,,Not Hispanic or Latino,United States
+DEM-000052,1005,1005-0009,1961,62,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000053,1005,1005-0010,1956,67,M,,Y,,,,,,,Not Hispanic or Latino,United States
+DEM-000054,1005,1005-0011,1960,63,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000055,1005,1005-0012,1953,70,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000056,1005,1005-0013,1954,69,M,,,Y,,,,,,Not Hispanic or Latino,United States
+DEM-000057,1005,1005-0014,1943,79,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000058,1005,1005-0015,1965,58,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000059,1006,1006-0001,1975,47,M,Y,Y,,,,,,,Not Hispanic or Latino,United States
+DEM-000060,1006,1006-0002,1952,70,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000061,1006,1006-0003,1965,57,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000062,1006,1006-0004,1955,67,M,,Y,,,,,,,Not Hispanic or Latino,United States
+DEM-000063,1006,1006-0005,1953,69,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000064,1006,1006-0006,1969,53,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000065,1006,1006-0007,1945,78,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000066,1006,1006-0008,1973,49,M,,,Y,,,,,,Hispanic or Latino,United States
+DEM-000067,1007,1007-0001,1955,67,"M ",Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000068,1007,1007-0002,1954,69,M,Y,,,,,,,,Hispanic or Latino,United States
+DEM-000069,1008,1008-0001,1972,51,M,,,Y,,,,,,Not Hispanic or Latino,United States
+DEM-000070,1009,1009-0001,1963,59,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000071,1009,1009-0002,1967,54,M,Y,,,,,,,,Hispanic or Latino,United States
+DEM-000072,1009,1009-0003,1955,66,M,,Y,,,,,,,Hispanic or Latino,United States
+DEM-000073,1009,1009-0004,1964,58,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000074,1009,1009-0005,1958,63,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000075,1009,1009-0006,1957,64,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000076,1009,1009-0007,1957,65,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000077,1009,1009-0008,1955,67,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000078,1009,1009-0009,1969,52,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000079,1009,1009-0010,1942,79,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000080,1009,1009-0011,1965,56,M,Y,,,,,,,,Hispanic or Latino,United States
+DEM-000081,1009,1009-0012,1964,57,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000082,1009,1009-0013,1966,57,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000083,1009,1009-0014,1971,51,M,Y,,,,,,,,Hispanic or Latino,United States
+DEM-000084,1009,1009-0015,1960,62,M,,,Y,,,,,,Hispanic or Latino,United States
+DEM-000085,1009,1009-0016,1955,68,F,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000086,1009,1009-0017,1956,66,M,Y,,,,,,,,Not Hispanic or Latino,United States
+DEM-000087,1009,1009-0018,1962,60,M,,,Y,,,,,,Hispanic or Latino,United States
+DEM-000088,1010,1010-0001,1956,66,F,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000089,1010,1010-0002,1949,73,M,Y,,Y,,,,,,Not Hispanic or Latino,Canada
+DEM-000090,1010,1010-0003,1961,60,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000091,1010,1010-0004,1983,39,F,,Y,,,,,,,Not Hispanic or Latino,Canada
+DEM-000092,1010,1010-0005,1964,58,F,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000093,1010,1010-0006,1972,51,M,,,,,,,,Y,Not Hispanic or Latino,Canada
+DEM-000094,1010,1010-0007,1962,61,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000095,1010,1010-0008,1947,76,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000096,1010,1010-0009,1949,73,F,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000097,1011,1011-0001,1978,44,F,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000098,1011,1011-0002,1961,60,F,,,,Y,,,,,Not Hispanic or Latino,Canada
+DEM-000099,1011,1011-0003,1959,63,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000100,1011,1011-0004,1965,56,M,,,Y,,,,,,Not Hispanic or Latino,Canada
+DEM-000101,1011,1011-0005,1942,80,F,,Y,,,,,,,Not reported,Canada
+DEM-000102,1011,1011-0006,1944,77,F,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000103,1011,1011-0007,1963,60,F,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000104,1011,1011-0008,1959,63,F,,,,Y,,,,,Not reported,Canada
+DEM-000105,1011,1011-0009,1963,60,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000106,1011,1011-0010,1960,63,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000107,1011,1011-0011,1956,66,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000108,1011,1011-0012,1949,74,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000109,1011,1011-0013,1965,57,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000110,1011,1011-0014,1949,74,M,Y,,Y,,,,,,Not Hispanic or Latino,Canada
+DEM-000111,1011,1011-0015,1955,68,F,,Y,,,,,,,Not Hispanic or Latino,Canada
+DEM-000112,1011,1011-0016,1954,69,F,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000113,1011,1011-0017,1954,68,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000114,1011,1011-0018,1975,47,F,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000115,1011,1011-0019,1958,64,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000116,1011,1011-0020,1968,54,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000117,1012,1012-0001,1970,51,F,,Y,,,,,,,Not Hispanic or Latino,Canada
+DEM-000118,1012,1012-0002,1954,68,M,,Y,,,,,,,Not Hispanic or Latino,Canada
+DEM-000119,1012,1012-0003,1959,62,F,,Y,,,,,,,Not Hispanic or Latino,Canada
+DEM-000120,1012,1012-0004,1956,65,F,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000121,1012,1012-0005,1960,62,F,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000122,1012,1012-0006,1947,76,M,Y,Y,,,,,,,Not Hispanic or Latino,Canada
+DEM-000123,1012,1012-0007,1966,56,F,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000124,1012,1012-0008,1961,62,M,Y,,,,,,,,Not reported,Canada
+DEM-000125,1012,1012-0009,1972,50,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000126,1012,1012-0010,1969,53,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000127,1012,1012-0011,1956,66,F,Y,,,,,,,,Not reported,Canada
+DEM-000128,1012,1012-0012,1961,61,M,Y,,,,,,,,Not Hispanic or Latino,Canada
+DEM-000129,1013,1013-0001,1948,73,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000130,1013,1013-0002,1955,67,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000131,1013,1013-0003,1967,55,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000132,1013,1013-0004,1968,55,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000133,1013,1013-0005,1947,76,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000134,1013,1013-0006,1967,56,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000135,1013,1013-0007,1972,51,female,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000136,1013,1013-0008,1956,66,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000137,1013,1013-0009,1942,81,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000138,1013,1013-0010,1954,69,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000139,1013,1013-0011,1947,76,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000140,1014,1014-0001,1950,72,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000141,1014,1014-0002,1952,70,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000142,1014,1014-0003,1954,67,M,Y,Y,,,,,,,Not Hispanic or Latino,Germany
+DEM-000143,1014,1014-0004,1954,67,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000144,1014,1014-0005,1978,43,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000145,1014,1014-0006,1953,68,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000146,1014,1014-0007,1959,63,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000147,1014,1014-0008,1963,60,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000148,1014,1014-0009,1964,58,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000149,1014,1014-0010,1950,73,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000150,1014,1014-0011,1964,58,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000151,1014,1014-0012,1962,60,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000152,1014,1014-0013,1969,53,M,,Y,,,,,,,Not Hispanic or Latino,Germany
+DEM-000153,1014,1014-0014,1957,65,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000154,1014,1014-0015,1959,63,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000155,1014,1014-0016,1973,49,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000156,1015,1015-0001,1966,55,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000157,1015,1015-0002,1963,58,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000158,1015,1015-0003,1964,58,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000159,1015,1015-0004,1952,69,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000160,1015,1015-0005,1940,81,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000161,1015,1015-0006,1943,79,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000162,1015,1015-0007,1965,58,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000163,1015,1015-0008,1939,84,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000164,1015,1015-0009,1968,55,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000165,1015,1015-0010,1956,67,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000166,1015,1015-0011,1970,53,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000167,1015,1015-0012,1968,54,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000168,1015,1015-0013,1959,64,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000169,1015,1015-0014,1958,65,M,,,Y,,,,,,Not Hispanic or Latino,Germany
+DEM-000170,1016,1016-0001,1956,65,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000171,1016,1016-0002,1964,57,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000172,1016,1016-0003,1968,53,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000173,1016,1016-0004,1952,70,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000174,1016,1016-0005,1963,58,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000175,1016,1016-0006,1950,71,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000176,1016,1016-0007,1963,59,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000177,1016,1016-0008,1949,73,F,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000178,1016,1016-0009,1961,60,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000179,1016,1016-0010,1945,76,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000180,1016,1016-0011,1952,70,M,,,,,,,,Y,Not Hispanic or Latino,Germany
+DEM-000181,1016,1016-0012,1968,55,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000182,1016,1016-0013,1968,54,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000183,1016,1016-0014,1955,68,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000184,1016,1016-0015,1972,50,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000185,1016,1016-0016,1963,60,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000186,1016,1016-0017,1947,75,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000187,1016,1016-0018,1965,57,M,Y,,,,,,,,Not Hispanic or Latino,Germany
+DEM-000188,1017,1017-0001,1970,51,M,,,,,,,,Y,Not Hispanic or Latino,France
+DEM-000189,1017,1017-0002,1961,60,M,,,,,,,,Y,Not Hispanic or Latino,France
+DEM-000190,1017,1017-0003,1973,49,F,,,,,,,,Y,Not Hispanic or Latino,France
+DEM-000191,1017,1017-0004,1954,68,M,,,Y,,,,,,Not Hispanic or Latino,France
+DEM-000192,1017,1017-0005,1958,64,F,Y,,,,,,,,Not Hispanic or Latino,France
+DEM-000193,1017,1017-0006,1964,58,F,,,,,,,,Y,Not Hispanic or Latino,France
+DEM-000194,1017,1017-0007,1942,81,M,Y,,,,,,,,Not Hispanic or Latino,France
+DEM-000195,1017,1017-0008,1957,66,M,Y,,,,,,,,Not reported,France
+DEM-000196,1017,1017-0009,1982,41,F,Y,,,,,,,,Not Hispanic or Latino,France
+DEM-000197,1017,1017-0010,1952,71,F,Y,,,,,,,,Not Hispanic or Latino,France
+DEM-000198,1017,1017-0011,1961,61,M,Y,,,,,,,,Not Hispanic or Latino,France
+DEM-000199,1017,1017-0012,1974,49,F,Y,,,,,,,,Not Hispanic or Latino,France
+DEM-000200,1017,1017-0013,1969,53,F,Y,,,,,,,,Not Hispanic or Latino,France
+DEM-000201,1018,1018-0001,1950,71,M,,,,,,,,Y,Not Hispanic or Latino,France
+DEM-000202,1018,1018-0002,1963,58,F,Y,,,,,,,,Not Hispanic or Latino,France
+DEM-000203,1018,1018-0003,1966,57,M,,,Y,,,,,,Not Hispanic or Latino,France
+DEM-000204,1019,1019-0001,1957,64,F,,,,,,,,Y,Not Hispanic or Latino,France
+DEM-000205,1019,1019-0002,1963,59,M,Y,,,,,,,,Not reported,France
+DEM-000206,1019,1019-0003,1950,71,F,,,Y,,,,,,Not Hispanic or Latino,France
+DEM-000207,1019,1019-0004,1958,64,M,Y,,,,,,,,Not Hispanic or Latino,France
+DEM-000208,1019,1019-0005,1971,50,F,Y,,,,,,,,Not Hispanic or Latino,France
+DEM-000209,1019,1019-0006,1957,64,F,,,,,,,,Y,Not Hispanic or Latino,France
+DEM-000210,1019,1019-0007,1965,58,M,,,,,,,,Y,Not Hispanic or Latino,France
+DEM-000211,1020,1019-0001,1947,74,M,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000212,1020,1020-0002,1961,60,M,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000213,1020,1020-0003,1963,58,F,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000214,1020,1020-0004,1978,44,M,Y,,,,,,,,Not Hispanic or Latino,Spain
+DEM-000215,1020,1020-0005,1965,56,M,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000216,1020,1020-0006,1960,61,M,Y,,,,,,,,Not Hispanic or Latino,Spain
+DEM-000217,1020,1020-0007,1960,61,F,,,Y,,,,,,Not Hispanic or Latino,Spain
+DEM-000218,1020,1020-0008,1945,78,M,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000219,1020,1020-0009,1952,71,F,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000220,1020,1020-0010,1955,68,M,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000221,1020,1020-0011,1951,72,M,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000222,1020,1020-0012,1939,84,F,Y,,,,,,,,Not Hispanic or Latino,Spain
+DEM-000223,1020,1020-0013,1952,70,F,Y,,,,,,,,Not Hispanic or Latino,Spain
+DEM-000224,1020,1020-0014,1949,74,M,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000225,1020,1020-0015,1968,55,M,,Y,,,,,,,Not Hispanic or Latino,Spain
+DEM-000226,1021,1021-0001,1950,72,M,Y,,,,,,,,Not Hispanic or Latino,Spain
+DEM-000227,1021,1021-0002,1956,67,F,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000228,1021,1021-0003,1961,62,M,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000229,1021,1021-0004,1956,66,F,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000230,1022,1022-0001,1966,56,F,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000231,1022,1022-0002,1977,46,F,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000232,1022,1022-0003,1977,46,M,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000233,1022,1022-0004,1943,79,F,Y,,,,,,,,Not Hispanic or Latino,Spain
+DEM-000234,1022,1022-0005,1954,69,F,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000235,1022,1022-0006,1970,53,F,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000236,1022,1022-0007,1949,74,F,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000237,1022,1022-0008,1947,76,F,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000238,1022,1022-0009,1974,48,M,Y,,,,,,,,Hispanic or Latino,Spain
+DEM-000239,1023,1023-0001,1953,69,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000240,1023,1023-0002,1953,69,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000241,1023,1023-0003,1971,51,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000242,1023,1023-0004,1955,66,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000243,1023,1023-0005,1952,70,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000244,1023,1023-0006,1957,65,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000245,1023,1023-0007,1963,58,F,,Y,,,,,,,Not Hispanic or Latino,Italy
+DEM-000246,1023,1023-0008,1958,64,F,Y,,,,,,,,Not reported,Italy
+DEM-000247,1023,1023-0009,1951,71,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000248,1023,1023-0010,1960,62,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000249,1023,1023-0011,1962,61,"F ",Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000250,1023,1023-0012,1958,64,"F ",Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000251,1023,1023-0013,1966,57,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000252,1023,1023-0014,1972,51,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000253,1024,1024-0001,1958,64,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000254,1024,1024-0002,1949,73,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000255,1024,1024-0003,1948,75,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000256,1024,1024-0004,1954,68,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000257,1025,1025-0001,1960,62,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000258,1025,1025-0002,1953,68,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000259,1025,1025-0003,1952,69,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000260,1025,1025-0004,1958,64,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000261,1025,1025-0005,1982,39,M,,,,,,,,Y,Not Hispanic or Latino,Italy
+DEM-000262,1025,1025-0006,1956,67,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000263,1025,1025-0007,1966,57,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000264,1025,1025-0008,1958,65,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000265,1025,1025-0009,1964,59,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000266,1025,1025-0010,1972,51,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000267,1025,1025-0011,1972,51,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000268,1025,1025-0012,1963,60,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000269,1025,1025-0013,1957,65,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000270,1025,1025-0014,1967,56,F,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000271,1025,1025-0015,1956,67,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000272,1025,1025-0016,1973,49,M,Y,,,,,,,,Not Hispanic or Latino,Italy
+DEM-000273,1026,1026-0001,1961,61,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000274,1026,1026-0002,1955,66,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000275,1026,1026-0003,1971,50,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000276,1026,1026-0004,1957,65,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000277,1026,1026-0005,1958,63,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000278,1026,1026-0006,1967,55,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000279,1026,1026-0007,1961,60,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000280,1026,1026-0008,1967,55,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000281,1026,1026-0009,1951,71,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000282,1026,1026-0010,1970,52,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000283,1026,1026-0011,1964,58,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000284,1026,1026-0012,1958,65,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000285,1026,1026-0013,1950,72,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000286,1026,1026-0014,1961,61,F,,,,,,,,Y,Not Hispanic or Latino,Poland
+DEM-000287,1026,1026-0015,1959,64,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000288,1026,1026-0016,1956,66,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000289,1026,1026-0017,1955,67,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000290,1026,1026-0018,1966,56,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000291,1026,1026-0019,1947,76,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000292,1026,1026-0020,1959,63,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000293,1027,1027-0001,1948,74,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000294,1027,1027-0002,1982,40,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000295,1027,1027-0003,1944,77,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000296,1027,1027-0004,1970,52,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000297,1027,1027-0005,1960,61,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000298,1027,1027-0006,1953,69,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000299,1027,1027-0007,1960,61,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000300,1027,1027-0008,1955,66,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000301,1027,1027-0009,1948,74,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000302,1027,1027-0010,1971,50,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000303,1027,1027-0011,1965,57,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000304,1027,1027-0012,1977,46,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000305,1027,1027-0013,1962,60,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000306,1027,1027-0014,1981,42,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000307,1027,1027-0015,1975,47,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000308,1027,1027-0016,1978,44,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000309,1027,1027-0017,1962,61,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000310,1027,1027-0018,1964,59,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000311,1027,1027-0019,1950,73,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000312,1027,1027-0020,1947,75,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000313,1027,1027-0021,1956,66,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000314,1027,1027-0022,1965,57,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000315,1027,1027-0023,1951,72,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000316,1027,1027-0024,1964,59,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000317,1027,1027-0025,1961,62,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000318,1027,1027-0026,1963,59,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000319,1027,1027-0027,1968,55,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000320,1027,1027-0028,1965,58,F,Y,,,,,,,,Not reported,Poland
+DEM-000321,1027,1027-0029,1979,44,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000322,1027,1027-0030,1977,46,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000323,1028,1028-0001,1958,64,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000324,1028,1028-0002,1965,57,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000325,1028,1028-0003,1967,56,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000326,1028,1028-0004,1955,67,M,,,,,,,,Y,Not Hispanic or Latino,Poland
+DEM-000327,1028,1028-0005,1958,65,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000328,1028,1028-0006,1962,61,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000329,1028,1028-0007,1955,68,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000330,1028,1028-0008,1974,48,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000331,1028,1028-0009,1971,51,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000332,1028,1028-0010,1960,63,M,Y,,,,,,,,Not reported,Poland
+DEM-000333,1028,1028-0011,1973,49,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000334,1028,1028-0012,1951,71,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000335,1028,1028-0013,1965,57,F,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000336,1028,1028-0014,1942,80,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000337,1028,1028-0015,1969,53,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000338,1028,1028-0016,1964,59,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000339,1028,1028-0017,1971,52,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000340,1028,1028-0018,1971,51,M,Y,,,,,,,,Not Hispanic or Latino,Poland
+DEM-000341,1029,1029-0001,1957,65,Male,Y,,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000342,1029,1029-0002,1946,75,Female,Y,,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000343,1029,1029-0003,1958,65,Male,,Y,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000344,1029,1029-0004,1961,62,Male,Y,,Y,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000345,1029,1029-0005,1963,60,Female,Y,,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000346,1029,1029-0006,1974,48,Female,,Y,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000347,1029,1029-0007,1943,80,Male,Y,,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000348,1029,1029-0008,1978,44,Female,Y,,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000349,1030,1030-0001,1938,83,M,,,,,,,,Y,Not Hispanic or Latino,United Kingdom
+DEM-000350,1030,1030-0002,1965,57,M,Y,,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000351,1030,1030-0003,1979,43,F,Y,,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000352,1030,1030-0004,1949,74,F,Y,,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000353,1030,1030-0005,1963,59,M,Y,,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000354,1031,1031-0001,1950,72,M,Y,,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000355,1031,1031-0002,1962,60,F,Y,,,,,,,,Not Hispanic or Latino,United Kingdom
+DEM-000356,1032,1032-0001,1953,69,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000357,1032,1032-0002,1962,59,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000358,1032,1032-0003,1959,62,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000359,1032,1032-0004,1963,59,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000360,1032,1032-0005,1968,54,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000361,1032,1032-0006,1952,70,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000362,1032,1032-0007,1953,70,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000363,1032,1032-0008,1962,60,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000364,1032,1032-0009,1947,75,MALE,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000365,1032,1032-0010,1951,71,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000366,1032,1032-0011,1963,60,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000367,1032,1032-0012,1945,77,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000368,1033,1033-0001,1951,70,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000369,1033,1033-0002,1963,60,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000370,1033,1033-0003,1959,63,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000371,1033,1033-0004,1947,75,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000372,1034,1034-0001,1957,65,M,,Y,,,,,,,Not reported,Japan
+DEM-000373,1034,1034-0002,1953,68,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000374,1034,1034-0003,1947,75,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000375,1034,1034-0004,1966,55,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000376,1034,1034-0005,1956,65,M,,,,,,,,Y,Not Hispanic or Latino,Japan
+DEM-000377,1034,1034-0006,1975,47,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000378,1034,1034-0007,1961,60,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000379,1034,1034-0008,1962,59,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000380,1034,1034-0009,1956,65,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000381,1034,1034-0010,1951,72,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000382,1034,1034-0011,1964,59,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000383,1034,1034-0012,1945,78,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000384,1034,1034-0013,1962,61,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000385,1034,1034-0014,1952,71,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000386,1034,1034-0015,1959,63,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000387,1034,1034-0016,1966,56,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000388,1034,1034-0017,1974,48,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000389,1034,1034-0018,1961,62,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000390,1035,1035-0001,1949,72,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000391,1035,1035-0002,1960,62,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000392,1035,1035-0003,1975,46,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000393,1035,1035-0004,1958,63,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000394,1035,1035-0005,1960,62,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000395,1035,1035-0006,1952,70,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000396,1035,1035-0007,1971,51,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000397,1035,1035-0008,1959,63,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000398,1035,1035-0009,1973,50,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000399,1035,1035-0010,1947,75,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000400,1035,1035-0011,1969,53,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000401,1035,1035-0012,1960,62,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000402,1035,1035-0013,1960,62,M,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000403,1035,1035-0014,1966,56,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000404,1035,1035-0015,1959,63,F,,Y,,,,,,,Not Hispanic or Latino,Japan
+DEM-000405,1036,1036-0001,1970,52,1,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000406,1036,1036-0002,1959,63,2,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000407,1036,1036-0003,1952,70,1,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000408,1036,1036-0004,1959,63,1,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000409,1036,1036-0005,1949,73,2,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000410,1036,1036-0006,1957,65,1,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000411,1036,1036-0007,1960,63,1,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000412,1036,1036-0008,1956,66,1,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000413,1036,1036-0009,1940,83,2,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000414,1036,1036-0010,1959,63,2,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000415,1036,1036-0011,1976,47,1,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000416,1037,1037-0001,1952,70,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000417,1037,1037-0002,1957,65,F,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000418,1037,1037-0003,1947,76,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000419,1037,1037-0004,1965,58,F,,,,,,,,Y,Not Hispanic or Latino,Republic of Korea
+DEM-000420,1037,1037-0005,1967,56,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000421,1037,1037-0006,1980,43,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000422,1037,1037-0007,1956,67,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000423,1037,1037-0008,1950,72,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000424,1038,1038-0001,1947,75,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000425,1038,1038-0002,1974,48,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000426,1038,1038-0003,1970,52,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000427,1038,1038-0004,1957,66,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000428,1038,1038-0005,1959,63,F,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000429,1038,1038-0006,1954,69,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000430,1038,1038-0007,1971,52,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000431,1038,1038-0008,1957,66,M,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000432,1038,1038-0009,1973,49,F,,Y,,,,,,,Not Hispanic or Latino,Republic of Korea
+DEM-000433,1039,1039-0001,1972,49,F,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000434,1039,1039-0002,1965,57,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000435,1039,1039-0003,1951,70,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000436,1039,1039-0004,1960,62,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000437,1039,1039-0005,1941,82,F,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000438,1039,1039-0006,1945,78,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000439,1039,1039-0007,1977,45,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000440,1039,1039-0008,1957,66,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000441,1039,1039-0009,1957,65,F,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000442,1039,1039-0010,1961,61,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000443,1039,1039-0011,1975,47,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000444,1039,1039-0012,1947,75,F,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000445,1039,1039-0013,1956,66,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000446,1039,1039-0014,1969,53,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000447,1039,1039-0015,1965,58,F,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000448,1039,1039-0016,1953,69,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000449,1039,1039-0017,1961,62,F,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000450,1040,1040-0001,1959,62,F,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000451,1040,1040-0002,1954,68,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000452,1040,1040-0003,1957,65,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000453,1040,1040-0004,1940,82,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000454,1040,1040-0005,1963,59,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000455,1040,1040-0006,1956,66,F,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000456,1040,1040-0007,1965,57,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000457,1040,1040-0008,1954,68,M,,Y,,,,,,,Not Hispanic or Latino,Taiwan
+DEM-000458,1041,1041-0001,1957,64,M,,,,,,Y,Aboriginal Australian,,Not Hispanic or Latino,Australia
+DEM-000459,1041,1041-0002,1969,53,M,Y,,,,,,,,Not Hispanic or Latino,Australia
+DEM-000460,1041,1041-0003,1943,79,M,,,,,Y,,,,Not Hispanic or Latino,Australia
+DEM-000461,1041,1041-0004,1959,63,M,Y,Y,,,,,,,Not Hispanic or Latino,Australia
+DEM-000462,1042,1042-0001,1956,65,Female,Y,,,,,,,,Not Hispanic or Latino,Australia
+DEM-000463,1042,1042-0002,1951,70,Male,,Y,,,,,,,Not Hispanic or Latino,Australia
+DEM-000464,1042,1042-0003,1976,46,Male,Y,,,,,,,,Not Hispanic or Latino,Australia
+DEM-000465,1042,1042-0004,1954,68,Male,Y,,,,,,,,Not Hispanic or Latino,Australia
+DEM-000466,1042,1042-0005,1959,64,Female,,Y,,,,,,,Not Hispanic or Latino,Australia
+DEM-000467,1042,1042-0006,1960,62,Male,Y,,,,,,,,Not Hispanic or Latino,Australia
+DEM-000468,1042,1042-0007,1957,66,Male,Y,,,,,,,,Not Hispanic or Latino,Australia

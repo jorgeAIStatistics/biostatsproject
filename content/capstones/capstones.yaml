@@ -1,0 +1,627 @@
+capstones:
+  - id: clinical-data-cleaner
+    number: 1
+    title: Clinical data cleaner
+    summary: Turn messy raw CRF and vendor exports into validated, documented datasets with an issue report a data manager could act on.
+    difficulty: intermediate
+    hours: 10
+    skills: [qc.data-cleaning, python.validation, sas.dates, trials.data-management, communication.documentation, repro.project-structure]
+    datasets: [oncology/raw/demographics, oncology/raw/labs, oncology/raw/ae, oncology/raw/vitals, oncology/raw/randomization]
+    starter: capstones/01-clinical-data-cleaner
+    objective: |
+      The CBX417-301 raw exports contain the kinds of problems every study has: duplicate rows, impossible dates, mixed
+      units, inconsistent coding of sex and treatment, partial dates, subjects present in one source but not another,
+      outliers that are data-entry errors and outliers that are real.
+
+      Your job is to produce (a) a cleaned dataset for each raw file, (b) a machine-readable issue report listing every
+      problem you found — file, record id, variable, issue type, raw value, proposed resolution — and (c) a short memo
+      that a data manager could use to raise queries.
+
+      You must not silently "fix" anything: every change is recorded, and anything that needs a site's answer stays
+      flagged rather than guessed.
+    relevance: |
+      Data cleaning is the first task most junior programmers are given, and the one where careless work does the most
+      damage. Being able to show a reproducible cleaning pipeline with a documented issue log is a direct signal that you
+      can be trusted with study data.
+    deliverables:
+      - A script (Python, R or SAS) that reads the raw files and writes cleaned versions — rerunnable from scratch, no manual edits.
+      - "`issues.csv` with one row per detected problem (file, record id, variable, issue type, raw value, proposed resolution)."
+      - A one-page memo summarizing the issues by type and severity, with the three you would escalate first.
+      - A short README describing how to run the pipeline and what "clean" means for each file.
+    steps:
+      - id: inventory
+        title: Inventory the raw data
+        body: |
+          Open every file in `data/oncology/raw/` in the dataset viewer. For each one write down: the grain (what is one
+          row?), the key, the date columns and their format, and any column whose values look inconsistent.
+
+          Record counts matter: note how many rows and how many distinct subjects each file has. You will use these
+          numbers later to prove that your cleaning did not lose anyone.
+        done: You can state the grain and key of every raw file, and the subject counts per file.
+      - id: rules
+        title: Write the validation rules before writing code
+        body: |
+          List the checks you will run, in plain language, grouped by type: structural (duplicate keys, orphan records),
+          format (dates, numeric fields stored as text), range (implausible values), consistency (end date before start
+          date, AE starting before consent), cross-file (randomized subjects with no exposure; exposure with no
+          randomization; kit numbers not in the kit list).
+
+          For each rule decide in advance: is a failure a *query* (ask the site) or a *derivation* (handled in the
+          mapping)? That distinction is the difference between cleaning and inventing data.
+        done: A written rule list where every rule has an owner — query or derivation.
+      - id: implement
+        title: Implement the checks
+        body: |
+          Write the pipeline. Structure it so each rule is a small function returning the offending rows, and the main
+          script collects them into one issue table. Keep a `RECORD_ID` on every issue so it can be traced back.
+
+          Resist the temptation to drop rows quietly. The cleaned output should keep everything that is usable and mark
+          the rest.
+        done: Running the script on a fresh checkout reproduces `issues.csv` byte-for-byte.
+      - id: units
+        title: Handle units and coding properly
+        body: |
+          The lab file mixes conventional and SI units and some rows have no unit at all; vitals include temperatures in
+          °F and weights in lb; sex is coded five different ways.
+
+          Convert with explicit, documented factors (e.g. creatinine mg/dL × 88.4 → µmol/L), never by guessing from the
+          magnitude alone — and flag rows where the unit is missing rather than assuming.
+        done: A conversion table appears in your README, and no converted value is produced without a unit.
+      - id: memo
+        title: Write the memo
+        body: |
+          Summarize: how many issues of each type, which subjects are affected, which three issues block analysis, and
+          what you need from the sites. Write it for a data manager, not for a programmer.
+
+          Then compare your issue list with `data/oncology/answer-key/data_issues.csv`. Note what you missed and why —
+          the miss pattern is more informative than the score.
+        done: Memo written, and you have compared against the answer key and noted the gaps.
+    rubric:
+      - criterion: Reproducibility
+        description: The pipeline runs end-to-end from raw files with no manual steps; outputs are identical on a rerun.
+      - criterion: Completeness
+        description: Every injected issue type is detected, with few false positives on values that are genuinely extreme but valid.
+      - criterion: Traceability
+        description: Every issue points at a specific file, record id and variable; every correction is recorded.
+      - criterion: Judgement
+        description: Queries and derivations are correctly separated; nothing is silently imputed.
+      - criterion: Communication
+        description: The memo is readable by a non-programmer and prioritizes correctly.
+    portfolio:
+      repoName: clinical-data-cleaning-pipeline
+      tagline: Educational implementation of a clinical data-cleaning and query-generation pipeline using synthetic CRF exports.
+      methods: |
+        Rule-based validation of raw eCRF and vendor exports (structural, format, range, consistency and cross-file
+        checks), unit standardization with documented conversion factors, and generation of a machine-readable issue
+        report plus a data-management memo. Implemented in <language>, rerunnable end-to-end.
+      limitations: |
+        The data is synthetic and the issue set was generated deliberately, so detection rates here do not transfer to
+        real studies. No query management system, audit trail or database lock process is simulated.
+
+  - id: sdtm-mapping-project
+    number: 2
+    title: SDTM mapping project
+    summary: Map cleaned raw data into SDTM-style DM, AE, EX, LB and VS domains, with a mapping specification and conformance checks.
+    difficulty: advanced
+    hours: 14
+    skills: [sdtm.mapping, sdtm.identifiers, sdtm.ct, sdtm.dates, sdtm.findings, sas.merge, sas.transpose, communication.documentation]
+    datasets: [oncology/raw/demographics, oncology/raw/ae, oncology/raw/labs, oncology/raw/vitals, oncology/sdtm/dm, oncology/sdtm/ae]
+    starter: capstones/02-sdtm-mapping
+    objective: |
+      Take the raw exports and produce SDTM-style DM, AE, EX, LB and VS datasets: correct structure, correct keys,
+      ISO 8601 dates, controlled terminology, standardized units and study days — together with the mapping
+      specification that documents how each variable was derived.
+
+      Compare your output with the reference SDTM in `data/oncology/sdtm/`, and explain every difference. Some will be
+      your errors; some will be legitimate alternative decisions that your specification must justify.
+    relevance: |
+      Mapping is the daily work of a clinical statistical programmer at a CRO. Being able to show your own SDTM mapping,
+      with a specification and a conformance discussion, is the single most convincing artifact for a first programming role.
+    deliverables:
+      - Programs that build DM, AE, EX, LB and VS from the raw files.
+      - A variable-level mapping specification (source variable, rule, controlled terminology, origin).
+      - "A conformance summary: keys unique, required variables present, dates ISO 8601, --DY consistent with RFSTDTC, CT values valid."
+      - A difference report against the reference SDTM with an explanation for each difference.
+    steps:
+      - id: spec
+        title: Write the specification first
+        body: |
+          For each target domain, list every variable you will create, its source, the transformation rule, the
+          controlled terminology codelist and the origin (Collected, Derived, Assigned, Predecessor).
+
+          Use `python3 scripts/tools/ct_lookup.py <CODELIST>` to confirm codelist values rather than inventing them.
+        done: A specification table exists for every domain you will build.
+      - id: dm
+        title: Build DM
+        body: |
+          One record per subject. Construct USUBJID consistently, derive the reference dates (RFSTDTC, RFXSTDTC,
+          RFXENDTC, RFICDTC, RFENDTC), map ARM/ARMCD/ACTARM/ACTARMCD, and handle the subjects who are screen failures or
+          were randomized but never treated with ARMNRS instead of inventing arm values.
+        done: DM has exactly one row per subject and your screen-failure and never-treated handling matches your specification.
+      - id: events
+        title: Build AE
+        body: |
+          Preserve the verbatim term, attach the coded term and body system, map seriousness criteria and action taken to
+          controlled terminology, keep partial dates as partial ISO 8601, derive AESTDY/AEENDY against RFSTDTC, and set
+          AESEQ deterministically.
+        done: AE passes your key-uniqueness and CT checks, and partial dates survive unchanged.
+      - id: findings
+        title: Build LB and VS
+        body: |
+          The lab file arrives long; the vitals form arrives wide. Transpose what needs transposing, map vendor test codes
+          to CDISC LBTESTCD, standardize units into --STRESN/--STRESU with documented factors, and carry the original
+          result in --ORRES/--ORRESU.
+
+          Derive the baseline-related flag your specification chose (--LOBXFL in SDTMIG v3.4) and say why.
+        done: LB and VS have one record per test per visit, with both original and standardized results.
+      - id: conformance
+        title: Run conformance checks and compare
+        body: |
+          Check: keys unique, no missing required variables, dates parseable, --DY never zero, CT values valid, subject
+          sets consistent across domains.
+
+          Then compare with the reference SDTM domain by domain and classify each difference as an error, a specification
+          difference or a tie-breaking choice.
+        done: A difference report exists where every line has an explanation.
+    rubric:
+      - criterion: Structure
+        description: Each domain has the right grain, keys and required variables.
+      - criterion: Terminology
+        description: Values come from the correct codelists; extensions are justified.
+      - criterion: Dates
+        description: ISO 8601 throughout, partial dates preserved, study days correct with no day zero.
+      - criterion: Specification quality
+        description: Another programmer could rebuild your datasets from the specification alone.
+      - criterion: Difference analysis
+        description: Differences from the reference are identified and explained rather than hidden.
+    portfolio:
+      repoName: sdtm-style-mapping
+      tagline: Educational SDTM-style mapping of synthetic eCRF and vendor data, with a variable-level specification and conformance checks.
+      methods: |
+        Raw-to-SDTM mapping for DM, AE, EX, LB and VS following SDTMIG v3.4 structure and CDISC controlled terminology
+        (verified against the NCI EVS terminology files), including ISO 8601 date handling, unit standardization and
+        study-day derivation, with a variable-level specification and automated conformance checks.
+      limitations: |
+        Built on synthetic data for teaching. Not a submission package: no Define-XML, no full conformance-rule engine
+        (e.g. Pinnacle 21), and domain coverage is limited to the five domains listed.
+
+  - id: adam-analysis-project
+    number: 3
+    title: ADaM analysis datasets
+    summary: Derive ADSL, ADAE and ADLB from SDTM with explicit, traceable derivations and QC of every flag.
+    difficulty: advanced
+    hours: 14
+    skills: [adam.adsl, adam.occds, adam.baseline, adam.bds, adam.traceability, sas.by-group, qc.compare]
+    datasets: [oncology/sdtm/dm, oncology/sdtm/ex, oncology/sdtm/ae, oncology/sdtm/lb, oncology/adam/adsl, oncology/adam/adae, oncology/adam/adlb]
+    starter: capstones/03-adam-analysis
+    objective: |
+      Build ADSL (one row per randomized subject, with treatment variables, dates, population flags and baseline
+      covariates), ADAE (treatment-emergent flags, imputed analysis dates, first-occurrence flags) and ADLB (parameters,
+      baseline, change from baseline, analysis flags, toxicity grades).
+
+      Every derived variable must have a written rule, and every rule must be checked — by an independent method, not by
+      rerunning your own code.
+    relevance: |
+      ADaM is where statistical thinking and programming meet: the flags you derive determine which subjects appear in
+      which table. Interviewers ask about TRTEMFL, ABLFL and population flags precisely because they separate people who
+      have done the work from people who have read about it.
+    deliverables:
+      - Programs producing ADSL, ADAE and ADLB from SDTM.
+      - A derivation specification for every variable you create.
+      - "A QC report comparing your datasets with the reference ADaM (`PROC COMPARE`-style: observations, variables, value differences)."
+      - A short note on the three derivations that were hardest to get right and why.
+    steps:
+      - id: adsl
+        title: ADSL — populations and treatment
+        body: |
+          Derive TRT01P/TRT01A (and explain the three subjects where they differ), TRTSDT/TRTEDT from EX, treatment
+          duration, ITTFL, SAFFL, EFFFL and PPROTFL.
+
+          Write the population definitions in words first. Then count: your ITT, safety and efficacy counts must match the
+          study facts (420 / 416 / see the study README) or you have a bug — or a better definition you must justify.
+        done: Population counts reconcile, and the planned-vs-actual treatment logic is documented.
+      - id: adae
+        title: ADAE — treatment-emergent
+        body: |
+          Implement the TEAE definition from the SAP, including the partial-date imputation rules, and derive the
+          first-occurrence flags.
+
+          Prove your flag: list the subjects whose AE start date is within a day of the treatment window boundary and check
+          each one by hand.
+        done: TEAE counts match the reference within your documented differences, and boundary cases are verified individually.
+      - id: adlb
+        title: ADLB — baseline and change
+        body: |
+          Build the BDS structure (PARAMCD/PARAM, AVAL, AVISIT), select baseline with the SAP rule, derive BASE, CHG and
+          PCHG, add reference ranges and CTCAE-style grades, and set the analysis flag for the record used per visit.
+
+          Check for subjects with more than one candidate baseline record and confirm your tie-breaker behaves.
+        done: Exactly one ABLFL per subject and parameter where a baseline exists; CHG = AVAL − BASE everywhere.
+      - id: qc
+        title: QC against the reference
+        body: |
+          Compare your datasets with `data/oncology/adam/`. Classify differences: value differences, extra/missing
+          records, attribute differences.
+
+          For each difference decide whether the reference or your version is right, and write the finding as you would in
+          a QC log: what differs, why, what you changed.
+        done: A QC log exists with a resolution for every difference.
+    rubric:
+      - criterion: Correct flags
+        description: Population, treatment-emergent, baseline and analysis flags follow the stated rules exactly.
+      - criterion: Traceability
+        description: Source variables are carried (SRCDOM/SRCVAR/SRCSEQ or equivalent) so any value can be traced to SDTM.
+      - criterion: Independent QC
+        description: Differences are found by an independent method and documented, not by rerunning the same code.
+      - criterion: Specification
+        description: Derivations are written clearly enough for a QC programmer to reproduce them.
+    portfolio:
+      repoName: adam-derivation-and-qc
+      tagline: Educational ADaM-style derivation (ADSL, ADAE, ADLB) from synthetic SDTM data, with independent QC.
+      methods: |
+        ADaMIG v1.3-style derivations including population flags, planned versus actual treatment, treatment-emergent
+        flagging with partial-date imputation, baseline selection and change-from-baseline, plus an independent QC
+        comparison and findings log.
+      limitations: |
+        Synthetic data; no Define-XML or ADRG is produced, and the QC is a single-programmer exercise rather than a
+        two-programmer process with sign-off.
+
+  - id: trial-analysis
+    number: 4
+    title: Clinical trial analysis from the SAP
+    summary: Read the SAP, build the analysis, program the tables and figures, and write the results section.
+    difficulty: advanced
+    hours: 16
+    skills: [trials.sap, tlf.shells, tlf.denominators, stats.ancova, stats.categorical, tlf.safety-tables, communication.interpretation]
+    datasets: [oncology/adam/adsl, oncology/adam/adae, oncology/adam/adlb, oncology/adam/adrs]
+    starter: capstones/04-trial-analysis
+    objective: |
+      Work the way a study team works: the SAP and the shells define the deliverable, and you produce it. Program the
+      demographics table, the disposition table, the AE overview, the TEAE-by-SOC/PT table, a laboratory shift table and
+      the response table — then write the paragraphs that would go into the CSR.
+    relevance: |
+      Every statistical programming interview includes some version of "walk me through how you'd program this table".
+      Having actually done it — including the denominators, the footnotes and the decimal conventions — is the answer.
+    deliverables:
+      - Programs producing each table from ADaM, with output that matches the shells.
+      - A mapping from each shell to the ADaM variables and population flags it uses.
+      - Draft CSR text for the safety and response results, with correct interpretation and no overclaiming.
+    steps:
+      - id: read
+        title: Read the SAP and shells like a programmer
+        body: |
+          For each shell, write down: population, denominator, treatment variable (planned or actual), the statistics
+          required, decimal places, sort order and footnotes.
+
+          Any ambiguity you find is a question for the statistician — list them. Real specifications always have some.
+        done: A table of requirements per output, plus a list of open questions.
+      - id: program
+        title: Program the tables
+        body: |
+          Build each table from ADaM. Separate computing the statistics from rendering the table — it makes QC far easier
+          and is how production code is usually structured.
+        done: Every table is produced by code, with no hand edits.
+      - id: check
+        title: Check the numbers three ways
+        body: |
+          For each table: do the column headers (big N) match ADSL population counts? Do row percentages use the right
+          denominator? Does the total of a categorical variable equal N (or explain the difference)? Spot-check two cells
+          by listing the underlying subjects.
+        done: Every table has been reconciled against subject counts.
+      - id: write
+        title: Write the results text
+        body: |
+          Write the safety and efficacy paragraphs. State estimates with confidence intervals, describe the populations,
+          and be explicit about what the analysis does not establish.
+
+          Avoid: "significantly improved" without an effect size, "trend toward" for a non-significant result, and causal
+          language for subgroup findings.
+        done: Draft text written and self-reviewed against the interpretation checklist in the Communication lessons.
+    rubric:
+      - criterion: Specification adherence
+        description: "Outputs match the shells: populations, denominators, statistics, ordering and footnotes."
+      - criterion: Numerical correctness
+        description: Counts reconcile with ADSL; spot-checked cells match the underlying records.
+      - criterion: Code structure
+        description: Statistics and presentation are separated; the programs are rerunnable.
+      - criterion: Interpretation
+        description: The written results are accurate, quantified and appropriately hedged.
+    portfolio:
+      repoName: clinical-trial-tlf-programming
+      tagline: Educational end-to-end programming of clinical tables and figures from an SAP using synthetic ADaM data.
+      methods: |
+        Shell-driven programming of demographics, disposition, adverse-event, laboratory shift and response outputs from
+        ADaM datasets, with population and denominator handling per the SAP, reconciliation checks, and drafted results
+        text.
+      limitations: |
+        Synthetic study; outputs are illustrative and were not produced under a validated system or reviewed by a
+        statistician.
+
+  - id: oncology-survival
+    number: 5
+    title: Oncology survival analysis
+    summary: Derive time-to-event variables with real censoring rules, fit Kaplan–Meier and Cox models, and interpret them honestly.
+    difficulty: expert
+    hours: 14
+    skills: [adam.adtte, stats.survival, stats.cox, stats.ph-assumption, trials.oncology, tlf.figures]
+    datasets: [oncology/sdtm/rs, oncology/sdtm/ds, oncology/adam/adsl, oncology/adam/adtte]
+    starter: capstones/05-oncology-survival
+    objective: |
+      Build ADTTE for PFS and OS from the tumour assessments, deaths and disposition data — implementing every censoring
+      rule in the SAP — then produce the KM figure with numbers at risk, the survival summary table, the stratified Cox
+      model, and a proportional-hazards assessment.
+
+      Censoring is where most of the work (and most of the errors) live.
+    relevance: |
+      Time-to-event programming is the highest-value skill in oncology biometrics, and the censoring rules are what
+      separate a correct analysis from a plausible-looking one.
+    deliverables:
+      - ADTTE with PARAMCD PFS and OS, CNSR, EVNTDESC, CNSDTDSC and source traceability.
+      - KM figure with numbers at risk; survival summary table with medians and confidence intervals.
+      - Stratified Cox model results with a hazard ratio and confidence interval, plus a PH assessment.
+      - "A censoring audit: for each censoring reason, the number of subjects and one worked example."
+    steps:
+      - id: rules
+        title: Translate the censoring rules into code
+        body: |
+          Write each SAP censoring rule as a condition and an assigned date. Decide the order in which rules are applied —
+          it matters when more than one applies.
+        done: A rules table with condition, event/censor, date and CNSR value.
+      - id: derive
+        title: Derive ADTTE
+        body: |
+          Build the analysis dataset. For each subject, the event or censoring date must come from a specific source
+          record; carry SRCDOM/SRCSEQ so it can be traced.
+
+          Sanity checks: no negative times, no event dates after the data cutoff, every subject appears exactly once per
+          parameter.
+        done: ADTTE passes your checks and the event/censoring counts are stable when you rerun.
+      - id: analyse
+        title: Kaplan–Meier and Cox
+        body: |
+          Produce the KM estimates by arm with the log-log confidence interval used by SAS, the median with its CI, the
+          numbers at risk, the stratified log-rank test and the stratified Cox hazard ratio.
+
+          Run the model twice, with Breslow and Efron ties, and note the difference.
+        done: Results are produced and the two ties methods are compared.
+      - id: assumptions
+        title: Check the assumption you are relying on
+        body: |
+          Assess proportional hazards with a log(−log) plot and scaled Schoenfeld residuals. If it is questionable, say
+          what you would report instead (restricted mean survival time, piecewise hazard ratios, landmark analysis).
+        done: A written assessment with the diagnostic plots.
+      - id: sensitivity
+        title: Sensitivity to the censoring rules
+        body: |
+          Re-run PFS under an alternative censoring approach (for example, ignoring the "two consecutive missed
+          assessments" rule, or censoring at new anticancer therapy versus treating it as an event) and compare the hazard
+          ratios.
+
+          Report how much the conclusion depends on the rule. This is the analysis that separates a programmer from an
+          analyst.
+        done: A small table of hazard ratios under each rule set, with a written conclusion.
+    rubric:
+      - criterion: Censoring correctness
+        description: Every SAP rule is implemented, applied in the right order and traceable to a source record.
+      - criterion: Analysis correctness
+        description: KM, log-rank and Cox results are correct and reproducible; ties handling is stated.
+      - criterion: Assumption checking
+        description: Proportional hazards is assessed and the consequences discussed.
+      - criterion: Interpretation
+        description: The hazard ratio is described accurately, without "lives 35% longer" style claims.
+    portfolio:
+      repoName: oncology-survival-analysis
+      tagline: Educational time-to-event derivation and survival analysis (PFS/OS) on a synthetic oncology trial.
+      methods: |
+        ADTTE derivation implementing protocol-style censoring rules, Kaplan–Meier estimation with log-log intervals,
+        stratified log-rank testing, stratified Cox regression with Breslow and Efron ties, proportional-hazards
+        diagnostics and sensitivity analyses over alternative censoring rules.
+      limitations: |
+        Synthetic data generated with known effects; results describe the simulation, not any real therapy. No
+        independent statistical review was performed.
+
+  - id: submission-simulation
+    number: 6
+    title: Statistical programming submission simulation
+    summary: Assemble a submission-style package — datasets, outputs, specifications, QC documentation and a reviewer's guide.
+    difficulty: expert
+    hours: 18
+    skills: [regulatory.define, regulatory.submission, adam.specs, qc.mindset, communication.documentation, repro.documentation]
+    datasets: [oncology/sdtm/dm, oncology/adam/adsl, oncology/adam/adtte]
+    starter: capstones/06-submission-simulation
+    objective: |
+      Package the work of capstones 2–5 the way a submission is packaged: standardized datasets, analysis datasets,
+      outputs, specifications, programs, QC documentation and a reviewer-facing guide that explains the decisions a
+      reviewer would otherwise have to guess.
+
+      This is explicitly an educational simulation, and your documentation must say so.
+    relevance: |
+      Most programmers never see the whole package until they work on a filing. Understanding what goes into it — and
+      writing documentation a reviewer could actually use — is a differentiator in interviews for submission-facing roles.
+    deliverables:
+      - A folder structure containing tabulation datasets, analysis datasets, outputs, programs and documentation.
+      - Dataset-level and variable-level specifications.
+      - A reviewer's-guide-style document (analysis datasets, key derivations, data dependencies, known issues).
+      - "A QC summary: what was independently programmed, what was checked by review, what remains open."
+    steps:
+      - id: structure
+        title: Build the package structure
+        body: |
+          Create the folder layout and a manifest of what goes where. Name programs so their run order is obvious, and
+          make sure every output names the program that produced it.
+        done: A reviewer could locate any output's source program in under a minute.
+      - id: specs
+        title: Finish the specifications
+        body: |
+          Complete dataset-level and variable-level specifications for the datasets you submit. Include origin, codelists
+          and derivation text for every derived variable.
+        done: No variable in your analysis datasets is undocumented.
+      - id: guide
+        title: Write the reviewer's guide
+        body: |
+          Cover: study design summary, the analysis datasets and how they relate, key derivations (populations,
+          treatment-emergent, censoring), data dependencies between datasets, and any known issues or deviations.
+
+          Be explicit that the study and data are synthetic and educational.
+        done: A guide exists that someone unfamiliar with your code could read before opening a dataset.
+      - id: qcdoc
+        title: Document the QC
+        body: |
+          For each output: who produced it, how it was checked (independent programming, review, both), what was found and
+          what was resolved. Leave open items visible rather than deleted.
+        done: A QC summary table covering every output in the package.
+    rubric:
+      - criterion: Completeness
+        description: Every dataset and output in the package is documented and reproducible.
+      - criterion: Reviewer orientation
+        description: Documentation answers a reviewer's questions instead of describing code.
+      - criterion: Honesty
+        description: Limitations, open issues and the educational nature of the package are stated clearly.
+      - criterion: Organization
+        description: Structure and naming make the package navigable without explanation.
+    portfolio:
+      repoName: biometrics-submission-simulation
+      tagline: Educational simulation of a statistical programming deliverable package built on synthetic study data.
+      methods: |
+        Assembly of tabulation and analysis datasets, outputs, programs, dataset and variable specifications, a
+        reviewer-guide-style document and a QC summary, organized as a navigable package.
+      limitations: |
+        This is a teaching exercise, not a regulatory submission: no Define-XML validation, no electronic submission
+        format, no sponsor quality system, and all data are synthetic.
+
+  - id: manufacturing-analytics
+    number: 7
+    title: Pharmaceutical manufacturing analytics
+    summary: Build a pipeline from messy instrument exports to a validated predictive model of batch quality — with the leakage traps avoided.
+    difficulty: advanced
+    hours: 14
+    skills: [analytics.instrument-data, python.automation, analytics.pca, analytics.regression, analytics.validation, analytics.leakage, communication.visualization]
+    datasets: [manufacturing/process/batches, manufacturing/process/sensor-timeseries, manufacturing/process/spectra]
+    starter: capstones/07-manufacturing-analytics
+    objective: |
+      Instrument exports arrive with inconsistent headers, units and delimiters. Standardize them into an analysis table,
+      explore the process data, reduce the correlated measurements with PCA, and build a model that predicts batch
+      potency — validated in a way that does not fool you.
+
+      The central lesson is that a model whose cross-validation splits rows within a batch will look excellent and be
+      useless.
+    relevance: |
+      Analytics roles in biotech manufacturing and process development look for exactly this: the ability to take
+      instrument data, make it trustworthy, and model it without leaking information between training and test sets.
+    deliverables:
+      - An automated ingestion pipeline (messy exports → tidy analysis table) with a data-quality report.
+      - "Exploratory analysis: distributions, correlations, VIFs, trends by line and supplier."
+      - PCA with scree plot, scores and loadings, and an interpretation of the first components.
+      - A predictive model with honest validation (grouped by batch), diagnostics and a short scientific report.
+    steps:
+      - id: ingest
+        title: Automate the ingestion
+        body: |
+          Write a pipeline that reads every export in the raw folder regardless of header spelling, delimiter, units or
+          metadata lines, and produces one tidy table plus a report of what it had to fix or reject.
+
+          Make it idempotent: running it twice produces the same output, and a new export file requires no code change.
+        done: All exports are ingested, with a quality report listing every anomaly handled.
+      - id: explore
+        title: Explore before modelling
+        body: |
+          Distributions by line and supplier, drift over time, correlations among process parameters, variance inflation
+          factors. Identify the genuine process excursions and decide how to treat them.
+        done: You can describe the correlation structure and name the variables that move together.
+      - id: pca
+        title: Reduce and interpret
+        body: |
+          Standardize, run PCA, choose the number of components with a stated criterion, and interpret the loadings. Say
+          what each retained component appears to represent — and what it does not.
+        done: A scree plot, a scores plot coloured by an outcome, and a written interpretation with caveats.
+      - id: model
+        title: Model with honest validation
+        body: |
+          Fit a model for potency. Use grouped cross-validation by batch, put every preprocessing step inside the
+          cross-validation loop, and compare with the naive row-level split so you can quantify the optimism.
+        done: A table comparing row-level and batch-grouped performance, with an explanation of the difference.
+      - id: report
+        title: Write the report
+        body: |
+          Two pages: question, data, method, results with uncertainty, limitations, and what you would do next. Write for a
+          process scientist, not for a data scientist.
+        done: Report written and reviewed against the communication checklist.
+    rubric:
+      - criterion: Pipeline robustness
+        description: New or malformed files are handled predictably and reported, not silently dropped.
+      - criterion: Analysis quality
+        description: Multicollinearity, scaling and outliers are handled deliberately and explained.
+      - criterion: Validation integrity
+        description: No leakage; grouped validation is used and the optimism of naive splitting is quantified.
+      - criterion: Communication
+        description: The report is accurate, quantified and readable by a non-modeller.
+    portfolio:
+      repoName: manufacturing-process-analytics
+      tagline: Educational analytics pipeline from synthetic instrument exports to a batch-quality model with leakage-safe validation.
+      methods: |
+        Automated ingestion and standardization of heterogeneous instrument exports, exploratory and correlation analysis,
+        principal component analysis of process and spectral variables, and predictive modelling validated with
+        batch-grouped cross-validation, with preprocessing inside the validation loop.
+      limitations: |
+        Synthetic process data generated from a known latent structure; performance figures reflect that generator, not a
+        real manufacturing process. No GMP or validation framework is implied.
+
+  - id: cross-language
+    number: 8
+    title: Cross-language challenge
+    summary: Produce the same analysis in SAS, R and Python — then explain every difference between them.
+    difficulty: expert
+    hours: 10
+    skills: [r.sas-translation, python.stats, sas.stat-procs, qc.discrepancy, communication.documentation]
+    datasets: [oncology/adam/adsl, oncology/adam/adtte, oncology/adam/adlb]
+    starter: capstones/08-cross-language
+    objective: |
+      Take one analysis — the PFS survival summary and a laboratory change-from-baseline summary — and implement it three
+      times: SAS, R and Python.
+
+      Then do the part that matters: reconcile the outputs. Where they differ, find out whether it is a default, a
+      definition or a bug.
+    relevance: |
+      Teams increasingly use more than one language, and the person who can explain why PROC PHREG and coxph disagree by
+      0.005, or why a median differs between SAS and R, becomes the person others bring their discrepancies to.
+    deliverables:
+      - Three implementations producing the same summary statistics and model results.
+      - "A reconciliation table: statistic, SAS value, R value, Python value, difference, cause."
+      - A short write-up of the default differences you found (ties handling, quantile definitions, CI transformations, rounding).
+    steps:
+      - id: implement
+        title: Implement the analysis three times
+        body: |
+          Write each implementation independently rather than translating line by line — translation hides the semantic
+          differences you are trying to find.
+        done: Three programs that run and produce the statistics.
+      - id: reconcile
+        title: Reconcile the numbers
+        body: |
+          Compare to at least four decimal places. Do not stop at "close enough": small differences usually have specific,
+          nameable causes.
+        done: A reconciliation table with every difference explained.
+      - id: defaults
+        title: Catalogue the defaults
+        body: |
+          Document the defaults that bit you: Efron vs Breslow ties, quantile definition (SAS QNTLDEF=5 vs R type 7),
+          log-log vs log confidence intervals for survival, rounding half away from zero vs half to even, and how missing
+          values are handled in each language.
+        done: A reference note you would actually reuse at work.
+    rubric:
+      - criterion: Equivalence
+        description: The three implementations answer the same question on the same population.
+      - criterion: Reconciliation depth
+        description: Differences are explained by mechanism, not dismissed.
+      - criterion: Reusability
+        description: The defaults note is concrete enough to be useful on a real project.
+    portfolio:
+      repoName: sas-r-python-reconciliation
+      tagline: Educational triple implementation of a clinical analysis in SAS, R and Python with a documented reconciliation of differences.
+      methods: |
+        Independent implementations of a survival summary and a laboratory change-from-baseline summary in SAS, R and
+        Python, followed by numerical reconciliation and documentation of language defaults (ties handling, quantile
+        definitions, confidence-interval transformations, rounding and missing-value semantics).
+      limitations: |
+        Synthetic data; SAS results were produced in a separate SAS environment and are not reproducible inside this
+        training application.

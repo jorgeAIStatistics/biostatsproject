@@ -1,0 +1,614 @@
+items:
+  - id: adam.base.lobxfl
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [adam.baseline, sdtm.findings, qc.discrepancy]
+    lesson: adam-baseline
+    title: 28 records where ABLFL and LBLOBXFL disagree
+    prompt: |
+      Joining every ADLB record to its source `LB` record through `SRCSEQ` gives:
+
+      | | `LBLOBXFL = "Y"` | `LBLOBXFL` null |
+      |---|---:|---:|
+      | `ABLFL = "Y"` | 2,910 | **28** |
+      | `ABLFL` null | 0 | 22,505 |
+
+      The 28 discordant records are 4 subjects across 7 parameters. Which subjects, and which flag is
+      wrong?
+    choices:
+      - text: "The four subjects who were randomized and never dosed. Neither flag is wrong: `--LOBXFL` means 'last observation before exposure' and there was no exposure, while the SAP's baseline rule falls back to the randomization date for never-treated subjects."
+        correct: true
+        feedback: "Correct. Two correct flags, two different definitions, two different owners — and the difference is exactly the subjects where the ADaM rule has a fallback that SDTM's does not."
+      - text: "Subjects whose baseline assessment was taken on the first-dose day, where SDTM used a stricter 'before exposure' comparison."
+        feedback: "That would produce a difference in the other direction and would not be exactly 4 subjects times 7 parameters. The clean 28 = 4 x 7 pattern points at whole subjects, not individual records."
+      - text: "`LBLOBXFL` is wrong — SDTM should flag a baseline for every subject in the study."
+        feedback: "SDTMIG v3.4 defines `--LOBXFL` relative to exposure. A subject with no exposure correctly has none, and SDTM has no business knowing the SAP's fallback."
+      - text: "`ABLFL` is wrong — ADaM should never flag a baseline for a subject who was never treated."
+        feedback: "An intent-to-treat analysis includes all randomized subjects and needs their baseline characteristics. Leaving them with no baseline would drop them from every change summary."
+    explanation:
+      objective: "Explain a systematic disagreement between an SDTM flag and an ADaM flag."
+      given: "A cross-tabulation showing 28 discordant records and the fact that they are 4 subjects across 7 parameters."
+      relevant: "That --LOBXFL is defined relative to exposure and ABLFL is defined by the SAP."
+      method: "The 4 x 7 pattern means whole subjects differ, not scattered records — so look for a subject-level cause."
+      numbers: "2,910 records agree; 28 = 4 subjects x 7 parameters; no record is flagged in SDTM but not in ADaM."
+      assumptions: "The SAP's fallback for never-treated subjects is the last assessment on or before randomization."
+      interpretation: "Both flags are right. Copying LBLOBXFL into ABLFL would leave four ITT subjects with no baseline."
+      changes: "If the study had no never-dosed subjects the two flags would agree everywhere, and the difference would look like a naming choice rather than a definition."
+      interviewer: "That you can state both definitions and say why neither flag is wrong."
+
+  - id: adam.base.at-most-one
+    format: numeric
+    modes: [check, qc, debug]
+    difficulty: intermediate
+    skills: [adam.baseline, qc.mindset]
+    lesson: adam-baseline
+    datasets: [oncology/adam/adlb]
+    title: How many baseline records should ADLB have?
+    prompt: |
+      CBX417-301's ADLB covers 420 subjects and 7 parameters, and every subject has at least one record
+      for every parameter.
+
+      Two subject-parameter cells have no assessment on or before first dose: one subject's haemoglobin
+      starts at Cycle 1 Day 8, another's ALT starts at Cycle 2 Day 1.
+
+      How many records should have `ABLFL = "Y"`?
+    answer: 2938
+    tolerance: 0
+    unit: records
+    hints:
+      - "420 x 7 cells in total."
+      - "ADaMIG requires *at most* one baseline per subject and parameter, not exactly one."
+      - "2,940 − 2."
+    solution: |
+      **2,938.** 420 × 7 = 2,940 subject-parameter cells, minus the 2 cells with no pre-dose assessment.
+
+      **This is why the QC check is `max(n) == 1`, not `nrow() == 2940`.** ADaMIG v1.3 requires at most
+      one baseline record per subject and parameter for a given baseline definition. A check asserting
+      2,940 fails on a correct dataset — and the repair somebody reaches for is to flag the earliest
+      post-baseline record as baseline, which silently corrupts every change from baseline for that
+      subject and parameter.
+
+      **What happens to those two cells instead:** no `ABLFL`, null `BASE`, null `CHG` on all five of
+      their records. They are excluded from change-from-baseline summaries for that parameter and remain
+      in the population and in every other summary, exactly as SAP Section 5.5 requires.
+
+      The records stay in the dataset. Their values are real and feed the worst-post-baseline summaries,
+      the "missing baseline" row of the shift table, and the listings. Only the change is undefined, and
+      a null `CHG` expresses that in a way every summary handles identically.
+    explanation:
+      objective: "Compute the expected baseline count and see why the obvious assertion is wrong."
+      given: "420 subjects, 7 parameters, and 2 cells with no pre-dose assessment."
+      relevant: "That the ADaM constraint is 'at most one', not 'exactly one'."
+      calculating: "420 x 7 minus the number of cells with no eligible record."
+      numbers: "2,940 cells, 2,938 flagged, 5 records with a null BASE across the 2 unflagged cells."
+      assumptions: "Every subject has at least one record for every parameter, so the cell count is exactly the product."
+      interpretation: "An over-strict check is more dangerous than no check, because the repair corrupts data."
+      changes: "The right assertions are that no cell has more than one baseline and that CHG is null wherever BASE is null."
+      interviewer: "That you reach for 'at most one' unprompted."
+
+  - id: adam.base.ecg-exception
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [adam.baseline, adam.specs, trials.safety]
+    lesson: adam-baseline
+    title: Why ECG has its own baseline rule
+    prompt: |
+      Subject `CBX417-301-1002-0001`, first dose 2022-05-23:
+
+      | Dataset | Assessment | Datetime | Selected as baseline? |
+      |---|---|---|---|
+      | ADLB (ALT) | Cycle 1 Day 1 blood draw | 2022-05-23 08:43 | **Yes** |
+      | ADEG (QTcF) | Cycle 1 Day 1 ECG | 2022-05-23 11:23 | No |
+      | ADEG (QTcF) | Screening ECG | 2022-05-11 10:12 | **Yes** |
+
+      Why does the ECG baseline skip back to screening?
+    choices:
+      - text: "The Cycle 1 Day 1 ECG is performed after dosing. Using it as baseline would compare a post-dose QTcF against a post-dose QTcF and systematically understate the drug's effect on the interval."
+        correct: true
+        feedback: "Correct. The SAP names ECG as an exception and defines its baseline as the last assessment strictly before the first dose — in practice the screening ECG."
+      - text: "ECG baselines are always taken at screening by CDISC convention."
+        feedback: "There is no such convention. The rule follows the collection schedule, which is why the SAP has to name the parameters it applies to."
+      - text: "The Cycle 1 Day 1 ECG has a datetime later than the lab draw, and baseline is always the earliest assessment."
+        feedback: "Baseline is the *last* eligible assessment, not the earliest. The ECG is excluded because it is post-dose, not because it is late in the day."
+      - text: "QTcF cannot be measured reliably on the dose day."
+        feedback: "It can, and it is — that measurement is a post-baseline value. The issue is which side of the dose it falls on."
+    explanation:
+      objective: "Explain a parameter-specific baseline exception from the collection schedule."
+      given: "Two parameters assessed on the first-dose day, one before dosing and one after."
+      relevant: "The time component of each assessment relative to the dose."
+      irrelevant: "The calendar date, which is identical for both."
+      method: "Compare datetimes, not dates, and treat the ordering relative to dosing as the criterion."
+      numbers: "Lab draw 08:43, ECG 11:23, both on 2022-05-23; the screening ECG is 12 days earlier at ADY -12."
+      assumptions: "The protocol schedules the C1D1 ECG post-dose, which is why the SAP names ECG as an exception."
+      interpretation: "Using the post-dose ECG as its own baseline would bias the QTcF change toward zero — the exact quantity the analysis exists to measure."
+      changes: "If the collection schedule put the C1D1 ECG pre-dose, no exception would be needed."
+      interviewer: "That you say the data cannot tell you which parameters are affected, so the SAP has to name them."
+
+  - id: adam.base.broadcast
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [adam.baseline, adam.bds]
+    lesson: adam-baseline
+    title: BASE on a screening record
+    prompt: |
+      An ADLB extract for one subject and parameter:
+
+      | `AVISIT` | `ADY` | `AVAL` | `BASE` | `ABLFL` |
+      |---|---:|---:|---:|---|
+      | SCREENING | −12 | 18 | **15** | — |
+      | BASELINE | 1 | 15 | 15 | Y |
+      | CYCLE 2 DAY 1 | 22 | 21 | 15 | — |
+
+      The screening record has `BASE = 15`, which is a value measured *after* it. Is that right?
+    choices:
+      - text: "Yes. `BASE` is the subject's baseline for the parameter, broadcast to every record — not 'the value before this record'."
+        correct: true
+        feedback: "Correct. There is one baseline per subject and parameter, and it goes on every row so that change is subtraction rather than a self-join in each table program."
+      - text: "No — `BASE` should be null on records collected before the baseline record."
+        feedback: "That would break the invariant that every record carries its subject's baseline, and would make shift tables and listings inconsistent about which rows have one."
+      - text: "No — the screening value of 18 should have been the baseline, since it is the earliest pre-dose record."
+        feedback: "Baseline is the *last* eligible assessment on or before first dose, not the earliest."
+      - text: "Yes, but only because `CHG` is null on the screening record."
+        feedback: "`CHG` being null on screening is a separate convention. `BASE` would still be 15 even if the study computed a change there."
+    explanation:
+      objective: "Read BASE correctly as a subject-and-parameter attribute rather than a per-record lookback."
+      given: "Three records where the earliest carries a BASE measured later."
+      relevant: "That BASE is broadcast from the single ABLFL record."
+      method: "One baseline per subject and parameter, copied to every row of that group."
+      interpretation: "Broadcasting means change from baseline is subtraction and a shift table is a cross-tabulation of two columns on one row."
+      changes: "If the broadcast were a per-table join instead, every table would re-implement it and a duplicate ABLFL would fan out in some tables and not others."
+
+  - id: adam.base.derive-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: advanced
+    skills: [adam.baseline, adam.bds, r.dplyr]
+    lesson: adam-baseline
+    datasets: [oncology/adam/adlb]
+    title: Derive ABLFL and BASE with the tie-breakers
+    minutes: 18
+    prompt: |
+      Write `derive_baseline(bds)` implementing the SAP rule on a BDS dataset that already has `AVAL`,
+      `ADTM`, `SRCSEQ` and a per-record `base_ref` (the datetime a record must be at or before to
+      qualify).
+
+      Requirements:
+
+      - A record qualifies when `AVAL` is **non-missing** and `ADTM <= base_ref`.
+      - Among the qualifying records, the **last** one wins, breaking ties by `ADTM` then `SRCSEQ`.
+      - Flag it with `ABLFL = "Y"`; all other records get `NA`.
+      - Broadcast `BASE`, `BNRIND` and `BTOXGR` from the flagged record to every record of the subject
+        and parameter.
+      - A subject and parameter with **no** qualifying record must end up with no flag and a null `BASE`,
+        without erroring or warning.
+    starter: |
+      library(dplyr)
+
+      derive_baseline <- function(bds) {
+        bds |>
+          group_by(USUBJID, PARAMCD) |>
+          arrange(___, .by_group = TRUE) |>
+          mutate(
+            cand   = ___,
+            bl_row = ___,
+            ABLFL  = ___
+          ) |>
+          mutate(
+            BASE   = ___,
+            BNRIND = ___,
+            BTOXGR = ___
+          ) |>
+          ungroup() |>
+          select(-cand, -bl_row)
+      }
+    reference: |
+      library(dplyr)
+
+      derive_baseline <- function(bds) {
+        bds |>
+          group_by(USUBJID, PARAMCD) |>
+          arrange(ADTM, SRCSEQ, .by_group = TRUE) |>
+          mutate(
+            cand   = !is.na(AVAL) & ADTM <= base_ref,
+            bl_row = if (any(cand)) max(which(cand)) else NA_integer_,
+            ABLFL  = if_else(!is.na(bl_row) & row_number() == bl_row,
+                             "Y", NA_character_)
+          ) |>
+          mutate(
+            BASE   = AVAL[!is.na(ABLFL)][1],
+            BNRIND = ANRIND[!is.na(ABLFL)][1],
+            BTOXGR = ATOXGR[!is.na(ABLFL)][1]
+          ) |>
+          ungroup() |>
+          select(-cand, -bl_row)
+      }
+    hints:
+      - "Sort inside the group with `.by_group = TRUE`, otherwise `row_number()` counts across the whole dataset."
+      - "Eligibility needs both conditions: non-missing *and* at or before the reference datetime."
+      - "`max(which(cand))` is the last eligible row — but guard it, because `max()` of an empty set is `-Inf` with a warning."
+      - "`AVAL[!is.na(ABLFL)][1]` gives `NA` when nothing is flagged, which is exactly the behaviour the two no-baseline cells need."
+    checks:
+      - pattern: "arrange\\s*\\(\\s*ADTM\\s*,\\s*SRCSEQ"
+        message: "Breaks ties explicitly: datetime first, then sequence number"
+      - pattern: "\\.by_group\\s*=\\s*TRUE"
+        message: "Sorts within each subject and parameter group"
+      - pattern: "!\\s*is\\.na\\s*\\(\\s*AVAL\\s*\\)\\s*&"
+        message: "Requires the value to be non-missing before it can be baseline"
+      - pattern: "ADTM\\s*<=\\s*base_ref"
+        message: "Compares datetimes against the reference point, not dates"
+      - pattern: "if\\s*\\(\\s*any\\s*\\(\\s*cand\\s*\\)\\s*\\)"
+        message: "Guards the case where no record qualifies"
+      - pattern: "AVAL\\s*\\[\\s*!\\s*is\\.na\\s*\\(\\s*ABLFL\\s*\\)\\s*\\]\\s*\\[\\s*1\\s*\\]"
+        message: "Broadcasts the flagged record's value to every record of the group"
+    expectedOutput: |
+      ```text
+      > out <- derive_baseline(adlb_pre)
+      > out |> summarise(cells     = n_distinct(paste(USUBJID, PARAMCD)),
+      +                  baselines = sum(ABLFL == "Y", na.rm = TRUE),
+      +                  no_base   = sum(is.na(BASE)))
+        cells baselines no_base
+      1  2940      2938       5
+      ```
+    solution: |
+      **Four decisions, four lines.**
+
+      | Line | Decision |
+      |---|---|
+      | `arrange(ADTM, SRCSEQ, .by_group = TRUE)` | The tie-breakers, made explicit rather than inherited from input order |
+      | `!is.na(AVAL) & ADTM <= base_ref` | Eligibility — "last **non-missing**" and the datetime comparison |
+      | `if (any(cand)) … else NA_integer_` | The no-qualifying-record case |
+      | `AVAL[!is.na(ABLFL)][1]` | The broadcast, which returns `NA` for those cells without a branch |
+
+      **The tie-breaker line is the one that matters most in practice.** "Last non-missing assessment on
+      or before first dose" does not resolve two records at the same datetime, and if the code leaves
+      that to whatever order the input arrived in, two independent programs can select different
+      records. Every change from baseline for that subject then differs, and neither program is visibly
+      wrong. `SRCSEQ` is arbitrary as a tie-breaker and *deterministic*, which is the property that
+      matters.
+
+      **`ADTM <= base_ref`, not `ADT <= TRTSDT`.** On the first-dose day some assessments are pre-dose
+      and some are post-dose. Comparing dates makes them indistinguishable, and on this study the Cycle 1
+      Day 1 ECG would be selected as its own baseline.
+
+      **Why `base_ref` is a per-record input rather than computed inside.** It is the first-dose datetime
+      for most parameters, the end of the randomization day for a never-treated subject, and
+      strictly-before-dose for ECG and tumor assessment. Those are SAP decisions, so they belong in the
+      caller, and the derivation stays one function for every parameter.
+    explanation:
+      objective: "Implement a fully specified baseline rule including its tie-breakers and edge cases."
+      given: "A BDS dataset with values, datetimes, sequence numbers and a per-record reference datetime."
+      relevant: "Non-missingness, the datetime comparison, the deterministic tie-break, and the empty-group case."
+      method: "Sort within group, mark eligibility, take the last eligible row, broadcast."
+      numbers: "2,940 subject-parameter cells, 2,938 flagged, 5 records with a null BASE."
+      assumptions: "base_ref already encodes the parameter-specific exceptions, so this function needs no special cases."
+      computation: "max(which(cand)) on an empty selection returns -Inf with a warning, which the any() guard avoids."
+      interpretation: "Every line corresponds to a sentence of SAP Section 5.3."
+      changes: "Comparing ADT to TRTSDT instead of datetimes would select the post-dose C1D1 ECG as its own baseline."
+      interviewer: "That you raise the tie-breaker without being asked and can say why determinism matters more than which rule."
+
+  - id: adam.base.tiebreak
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [adam.baseline, qc.discrepancy, r.dplyr]
+    lesson: adam-baseline
+    title: Production and QC picked different baselines
+    minutes: 10
+    prompt: |
+      Production and QC both implemented SAP Section 5.3. They agree on 2,931 of 2,938 baseline records
+      and disagree on 7 — all subjects with two laboratory draws on the same day.
+
+      This is the QC program. Click the line that makes its answer depend on the order the input
+      happened to arrive in.
+    code: |
+      library(dplyr)
+
+      adlb <- adlb_pre |>
+        group_by(USUBJID, PARAMCD) |>
+        filter(!is.na(AVAL), ADTM <= base_ref) |>
+        arrange(ADT, .by_group = TRUE) |>
+        slice_tail(n = 1) |>
+        mutate(ABLFL = "Y") |>
+        ungroup()
+    answerLines: [6]
+    lineNotes:
+      - line: 6
+        note: "Sorting on `ADT` — the **date** — leaves records collected on the same day in whatever order they arrived, and `slice_tail()` then takes whichever happened to be last. The SAP's tie-breakers are datetime first, then `--SEQ`: `arrange(ADTM, SRCSEQ, .by_group = TRUE)`."
+      - line: 5
+        note: "`filter()` is a second, separate defect: it removes every post-baseline record instead of flagging one, leaving a baseline-only dataset with no `CHG` to compute. The eligibility test itself is correct."
+      - line: 7
+        note: "`slice_tail(n = 1)` does return exactly one row, so it is not the source of duplicate flags — it is the source of an *arbitrary* one, because line 6 did not determine the order."
+      - line: 8
+        note: "Assigning `ABLFL = \"Y\"` unconditionally is correct here only because `filter` and `slice_tail` already reduced the group to one row. In a flag-rather-than-filter implementation this line would need a condition."
+    fixed: |
+      library(dplyr)
+
+      adlb <- adlb_pre |>
+        group_by(USUBJID, PARAMCD) |>
+        arrange(ADTM, SRCSEQ, .by_group = TRUE) |>
+        mutate(
+          cand   = !is.na(AVAL) & ADTM <= base_ref,
+          bl_row = if (any(cand)) max(which(cand)) else NA_integer_,
+          ABLFL  = if_else(!is.na(bl_row) & row_number() == bl_row,
+                           "Y", NA_character_)
+        ) |>
+        ungroup()
+    hints:
+      - "The disagreements are all subjects with two draws on the same day. What separates two records on the same day?"
+      - "Compare what the sort key is with what the SAP's tie-breakers are."
+      - "There are two defects in this program. The one asked about is the one that makes the answer non-deterministic."
+    solution: |
+      **Line 6.** `arrange(ADT)` sorts on the date, so two draws on the same day are tied, and
+      `slice_tail()` takes whichever row the input order left last. Change the input order — a different
+      sort upstream, a different SAS engine, a rebuilt dataset — and the answer changes.
+
+      The SAP's rule is *datetime first, then `--SEQ`*:
+
+      ```r
+      arrange(ADTM, SRCSEQ, .by_group = TRUE)
+      ```
+
+      `SRCSEQ` as a final tie-breaker is arbitrary and **deterministic**, and determinism is the property
+      that makes two independent programs agree. A rule that is reasonable but not deterministic
+      produces exactly this failure: two correct-looking implementations, seven disagreements, and every
+      change from baseline for those seven subjects different between production and QC.
+
+      **The second defect, on line 5**, is `filter()` where a flag was needed. It deletes every
+      post-baseline record, so the resulting dataset has nothing to compute a change *from*. `ABLFL` is a
+      flag precisely so the rest of the BDS dataset survives.
+
+      **How this gets found in practice:** a record-count comparison between production and QC ADLB, and
+      a comparison of `ABLFL = "Y"` keys. Seven differing keys out of 2,938 is small enough to miss in a
+      value-level comparison of means and large enough to change seven subjects' entire series.
+    explanation:
+      objective: "Locate the line that makes a baseline derivation non-deterministic."
+      given: "Seven disagreements between two implementations, all on subjects with same-day duplicate draws."
+      relevant: "That the sort key is the date rather than the datetime, and that no final tie-breaker is applied."
+      irrelevant: "slice_tail, which correctly returns one row from whatever order it is given."
+      method: "The pattern of disagreement — same-day duplicates only — points straight at the tie-breaking."
+      numbers: "2,938 baseline records, 7 disagreements."
+      assumptions: "The SAP specifies datetime then --SEQ as the tie-breakers; without that sentence neither program would be wrong."
+      interpretation: "Non-determinism is worse than a wrong rule, because it cannot be reproduced or reviewed."
+      changes: "The second defect — filtering instead of flagging — would be caught by a record count, since the output has only 2,938 rows."
+      interviewer: "That you name determinism, not correctness, as the property the tie-breaker provides."
+
+  - id: adam.base.no-baseline
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [adam.baseline, adam.bds, tlf.denominators]
+    lesson: adam-baseline
+    title: The subject whose haemoglobin starts at Cycle 1 Day 8
+    prompt: |
+      ```text
+      USUBJID              PARAMCD AVISIT        ADY AVAL BASE CHG ABLFL
+      CBX417-301-1010-0001 HGB     CYCLE 1 DAY 8   7  132   NA  NA  (null)
+      CBX417-301-1010-0001 HGB     CYCLE 2 DAY 1  22  131   NA  NA  (null)
+      CBX417-301-1010-0001 HGB     CYCLE 4 DAY 1  64  123   NA  NA  (null)
+      ```
+
+      This subject has no pre-dose haemoglobin. What should happen to these records?
+    choices:
+      - text: "They stay in the dataset with null `BASE` and null `CHG` — excluded from change-from-baseline summaries for haemoglobin, included in the population, the worst-post-baseline summary, the shift table's missing-baseline category, and every listing."
+        correct: true
+        feedback: "Correct. The exclusion is expressed as a null rather than as a deletion, which is why every summary handles it identically and a reviewer can still see the gap."
+      - text: "They should be deleted, since a record with no baseline cannot contribute to any analysis."
+        feedback: "The values are real measurements. They feed the worst post-baseline summary and the listings; only the *change* is undefined."
+      - text: "The Cycle 1 Day 8 record should be flagged as baseline, since it is the earliest available."
+        feedback: "It is post-dose. Flagging it would make the change from baseline a change from a post-treatment value, and the subject's apparent haemoglobin drop would be understated."
+      - text: "The subject should be excluded from the safety population."
+        feedback: "The subject received treatment and is in the safety population. One missing baseline for one parameter does not change population membership."
+    explanation:
+      objective: "Decide what a BDS dataset does with a subject-parameter cell that has no baseline."
+      given: "Three post-baseline records with no pre-dose assessment for the parameter."
+      relevant: "That the missing quantity is the change, not the value."
+      method: "SAP Section 5.5: subjects without a baseline are excluded from change summaries for that parameter and remain in every other summary."
+      numbers: "Two such cells exist in CBX417-301's ADLB, covering 5 records in total."
+      interpretation: "A null CHG is an exclusion that every summary applies the same way; a deleted record is an exclusion nobody can see."
+      changes: "Flagging the first post-dose record as baseline would corrupt the entire series, which is the repair an over-strict 'exactly one baseline' check invites."
+      interviewer: "That you distinguish excluding a value from excluding a change."
+
+  - id: adam.base.never-treated
+    format: numeric
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [adam.baseline, adam.adsl, trials.populations]
+    lesson: adam-baseline
+    datasets: [oncology/adam/adlb]
+    title: Baseline for a subject who was never dosed
+    prompt: |
+      CBX417-301 randomized 420 subjects; 4 were never dosed. ADLB covers 7 laboratory parameters.
+
+      The SAP says baseline is the last non-missing assessment on or before the first dose, and for
+      randomized subjects who were never treated, the last non-missing assessment on or before
+      randomization.
+
+      SDTM's `LBLOBXFL` — last observation before exposure — is null for every record of those four
+      subjects, because they had no exposure.
+
+      How many ADLB records are flagged `ABLFL = "Y"` while their source `LB` record has a null
+      `LBLOBXFL`?
+    answer: 28
+    tolerance: 0
+    unit: records
+    hints:
+      - "Only the never-dosed subjects can differ, because for everyone else both definitions key on the first dose."
+      - "Each of those subjects has a baseline for each parameter."
+      - "4 x 7."
+    solution: |
+      **28** — four subjects × seven parameters.
+
+      Verified by joining every ADLB record to its source `LB` record through `SRCSEQ`:
+
+      | | `LBLOBXFL = "Y"` | `LBLOBXFL` null |
+      |---|---:|---:|
+      | `ABLFL = "Y"` | 2,910 | **28** |
+      | `ABLFL` null | **0** | 22,505 |
+
+      **The zero in the bottom-left corner is as informative as the 28.** No record is flagged in SDTM
+      and not in ADaM, which means the two rules agree wherever they both apply — the disagreement is
+      entirely the fallback, not a difference in the selection.
+
+      **Neither flag is wrong.** `--LOBXFL` is defined by SDTMIG v3.4 relative to exposure, and a subject
+      with no exposure has nothing for an observation to be before. `ABLFL` is defined by the SAP, which
+      provides a fallback because an intent-to-treat analysis includes all randomized subjects and needs
+      their baseline characteristics.
+
+      **The practical lesson is that you cannot copy one into the other.** A programmer who sets
+      `ABLFL = LBLOBXFL` leaves four ITT subjects with no baseline for any parameter — and the symptom is
+      four missing rows in a demographics-by-baseline-value table, which nobody checks.
+    explanation:
+      objective: "Quantify the systematic difference between an SDTM flag and an ADaM flag."
+      given: "4 never-dosed subjects, 7 parameters, and the two flag definitions."
+      relevant: "That the definitions differ only where there is no exposure."
+      calculating: "Subjects with no exposure times parameters per subject."
+      numbers: "4 x 7 = 28; 2,910 records agree; 0 records are flagged in SDTM but not ADaM."
+      assumptions: "Each never-dosed subject has at least one pre-randomization assessment for each parameter."
+      interpretation: "The disagreement is entirely the ADaM fallback, not a different selection rule."
+      changes: "In a study where every randomized subject was dosed, the two flags would agree everywhere."
+      interviewer: "That you predict the direction of the difference before computing it."
+
+  - id: adam.base.spec-gaps
+    format: multi
+    modes: [independent, qc, boss]
+    difficulty: expert
+    skills: [adam.baseline, adam.specs, qc.mindset]
+    lesson: adam-baseline
+    title: What this baseline definition fails to specify
+    minutes: 10
+    prompt: |
+      A draft SAP says only:
+
+      > Baseline is the last non-missing assessment before the first dose of study drug.
+
+      Select every gap that will cause two independent programmers to produce different `ABLFL` records.
+    choices:
+      - text: "It does not say what happens when two qualifying records share a date and time."
+        correct: true
+        feedback: "A final deterministic tie-breaker — usually the higher `--SEQ` — is required. Without it the answer depends on input order and cannot be reproduced."
+      - text: "It does not define baseline for a subject who was randomized and never dosed."
+        correct: true
+        feedback: "There is no first dose date at all. CBX417-301 has four such subjects, and the fallback to randomization is what makes `ABLFL` differ from `LBLOBXFL` on 28 records."
+      - text: "\"Before the first dose\" does not say whether an assessment on the dose day qualifies, or whether the comparison is by date or by datetime."
+        correct: true
+        feedback: "The difference decides whether the pre-dose Day 1 blood draw is the baseline. On this study it is, and the post-dose Day 1 ECG is not — which the rule as written cannot distinguish."
+      - text: "It does not name the parameters whose assessments are scheduled after dosing on the dose day."
+        correct: true
+        feedback: "ECG and tumor assessment need their own rules here. The data cannot tell you which parameters are affected — a date without a usable time looks identical either way — so the SAP has to name them."
+      - text: "It does not say whether `BASE` is broadcast to records collected before the baseline record."
+        correct: true
+        feedback: "It should be — `BASE` is a subject-and-parameter attribute, not a lookback — but a specification that leaves it open will get both answers, and one of them makes a shift table inconsistent about which rows have a baseline."
+      - text: "It does not specify the variable name to use for the flag."
+        feedback: "`ABLFL` is fixed by ADaMIG v1.3. The specification does not need to restate the standard."
+      - text: "It does not say whether `AVAL` or `AVALC` is used."
+        feedback: "That follows from the parameter's type, not from the baseline rule."
+    hints:
+      - "Read the sentence looking for words that do not fully resolve: 'last', 'before', 'assessment'."
+      - "Think about a subject the sentence cannot apply to at all."
+      - "Think about a measurement whose date is the dose date but whose time is after the dose."
+    solution: |
+      **Five gaps, and each one produces a different pair of `ABLFL` records.**
+
+      | Gap | What two programmers do |
+      |---|---|
+      | Same-date-and-time ties | One sorts by `--SEQ`, one by input order |
+      | Never-dosed subjects | One flags nothing, one falls back to randomization |
+      | Date versus datetime | One includes the whole dose day, one uses the dose time |
+      | Post-dose assessments on the dose day | One uses the C1D1 ECG as its own baseline |
+      | Broadcasting to earlier records | One leaves `BASE` null on screening records |
+
+      CBX417-301's SAP Section 5.3 closes all five in six sentences: the general rule, "on or before the
+      date **and, where collected, the time**", the never-treated fallback to randomization, "ties broken
+      by the later collection time then the higher `--SEQ`", and the two named exceptions for ECG and
+      tumor assessment.
+
+      **The two that are not gaps** are `ABLFL` itself and the `AVAL`/`AVALC` choice. Both are fixed by
+      ADaMIG v1.3 and by the parameter's type. A specification that restates the standard is longer
+      without being more specific, and it creates a second place for the standard to be wrong.
+
+      **The general test for a derivation specification:** read it looking for the words that do not fully
+      resolve. "Last" needs a tie-breaker. "Before" needs a granularity. "Assessment" needs a definition
+      of missing. Any word that still has two readings after you read the sentence is a place two
+      programs will diverge.
+    explanation:
+      objective: "Audit a derivation specification for under-determination rather than for correctness."
+      given: "A one-sentence baseline definition."
+      relevant: "Words that admit more than one reading: 'last', 'before', and the implicit assumption that a first dose exists."
+      irrelevant: "The variable name and the value type, both fixed elsewhere."
+      method: "For each ambiguous word, construct the two implementations it permits and see whether they differ on real data."
+      numbers: "The never-dosed gap alone accounts for 28 records on this study; the tie-break gap for around 7."
+      assumptions: "Both programmers are competent and reading the same sentence — the failure is in the sentence."
+      interpretation: "A specification is complete when no reasonable reading produces a different dataset."
+      changes: "Adding one sentence of tie-breakers removes an entire class of production-versus-QC disagreements."
+      interviewer: "That you audit for ambiguity rather than for whether the rule sounds right."
+
+  - id: adam.base.open-review
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [adam.baseline, qc.discrepancy, communication.interviewing]
+    lesson: adam-baseline
+    title: Reconciling two baseline derivations
+    prompt: |
+      **Interviewer:** "Production and QC disagree on the baseline record for eleven subjects. Talk me
+      through how you'd resolve it."
+    modelAnswer: |
+      I'd find the pattern before I read either program, because the pattern usually names the cause.
+
+      **First, characterise the eleven.** Are they all the same parameter? Do they all have two
+      assessments on the same day? Are any of them never-dosed subjects? Three patterns cover most of
+      these disagreements and each points somewhere different.
+
+      If they all have **two draws on the same date**, it is the tie-breaker. The SAP has to say datetime
+      first and then something deterministic — the higher `--SEQ` is the usual choice. If one program
+      sorts on date and takes the last row, its answer depends on whatever order the input arrived in,
+      which means it is not reproducible even against itself.
+
+      If they are **never-dosed subjects**, there is no first dose date and the rule as written does not
+      apply. The SAP needs a fallback — the last assessment on or before randomization — because an ITT
+      analysis still needs those subjects' baselines. On the study I've worked with that is four
+      subjects, and it is exactly where ADaM's `ABLFL` diverges from SDTM's `LBLOBXFL`: 28 records
+      flagged in ADaM and not in SDTM, and both flags are correct.
+
+      If they are **all one parameter**, it is probably a post-dose assessment on the dose day. The Cycle
+      1 Day 1 ECG is taken after dosing and shares its date with the first dose, so a date comparison
+      selects it as its own baseline. That parameter needs "strictly before the first dose", and the SAP
+      has to name it because the data cannot tell you which parameters are affected.
+
+      **Then I'd read both programs against the SAP sentence, not against each other.** The question is
+      not which programmer is right — it is whether the sentence admits both readings. Most of the time
+      it does, and then the finding goes to the study statistician as a specification gap rather than to
+      either programmer as a bug. That distinction matters for how it gets fixed: a bug gets patched, a
+      specification gap gets a sentence added and both programs regenerated.
+
+      **What I'd check after the fix.** That no subject and parameter has more than one `ABLFL = "Y"` —
+      and deliberately *not* that every cell has exactly one, because on this study two cells legitimately
+      have no pre-dose assessment at all. An over-strict check is worse than no check: the repair
+      somebody reaches for is to flag the earliest post-baseline record, which corrupts every change for
+      that subject.
+
+      And I'd check the blast radius. Baseline feeds `BASE`, `CHG`, `PCHG`, `BNRIND` and `BTOXGR`, so
+      eleven subjects with a different baseline means eleven subjects with a different value in every
+      change table, every shift table and every figure. It is not a localised difference.
+    rubric:
+      - Characterises the eleven discordant subjects before reading code
+      - Names same-day ties, never-dosed subjects and post-dose dose-day assessments as the three usual causes
+      - Explains why a non-deterministic tie-breaker is the real defect
+      - Knows the never-dosed fallback and its relationship to --LOBXFL
+      - Reads both programs against the specification rather than against each other
+      - Routes a specification gap to the statistician rather than to a programmer
+      - Uses "at most one baseline", not "exactly one", as the post-fix check
+      - Notes that baseline propagates into CHG, PCHG, BNRIND and BTOXGR
+    redFlags:
+      - "Decides which program is right by inspection and makes the other match it"
+      - "Asserts exactly one baseline per subject and parameter"
+      - "Treats the disagreement as a bug without checking whether the SAP is ambiguous"
+      - "Does not consider never-dosed subjects"
+    followUps:
+      - "The SAP genuinely is ambiguous and the database locks on Friday. What do you do?"
+      - "How would you word the tie-breaker sentence so it cannot be read two ways?"

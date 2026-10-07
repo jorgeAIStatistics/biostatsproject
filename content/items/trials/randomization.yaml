@@ -1,0 +1,265 @@
+items:
+  - id: trials.randomization.concealment-vs-blinding
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.randomization, trials.blinding]
+    lesson: trials-randomization-stratification
+    title: Concealment is not blinding
+    prompt: |
+      An open-label oncology trial (no placebo) uses a central IxRS that reveals each assignment only after the site has confirmed eligibility and registered the patient. Which statement is correct?
+    choices:
+      - text: "Allocation is concealed even though the trial is not blinded"
+        correct: true
+        feedback: "Concealment protects the sequence before assignment; blinding protects knowledge of treatment after assignment. An open-label trial can and should conceal allocation."
+      - text: "The trial is single-blind because the IxRS hides the next assignment"
+        feedback: "Hiding the *next* assignment is concealment. Blinding refers to who knows the treatment a patient *has received*."
+      - text: "Without blinding, concealment is pointless"
+        feedback: "Concealment prevents selection bias — steering particular patients into particular slots — which matters regardless of blinding."
+      - text: "Concealment is only needed when the block size is 2"
+        feedback: "Every randomized trial needs concealment; small blocks just make lapses more exploitable."
+    solution: |
+      Concealment (before assignment) prevents selection bias; blinding (after assignment) prevents performance and assessment bias. They are independent safeguards.
+
+  - id: trials.randomization.block-count
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [trials.randomization]
+    lesson: trials-randomization-stratification
+    title: How many distinct blocks?
+    prompt: |
+      For 1:1 randomization with permuted blocks of size 6 (3 A and 3 B), how many distinct block orderings are possible?
+    answer: 20
+    tolerance: 0
+    hints:
+      - "Choose which 3 of the 6 positions get A."
+      - "That is the binomial coefficient 6 choose 3."
+    solution: |
+      $\binom{6}{3} = 20$. For blocks of 4 it is $\binom{4}{2} = 6$. More possible orderings per block means less predictability.
+
+  - id: trials.randomization.next-assignment
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.randomization]
+    lesson: trials-randomization-stratification
+    title: Predicting the end of a block
+    prompt: |
+      Blocks of 4 (2 A, 2 B). Within the current block, the first three assignments in a stratum were A, B, A. What must the fourth be?
+    choices:
+      - text: "B"
+        correct: true
+        feedback: "The block must contain exactly two B; only one has been used."
+      - text: "A"
+        feedback: "Two A have already been used; a third would break the 2:2 block."
+      - text: "It cannot be known"
+        feedback: "Within a fixed-size block the last assignment is always determined by the first three. That is the predictability cost of blocking."
+      - text: "It depends on the other strata"
+        feedback: "In stratified randomization each stratum has its own independent block sequence."
+    solution: |
+      B. This is why block sizes are not disclosed to sites, why random block sizes are used, and why central IxRS and blinding matter.
+
+  - id: trials.randomization.strata-source
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.randomization, adam.adsl]
+    lesson: trials-randomization-stratification
+    title: Which ECOG value goes in the stratified model?
+    prompt: |
+      The SAP says the primary analysis is stratified "by the randomization stratification factors". For subject 1012-0031, IxRS recorded ECOG stratum **0**, but the screening CRF shows ECOG **1**. What value should the primary analysis use, and where does it live?
+    choices:
+      - text: "ECOG 0, from `STRAT1R` (as randomized, sourced from IxRS)"
+        correct: true
+        feedback: "The stratified analysis mirrors how randomization was performed. The discrepancy is reported as a mis-stratification and can be explored in a sensitivity analysis."
+      - text: "ECOG 1, from `ECOGBL`, because the CRF is the source document"
+        feedback: "ECOGBL is the correct baseline ECOG for description and subgroups, but the design balanced the arms on the IxRS value."
+      - text: "Exclude the subject from the stratified analysis"
+        feedback: "Excluding randomized subjects breaks the ITT principle. Mis-stratified subjects stay in the analysis."
+      - text: "Ask data management to change the IxRS record to ECOG 1"
+        feedback: "The IxRS record correctly shows what happened at randomization. Changing it would falsify the randomization history."
+    solution: |
+      Use `STRAT1R = "0"`. Keep `ECOGBL = "1"` for descriptive tables and subgroup analyses, report the number of mis-stratified subjects, and run the CRF-based sensitivity analysis if the SAP specifies it.
+
+  - id: trials.randomization.max-imbalance
+    format: numeric
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.randomization]
+    lesson: trials-randomization-stratification
+    title: Worst-case imbalance with stratification
+    prompt: |
+      A trial stratifies randomization into 12 strata (3 regions × 2 ECOG × 2 prior IO) with permuted blocks of 4. What is the **worst-case** overall difference between the number of subjects in arm A and arm B at the end of enrollment?
+    answer: 24
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "Within one stratum, what is the largest possible imbalance in a partially filled block of 4?"
+      - "It is 2 (for example, AA used and BB not yet used). The worst case is every stratum being off by 2 in the same direction."
+    solution: |
+      Each stratum's incomplete block can be unbalanced by at most 4/2 = 2. With 12 strata all unbalanced in the same direction: 12 × 2 = **24**. With CBX417-301's 4 strata the bound is 8. More strata mean more incomplete blocks — the reason trials stratify on only a few factors.
+
+  - id: trials.randomization.block-code
+    format: code
+    language: r
+    modes: [independent]
+    difficulty: intermediate
+    skills: [trials.randomization, r.basics]
+    lesson: trials-randomization-stratification
+    title: Write a permuted-block list in R
+    minutes: 12
+    prompt: |
+      Write R code that creates a reproducible 1:1 randomization list for **one** stratum with **50 blocks of size 4**, stored in a data frame `rand` with columns `slot` (1, 2, …) and `arm` ("A"/"B"). Use a seed so the list can be regenerated.
+    starter: |
+      # set a seed, then build 50 permuted blocks of A, A, B, B
+    hints:
+      - "`sample(c('A','A','B','B'))` returns one random permutation of a block."
+      - "Repeat it 50 times with `replicate()` or `lapply()` and flatten with `as.vector()` or `unlist()`."
+    checks:
+      - pattern: "set\\.seed\\s*\\("
+        message: "Sets a seed for reproducibility"
+      - pattern: "sample\\s*\\("
+        message: "Uses sample() to permute each block"
+      - pattern: "50"
+        message: "Generates 50 blocks"
+      - pattern: "data\\.frame\\s*\\("
+        message: "Returns a data frame"
+      - pattern: "\\bslot\\b"
+        message: "Has a slot column"
+    reference: |
+      set.seed(20220411)
+      arm <- as.vector(replicate(50, sample(c("A", "A", "B", "B"))))
+      rand <- data.frame(slot = seq_along(arm), arm = arm)
+      table(rand$arm)
+    expectedOutput: |
+      Output of table(rand$arm) (R 4.6, seed 20220411):
+        A   B
+      100 100
+    solution: |
+      `replicate(50, sample(...))` returns a 4 × 50 matrix whose columns are blocks; `as.vector()` reads it column by column, so the block structure is preserved. `table(rand$arm)` must show 100 and 100. A second check you should do: every consecutive group of 4 slots contains two A and two B — for example `all(tapply(rand$arm == "A", (rand$slot - 1) %/% 4, sum) == 2)`.
+
+  - id: trials.randomization.strata-qc
+    format: diff
+    modes: [qc]
+    difficulty: advanced
+    skills: [trials.randomization, qc.discrepancy, adam.adsl]
+    lesson: trials-randomization-stratification
+    title: Stratum counts disagree between production and QC
+    prompt: |
+      Production and QC programmers each summarized ITT subjects by the ECOG stratification factor for the "strata used in the primary analysis" table. The counts disagree. The numbers below are **illustrative** (not CBX417-301 results). What is the most likely root cause?
+    left:
+      title: "Production — ITT subjects by ECOG stratum"
+      columns: ["Stratum", "CBX-417 + Docetaxel", "Placebo + Docetaxel"]
+      rows:
+        - ["ECOG 0", 80, 79]
+        - ["ECOG 1", 130, 131]
+      footnote: "Program: t_strata.sas; source variable STRAT1R (ADSL)."
+    right:
+      title: "QC — ITT subjects by ECOG stratum"
+      columns: ["Stratum", "CBX-417 + Docetaxel", "Placebo + Docetaxel"]
+      rows:
+        - ["ECOG 0", 77, 78]
+        - ["ECOG 1", 133, 132]
+      footnote: "Program: qc_t_strata.R; source variable ECOGBL (ADSL)."
+    choices:
+      - text: "QC used baseline ECOG from the CRF (`ECOGBL`) instead of the IxRS stratum (`STRAT1R`); four subjects are mis-stratified"
+        correct: true
+        feedback: "The totals match (210 per arm) but four subjects moved from ECOG 0 to ECOG 1 — the signature of a different source variable. The table is about strata as randomized, so production is right."
+      - text: "Production included the 4 never-treated subjects and QC did not"
+        feedback: "Both tables total 210 per arm, so the same subjects are included; only their classification differs."
+      - text: "QC used actual treatment (TRT01A) instead of planned treatment"
+        feedback: "That would change arm totals (the dispensing errors move subjects between arms). The arm totals are identical."
+      - text: "Rounding differences between SAS and R"
+        feedback: "These are integer counts; rounding cannot change them."
+    solution: |
+      Same totals, different classification: a variable-source difference. Production (`STRAT1R`) follows the table's purpose. The four subjects whose IxRS stratum differs from CRF ECOG are exactly the mis-stratified subjects, and should be listed.
+    explanation:
+      objective: "Find why two independently programmed stratum tables disagree."
+      given: "Two 2 × 2 count tables with identical arm totals and the source variable in each footnote."
+      relevant: "Totals per arm (equal) versus cell counts (shifted by 3 and 1 in ECOG categories); the source variables named in the footnotes."
+      irrelevant: "Software (SAS vs R) — counts do not depend on it."
+      calculating: "Net movement: production ECOG 0 = 80 + 79 = 159; QC ECOG 0 = 77 + 78 = 155 — four subjects reclassified."
+      method: "When totals agree but categories shift, suspect a different classification variable or recoding rule, not a population difference."
+      interpretation: "Production is correct for a 'strata as randomized' display; the QC finding is still useful — it identifies mis-stratified subjects."
+      changes: "If the arm totals differed, the root cause would more likely be a population flag or planned-vs-actual treatment."
+      interviewer: "That you read the pattern of a discrepancy (totals vs cells) before reading code."
+
+  - id: trials.randomization.block-size-risk
+    format: mcq
+    modes: [debug]
+    difficulty: advanced
+    skills: [trials.randomization, trials.blinding]
+    lesson: trials-randomization-stratification
+    title: Is a fixed block size of 4 a problem here?
+    prompt: |
+      A reviewer notes that CBX417-301 uses **fixed** blocks of 4 within stratum and asks whether investigators could predict assignments. Which answer is most accurate?
+    choices:
+      - text: "Risk is low because the trial is double-blind and randomization is central across sites, but the block size should still not be disclosed to sites; random block sizes would reduce residual risk"
+        correct: true
+        feedback: "Predicting needs knowledge of previous assignments. Sites see only blinded kit numbers, and a site sees only a fraction of each stratum's block because blocks span all sites. Non-disclosure and variable block sizes are the standard extra safeguards."
+      - text: "Risk is high: any investigator can predict every fourth assignment"
+        feedback: "Only someone who knew the block size and all previous assignments in the stratum could do that. With double-blinding and central strata spanning sites, that information is not available at a site."
+      - text: "There is no risk because stratification removes predictability"
+        feedback: "Stratification alone does not remove predictability; within each stratum the block structure is the same."
+      - text: "The fix is to switch to simple randomization"
+        feedback: "Simple randomization removes predictability but gives up within-stratum balance, the reason for blocking in the first place."
+    solution: |
+      Predictability requires both the block size and knowledge of prior assignments. Double-blinding hides assignments; central stratification spreads each stratum's blocks across sites. Good practice still keeps the block size out of site-facing documents (ICH E9) and often mixes block sizes.
+    explanation:
+      objective: "Judge the real-world predictability risk of a blocking design."
+      given: "Fixed blocks of 4, stratified, central IxRS, double-blind."
+      relevant: "Blinding status, whether blocks are per site or per stratum, disclosure of block size."
+      irrelevant: "The total sample size."
+      method: "Ask what information an investigator would need to predict the next assignment, and whether they have it."
+      interpretation: "Design safeguards interact: blinding and central allocation compensate for small fixed blocks, but open-label trials with site-level blocks are far more vulnerable."
+      changes: "In an open-label trial with blocks within site, the risk would be substantial; random block sizes (for example 4 and 6) would be expected."
+      interviewer: "That you understand predictability as a combination of design features, not a property of block size alone."
+
+  - id: trials.randomization.interview-why-stratify
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [trials.randomization, communication.interviewing]
+    lesson: trials-randomization-stratification
+    title: Why stratify?
+    prompt: |
+      **Interviewer:** "Why would a trial stratify its randomization, and how does that affect the statistical analysis and the datasets you build?"
+    modelAnswer: |
+      Stratification guarantees balance between arms on a few strong prognostic factors, which simple randomization only achieves on average. It is implemented with separate permuted-block sequences per stratum, typically through a central IxRS that conceals the sequence.
+
+      Because randomization was restricted within strata, the primary analysis should account for them — for time-to-event endpoints a stratified log-rank test and stratified Cox model; for continuous endpoints the factors as covariates. Ignoring them usually makes the analysis conservative. In the datasets, ADSL carries the strata as randomized (for example `STRAT1R`, `STRAT2R`) sourced from IxRS, separately from the CRF-based baseline values, so mis-stratifications are visible and a sensitivity analysis can use the CRF values. Too many strata create incomplete blocks and sparse strata, so trials stratify on only a few factors or use minimization.
+    rubric:
+      - Explains the purpose (balance on prognostic factors)
+      - Mentions permuted blocks within strata and concealment via IxRS
+      - Says the analysis should reflect stratification (stratified test/model or covariates)
+      - Distinguishes as-randomized strata from CRF values
+      - Mentions the cost of too many strata
+    redFlags:
+      - "Says stratification makes the analysis more significant by itself"
+      - "Recodes strata from baseline CRF variables"
+    followUps:
+      - "What would you do if one stratum had only 3 events?"
+      - "How is minimization different from stratified blocks?"
+
+  - id: trials.randomization.speed-lifetest-strata
+    format: mcq
+    modes: [speed]
+    difficulty: intermediate
+    skills: [trials.randomization, sas.stat-procs]
+    lesson: trials-randomization-stratification
+    title: Stratified log-rank syntax
+    prompt: |
+      Which `PROC LIFETEST` statement requests a log-rank test of `TRTP` **stratified** by `STRAT1R` and `STRAT2R`?
+    choices:
+      - text: "`strata STRAT1R STRAT2R / group=TRTP test=logrank;`"
+        correct: true
+        feedback: "With GROUP=, LIFETEST compares the GROUP levels within each stratum and combines the results into a stratified test."
+      - text: "`strata TRTP STRAT1R STRAT2R / test=logrank;`"
+        feedback: "This treats every TRTP × strata combination as a separate curve and tests all of them against each other — not a stratified treatment comparison."
+      - text: "`by STRAT1R STRAT2R; strata TRTP;`"
+        feedback: "BY processing runs separate analyses per stratum; it does not combine them into one stratified test."
+      - text: "`strata TRTP / adjust=STRAT1R STRAT2R;`"
+        feedback: "ADJUST= requests multiple-comparison adjustments; it is not a stratification option."
+    solution: |
+      `strata STRAT1R STRAT2R / group=TRTP test=logrank;`. The R equivalent is `survdiff(Surv(AVAL, 1 - CNSR) ~ TRTP + strata(STRAT1R, STRAT2R), data = adtte)`.

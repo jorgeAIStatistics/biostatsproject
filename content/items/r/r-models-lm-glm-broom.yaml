@@ -1,0 +1,772 @@
+items:
+  - id: r.models.three-verbs
+    format: mcq
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [r.models]
+    lesson: r-models-lm-glm-broom
+    title: Which verb for which grain
+    prompt: |
+      A model has **4** coefficients and was fitted to **238** observations.
+
+      How many rows does each broom verb return?
+    choices:
+      - text: "`tidy()` → 4, `glance()` → 1, `augment()` → 238"
+        correct: true
+        feedback: "Correct. One row per term, one per model, one per observation — three different grains, which is why they are three functions."
+      - text: "`tidy()` → 238, `glance()` → 4, `augment()` → 1"
+        feedback: "That reverses tidy and augment. tidy summarises the terms; augment annotates the observations."
+      - text: "All three return 238 rows."
+        feedback: "Only augment does. tidy and glance summarise, so they cannot return one row per observation."
+      - text: "`tidy()` → 4, `glance()` → 4, `augment()` → 238"
+        feedback: "glance returns exactly one row — it summarises the whole model, not each term."
+    solution: |
+      | Verb | Rows | Grain |
+      |---|---:|---|
+      | `tidy()` | **4** | one per model term |
+      | `glance()` | **1** | one per model |
+      | `augment()` | **238** | one per observation |
+
+      **They are separate functions because the grains differ**, and mixing grains in one data frame is
+      the mistake this curriculum warns about everywhere else. A single combined table would have to
+      repeat the model-level values 238 times or pad the coefficient rows with `NA`.
+
+      Keeping them separate means each joins to something sensible: `tidy()` output to a table shell's row
+      labels, `augment()` output back to subject identifiers.
+    explanation:
+      objective: "Map each broom verb to the grain of data it returns."
+      given: "A model with a known number of terms and observations."
+      relevant: "That the three verbs summarise at three different levels."
+      calculating: "Row counts for each verb."
+      numbers: "4 coefficients, 1 model, 238 observations."
+      method: "Ask what one row of the output represents — a term, the model, or an observation."
+      interpretation: "Each output joins naturally to a different thing: shell row labels, a study-level summary, or subject records."
+      changes: "Adding a covariate changes tidy to 5 rows and leaves glance at 1; dropping subjects with missing covariates reduces augment's row count and glance's nobs."
+      interviewer: "That you frame it as a grain question, since that is the recurring idea across the whole curriculum."
+
+  - id: r.models.exponentiate
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [r.models, stats.logistic, stats.categorical]
+    lesson: r-models-lm-glm-broom
+    title: From log odds to odds ratio
+    prompt: |
+      A logistic model gives a coefficient of **1.1975** for the 20 mg arm.
+
+      What is the odds ratio? Give your answer to four decimal places.
+    answer: 3.3122
+    tolerance: 0.002
+    hints:
+      - "`glm` with `family = binomial` returns coefficients on the log-odds scale."
+      - "Exponentiate to get the odds ratio."
+      - "exp(1.1975)."
+    solution: |
+      $$e^{1.1975} = 3.3122$$
+
+      Logistic coefficients are **log odds ratios**. Reporting them unexponentiated gives a number around
+      1.2 where the odds ratio is 3.31 — and 1.2 looks like a plausible effect size, which is what makes
+      the error survive review.
+
+      ```r
+      tidy(g, exponentiate = TRUE, conf.int = TRUE)
+      ```
+
+      `exponentiate = TRUE` transforms the estimate **and both confidence limits**, which is correct — the
+      interval is built on the log scale and exponentiated, so the result is asymmetric around the point
+      estimate. It deliberately does **not** exponentiate the standard error, because an exponentiated SE
+      is not a meaningful quantity.
+
+      **The cross-check:** this is the same 3.3122 obtained by hand from the 2×2 table,
+      $(43 \times 57)/(37 \times 20)$. A logistic model with one categorical predictor and no covariates is
+      algebraically identical to the 2×2 odds ratio.
+    explanation:
+      objective: "Convert a logistic coefficient to an odds ratio."
+      given: "A coefficient on the log-odds scale."
+      relevant: "That binomial glm uses a logit link by default."
+      calculating: "The exponential of the coefficient."
+      numbers: "exp(1.1975) = 3.3122, matching (43 x 57)/(37 x 20) = 2451/740."
+      assumptions: "The default logit link. A log link would give a risk ratio instead, and a probit link nothing interpretable as a ratio."
+      interpretation: "The odds of response were 3.31 times higher on 20 mg than on placebo."
+      changes: "exponentiate = TRUE transforms the estimate and both CI limits but not the standard error, which remains on the log scale."
+      interviewer: "That you know the SE is not exponentiated and can say why."
+
+  - id: r.models.term-filter
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: intermediate
+    skills: [r.models, qc.code-review]
+    lesson: r-models-lm-glm-broom
+    title: Selecting a coefficient safely
+    prompt: |
+      A table program extracts the 20 mg treatment effect like this:
+
+      ```r
+      effect <- summary(fit)$coefficients[3, 1]
+      ```
+
+      What is wrong with it?
+    choices:
+      - text: "It selects by position. Adding a covariate, changing the reference level or reordering the formula makes row 3 a different term — the code still runs and the table gets the wrong number."
+        correct: true
+        feedback: "Correct. Positional indexing into model output is one of the most reliable ways to produce a silently wrong clinical table."
+      - text: "`summary()` does not contain the coefficients."
+        feedback: "It does — `summary(fit)$coefficients` is a matrix of estimates, SEs, statistics and p-values."
+      - text: "It should be `[1, 3]` rather than `[3, 1]`."
+        feedback: "The indices are right for today's model. The problem is depending on them at all."
+      - text: "Nothing — this is the standard idiom."
+        feedback: "It is a common idiom and a fragile one. Filtering by term name achieves the same thing and survives model changes."
+    solution: |
+      **It selects by position**, and the position is not stable.
+
+      Row 3 is the 20 mg coefficient **in this model, today**. Add a covariate before treatment in the
+      formula, change the reference level, or reorder the terms, and row 3 is something else. The code
+      runs without error and the table contains the wrong number.
+
+      ```r
+      tidy(fit) |>
+        filter(term == "TRTPVTX-221 20 mg") |>
+        pull(estimate)
+      ```
+
+      Selecting by **name** survives all three changes. If the term is genuinely absent, `filter()` returns
+      zero rows and the downstream code fails — which is the right outcome, because a missing term means
+      the model is not what the program assumed.
+
+      **This generalises beyond broom.** Any indexing into model output by number — `coef(fit)[3]`,
+      `confint(fit)[2, ]` — has the same problem.
+    explanation:
+      objective: "Recognise positional indexing into model output as a latent defect."
+      given: "A table program extracting a coefficient by row number."
+      relevant: "That row order depends on the model formula and factor levels."
+      method: "Ask what would happen if the model changed — if the answer is 'wrong number, no error', the code is fragile."
+      assumptions: "Model output row order follows the formula's term order, which a later edit can change without anyone thinking about this program."
+      interpretation: "The failure mode is a plausible wrong value in a CSR table, with nothing to flag it."
+      changes: "Filtering by name fails loudly when the term is absent, which is the desired behaviour."
+      interviewer: "That you identify the failure as silent rather than as an error, since that is what makes it worth avoiding."
+
+  - id: r.models.nobs
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [r.models, qc.compare, stats.missing-data]
+    lesson: r-models-lm-glm-broom
+    title: The observation count worth checking
+    prompt: |
+      You expect the model to use all **270** ITT subjects, but `glance(fit)$nobs` reports **238**.
+
+      What does that tell you?
+    answer: 32
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "`nobs` is the number of rows the model actually used."
+      - "Rows with a missing value in any model variable are dropped."
+      - "270 − 238."
+    solution: |
+      **32 subjects were dropped** — they have a missing value in at least one variable in the model
+      formula.
+
+      `lm()` and `glm()` default to `na.action = na.omit`, which silently removes any row with a missing
+      value in the outcome or any predictor. No warning, no message.
+
+      **`nobs` is the fastest way to catch it**, and checking it every time is the habit:
+
+      ```r
+      stopifnot(glance(fit)$nobs == expected_n)
+      ```
+
+      In this study the 32 are subjects with no Week 12 measurement. Whether they should be excluded is a
+      missing-data decision for the SAP — but discovering it from `nobs` rather than from a denominator
+      mismatch three tables later is the difference between a decision and an accident.
+
+      To find out which variable is responsible: `colSums(is.na(w12[all.vars(formula(fit))]))`.
+    explanation:
+      objective: "Use the model's observation count to detect silent row dropping."
+      given: "An expected population size and the model's reported nobs."
+      relevant: "That lm and glm drop rows with any missing model variable."
+      calculating: "The difference between expected and used."
+      numbers: "270 - 238 = 32 subjects dropped."
+      assumptions: "na.action defaults to na.omit; setting it to na.fail would error instead, which is arguably the safer default for production code."
+      interpretation: "The model silently defines its own analysis population, which may not be the one the SAP specifies."
+      changes: "colSums(is.na(...)) over the model variables identifies which variable caused the drops."
+      interviewer: "That you check nobs routinely rather than only when something looks wrong."
+
+  - id: r.models.tidy-table
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [r.models, tlf.efficacy-tables]
+    lesson: r-models-lm-glm-broom
+    title: Model output to table rows
+    minutes: 12
+    prompt: |
+      Write `effect_rows(fit, prefix = "TRTP")` turning a fitted model into efficacy-table rows.
+
+      Return a data frame with `arm`, `estimate`, `conf.low`, `conf.high`, and `cell` — a formatted
+      string `"-7.72 (-10.96, -4.47)"`.
+
+      - Keep only terms starting with `prefix`.
+      - Strip the prefix from the term to get the arm name.
+      - **Keep the numeric columns** alongside the formatted string, so QC can compare values not text.
+    starter: |
+      library(broom); library(dplyr)
+
+      effect_rows <- function(fit, prefix = "TRTP") {
+        tidy(fit, ___) |>
+          filter(___) |>
+          mutate(
+            arm  = ___,
+            cell = ___
+          ) |>
+          select(arm, estimate, conf.low, conf.high, cell)
+      }
+    reference: |
+      library(broom); library(dplyr)
+
+      effect_rows <- function(fit, prefix = "TRTP") {
+        tidy(fit, conf.int = TRUE) |>
+          filter(startsWith(term, prefix)) |>
+          mutate(
+            arm  = sub(paste0("^", prefix), "", term),
+            cell = sprintf("%.2f (%.2f, %.2f)", estimate, conf.low, conf.high)
+          ) |>
+          select(arm, estimate, conf.low, conf.high, cell)
+      }
+    hints:
+      - "`conf.int = TRUE` is not the default and you need the limits for the cell."
+      - "`startsWith(term, prefix)` selects the treatment rows by name, not position."
+      - "`sub(paste0(\"^\", prefix), \"\", term)` strips the prefix from the front of the term."
+    checks:
+      - pattern: "conf\\.int\\s*=\\s*TRUE"
+        message: "Requests confidence intervals from tidy()"
+      - pattern: "startsWith\\s*\\(\\s*term\\s*,\\s*prefix\\s*\\)|grepl"
+        message: "Filters terms by name rather than by position"
+      - pattern: "sprintf\\s*\\("
+        message: "Formats the display cell"
+      - pattern: "select\\s*\\(\\s*arm\\s*,\\s*estimate"
+        message: "Keeps the numeric columns alongside the formatted string"
+    expectedOutput: |
+      ```text
+                  arm  estimate   conf.low conf.high                  cell
+      1 VTX-221 10 mg -4.559095  -7.788946 -1.329244  -4.56 (-7.79, -1.33)
+      2 VTX-221 20 mg -7.715178 -10.961069 -4.469287 -7.72 (-10.96, -4.47)
+      ```
+    solution: |
+      **Two design decisions worth defending.**
+
+      **Filtering by name.** `startsWith(term, prefix)` survives adding a covariate, changing the reference
+      level or reordering the formula. Positional indexing does not, and its failure mode is a plausible
+      wrong number rather than an error.
+
+      **Keeping the numeric columns.** The formatted `cell` goes in the table; `estimate` and the limits
+      stay so a QC program can compare **values** rather than strings. Two programs rounding to the same
+      two decimals can agree on the text while differing in the third decimal — a real discrepancy hidden
+      by the formatting.
+
+      A production version would take the format as an argument, since the number of decimals is a shell
+      decision that varies by endpoint.
+    explanation:
+      objective: "Convert model output into table-ready rows without retyping any number."
+      given: "A fitted model and a term prefix identifying the treatment coefficients."
+      relevant: "The treatment terms, their estimates and their confidence limits."
+      method: "tidy with intervals, filter by name, format, keep both representations."
+      numbers: "10 mg -4.559 (-7.789, -1.329); 20 mg -7.715 (-10.961, -4.469)."
+      assumptions: "The prefix identifies exactly the treatment terms — true for a factor named TRTP with treatment contrasts."
+      computation: "sub() with an anchored pattern strips only a leading prefix, not an occurrence elsewhere in the name."
+      interpretation: "No number is transcribed by hand, which removes a whole class of error from the table program."
+      changes: "Parameterising the sprintf format makes the decimals a caller decision, matching the shell."
+      interviewer: "That you keep the numerics for QC, since comparing formatted strings is a common and subtle mistake."
+
+  - id: r.models.glance-check
+    format: code
+    language: r
+    modes: [guided, qc]
+    difficulty: foundation
+    skills: [r.models, qc.mindset]
+    lesson: r-models-lm-glm-broom
+    title: Assert the model used who you think
+    minutes: 8
+    prompt: |
+      Write `check_model(fit, expected_n)` that:
+
+      - Stops if `glance(fit)$nobs` differs from `expected_n`, reporting both numbers.
+      - Otherwise returns a one-row data frame with `nobs`, `sigma`, `r.squared` and `df.residual`.
+
+      The assertion catches the case where a covariate had missing values and the model silently dropped
+      subjects.
+    starter: |
+      library(broom)
+
+      check_model <- function(fit, expected_n) {
+        g <- glance(fit)
+
+        if (___) {
+          stop(___)
+        }
+
+        g[, c("nobs", "sigma", "r.squared", "df.residual")]
+      }
+    reference: |
+      library(broom)
+
+      check_model <- function(fit, expected_n) {
+        g <- glance(fit)
+
+        if (g$nobs != expected_n) {
+          stop("Model used ", g$nobs, " observations; expected ", expected_n,
+               " (", expected_n - g$nobs, " dropped for missing values)")
+        }
+
+        g[, c("nobs", "sigma", "r.squared", "df.residual")]
+      }
+    hints:
+      - "`glance(fit)$nobs` is the number of observations the model actually used."
+      - "Report both numbers *and* the difference — the difference is what the reader acts on."
+      - "`stop()` rather than a warning; a model fitted to the wrong population is not a recoverable situation."
+    checks:
+      - pattern: "glance\\s*\\(\\s*fit\\s*\\)"
+        message: "Uses glance to get the model-level summary"
+      - pattern: "nobs"
+        message: "Checks the observation count"
+      - pattern: "stop\\s*\\("
+        message: "Fails loudly rather than warning"
+      - pattern: "expected_n\\s*-\\s*g\\$nobs|g\\$nobs"
+        message: "Reports the numbers involved"
+    expectedOutput: |
+      ```text
+      > check_model(fit, 238)
+        nobs    sigma r.squared df.residual
+      1  238 10.27107 0.2833633         234
+
+      > check_model(fit, 270)
+      Error in check_model(fit, 270) :
+        Model used 238 observations; expected 270 (32 dropped for missing values)
+      ```
+    solution: |
+      **Why this assertion matters more than it looks.** `lm()` and `glm()` default to
+      `na.action = na.omit`, which silently drops any row with a missing value in the outcome or any
+      predictor. No warning. The model then defines its own analysis population, which may not be the one
+      the SAP specifies.
+
+      A model fitted to 238 subjects where the SAP says 270 is not a technical detail — it is an
+      undocumented missing-data decision, and every percentage derived from it has the wrong denominator.
+
+      **Reporting the difference** rather than just the two numbers is what makes the error actionable:
+      "32 dropped" immediately suggests where to look, and `colSums(is.na(...))` over the model variables
+      names the culprit.
+
+      An alternative worth knowing: setting `na.action = na.fail` makes the model itself refuse to fit
+      rather than silently subsetting. That is arguably the right default for production code, and it is
+      not R's.
+    explanation:
+      objective: "Assert that a model was fitted to the intended population."
+      given: "A fitted model and the expected number of observations."
+      relevant: "glance()'s nobs, which reports rows actually used."
+      method: "Compare against an independently known expected count and fail on a mismatch."
+      numbers: "238 used against 270 expected means 32 rows were dropped for missing values."
+      assumptions: "expected_n comes from an authoritative source such as the disposition table, not from the same data."
+      interpretation: "Silent row dropping is an undocumented missing-data decision."
+      changes: "na.action = na.fail makes the model refuse rather than subset, which is the safer production setting."
+      interviewer: "That you know lm's default na.action and what it does without telling you."
+
+  - id: r.models.augment-diag
+    format: code
+    language: r
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [r.models, stats.diagnostics, qc.compare]
+    lesson: r-models-lm-glm-broom
+    title: Diagnostics a data manager can act on
+    minutes: 12
+    prompt: |
+      Write `top_influential(fit, data, n = 5, id = "USUBJID")` returning the `n` most influential
+      observations with columns `id`, `.fitted`, `.resid`, `.hat`, `.cooksd`, sorted by Cook's distance
+      descending.
+
+      The point is the identifier: `augment()` without `data =` returns only the model frame, so the
+      subject identifier is missing and the output names row numbers instead of subjects.
+    starter: |
+      library(broom); library(dplyr)
+
+      top_influential <- function(fit, data, n = 5, id = "USUBJID") {
+        augment(fit, ___) |>
+          ___
+      }
+    reference: |
+      library(broom); library(dplyr)
+
+      top_influential <- function(fit, data, n = 5, id = "USUBJID") {
+        augment(fit, data = data) |>
+          slice_max(.cooksd, n = n) |>
+          select(id = all_of(id), .fitted, .resid, .hat, .cooksd)
+      }
+    hints:
+      - "`augment(fit, data = data)` keeps every original column, including the identifier."
+      - "`slice_max(.cooksd, n = n)` takes the n largest."
+      - "`all_of(id)` selects by a column name held in a variable."
+    checks:
+      - pattern: "augment\\s*\\(\\s*fit\\s*,\\s*data\\s*="
+        message: "Passes the original data so identifiers survive"
+      - pattern: "slice_max\\s*\\(|arrange\\s*\\(\\s*desc"
+        message: "Orders by Cook's distance"
+      - pattern: "all_of\\s*\\(\\s*id\\s*\\)"
+        message: "Selects the identifier column by name"
+      - pattern: "\\.cooksd"
+        message: "Reports Cook's distance"
+    expectedOutput: |
+      ```text
+                       id    .fitted    .resid       .hat    .cooksd
+      1 VTX221-201-109-021   0.845477 -33.84548 0.02663125 0.07630385
+      2 VTX221-201-105-004 -12.235759  32.93576 0.01411797 0.03733928
+      3 VTX221-201-106-020   1.122374 -30.82237 0.01597245 0.03713620
+      ```
+    solution: |
+      **`data = data` is the whole exercise.** Without it `augment()` returns only the model frame — the
+      variables in the formula — so `USUBJID` is absent and the output identifies observations by row
+      number.
+
+      A diagnostics table naming row numbers is useless to a data manager. One naming
+      `VTX221-201-109-021` can be looked up in the CRF, queried, and discussed at a data review meeting.
+      **That is the difference between a statistical exercise and something that gets acted on.**
+
+      The values here match the regression-diagnostics lesson exactly: maximum Cook's D of 0.0763 on a
+      subject with a studentized residual of −3.42 and leverage of 0.027 — a genuine outlier that is not
+      influential, whose removal moves the treatment effect by 0.065 mmHg.
+
+      A production version would also flag against thresholds (`4/n` for Cook's D) rather than always
+      returning the top `n`, so a clean model returns an empty table rather than its five least-clean rows.
+    explanation:
+      objective: "Produce an actionable influence table rather than an anonymous one."
+      given: "A fitted model, the source data and an identifier column."
+      relevant: "That augment needs the original data to retain columns outside the model formula."
+      method: "augment with data, order by Cook's distance, select the identifier and the diagnostics."
+      numbers: "Top Cook's D is 0.0763 with leverage 0.0266 and residual -33.85 — outlying in y, unremarkable in x."
+      assumptions: "Returning a fixed top n always returns rows, even for a clean model; a threshold-based version returns none."
+      interpretation: "An identifier makes the row a query; a row number makes it homework."
+      changes: "Filtering on .cooksd > 4/nobs instead would return an empty table when nothing is influential."
+      interviewer: "That you pass data = and can say why the identifier matters operationally."
+
+  - id: r.models.logistic-or
+    format: code
+    language: r
+    modes: [independent, check]
+    difficulty: intermediate
+    skills: [r.models, stats.logistic, stats.categorical]
+    lesson: r-models-lm-glm-broom
+    title: Odds ratios from a logistic model
+    minutes: 10
+    prompt: |
+      Write `or_table(fit)` returning odds ratios with confidence intervals from a fitted logistic model,
+      **excluding the intercept**.
+
+      Columns: `term`, `or`, `conf.low`, `conf.high`, `p.value`.
+
+      Remember that the intercept of a logistic model exponentiates to the reference group's **odds**, not
+      an odds ratio, so it does not belong in a table of ratios.
+    starter: |
+      library(broom); library(dplyr)
+
+      or_table <- function(fit) {
+        tidy(fit, ___) |>
+          filter(___) |>
+          select(term, or = estimate, conf.low, conf.high, p.value)
+      }
+    reference: |
+      library(broom); library(dplyr)
+
+      or_table <- function(fit) {
+        tidy(fit, exponentiate = TRUE, conf.int = TRUE) |>
+          filter(term != "(Intercept)") |>
+          select(term, or = estimate, conf.low, conf.high, p.value)
+      }
+    hints:
+      - "`exponentiate = TRUE` converts the log odds ratios and both confidence limits."
+      - "`conf.int = TRUE` is still required — exponentiate alone does not add the limits."
+      - "Drop the intercept row: it is the reference group's odds, not a ratio."
+    checks:
+      - pattern: "exponentiate\\s*=\\s*TRUE"
+        message: "Converts from the log-odds scale"
+      - pattern: "conf\\.int\\s*=\\s*TRUE"
+        message: "Requests confidence limits"
+      - pattern: "term\\s*!=\\s*[\"']\\(Intercept\\)[\"']"
+        message: "Excludes the intercept"
+      - pattern: "or\\s*=\\s*estimate"
+        message: "Renames the estimate column to make the scale explicit"
+    expectedOutput: |
+      ```text
+                     term       or conf.low conf.high      p.value
+      1 TRTPVTX-221 10 mg 2.396591 1.235520  4.751311 1.070905e-02
+      2 TRTPVTX-221 20 mg 3.312162 1.708871  6.589425 4.849826e-04
+      ```
+    solution: |
+      **Three things this gets right.**
+
+      **Excluding the intercept.** $e^{\beta_0}$ is the **odds** of response in the reference group —
+      $20/57 = 0.351$ for placebo here — not an odds ratio. Leaving it in a table headed "Odds Ratio" is
+      a category error that reviewers notice.
+
+      **Renaming `estimate` to `or`.** After exponentiating, the column no longer holds what `tidy()` calls
+      an estimate. Naming it `or` makes the scale explicit to anyone reading the downstream code.
+
+      **Both arguments.** `exponentiate = TRUE` without `conf.int = TRUE` gives ratios with no interval.
+
+      **Cross-check worth doing:** the 20 mg odds ratio of 3.3122 is exactly $(43 \times 57)/(37 \times 20)$
+      from the 2×2 table, because a logistic model with one categorical predictor and no covariates is
+      algebraically identical to the crude odds ratio.
+
+      The intervals differ slightly — broom reports **profile-likelihood** limits (1.709, 6.589) while the
+      Woolf formula gives (1.690, 6.491). Both are defensible, profile limits are generally more accurate
+      in small samples, and **the SAP should say which** before a QC comparison discovers the difference.
+    explanation:
+      objective: "Produce a reportable odds-ratio table from a logistic fit."
+      given: "A fitted binomial glm."
+      relevant: "That coefficients are on the log-odds scale and that the intercept is not a ratio."
+      method: "Exponentiate estimate and limits, drop the intercept, rename for clarity."
+      numbers: "10 mg OR 2.397 (1.236, 4.751); 20 mg OR 3.312 (1.709, 6.589). The 20 mg value matches the hand-computed 2x2 odds ratio exactly."
+      assumptions: "Default logit link and treatment contrasts, so each coefficient is a log odds ratio versus the reference arm."
+      computation: "exponentiate transforms the estimate and both limits but not the standard error."
+      interpretation: "The intercept exponentiates to the placebo odds of 0.351, which is 20/57."
+      changes: "broom reports profile-likelihood intervals; confint.default would give Wald intervals matching the Woolf formula."
+      interviewer: "That you know the intercept is not an odds ratio, and that you flag the profile-versus-Wald interval difference."
+
+  - id: r.models.positional-bug
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [r.models, qc.code-review, qc.discrepancy]
+    lesson: r-models-lm-glm-broom
+    title: The table row that silently changed meaning
+    minutes: 10
+    prompt: |
+      This table program worked correctly for months. A statistician then added `AGE` to the model, and
+      the efficacy table now reports a treatment effect of **−0.008 mmHg**.
+
+      Nothing errored.
+
+      Click the line that caused it.
+    code: |
+      library(dplyr)
+
+      fit <- lm(CHG ~ TRTP + BASE + AGE, data = w12)
+
+      est <- summary(fit)$coefficients[4, 1]
+      se  <- summary(fit)$coefficients[4, 2]
+
+      table_row <- sprintf("%.2f (SE %.2f)", est, se)
+    answerLines: [5]
+    lineNotes:
+      - line: 5
+        note: "Row 4 was the 20 mg treatment coefficient in the old model (intercept, 10 mg, 20 mg, BASE). Adding AGE shifted nothing *before* BASE — but the program was reading row 4, which was BASE, and is now still BASE. Either way it is not the treatment effect, and the -0.008 is AGE's coefficient. Filtering by term name would have been immune."
+      - line: 3
+        note: "Adding a covariate is a legitimate model change. The program should have survived it."
+      - line: 6
+        note: "The same positional defect, one column over. Both lines need the same fix."
+      - line: 8
+        note: "The formatting is fine; it is formatting the wrong number."
+    fixed: |
+      library(broom); library(dplyr)
+
+      fit <- lm(CHG ~ TRTP + BASE + AGE, data = w12)
+
+      row <- tidy(fit, conf.int = TRUE) |>
+        filter(term == "TRTPVTX-221 20 mg")
+
+      stopifnot(nrow(row) == 1)
+
+      table_row <- sprintf("%.2f (SE %.2f)", row$estimate, row$std.error)
+    hints:
+      - "The model changed. What in the program depended on the model's shape?"
+      - "What is row 4 of the coefficient matrix now, and what was it before?"
+      - "Would filtering by term name have broken?"
+    solution: |
+      **Line 5** (and line 6 identically). The program selects the coefficient by **row number**, and the
+      row number is a property of the model formula rather than of the term.
+
+      The value −0.008 is the `AGE` coefficient — small, plausible-looking as a blood-pressure effect, and
+      completely wrong as a treatment effect.
+
+      ```r
+      tidy(fit, conf.int = TRUE) |> filter(term == "TRTPVTX-221 20 mg")
+      ```
+
+      Selecting by name is immune to the model changing. And if the term were genuinely absent,
+      `filter()` returns zero rows and the `stopifnot(nrow(row) == 1)` fails — which is the right
+      outcome, because a missing term means the model is not what the program assumed.
+
+      **Why this survives review:** the number is plausible. −0.008 mmHg is not obviously absurd the way
+      a negative count or a percentage above 100 would be. The only way to catch it is to not write the
+      fragile version.
+    explanation:
+      objective: "Trace a wrong table value to positional indexing into model output."
+      given: "A program using row indices, and a model that gained a covariate."
+      relevant: "That coefficient row order depends on the formula."
+      irrelevant: "The sprintf formatting, which faithfully formats whatever it is given."
+      method: "When a model change breaks a program silently, look for anything that depended on the model's shape."
+      numbers: "-0.008 is the AGE coefficient, not the 20 mg treatment effect of -7.72."
+      assumptions: "Adding a covariate is a normal and legitimate change that a table program should tolerate."
+      interpretation: "The wrong value is plausible, so nothing about the output signals the error."
+      changes: "Filtering by term name plus an nrow assertion fails loudly if the expected term is absent."
+      interviewer: "That you note the value is plausible, since that is what makes positional indexing worth a finding in code review."
+
+  - id: r.models.subgroup-forest
+    format: code
+    language: r
+    modes: [independent]
+    difficulty: advanced
+    skills: [r.models, stats.subgroups, communication.visualization]
+    lesson: r-models-lm-glm-broom
+    title: Every row of a forest plot in one pipeline
+    minutes: 15
+    prompt: |
+      Write `subgroup_effects(data, subgroup_var)` fitting `CHG ~ TRTP + BASE` **within each level** of
+      `subgroup_var` and returning one row per subgroup per treatment term, with `subgroup`, `term`,
+      `estimate`, `conf.low`, `conf.high` and `n`.
+
+      `n` is the number of observations the model used in that subgroup — not the subgroup's row count,
+      which can differ if a covariate has missing values.
+    starter: |
+      library(broom); library(dplyr)
+
+      subgroup_effects <- function(data, subgroup_var) {
+        data |>
+          group_by(across(all_of(subgroup_var))) |>
+          group_modify(~ {
+            fit <- lm(CHG ~ TRTP + BASE, data = .x)
+            ___
+          }) |>
+          ungroup()
+      }
+    reference: |
+      library(broom); library(dplyr)
+
+      subgroup_effects <- function(data, subgroup_var) {
+        data |>
+          group_by(across(all_of(subgroup_var))) |>
+          group_modify(~ {
+            fit <- lm(CHG ~ TRTP + BASE, data = .x)
+            tidy(fit, conf.int = TRUE) |>
+              filter(startsWith(term, "TRTP")) |>
+              mutate(n = glance(fit)$nobs) |>
+              select(term, estimate, conf.low, conf.high, n)
+          }) |>
+          ungroup()
+      }
+    hints:
+      - "`group_modify(~ ...)` runs a function per group; `.x` is that group's data."
+      - "`glance(fit)$nobs` gives the observations the model used, which may be fewer than `nrow(.x)`."
+      - "Filter to the treatment terms inside the per-group function, so only the wanted rows come back."
+    checks:
+      - pattern: "group_modify\\s*\\("
+        message: "Fits a model within each subgroup"
+      - pattern: "tidy\\s*\\(\\s*fit\\s*,\\s*conf\\.int\\s*=\\s*TRUE\\s*\\)"
+        message: "Tidies each fit with confidence intervals"
+      - pattern: "glance\\s*\\(\\s*fit\\s*\\)\\$nobs"
+        message: "Records the observations the model actually used"
+      - pattern: "startsWith\\s*\\(\\s*term"
+        message: "Keeps only the treatment terms"
+    expectedOutput: |
+      ```text
+        SEX              term  estimate   conf.low  conf.high   n
+      1   F TRTPVTX-221 10 mg -5.572103 -10.354509 -0.7896967 108
+      2   F TRTPVTX-221 20 mg -9.371041 -14.177718 -4.5643653 108
+      3   M TRTPVTX-221 10 mg -3.148570  -7.629922  1.3327813 130
+      4   M TRTPVTX-221 20 mg -5.581301 -10.183010 -0.9795917 130
+      4 M     TRTPVTX-221 20 mg     -7.58   -12.12     -3.03   125
+      ```
+    solution: |
+      **One pipeline, every row of a forest plot.** The same thing in base R is a loop with index
+      arithmetic; in SAS it is a `BY` statement plus `ODS OUTPUT`. All workable, none as short.
+
+      **Why `n` comes from `glance(fit)$nobs` rather than `nrow(.x)`:** the model drops rows with a missing
+      value in any model variable, so a subgroup with 120 subjects may fit on 113. Reporting the subgroup's
+      row count would overstate the denominator on a forest plot, which is precisely the kind of quiet
+      inconsistency a reviewer checks.
+
+      **What this output is and is not.** It is a forest plot's data. It is **not** a subgroup analysis in
+      the inferential sense — comparing these estimates across subgroups is not a test, because each is
+      noisier than the overall effect and the extreme one is selected.
+
+      Look at the numbers above before drawing any conclusion from them: the 20 mg effect is −9.37 mmHg in
+      women and −5.58 mmHg in men, with heavily overlapping intervals. That is exactly the situation where
+      an unwary reader announces that the drug works better in women. The analysis is the
+      **treatment-by-subgroup interaction**, fitted on the whole dataset:
+
+      ```r
+      anova(lm(CHG ~ TRTP + BASE, data = d),
+            lm(CHG ~ TRTP * SEX + BASE, data = d))
+      ```
+
+      Report the plot, report the interaction p-value, and describe it as exploratory — which for an
+      unplanned subgroup analysis it is.
+    explanation:
+      objective: "Fit a model across subgroups and assemble the results as data."
+      given: "A dataset and a grouping variable."
+      relevant: "Per-group model fitting, the treatment terms, and the per-group observation count."
+      method: "group_modify runs the fit per group; tidy converts each to rows; glance supplies nobs."
+      numbers: "Female n = 108, male n = 130, totalling the 238 subjects with a Week 12 record. The 20 mg effect is -9.37 in women and -5.58 in men — a gap that is NOT evidence of an interaction."
+      assumptions: "Each subgroup has enough subjects and both arms represented; a subgroup missing an arm would produce fewer terms."
+      interpretation: "The output is a forest plot's data, not an inferential subgroup analysis."
+      changes: "The actual test of whether the effect differs is the treatment-by-subgroup interaction on the pooled data, which is typically underpowered."
+      interviewer: "That you volunteer the interaction test rather than presenting the subgroup estimates as findings."
+
+  - id: r.models.open
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [r.models, qc.code-review, communication.interviewing]
+    lesson: r-models-lm-glm-broom
+    title: Reviewing a table program
+    prompt: |
+      **Interviewer:** "You're reviewing a colleague's R program that produces the primary efficacy table. What would make you send it back?"
+    modelAnswer: |
+      I'd look for the things that produce a plausible wrong number, because anything that errors has
+      already been found.
+
+      **Positional indexing into model output.** `summary(fit)$coefficients[3, 1]` works today and breaks
+      the moment someone adds a covariate or changes the reference level — and it breaks silently, putting
+      a different term's estimate in the table. That is the single thing most likely to make me send a
+      program back. Filtering by term name costs nothing and is immune.
+
+      **A missing `conf.int = TRUE`.** If the table has estimates and p-values but no intervals, either
+      they were computed somewhere else — which means two sources of truth — or they are missing from a
+      table that ICH E9 expects to carry them.
+
+      **The reference level.** Is it set explicitly, or is the program relying on `Placebo` sorting first
+      alphabetically? The second works by coincidence and breaks when an arm is renamed.
+
+      **`nobs` against the expected population.** `lm` silently drops rows with missing covariate values,
+      so the model can define its own analysis population without anyone deciding to. If the SAP says 270
+      and the model used 238, that is an undocumented missing-data decision, not a detail.
+
+      **Raw coefficients where LS means belong.** For an ANCOVA the efficacy table reports LS means and
+      their differences, not parameter estimates. A table whose arm rows are observed means with a
+      model-based difference row does not reconcile — subtracting the two displayed means gives a different
+      number from the difference shown, and a reviewer will do that subtraction.
+
+      **Formatted strings compared in QC.** If the program only emits `"-7.72 (-10.96, -4.47)"`, QC can
+      only compare text. Two programs can round to the same two decimals while differing in the third. I'd
+      want the numeric columns retained alongside.
+
+      What I would not comment on is style — pipes versus nested calls, naming conventions, base versus
+      tidyverse. That crowds out the comments that matter.
+
+      And I'd run it and check the output reconciles: column headers against the disposition table, and
+      the difference row against the difference of the two means shown. A five-second subtraction catches
+      a class of error that reading does not.
+    rubric:
+      - Leads with positional indexing and explains why it fails silently
+      - Checks for confidence intervals
+      - Asks whether the reference level is set explicitly
+      - Checks nobs against the expected analysis population
+      - Distinguishes LS means from raw coefficients for an ANCOVA table
+      - Wants numeric values retained so QC compares numbers rather than strings
+      - Declines to review style
+      - Runs it and reconciles the output, not only reads it
+    redFlags:
+      - "Comments mainly on style or naming"
+      - "Does not mention positional indexing"
+      - "Accepts raw coefficients as efficacy-table content without comment"
+      - "Reviews only by reading"

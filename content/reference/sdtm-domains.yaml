@@ -1,0 +1,383 @@
+category: sdtm-domains
+title: SDTM domains
+description: >-
+  The domains you will map, merge and debug. Each entry gives the structure (what one row is), the key
+  variables, and the trap that most often catches people. Domain codes are two characters; the general
+  observation class each belongs to determines its shape.
+entries:
+  # ---------------- Special purpose ----------------
+  - id: sdtm-dm
+    term: DM
+    aliases: [Demographics]
+    summary: One row per subject — the only domain with exactly one record per subject.
+    body: |
+      **Special-purpose domain**, not one of the three general observation classes. Holds
+      `USUBJID`, `RFSTDTC`/`RFENDTC` (reference start/end of the study treatment period),
+      `RFXSTDTC`/`RFXENDTC` (first/last exposure), `AGE`, `SEX`, `RACE`, `ETHNIC`, `ARM`/`ARMCD`
+      (planned) and `ACTARM`/`ACTARMCD` (actual), `COUNTRY` and `SITEID`.
+
+      **The trap:** `ARM` is *planned* and `ACTARM` is *actual*. A subject randomized to placebo who
+      received drug has `ARM = 'Placebo'` and `ACTARM = 'Drug'`. Screen failures have `ARMCD = 'SCRNFAIL'`
+      and no randomization — and because DM has one row per subject, that means screen failures appear
+      in DM but should not appear in efficacy analyses.
+
+      `RFSTDTC` is the anchor for every `--DY` calculation in the study.
+    standard: official
+    related: [sdtm-ex, sdtm-ds, sdtm-supp]
+    source: { label: SDTMIG v3.4, url: https://www.cdisc.org/standards/foundational/sdtmig }
+
+  - id: sdtm-co
+    term: CO
+    aliases: [Comments]
+    summary: Free-text comments collected on the CRF, linked back to the record they annotate.
+    body: |
+      Special-purpose. Uses `RDOMAIN`, `IDVAR` and `IDVARVAL` to point at the specific record being
+      commented on — the same linking mechanism `SUPPQUAL` uses.
+
+      Rarely analysed, occasionally essential when reconstructing what happened to a particular subject.
+    standard: official
+    related: [sdtm-supp]
+
+  - id: sdtm-se
+    term: SE / SV
+    aliases: [Subject Elements, Subject Visits]
+    summary: "`SE`: one row per subject per study element (period). `SV`: one row per subject per visit."
+    body: |
+      `SV` is the workhorse of the two — it records when each visit actually occurred, which is what you
+      need to window unscheduled assessments into analysis visits and to check visit-window deviations.
+
+      `SE` carries the trial-design elements (screening, treatment, follow-up) a subject actually passed
+      through, and is what makes `EPOCH` derivable.
+    standard: official
+    related: [sdtm-dm, sdtm-trialdesign]
+
+  # ---------------- Interventions ----------------
+  - id: sdtm-ex
+    term: EX
+    aliases: [Exposure]
+    summary: One row per subject per **constant-dosing interval** of study treatment — not one row per dose.
+    body: |
+      **Interventions class.** This is the structure people get wrong first. A subject taking 50 mg
+      daily from Day 1 to Day 28 is **one** EX record with `EXSTDTC` = Day 1 and `EXENDTC` = Day 28 —
+      not 28 records. A new record starts whenever the dose, frequency, route or formulation changes,
+      or dosing is interrupted.
+
+      Key variables: `EXTRT`, `EXDOSE`, `EXDOSU`, `EXDOSFRQ`, `EXROUTE`, `EXSTDTC`, `EXENDTC`.
+
+      `EX` is where treatment start and end dates, total dose and exposure duration come from —
+      so an incorrectly collapsed EX makes every exposure summary wrong.
+    standard: official
+    related: [sdtm-ec, sdtm-cm, sdtm-dm]
+
+  - id: sdtm-ec
+    term: EC
+    aliases: [Exposure as Collected]
+    summary: Exposure exactly as recorded on the CRF, before the derivation into EX's constant-dosing intervals.
+    body: |
+      Introduced so that the collected data survives alongside the derived `EX`. If the CRF records
+      every individual administration, that belongs in `EC`, and `EX` holds the collapsed intervals
+      derived from it.
+
+      When a study has both, `EX` is derived from `EC` and the derivation belongs in define.xml.
+    standard: official
+    related: [sdtm-ex]
+
+  - id: sdtm-cm
+    term: CM
+    aliases: [Concomitant Medications]
+    summary: One row per medication per subject per dosing interval — non-study drugs taken during the trial.
+    body: |
+      **Interventions class**, same shape as `EX`. Coded with **WHODrug**, giving a standardised name
+      and an ATC classification so that "Tylenol" and "paracetamol" resolve to one substance.
+
+      Used to identify prohibited medications, rescue therapy (which is an intercurrent event under
+      ICH E9(R1)) and, in oncology, subsequent anticancer therapy — which is frequently a censoring
+      reason for PFS.
+    standard: official
+    related: [sdtm-ex, sdtm-pr]
+
+  - id: sdtm-pr
+    term: PR
+    aliases: [Procedures]
+    summary: Interventional procedures — surgery, radiotherapy, transfusions.
+    body: |
+      Interventions class. In oncology, `PR` and `CM` together identify subsequent anticancer therapy,
+      which matters for both PFS censoring and the interpretation of overall survival.
+    standard: official
+    related: [sdtm-cm]
+
+  # ---------------- Events ----------------
+  - id: sdtm-ae
+    term: AE
+    aliases: [Adverse Events]
+    summary: One row per adverse event per subject.
+    body: |
+      **Events class.** Key variables: `AETERM` (verbatim, as the investigator wrote it),
+      `AEDECOD` (MedDRA preferred term), `AEBODSYS` (system organ class), `AESTDTC`/`AEENDTC`,
+      `AESEV` or `AETOXGR` (severity/grade), `AESER` (serious), `AEREL` (causality), `AEACN` (action taken),
+      `AEOUT` (outcome).
+
+      **Three traps:**
+
+      1. **Serious ≠ severe.** `AESER` is a regulatory category; `AESEV`/`AETOXGR` is intensity. A mild
+         event requiring hospitalisation is serious.
+      2. **`AETERM` is verbatim and must not be cleaned.** The coding lives in `AEDECOD`; overwriting
+         the verbatim term destroys the audit trail.
+      3. **Treatment-emergence is derived, not collected.** `AE` holds all events; the TEAE flag is an
+         ADaM derivation comparing `AESTDTC` with `RFXSTDTC`.
+    standard: official
+    related: [sdtm-ds, sdtm-mh, sdtm-supp]
+
+  - id: sdtm-ds
+    term: DS
+    aliases: [Disposition]
+    summary: One row per subject per disposition event — study completion, discontinuation, and protocol milestones.
+    body: |
+      Events class. `DSCAT` separates `DISPOSITION EVENT` from `PROTOCOL MILESTONE` (informed consent,
+      randomization). `DSDECOD` is the standardised reason, `DSTERM` the verbatim one.
+
+      **Randomization date normally comes from here**, as the `RANDOMIZED` protocol milestone — and
+      because the ITT principle anchors time-to-event endpoints at randomization, this is where `STARTDT`
+      for PFS and OS originates.
+    standard: official
+    related: [sdtm-dm, sdtm-ae]
+
+  - id: sdtm-mh
+    term: MH
+    aliases: [Medical History]
+    summary: One row per reported medical-history condition per subject.
+    body: |
+      Events class, coded with MedDRA like `AE`. The distinction from `AE` is **timing relative to
+      study entry**: conditions present before consent are medical history; events starting after are
+      adverse events. A pre-existing condition that *worsens* during the study becomes an AE.
+
+      Where a study draws that line is a protocol decision and should be checked, not assumed.
+    standard: official
+    related: [sdtm-ae]
+
+  # ---------------- Findings ----------------
+  - id: sdtm-lb
+    term: LB
+    aliases: [Laboratory Test Results]
+    summary: One row per lab test per subject per timepoint — usually the largest domain in a study.
+    body: |
+      **Findings class.** The variable family that matters:
+
+      | Variable | Meaning |
+      |---|---|
+      | `LBTESTCD` / `LBTEST` | Short code and full name of the test |
+      | `LBORRES` / `LBORRESU` | Result and unit **as originally reported** by the lab |
+      | `LBSTRESC` / `LBSTRESN` / `LBSTRESU` | Result in **standard** units — character, numeric, unit |
+      | `LBNRIND` | Reference-range indicator (NORMAL / LOW / HIGH) |
+      | `LBBLFL` | Baseline flag |
+
+      **The central trap: `--ORRES` versus `--STRESN`.** Central labs report in whatever units they use;
+      different labs report the same analyte differently (creatinine in mg/dL or µmol/L). `--ORRES` preserves
+      what was reported; `--STRESN` holds the value converted to one standard unit across the study.
+      **Every analysis uses `--STRESN`**, and mixing the two silently produces results that are wrong by a
+      factor of 88.4.
+
+      `LBSTRESC` exists because some results are not numeric (`<0.1`, `NOT DONE`), and those must survive
+      into the standardised column without becoming missing.
+    standard: official
+    related: [sdtm-vs, sdtm-eg, sdtm-findings-class]
+
+  - id: sdtm-vs
+    term: VS
+    aliases: [Vital Signs]
+    summary: One row per vital-sign measurement per subject per timepoint.
+    body: |
+      Findings class, same `--ORRES`/`--STRESN` structure as `LB`. `VSTESTCD` values include `SYSBP`,
+      `DIABP`, `PULSE`, `TEMP`, `RESP`, `WEIGHT`, `HEIGHT`, `BMI`.
+
+      `VSPOS` (position: SITTING, STANDING, SUPINE) matters more than it looks — a protocol specifying
+      seated blood pressure and a site recording standing values produces a real, analysable difference.
+
+      Temperature in °F versus °C and weight in lb versus kg are the classic unit conversions here.
+    standard: official
+    related: [sdtm-lb, sdtm-eg]
+
+  - id: sdtm-eg
+    term: EG
+    aliases: [ECG Test Results]
+    summary: One row per ECG measurement per subject per timepoint.
+    body: |
+      Findings class. `EGTESTCD` includes `QT`, `QTCF` (Fridericia-corrected), `QTCB` (Bazett-corrected),
+      `HR`, `PR`, `RR`, `QRS`.
+
+      **Which correction the protocol specifies matters.** Fridericia and Bazett give materially different
+      QTc values at heart rates away from 60 bpm, and cardiac safety analyses are sensitive to the choice.
+      Both may be collected; the SAP names the primary one.
+    standard: official
+    related: [sdtm-vs, sdtm-lb]
+
+  - id: sdtm-rs
+    term: RS
+    aliases: [Disease Response]
+    summary: One row per response assessment per subject per timepoint per assessor.
+    body: |
+      Findings class. In oncology this holds the RECIST overall response at each assessment
+      (`RSTESTCD = 'OVRLRESP'`, `RSSTRESC` in {CR, PR, SD, PD, NE}).
+
+      `RSEVAL` identifies the assessor — INVESTIGATOR or INDEPENDENT ASSESSOR. Trials with blinded
+      independent central review have both, and **the SAP says which drives the primary endpoint**.
+      Analysing the wrong one is a whole-table error.
+    standard: official
+    related: [sdtm-tu]
+
+  - id: sdtm-tu
+    term: TU / TR
+    aliases: [Tumor Identification, Tumor Results]
+    summary: "`TU` identifies each lesion; `TR` holds the measurements of those lesions over time."
+    body: |
+      Findings class, and they work as a pair. `TU` assigns each lesion a `TULNKID` and classifies it as
+      TARGET, NON-TARGET or NEW. `TR` then records measurements keyed by that `TULNKID`, so lesion 3's
+      diameter at each visit is traceable.
+
+      The sum of diameters that drives RECIST response is **derived** from `TR` — it is an ADaM
+      derivation (ADTR), not a collected value. Reconstructing it from `TU`/`TR` and checking it against
+      the reported response is one of the most instructive exercises in oncology programming.
+    standard: official
+    related: [sdtm-rs]
+
+  - id: sdtm-qs
+    term: QS
+    aliases: [Questionnaires]
+    summary: One row per questionnaire item per subject per timepoint.
+    body: |
+      Findings class. Holds **individual item responses**, not scores. `QSCAT` names the instrument
+      (EORTC QLQ-C30, SF-36), `QSTESTCD` the item.
+
+      **Derived domain scores belong in ADaM, not in QS** — the scoring algorithm is an analysis
+      decision and must be traceable. A QS domain containing a total score is a conformance problem.
+    standard: official
+    related: [sdtm-findings-class]
+
+  - id: sdtm-pc
+    term: PC / PP
+    aliases: [Pharmacokinetic Concentrations, Pharmacokinetic Parameters]
+    summary: "`PC`: one row per concentration measurement. `PP`: one row per derived PK parameter."
+    body: |
+      Findings class. `PC` holds the concentration–time data as measured; `PP` holds the derived
+      parameters (`AUC`, `CMAX`, `TMAX`, `HALFLIFE`) computed from it.
+
+      The split follows the same principle as `QS`: measured values in one domain, derived values in
+      another, with the derivation documented.
+    standard: official
+    related: [sdtm-findings-class]
+
+  # ---------------- Structural concepts ----------------
+  - id: sdtm-findings-class
+    term: General observation classes
+    aliases: [Interventions, Events, Findings]
+    summary: The three shapes every SDTM domain takes, which determine its variables.
+    body: |
+      **Interventions** — something given to the subject. `EX`, `CM`, `PR`.
+      Topic variable is `--TRT`, and records carry dose, route, frequency and a start/end interval.
+
+      **Events** — something that happened to the subject. `AE`, `MH`, `DS`.
+      Topic variable is `--TERM`, and records carry a verbatim term, a coded term and timing.
+
+      **Findings** — something measured about the subject. `LB`, `VS`, `EG`, `QS`, `RS`, `TU`, `TR`, `PC`.
+      Topic variable is `--TESTCD`, and records carry a result in original and standard units.
+
+      **Deciding the class is the first step of any mapping**, and it is decided by asking what the
+      topic of the observation is. A domain in the wrong class has the wrong variables available and
+      cannot be repaired by adding columns.
+    standard: official
+    related: [sdtm-lb, sdtm-ae, sdtm-ex]
+
+  - id: sdtm-seq
+    term: "--SEQ"
+    aliases: [Sequence Number]
+    summary: A number making each record unique within a subject and domain.
+    syntax: "USUBJID + DOMAIN + --SEQ is unique"
+    body: |
+      **Required in every domain except DM** (which already has one row per subject). It has no meaning
+      beyond uniqueness — it is not a sort order the reviewer should read anything into, though
+      sponsors conventionally assign it in a sensible order.
+
+      It is also the anchor for `SUPPQUAL` and `CO`, which point at a parent record with
+      `IDVAR = '--SEQ'` and `IDVARVAL` = the value. Renumbering `--SEQ` after linking breaks those
+      pointers silently.
+    standard: official
+    related: [sdtm-supp, sdtm-dy]
+
+  - id: sdtm-dy
+    term: "--DY"
+    aliases: [Study Day]
+    summary: Study day of an observation, relative to `RFSTDTC` in DM.
+    syntax: |
+      --DY = date - RFSTDTC + 1   if date >= RFSTDTC
+      --DY = date - RFSTDTC       if date <  RFSTDTC
+    body: |
+      **There is no Day 0.** The day before the reference start is Day −1; the reference start day is
+      Day 1. Naive subtraction produces a Day 0 that does not exist and shifts every pre-treatment day.
+
+      All `--DY` variables in a study anchor on the **same** `RFSTDTC`, which is why it lives in DM.
+    standard: official
+    related: [sdtm-dm, sdtm-iso8601]
+
+  - id: sdtm-iso8601
+    term: ISO 8601 dates
+    aliases: ["--DTC", partial dates]
+    summary: All SDTM dates are character strings in ISO 8601 format, which is what makes partial dates representable.
+    syntax: |
+      2025-03-14T09:30      complete date and time
+      2025-03-14            date only
+      2025-03               month and year — day unknown
+      2025                  year only
+      --03-14               day and month, year unknown
+    body: |
+      Dates are `--DTC` character variables, never numeric, precisely so that **partial dates** survive.
+      A numeric date cannot represent "March 2025, day unknown"; a truncated ISO string can.
+
+      Partial dates are not an edge case — they are routine in medical history, adverse-event onset and
+      prior-therapy dates. The **imputation rule** for them is an analysis decision that belongs in the
+      SAP, and the imputed value belongs in ADaM (flagged), never written back into SDTM.
+    standard: official
+    related: [sdtm-dy, sdtm-dm]
+
+  - id: sdtm-supp
+    term: SUPPQUAL
+    aliases: [SUPPAE, SUPPDM, Supplemental Qualifiers]
+    summary: A vertical structure holding variables that do not fit the standard domain.
+    syntax: |
+      RDOMAIN  IDVAR    IDVARVAL  QNAM      QLABEL              QVAL
+      AE       AESEQ    3         AESI      AE of Special Int.  Y
+    body: |
+      One `SUPP--` dataset per parent domain. Each row is a name/value pair pointing at a parent record
+      via `RDOMAIN` + `IDVAR` + `IDVARVAL`.
+
+      **When to use it:** genuinely study-specific information with no standard home. **When not to:**
+      as a dumping ground for data that does have a home, or for derived values that belong in ADaM.
+
+      Its practical cost is real — a supplemental qualifier has to be transposed and merged before it
+      can be used, which is why reviewers prefer to see few of them and why an over-full SUPPQUAL is a
+      sign the mapping went wrong somewhere upstream.
+    standard: official
+    related: [sdtm-seq, sdtm-co]
+
+  - id: sdtm-epoch
+    term: EPOCH
+    summary: The period of the trial an observation falls in — SCREENING, TREATMENT, FOLLOW-UP.
+    body: |
+      Derived from the subject's timeline (`SE`) rather than collected. Useful for separating
+      pre-treatment from treatment-emergent observations at the SDTM level, before ADaM derives the
+      formal TEAE flag.
+    standard: official
+    related: [sdtm-se, sdtm-dy]
+
+  - id: sdtm-trialdesign
+    term: Trial design domains
+    aliases: [TA, TE, TV, TI, TS]
+    summary: Domains describing the trial itself rather than the subjects — required for a submission.
+    body: |
+      `TA` (trial arms), `TE` (trial elements), `TV` (trial visits), `TI` (inclusion/exclusion criteria),
+      `TS` (trial summary parameters).
+
+      They are small, they are almost never analysed, and they are **required** — so they are also the
+      ones most often left until the week before a submission. `TS` in particular carries the
+      registration-relevant study characteristics a reviewer uses to index the study.
+    standard: official
+    related: [sdtm-se, sdtm-dm]

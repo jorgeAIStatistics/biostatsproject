@@ -1,0 +1,182 @@
+sheets:
+  - id: enrolment-by-site
+    title: Enrolment tracker — CBX417-301
+    description: >-
+      Screening and randomization counts for the first 18 sites of the synthetic CBX417-301 study, taken
+      directly from `oncology/sdtm/dm.csv`. A site's `SCREENED` count is every subject the site entered
+      into DM; `RANDOMIZED` counts those with a non-missing `ARMCD`, because a screen failure has a DM
+      record but no arm.
+
+      This is the sheet a study manager actually keeps: one row per site, counts that have to reconcile
+      to the study total, and a set of questions asked every Monday.
+    columns: [Site, Country, Screened, Randomized, All screened randomized?]
+    formats:
+      C: '0'
+      D: '0'
+      E: '0'
+    rows:
+      - [1001, USA, 17, 12, '=IF(C2=D2,1,0)']
+      - [1002, USA, 17, 13, '=IF(C3=D3,1,0)']
+      - [1003, USA, 6, 6, '=IF(C4=D4,1,0)']
+      - [1004, USA, 3, 1, '=IF(C5=D5,1,0)']
+      - [1005, USA, 15, 13, '=IF(C6=D6,1,0)']
+      - [1006, USA, 8, 7, '=IF(C7=D7,1,0)']
+      - [1007, USA, 2, 2, '=IF(C8=D8,1,0)']
+      - [1008, USA, 1, 1, '=IF(C9=D9,1,0)']
+      - [1009, USA, 18, 15, '=IF(C10=D10,1,0)']
+      - [1010, CAN, 9, 6, '=IF(C11=D11,1,0)']
+      - [1011, CAN, 20, 20, '=IF(C12=D12,1,0)']
+      - [1012, CAN, 12, 12, '=IF(C13=D13,1,0)']
+      - [1013, DEU, 11, 10, '=IF(C14=D14,1,0)']
+      - [1014, DEU, 16, 16, '=IF(C15=D15,1,0)']
+      - [1015, DEU, 14, 13, '=IF(C16=D16,1,0)']
+      - [1016, DEU, 18, 17, '=IF(C17=D17,1,0)']
+      - [1017, FRA, 13, 11, '=IF(C18=D18,1,0)']
+      - [1018, FRA, 3, 2, '=IF(C19=D19,1,0)']
+    tasks:
+      - prompt: >-
+          How many subjects were **screened** across all 18 sites? Put the total in `F2`.
+        cell: F2
+        expected: 203
+        hint: The data rows run from row 2 to row 19 — the header is row 1.
+        solution: '=SUM(C2:C19)'
+      - prompt: >-
+          How many subjects were **randomized in the USA**? Use a conditional sum rather than adding the
+          USA rows by hand, so the answer survives a new site being added.
+        cell: F3
+        expected: 70
+        hint: '`SUMIFS(sum_range, criteria_range, criteria)` — note the sum range comes first, unlike SUMIF.'
+        solution: '=SUMIFS(D2:D19,B2:B19,"USA")'
+      - prompt: >-
+          How many **sites** are in the USA? Count sites, not subjects.
+        cell: F4
+        expected: 9
+        hint: You are counting rows that meet a condition, not summing a column.
+        solution: '=COUNTIF(B2:B19,"USA")'
+      - prompt: >-
+          How many sites randomized **10 or more** subjects?
+        cell: F5
+        expected: 11
+        hint: 'A comparison criterion is written as a text string: `">=10"`.'
+        solution: '=COUNTIF(D2:D19,">=10")'
+      - prompt: >-
+          What is the **screen-failure rate** across all 18 sites, as a percentage to two decimals? A
+          screen failure is a subject who was screened but not randomized.
+        cell: F6
+        expected: 12.81
+        tolerance: 0.01
+        hint: >-
+          Failures are screened minus randomized. Work from the totals rather than averaging the
+          per-site rates — a rate of rates is not the overall rate.
+        solution: '=ROUND(100*(SUM(C2:C19)-SUM(D2:D19))/SUM(C2:C19),2)'
+      - prompt: >-
+          Which **country** is site 1011 in? Look it up rather than reading it off the screen — the
+          formula is the point.
+        cell: F7
+        expected: CAN
+        hint: '`XLOOKUP(what_to_find, where_to_look, what_to_return)`.'
+        solution: '=XLOOKUP(1011,A2:A19,B2:B19)'
+      - prompt: >-
+          What is the **largest** number of subjects randomized by any single **USA** site?
+        cell: F8
+        expected: 15
+        hint: '`MAXIFS(max_range, criteria_range, criteria)`.'
+        solution: '=MAXIFS(D2:D19,B2:B19,"USA")'
+      - prompt: >-
+          What is the **mean** number randomized per USA site, to four decimals? This is the number that
+          goes in a slide as "average enrolment per US site".
+        cell: F9
+        expected: 7.7778
+        tolerance: 0.0001
+        hint: '`AVERAGEIFS` takes the same argument order as `SUMIFS`.'
+        solution: '=ROUND(AVERAGEIFS(D2:D19,B2:B19,"USA"),4)'
+      - prompt: >-
+          How many sites had **no screen failures at all** — every subject they screened was randomized?
+
+          `COUNTIFS` has no criterion that compares one column against another, so column E already
+          carries a helper: `=IF(C2=D2,1,0)` on every row. Total it.
+        cell: F10
+        expected: 6
+        hint: >-
+          A helper column is not a workaround here, it is the better answer. Anyone reviewing the sheet
+          can see the per-row test and which rows it flagged, which a single clever formula hides.
+        solution: '=SUM(E2:E19)'
+
+  - id: enrolment-report-layout
+    title: The same data, laid out for reading
+    description: >-
+      This is the shape enrolment data usually arrives in: countries as banner headings inside the data,
+      a blank spacer row between groups, a subtotal row mixed in with the detail, and the site number
+      stored as text with a label glued to it.
+
+      Every one of those choices makes the sheet easier to read and impossible to compute on. The
+      exercise is to see exactly which formula each choice breaks — then read
+      `excel-clean-data-layout` for how to lay it out instead.
+
+      The numbers are the same first 18 sites of CBX417-301 as in the tracker above, so you can check
+      your answers against a sheet that is structured properly.
+    columns: [Site, Country, Screened, Randomized]
+    formats: {}
+    rows:
+      - ['UNITED STATES', '', '', '']
+      - ['Site 1001', '', 17, 12]
+      - ['Site 1002', '', 17, 13]
+      - ['Site 1003', '', 6, 6]
+      - ['Site 1004', '', 3, 1]
+      - ['Site 1005', '', 15, 13]
+      - ['Site 1006', '', 8, 7]
+      - ['Site 1007', '', 2, 2]
+      - ['Site 1008', '', 1, 1]
+      - ['Site 1009', '', 18, 15]
+      - ['  Subtotal', '', 87, 70]
+      - ['', '', '', '']
+      - ['CANADA', '', '', '']
+      - ['Site 1010', '', 9, 6]
+      - ['Site 1011', '', 20, 20]
+      - ['Site 1012', '', 12, 12]
+      - ['  Subtotal', '', 41, 38]
+    tasks:
+      - prompt: >-
+          Sum the `Screened` column over every row, `C2:C18`. The true number of subjects screened across
+          these 12 sites is 128. What does the formula give?
+        cell: F2
+        expected: 256
+        hint: Look at what rows 12 and 18 contain.
+        solution: '=SUM(C2:C18)'
+      - prompt: >-
+          By how much does that overstate the real figure? This is the number that would have been
+          reported at the meeting.
+        cell: F3
+        expected: 128
+        hint: The subtotal rows are counted as though they were sites.
+        solution: '=SUM(C2:C18)-128'
+      - prompt: >-
+          Try to total the USA sites with `SUMIFS(D2:D18,B2:B18,"USA")`. The country column is empty on
+          every detail row because the country is a banner heading instead of a value. What does it
+          return?
+        cell: F4
+        expected: 0
+        hint: '`SUMIFS` matches values in cells. There are none to match.'
+        solution: '=SUMIFS(D2:D18,B2:B18,"USA")'
+      - prompt: >-
+          Try to look up site 1011 with `XLOOKUP(1011,A2:A18,D2:D18)`. Column A holds `"Site 1011"`, a
+          text string, not the number `1011`. Wrap it in `IFNA` so the sheet shows `Not found` instead of
+          an error.
+        cell: F5
+        expected: Not found
+        hint: >-
+          `"Site 1011"` and `1011` are different values. A lookup for one will never match the other, and
+          no amount of formatting changes that.
+        solution: '=IFNA(XLOOKUP(1011,A2:A18,D2:D18),"Not found")'
+      - prompt: >-
+          Now extract the site number from `"Site 1011"` in `A16` and convert it to a real number, so the
+          sheet could be repaired rather than rebuilt.
+
+          Count the rows carefully before you write the reference: the banner, spacer and subtotal rows
+          mean row 16 is not the sixteenth site.
+        cell: F6
+        expected: 1011
+        hint: >-
+          `MID(text, start, length)` takes characters from the middle; `VALUE` turns digits into a number.
+          If you get 1010, you are one row out — which is the whole problem with this layout.
+        solution: '=VALUE(MID(A16,6,4))'

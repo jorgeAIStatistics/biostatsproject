@@ -1,0 +1,221 @@
+.dash__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+}
+.dash__header .page-title {
+  margin: 4px 0 6px;
+}
+.dash__level {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.dash__welcome {
+  margin-bottom: var(--space-5);
+  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+}
+.dash__welcome-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: var(--space-7);
+}
+.dash__steps {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.dash__steps b {
+  color: var(--text);
+}
+.dash__kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.kpi {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--text);
+  text-decoration: none !important;
+}
+.kpi__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.kpi__icon svg {
+  width: 18px;
+  height: 18px;
+}
+.kpi__value {
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.kpi__unit {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.kpi__label {
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+.dash__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.next-lesson {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+.next-lesson__title {
+  font-size: 18px;
+  font-weight: 620;
+  letter-spacing: -0.012em;
+  color: var(--text);
+}
+.week-strip {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.week-strip__list {
+  margin-top: 6px;
+}
+.week-strip__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13.5px;
+  text-decoration: none !important;
+}
+.week-strip__item:hover {
+  background: var(--surface-2);
+}
+.domain-bars {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 28px;
+}
+.domain-bar {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-decoration: none !important;
+  font-size: 13px;
+}
+.domain-bar__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.domain-bar__value {
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.readiness__label {
+  fill: var(--text);
+  font-size: 12.5px;
+  font-weight: 520;
+}
+.readiness__value {
+  fill: var(--text-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.weak-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.weak-row:last-child {
+  border-bottom: 0;
+}
+.skill-matrix {
+  width: 100%;
+  font-size: 12px;
+}
+.skill-matrix th {
+  font-weight: 600;
+  color: var(--text-3);
+  font-size: 11px;
+  padding: 2px;
+}
+.skill-matrix td {
+  padding: 2px;
+  text-align: center;
+}
+.skill-matrix__name {
+  text-align: left !important;
+  color: var(--text-2);
+  white-space: nowrap;
+  padding-right: 8px !important;
+}
+.skill-matrix__cell {
+  display: inline-grid;
+  place-items: center;
+  width: 100%;
+  min-width: 22px;
+  height: 20px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+  border: 1px solid var(--border);
+}
+@media (max-width: 1100px) {
+  .dash__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dash__kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dash__welcome-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .domain-bars {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .next-lesson {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dash__level {
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,606 @@
+items:
+  - id: excel.layout.subtotal-in-range
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [excel.layout, qc.mindset]
+    lesson: excel-clean-data-layout
+    title: The total that is exactly double
+    prompt: |
+      An enrolment tracker lists twelve sites grouped into two countries, with a subtotal row under each
+      country's block. The cell at the bottom reads `=SUM(C2:C18)` and returns **256**.
+
+      The twelve sites screened 128 subjects between them.
+
+      What happened?
+    choices:
+      - text: "The two subtotal rows are inside the summed range, so every site is counted once as itself and once inside its country's subtotal."
+        correct: true
+        feedback: "Correct — 87 + 87 + 41 + 41 = 256. Both subtotals are right; the range is what asked for something nobody meant."
+      - text: "`SUM` counted the country banner rows, which hold text."
+        feedback: "`SUM` silently skips text cells, so the banners contribute nothing. It is the numeric subtotal rows that double the answer."
+      - text: "The blank spacer row was counted as a zero and shifted the range."
+        feedback: "A blank cell contributes 0 to a `SUM` and does not shift anything. It causes different problems — selection and autofilter ranges stop at it — but not this one."
+      - text: "The screened and randomized columns were transposed."
+        feedback: "That would give a different wrong number, not one that is exactly twice the truth. The factor of exactly two is the clue."
+    solution: |
+      **The subtotal rows are detail rows as far as `SUM` is concerned.**
+
+      $$87 + \underbrace{87}_{\text{USA subtotal}} + 41 + \underbrace{41}_{\text{CAN subtotal}} = 256$$
+
+      The overstatement — 128 — is exactly the true total, because every site appears in precisely one
+      subtotal.
+
+      What makes this dangerous is that nothing is broken. Both subtotals are correct. The formula is
+      correct. The number is plausible for a study of this size, and the *relative* picture between
+      countries is unchanged, so nothing looks odd at the meeting.
+
+      **Totals belong outside the rectangle** — above the header, in a column to the right, or on a
+      separate summary sheet. Once no row is both a detail row and a summary row, this entire class of
+      error cannot occur.
+    explanation:
+      objective: "Diagnose a double-counted total caused by layout rather than by a formula."
+      given: "A grouped tracker with interleaved subtotals and a SUM over the whole block."
+      relevant: "That the subtotal rows hold numbers and sit inside the summed range."
+      irrelevant: "The text banner rows, which SUM skips, and the blank spacer, which contributes zero."
+      numbers: "87 + 87 + 41 + 41 = 256 against a true total of 128."
+      interpretation: "A plausible, internally consistent, wrong number that survives review."
+      changes: "Moving the subtotals out of the data range, or using an Excel Table's Total Row, makes it impossible."
+      interviewer: "That you recognise a factor of exactly two as a structural signature rather than an arithmetic slip."
+
+  - id: excel.layout.banner-country
+    format: mcq
+    modes: [check, debug]
+    difficulty: foundation
+    skills: [excel.layout, excel.conditional-aggregation]
+    lesson: excel-clean-data-layout
+    title: SUMIFS on a country that is a heading
+    prompt: |
+      In the report-shaped tracker, `UNITED STATES` is a banner row above the nine US sites and the
+      `Country` column is empty on every detail row.
+
+      A programmer writes:
+
+      ```excel
+      =SUMIFS(D2:D18,B2:B18,"USA")
+      ```
+
+      What does it return, and why does that matter more than an error would?
+    choices:
+      - text: "`0` — there are no cells holding `USA` to match, and a zero in an enrolment column reads as a real fact rather than a failure."
+        correct: true
+        feedback: "Correct. `0` is a completely believable enrolment number, which is exactly what makes it worse than `#N/A`."
+      - text: "`#N/A`, because the criterion was not found in the range."
+        feedback: "`SUMIFS` does not return `#N/A` when nothing matches. It returns 0 — a number, not an error."
+      - text: "`#VALUE!`, because the criteria range contains text banners."
+        feedback: "`SUMIFS` handles mixed content in a criteria range without complaint; it simply finds no match."
+      - text: "70, because `SUMIFS` follows the banner up the column to find the country."
+        feedback: "No formula reads a heading and applies it downward. Grouping by position is invisible to every function."
+    solution: |
+      **It returns `0`.**
+
+      `SUMIFS` matches values *in cells*. The banner in row 2 is a fact about rows 3 to 11 that is stored
+      in row 2, and no aggregation function in any spreadsheet will infer it.
+
+      The failure mode is the lesson. An error propagates — it turns every dependent cell into an error
+      and someone eventually chases it. A zero does not propagate. It flows into the country summary, the
+      recruitment projection and the slide, and it reads as *"no subjects randomized in the USA yet"*,
+      which is a thing that is true of some countries in some studies.
+
+      In the analysable layout — `Country` as a value on every row — the identical formula returns **70**,
+      and keeps returning the right answer when a site is added or the sheet is sorted.
+    explanation:
+      objective: "Predict what a criteria-based aggregation does when the criterion lives in a heading."
+      given: "A grouped layout with an empty country column and a SUMIFS over it."
+      relevant: "That SUMIFS compares cell values and has no notion of position or grouping."
+      method: "No match means an empty set, and the sum of an empty set is zero."
+      interpretation: "A silent zero is more dangerous than an error because it is indistinguishable from a real count."
+      changes: "Storing the country on every detail row makes the same formula correct and keeps it correct after a sort."
+      interviewer: "That you rank a plausible wrong number above an error on the danger scale."
+
+  - id: excel.layout.merged-cells
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [excel.layout, excel.tables]
+    lesson: excel-clean-data-layout
+    title: What a merged cell actually is
+    prompt: |
+      A lab vendor's transfer specification uses a merged cell spanning columns B to D above the real
+      column names, holding the text `Central laboratory results`.
+
+      What is true of the cells B1, C1 and D1 after that merge?
+    choices:
+      - text: "The value lives in B1 and C1 and D1 are empty, so anything reading the header row gets one name and two blanks."
+        correct: true
+        feedback: "Correct. A merge is a display instruction over a range whose value sits in the top-left cell; the rest really are empty."
+      - text: "All three cells hold the same text, so any of them can be read."
+        feedback: "Only the top-left cell holds the value. Reading C1 or D1 returns an empty cell."
+      - text: "The three cells become a single cell with the address B1:D1, which formulas can reference."
+        feedback: "There is no such address. The range still has three cells; two of them are simply blank and hidden behind the display."
+      - text: "The merge is stored as formatting only and the original values in C1 and D1 are preserved."
+        feedback: "Merging discards the other cells' contents — Excel warns about it once and then does it."
+    solution: |
+      **A merge is a display instruction, and the value sits in the top-left cell of the merged block.**
+
+      The practical consequences, all of which show up in ordinary work:
+
+      - Sorting a range that contains merged cells is refused outright.
+      - Filtering shows one row per merged block, so rows disappear from view.
+      - A lookup down a merged column returns the value on the first row of each block and blanks for
+        every other row.
+      - `COUNTA` on the header row counts one, not three.
+
+      **Use Center Across Selection instead** — Format Cells → Alignment → Horizontal → Center Across
+      Selection. The visual result is identical, the cells stay separate, and nothing downstream breaks.
+
+      There is no situation in which a merged cell inside a data range is the right choice.
+    explanation:
+      objective: "Know what merging does to the underlying cells, not just to the display."
+      given: "A merged header spanning three columns in a specification workbook."
+      relevant: "That merging keeps only the top-left value and blanks the rest."
+      interpretation: "A header row that looks complete and reads as one name and two blanks."
+      changes: "Center Across Selection gives the same appearance with no structural damage."
+      interviewer: "That you can name the alternative, not only the objection."
+
+  - id: excel.layout.colour-as-data
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [excel.layout, qc.data-cleaning, communication.documentation]
+    lesson: excel-clean-data-layout
+    title: Yellow means a query is open
+    prompt: |
+      A data manager keeps a query tracker in which a yellow cell means the value is under query with the
+      site. She is asked how many values are currently queried.
+
+      What is the real problem with the tracker?
+    choices:
+      - text: "The query status is a fact about the data stored only as formatting, so it cannot be counted, filtered, exported or read by anyone downstream."
+        correct: true
+        feedback: "Correct. If a fact is worth recording it is worth a column; colour it afterwards with conditional formatting driven by that column."
+      - text: "Yellow is a poor colour choice for accessibility."
+        feedback: "True and worth fixing, but it is a symptom. The problem is that the colour is the only copy of the information."
+      - text: "Conditional formatting would recalculate too slowly on a sheet this size."
+        feedback: "Performance is not the issue on a query tracker, and conditional formatting is the fix here rather than the problem."
+      - text: "Nothing — Excel can count cells by fill colour."
+        feedback: "Not with a worksheet function. Colour survives no export, no copy-paste-values and no CSV, and a colour-blind reviewer cannot read it."
+    solution: |
+      **Formatting is invisible to every formula, every export and every other tool.**
+
+      Yellow does not survive a copy-paste-values, does not survive saving as CSV, cannot be `COUNTIF`-ed,
+      cannot be filtered on reliably, and cannot be read by a colleague who is colour-blind. It also
+      carries no detail: which query, raised when, by whom, still open or closed last week.
+
+      The fix is a column — `Query status`, with values like `OPEN`, `ANSWERED`, `CLOSED` — and then
+      conditional formatting driven by that column. The colour becomes a *view* of the data rather than
+      the only copy of it, and the view updates itself when the status changes.
+
+      The general rule is worth stating flatly: **if it matters, it is a column.**
+    explanation:
+      objective: "Recognise formatting used as a data store."
+      given: "A tracker where fill colour carries query status."
+      relevant: "That no worksheet function, export or downstream tool can read a fill colour."
+      irrelevant: "The specific colour chosen, which is a separate accessibility question."
+      interpretation: "The information exists in exactly one place and that place is not readable by anything but a human eye."
+      changes: "A status column plus conditional formatting keeps the visual cue and makes the fact computable."
+      interviewer: "That you reach for a column rather than for a macro that reads fill colours."
+
+  - id: excel.layout.overstatement
+    format: numeric
+    modes: [guided, check]
+    difficulty: foundation
+    skills: [excel.layout, tlf.denominators]
+    lesson: excel-clean-data-layout
+    title: How far out was the meeting number?
+    prompt: |
+      The report-shaped tracker covers twelve sites in two countries. The nine US sites screened 87
+      subjects and the three Canadian sites screened 41.
+
+      A subtotal row sits under each country's block, inside the data. The total cell reads
+      `=SUM(C2:C18)`.
+
+      By how many subjects does that total overstate the truth?
+    answer: 128
+    tolerance: 0
+    unit: subjects
+    hints:
+      - "Work out what the formula adds, then what the truth is."
+      - "The subtotals are inside the range, so each site's number appears twice."
+      - "87 + 87 + 41 + 41, against 87 + 41."
+    solution: |
+      $$\text{True total} = 87 + 41 = 128$$
+
+      $$\texttt{SUM(C2:C18)} = 87 + 87 + 41 + 41 = 256$$
+
+      $$256 - 128 = \mathbf{128}$$
+
+      **The overstatement equals the true total**, because every site sits inside exactly one subtotal.
+      That relationship is worth recognising on sight: a figure that is exactly twice what you expected,
+      in a grouped sheet, is a subtotal-in-range problem until proved otherwise.
+
+      It also means the error scales perfectly with the data. Add sites, add countries, add months — the
+      total stays exactly double, stays plausible, and stays wrong.
+    explanation:
+      objective: "Quantify a layout-induced double count."
+      given: "Two country blocks with interleaved subtotals and a SUM over the whole block."
+      relevant: "The two subtotal rows, which hold numbers."
+      calculating: "The difference between what SUM adds and the true total."
+      numbers: "256 - 128 = 128."
+      interpretation: "Exactly double, which is the signature of every site appearing in exactly one subtotal."
+      changes: "If only one country had a subtotal the factor would not be two, and the error would be much harder to spot."
+
+  - id: excel.layout.site-text
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [excel.layout, excel.lookups]
+    lesson: excel-clean-data-layout
+    title: "Site 1011 is not 1011"
+    prompt: |
+      The report sheet stores site numbers as `"Site 1001"`, `"Site 1002"` and so on in column A.
+
+      ```excel
+      =XLOOKUP(1011,A2:A18,D2:D18)
+      ```
+
+      returns `#N/A`, and formatting the column differently does not help.
+
+      Which statement is correct?
+    choices:
+      - text: "`\"Site 1011\"` and `1011` are different values of different types, and Excel's comparison never converts between them — so the match can never occur."
+        correct: true
+        feedback: "Correct. Excel's comparison operators are type-aware: a number is ordered before text and is never equal to it, whatever the two display as."
+      - text: "`XLOOKUP` needs the lookup array sorted before it can find a numeric key."
+        feedback: "`XLOOKUP` defaults to an exact match and does not require sorting. Sorting would not create a value that is not there."
+      - text: "The lookup value should be written as `\"1011\"` in quotes, which would then match."
+        feedback: "`\"1011\"` is still not `\"Site 1011\"`. The prefix is part of the stored value."
+      - text: "Changing the column's number format to Text would make the values comparable."
+        feedback: "A number format changes what is displayed, never what is stored. This is the single most common false hope in a spreadsheet."
+    solution: |
+      **Two things are glued into one cell** — the fact that the row is a site, and the site's number —
+      and the lookup key is only one of them.
+
+      Excel's comparison operators do not coerce across types. A number is never equal to a text string,
+      and the ordering places every number before every piece of text. So `1011 = "Site 1011"` is `FALSE`,
+      and so is `1011 = "1011"`.
+
+      :::note
+      Criteria arguments follow the *opposite* rule. `COUNTIF(range,"1011")` will match a cell holding the
+      number 1011, because criteria coerce. These two behaviours genuinely differ and neither can be
+      derived from the other — they have to be learned separately.
+      :::
+
+      The repair, given that column A still exists:
+
+      ```excel
+      =VALUE(MID(A16,6,4))
+      ```
+
+      And note the row number. Site 1011 is on **row 16**, not row 12, because the banner, the spacer and
+      the subtotal have shifted everything below them. Hand-written row references in a grouped sheet are
+      off by an amount that depends on how many groups came before.
+    explanation:
+      objective: "Explain why a numeric lookup key cannot match a text label containing that number."
+      given: "Site numbers stored as `Site nnnn` and an XLOOKUP for a bare number."
+      relevant: "That Excel's comparison operators are type-aware and never coerce."
+      irrelevant: "Sorting and number formatting, neither of which changes a stored value."
+      method: "Extract the number with MID and convert it with VALUE, or store the site as a number in the first place."
+      interpretation: "A loud failure — #N/A — which is the one thing this layout does well."
+      changes: "COUNTIF and SUMIFS criteria do coerce, so the same comparison written as a criterion would match."
+      interviewer: "That you can state both rules — operators do not coerce, criteria do — without conflating them."
+
+  - id: excel.layout.rules-classify
+    format: classify
+    modes: [guided, check]
+    difficulty: foundation
+    skills: [excel.layout, excel.tables]
+    lesson: excel-clean-data-layout
+    title: Which choices break analysis
+    prompt: |
+      A study manager is building an enrolment tracker. Sort each decision into the one that leaves the
+      sheet analysable and the one that does not.
+    categories: [Keeps the sheet analysable, Breaks something downstream]
+    entries:
+      - text: "Repeating the country on all eighteen detail rows"
+        category: Keeps the sheet analysable
+        note: "Redundancy in values is cheap; information stored in position is expensive. It also survives sorting."
+      - text: "A blank row between countries to make the sheet easier to read"
+        category: Breaks something downstream
+        note: "Selection with Ctrl+Shift+Down stops there, autofilter ranges end there, and Ctrl-T proposes only the block above it."
+      - text: "Freezing the top row so the headers stay visible while scrolling"
+        category: Keeps the sheet analysable
+        note: "Frozen panes are a pure view setting. They change nothing about the stored data."
+      - text: "A subtotal row under each country's block"
+        category: Breaks something downstream
+        note: "Inside the data range it is a detail row as far as SUM is concerned, and every site gets counted twice."
+      - text: "Bolding the rows where enrolment is behind target"
+        category: Breaks something downstream
+        note: "Behind target is a fact about the study stored where no formula can read it. It needs a column."
+      - text: "Adding a helper column `=IF(C2=D2,1,0)` to flag sites with no screen failures"
+        category: Keeps the sheet analysable
+        note: "A visible per-row test that a reviewer can check, and the standard answer to COUNTIFS being unable to compare two columns."
+      - text: "Storing the site as the text `Site 1001`"
+        category: Breaks something downstream
+        note: "Two values in one cell, and a key that will never match the numeric site id used everywhere else."
+      - text: "Putting the grand total two rows above the header instead of below the data"
+        category: Keeps the sheet analysable
+        note: "Outside the rectangle, so it cannot be swept into any range that spans the data."
+    solution: |
+      The dividing line is always the same question: **is this information stored as a value in a cell?**
+
+      Country repeated on every row, a helper column, a total placed outside the rectangle — all values,
+      all computable. Frozen panes are neither data nor structure; they are a view, and views are free.
+
+      Blank rows, subtotals inside the data, bold-as-meaning and `"Site 1001"` all fail the test in
+      different ways: the first two change what a range *contains*, the third stores a fact where no
+      formula reaches, and the fourth puts two values in one cell.
+
+      **The cheapest check on the whole sheet is `Ctrl-T`.** If Excel cannot turn your data into a table,
+      the data is not a rectangle yet, and you now know exactly which rows are the reason.
+    explanation:
+      objective: "Separate presentation choices that are free from those that destroy structure."
+      given: "Eight decisions a tracker author might make."
+      relevant: "Whether each one stores information as a cell value or as position, formatting or absence."
+      method: "Apply the one-header-row, one-record-per-row, one-value-per-cell test to each."
+      interpretation: "Readability and analysability only conflict when readability is achieved structurally."
+      changes: "Every breaking choice here has a non-breaking equivalent: a column, a view, or a total placed outside the data."
+
+  - id: excel.layout.repair-order
+    format: order
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [excel.layout, excel.tables, qc.data-cleaning]
+    lesson: excel-clean-data-layout
+    title: Converting a report sheet into a table
+    prompt: |
+      A report-shaped enrolment tracker arrives: country banners inside the data, a blank spacer row,
+      subtotal rows mixed into the detail, and sites stored as `"Site 1001"`.
+
+      Put the conversion steps into the order that does not lose information.
+    steps:
+      - "Work on a copy, and keep the original file untouched so the conversion can be checked against it."
+      - "Read the sheet and write down what each non-detail row means — which rows are banners, which are subtotals, which are spacers."
+      - "Add a `Country` column and fill each detail row from the banner above it, before removing anything."
+      - "Add a numeric `Site` column derived from the text label with `=VALUE(MID(A2,6,4))`."
+      - "Delete the banner, spacer and subtotal rows, now that everything they encoded lives in a column."
+      - "Select the rectangle and press Ctrl-T to confirm it really is one table."
+      - "Reconcile the new total against the country subtotals recorded in step 2."
+    solution: |
+      **The order is the whole exercise.** Two steps are commonly done in the wrong order and both lose
+      data permanently.
+
+      **Capture before you delete.** The banner is the only place the country is recorded. Delete the
+      banners first and the country is gone — not wrong, *gone*, with nothing in the file to recover it
+      from. The same applies to the site number: derive the numeric column while the text label still
+      exists.
+
+      **Reconcile last, against something written down first.** The subtotals in the original sheet are
+      correct and are the only independent check you will get. Note them in step 2, then confirm at the
+      end that the converted table reproduces them. If it does not, the conversion dropped or duplicated
+      rows, and you find out now rather than at the meeting.
+
+      Working on a copy is not caution for its own sake — it is what makes the final reconciliation
+      possible at all.
+
+      **`Ctrl-T` is the acceptance test.** If Excel will not make a table out of the result, something
+      non-rectangular is still in there.
+    explanation:
+      objective: "Sequence a layout conversion so that nothing encoded in position is lost."
+      given: "A grouped sheet where country, site number and row type are all encoded structurally."
+      relevant: "That banners and labels are the only copy of the information they carry."
+      method: "Promote every positional fact into a column, then remove the structure, then verify."
+      assumptions: "The subtotals in the original sheet are correct, which is what makes them usable as a check."
+      interpretation: "The conversion is a data operation with a verification step, not a formatting tidy-up."
+      changes: "Deleting banners before filling the country column destroys the information irrecoverably."
+      interviewer: "That you reconcile against the original subtotals rather than declaring it done when it looks clean."
+
+  - id: excel.layout.silent-zero
+    format: diff
+    modes: [qc, debug]
+    difficulty: advanced
+    skills: [excel.layout, excel.conditional-aggregation, qc.compare]
+    lesson: excel-clean-data-layout
+    title: Two country summaries, one plausible and one right
+    prompt: |
+      The same twelve sites, summarised twice on the same morning. The tracker was summarised from a
+      report-shaped sheet; the analyst worked from a sheet with one row per site and a `Country` column.
+
+      Both used `=SUMIFS(randomized, country, "USA")` and `=SUMIFS(randomized, country, "CAN")`.
+
+      What explains the tracker's figures?
+    left:
+      title: From the report-shaped tracker
+      columns: [Country, Randomized]
+      rows:
+        - [USA, 0]
+        - [CAN, 0]
+        - [Total, 216]
+      footnote: "Total taken with =SUM over the whole Randomized column."
+    right:
+      title: From the one-row-per-site sheet
+      columns: [Country, Randomized]
+      rows:
+        - [USA, 70]
+        - [CAN, 38]
+        - [Total, 108]
+      footnote: "Total taken with =SUM over the whole Randomized column."
+    choices:
+      - text: "The country is a banner row rather than a value, so both `SUMIFS` criteria match nothing and return 0; and the two subtotal rows sit inside the summed range, so the total is 108 + 108 = 216."
+        correct: true
+        feedback: "Correct — one layout decision produces both symptoms at once, and neither produces an error."
+      - text: "The tracker was filtered to a subset of sites when the summary was taken."
+        feedback: "A filter would give smaller numbers, not zeros in the breakdown alongside a total that is exactly double."
+      - text: "The tracker's country codes are spelled differently — `United States` rather than `USA`."
+        feedback: "That would explain the zeros, but not a total of exactly twice the truth. Both symptoms have to come from the same cause here."
+      - text: "The tracker includes screen failures in the randomized column."
+        feedback: "That would inflate the total without zeroing the breakdown, and it would not produce a factor of exactly two."
+    solution: |
+      **One layout, two failures, no errors.**
+
+      The zeros come from the country living in a banner row. `SUMIFS` matches values in cells, there are
+      no cells holding `USA`, so the criterion matches nothing and the sum of nothing is `0`.
+
+      The 216 comes from the subtotal rows being inside the range:
+
+      $$70 + \underbrace{70}_{\text{USA subtotal}} + 38 + \underbrace{38}_{\text{CAN subtotal}} = 216$$
+
+      **Read the two symptoms together.** A breakdown of zeros beside a non-zero total is internally
+      contradictory — the parts cannot be zero while the whole is 216 — and that contradiction is the
+      fastest available check on any grouped summary. The parts should sum to the whole. When they do not,
+      something structural is wrong, and you know it before you know what.
+
+      Neither figure raised an error, and the tracker's total was the one that reached the slide.
+    explanation:
+      objective: "Attribute two simultaneous summary failures to a single layout cause."
+      given: "A breakdown of zeros with a total of 216, against a correct 70 / 38 / 108."
+      relevant: "That the country is a banner and the subtotals are inside the data range."
+      irrelevant: "Filtering and code spelling, neither of which explains both symptoms together."
+      method: "Check whether the parts sum to the whole; here they cannot."
+      numbers: "70 + 70 + 38 + 38 = 216, against a true 108."
+      interpretation: "Both numbers are plausible in isolation and contradictory together."
+      changes: "Storing the country as a value fixes the breakdown; moving the subtotals out of the range fixes the total."
+      interviewer: "That parts-versus-whole is your first check on any grouped summary, before you look at any individual figure."
+
+  - id: excel.layout.hotspot
+    format: hotspot
+    language: text
+    modes: [debug, qc]
+    difficulty: intermediate
+    skills: [excel.layout, qc.mindset]
+    lesson: excel-clean-data-layout
+    title: Which rows must not be in the range
+    minutes: 6
+    prompt: |
+      Below is column A of the report-shaped tracker, one spreadsheet row per line, starting at
+      spreadsheet row 2.
+
+      The total `=SUM(C2:C18)` returns 256 instead of 128.
+
+      Click the lines that must not be inside that range for the total to be right.
+    code: |
+      UNITED STATES
+      Site 1001
+      Site 1002
+      Site 1003
+      Site 1004
+      Site 1005
+      Site 1006
+      Site 1007
+      Site 1008
+      Site 1009
+        Subtotal
+      (blank)
+      CANADA
+      Site 1010
+      Site 1011
+      Site 1012
+        Subtotal
+    answerLines: [11, 17]
+    lineNotes:
+      - line: 11
+        note: "Spreadsheet row 12 — the USA subtotal, 87. It holds a number, so `SUM` adds it, and every US site is counted a second time."
+      - line: 17
+        note: "Spreadsheet row 18 — the Canada subtotal, 41. Same mechanism. 87 + 87 + 41 + 41 = 256."
+      - line: 1
+        note: "A text banner. `SUM` silently skips text, so this contributes nothing to the total — but it is why `SUMIFS` on country returns 0."
+      - line: 12
+        note: "The blank spacer contributes 0 to the sum. It causes different damage: Ctrl+Shift+Down stops here, and Ctrl-T would offer only the block above it."
+      - line: 13
+        note: "Another text banner. Harmless to `SUM`, fatal to any grouped aggregation."
+    fixed: |
+      Site,Country,Screened,Randomized
+      1001,USA,17,12
+      1002,USA,17,13
+      1003,USA,6,6
+      1004,USA,3,1
+      1005,USA,15,13
+      1006,USA,8,7
+      1007,USA,2,2
+      1008,USA,1,1
+      1009,USA,18,15
+      1010,CAN,9,6
+      1011,CAN,20,20
+      1012,CAN,12,12
+    hints:
+      - "`SUM` ignores text. Which of these rows hold numbers in column C?"
+      - "There are two of them, and they are the only rows that are summaries rather than sites."
+      - "87 + 87 + 41 + 41."
+    solution: |
+      **The two subtotal rows — spreadsheet rows 12 and 18.**
+
+      They are the only non-site rows holding numbers, so they are the only ones `SUM` can add. The
+      banners and the spacer are invisible to `SUM`.
+
+      That does not make the banners harmless. They are the reason `SUMIFS(D2:D18,B2:B18,"USA")` returns
+      `0`, and the blank spacer is the reason :kbd[Ctrl]+:kbd[Shift]+:kbd[↓] stops at row 12 and `Ctrl-T`
+      offers only the first block as a table. **Three different layout decisions, three different tools
+      broken, no error messages.**
+
+      The fixed version has one header row, one record per row, the country as a value and the site as a
+      number — and no totals anywhere inside it.
+    explanation:
+      objective: "Identify which structural rows affect which function."
+      given: "A grouped column-A listing and a SUM that is exactly double."
+      relevant: "That SUM adds numbers and skips text, so only the subtotal rows can inflate it."
+      irrelevant: "The text banners, for this particular symptom."
+      numbers: "87 + 87 + 41 + 41 = 256."
+      interpretation: "Each layout decision breaks a different tool, and the symptoms have to be attributed separately."
+      changes: "The banners break SUMIFS; the spacer breaks selection and Ctrl-T; only the subtotals break SUM."
+      interviewer: "That you attribute each symptom to its own cause rather than calling the whole sheet messy."
+
+  - id: excel.layout.open-handover
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [excel.layout, communication.documentation, qc.mindset]
+    lesson: excel-clean-data-layout
+    title: The tracker you have to take over
+    prompt: |
+      **Interviewer:** "You've inherited an enrolment tracker that the study team has maintained for two
+      years and looks at every Monday. It's grouped by country with subtotals inside the data, sites are
+      stored as text labels, and overdue sites are marked in red. What do you do?"
+    modelAnswer: |
+      The first thing I would not do is rebuild it over the weekend and present the team with a different
+      file on Monday. They have looked at this layout for two years and they read it fluently; taking that
+      away buys me a correct sheet nobody uses.
+
+      So I'd start by finding out whether it is wrong. The specific thing I'd check is any `SUM` or
+      `SUMIFS` whose range spans the subtotal rows, because a subtotal inside the data is counted as a
+      detail row and the total comes out exactly double. That number is plausible, internally consistent
+      and has probably been in slides for two years. I'd reconcile the tracker's totals against the source
+      — the enrolment extract or DM — before I said anything, because "your headline number is twice the
+      truth" is a claim you only make once and it needs to be right.
+
+      I'd also check what red means. Red is a real fact about the study — a site is behind target — stored
+      where no formula can read it, so it does not survive a copy, an export or a colour-blind reader, and
+      nobody can tell me how many sites are currently red without counting by eye. That is a missing
+      column, not a formatting preference.
+
+      Then the change I'd actually propose is a separation, not a rewrite. The analysable rectangle becomes
+      the source: one row per site, country as a value, site as a number, a status column instead of the
+      red. The grouped, subtotalled view everyone reads becomes a PivotTable built from it — which produces
+      the same banners and subtotals the team is used to, on a sheet where nothing is hand-typed into the
+      middle of the data. They keep their Monday view; the totals stop being able to double.
+
+      On the handover side I'd write down what the columns mean and where the data comes from, because
+      right now that lives in one person's head and I am the person it is being handed to. And I'd keep the
+      old file until the new totals have reconciled against it for a couple of cycles.
+
+      If the team pushes back on any of it, the argument I'd use is not tidiness. It is that the sheet
+      currently cannot answer "how many sites are behind target" and reports twice the real enrolment —
+      and both of those are things they care about independently of how the sheet looks.
+    rubric:
+      - Does not start by rebuilding the file
+      - Checks whether the subtotal-in-range double count has actually occurred
+      - Reconciles against the source before raising the finding
+      - Identifies colour as a missing column rather than a style preference
+      - Separates the analysable source from the readable view
+      - Proposes a PivotTable so the team keeps the layout it reads
+      - Documents the columns and their provenance as part of the handover
+      - Runs old and new in parallel before switching
+    redFlags:
+      - "Rewrites the sheet without checking what the current numbers are"
+      - "Treats the problem as untidiness rather than as wrong numbers"
+      - "Proposes a macro that counts cells by fill colour"
+      - "Announces the error to the team before reconciling it against the source"

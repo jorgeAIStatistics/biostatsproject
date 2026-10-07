@@ -1,0 +1,129 @@
+lab: cdisc
+modules:
+  - id: cdisc-sdtm-foundations
+    title: SDTM foundations
+    summary: Why tabulation standards exist, how SDTM decides where a piece of collected data belongs, and the four things every SDTM record needs — an identity, a class, a controlled term and a date.
+    level: 2
+    lessons:
+      - id: sdtm-why-standards
+        title: Why data standards exist - and what SDTM is not
+        summary: The reviewer's problem that SDTM solves, the difference between the SDTM model and the SDTMIG, why SDTM is a tabulation (not analysis) standard, and what "FDA requires SDTM" actually means.
+        minutes: 45
+        difficulty: foundation
+        tracks: [programmer, biostatistician]
+        skills: [sdtm.purpose, regulatory.data-standards]
+        prerequisites: [trials-drug-development-lifecycle]
+        keywords: [SDTM, SDTMIG, tabulation, Study Data Technical Conformance Guide, Data Standards Catalog, eCTD, define.xml, standardization, CDISC]
+      - id: sdtm-observation-classes
+        title: Interventions, Events and Findings - deciding the class
+        summary: The three general observation classes, the topic variable that identifies each one, and a repeatable decision procedure for placing any collected item into the right domain.
+        minutes: 50
+        difficulty: foundation
+        tracks: [programmer]
+        skills: [sdtm.purpose, sdtm.roles, sdtm.mapping]
+        prerequisites: [sdtm-why-standards]
+        keywords: [Interventions, Events, Findings, Findings About, topic variable, qualifier, timing, special purpose, trial design, --TERM, --TRT, --TESTCD]
+      - id: sdtm-dm-domain
+        title: DM - one row per subject, and the dates everything else hangs from
+        summary: Building the Demographics domain for CBX417-301, including RFSTDTC, RFXSTDTC, the ARM/ACTARM pair, ARMNRS for screen failures and never-treated subjects, and why DM is the first domain you program.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [sdtm.dm, sdtm.identifiers, sdtm.mapping]
+        prerequisites: [sdtm-observation-classes]
+        keywords: [DM, RFSTDTC, RFXSTDTC, RFXENDTC, RFICDTC, RFPENDTC, ARM, ARMCD, ACTARM, ACTARMCD, ARMNRS, screen failure, DTHFL, AGE, RACE, ETHNIC]
+      - id: sdtm-identifiers-and-keys
+        title: Identifiers, --SEQ and what "unique" really means
+        summary: STUDYID, DOMAIN, USUBJID, SUBJID, --SEQ and --SPID; how a natural key differs from a surrogate key; and how to prove uniqueness before anyone else finds a duplicate.
+        minutes: 45
+        difficulty: intermediate
+        tracks: [programmer]
+        skills: [sdtm.identifiers, qc.data-cleaning]
+        prerequisites: [sdtm-dm-domain]
+        keywords: [STUDYID, USUBJID, SUBJID, --SEQ, --SPID, --REFID, --GRPID, natural key, surrogate key, duplicate detection, RELREC key]
+      - id: sdtm-controlled-terminology
+        title: Controlled terminology - and how to look a value up
+        summary: What an NCI/CDISC codelist is, extensible versus non-extensible, codelist versions, sponsor extensions, and a practical workflow for turning messy collected text into submission values.
+        minutes: 50
+        difficulty: intermediate
+        tracks: [programmer]
+        skills: [sdtm.ct, sdtm.mapping, qc.data-cleaning]
+        prerequisites: [sdtm-dm-domain]
+        keywords: [controlled terminology, NCI EVS, codelist, C-code, extensible, non-extensible, submission value, synonym, sponsor extension, MedDRA, WHODrug, CDISC CT package]
+      - id: sdtm-iso8601-and-study-day
+        title: ISO 8601 dates, partial dates and --DY (there is no Day 0)
+        summary: The ISO 8601 subset SDTM uses, how partial and unknown dates are represented, the exact --DY formula with its two branches, and why a date is stored as text in SDTM but as a number in your program.
+        minutes: 55
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [sdtm.dates, sdtm.identifiers]
+        prerequisites: [sdtm-dm-domain]
+        keywords: [ISO 8601, --DTC, --DY, --STDY, --ENDY, partial date, interval, duration, RFSTDTC, day zero, DATE9., anchor date, imputation]
+  - id: cdisc-sdtm-domains
+    title: SDTM domains in practice
+    summary: Programming the domains a clinical study actually runs on - adverse events, exposure, laboratory results, vital signs and ECGs, oncology response - plus supplemental qualifiers, the annotated CRF and Define-XML.
+    level: 3
+    lessons:
+      - id: sdtm-ae-domain
+        title: The AE domain end to end
+        summary: From an EDC adverse-event page to a conformant AE domain - verbatim versus coded terms, CTCAE grade versus severity, the seriousness criteria, action taken, outcome, and the records that belong somewhere else.
+        minutes: 60
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [sdtm.events, sdtm.ct, sdtm.mapping]
+        prerequisites: [sdtm-iso8601-and-study-day, sdtm-controlled-terminology]
+        keywords: [AE, AETERM, AEDECOD, AEBODSYS, AESOC, AETOXGR, AESEV, AESER, AEACN, AEREL, AEOUT, AESPID, MedDRA, treatment-emergent, SAE reconciliation]
+      - id: sdtm-ex-exposure
+        title: EX - what the subject actually received
+        summary: Modeling exposure as constant-dose intervals, the difference between EX and EC, dose interruptions and reductions, and why RFXSTDTC in DM must agree with EX to the minute.
+        minutes: 50
+        difficulty: intermediate
+        tracks: [programmer]
+        skills: [sdtm.interventions, sdtm.dates, sdtm.identifiers]
+        prerequisites: [sdtm-ae-domain]
+        keywords: [EX, EC, EXTRT, EXDOSE, EXDOSU, EXDOSFRM, EXDOSFRQ, EXROUTE, EXADJ, EXSTDTC, EXENDTC, constant dosing interval, dose interruption, RFXSTDTC, cumulative dose]
+      - id: sdtm-lb-domain
+        title: LB - original results, standard results and the baseline flag
+        summary: The Findings result pair (--ORRES/--ORRESU versus --STRESC/--STRESN/--STRESU), unit conversion with reference ranges, LBNRIND, records that were not done, and what --LOBXFL flags.
+        minutes: 60
+        difficulty: intermediate
+        tracks: [programmer, biostatistician]
+        skills: [sdtm.findings, sdtm.ct, qc.data-cleaning]
+        prerequisites: [sdtm-ae-domain]
+        keywords: [LB, LBTESTCD, LBTEST, LBORRES, LBORRESU, LBSTRESC, LBSTRESN, LBSTRESU, LBNRIND, LBSTAT, LBREASND, LBLOBXFL, unit conversion, reference range, central lab, local lab]
+      - id: sdtm-vs-eg-domains
+        title: VS and EG - the same structure, two different measurements
+        summary: How one Findings pattern covers vital signs and ECGs, wide-to-long transposition from the CRF, position and method qualifiers, and the units trap that hides in temperature and weight.
+        minutes: 45
+        difficulty: intermediate
+        tracks: [programmer]
+        skills: [sdtm.findings, sdtm.ct, sdtm.mapping]
+        prerequisites: [sdtm-lb-domain]
+        keywords: [VS, EG, VSTESTCD, VSPOS, VSORRESU, EGTESTCD, QTCFAG, EGHRMN, transpose, wide to long, VISITNUM, unscheduled visit, --LOBXFL]
+      - id: sdtm-oncology-rs-tr
+        title: RS, TU and TR - oncology response in SDTM
+        summary: "How RECIST 1.1 assessments are tabulated: target-lesion measurements in TR, lesion identification in TU, the investigator's overall response in RS, and the --LNKGRP that ties one assessment together."
+        minutes: 55
+        difficulty: advanced
+        tracks: [programmer, biostatistician]
+        skills: [sdtm.findings, trials.oncology, sdtm.identifiers]
+        prerequisites: [sdtm-lb-domain, trials-oncology-response-recist]
+        keywords: [RS, TU, TR, RECIST 1.1, OVRLRESP, SUMDIAM, RSEVAL, TREVAL, RSLNKGRP, TRLNKGRP, ECOG101, BICR, target lesion, non-target lesion, new lesion]
+      - id: sdtm-suppqual-relrec
+        title: SUPPQUAL, RELREC and when a variable does not belong
+        summary: The decision tree for collected data that has no standard variable - a qualifier in SUPP--, a Findings About record, a new domain, or nothing at all - and how QNAM/IDVAR/IDVARVAL rejoin the parent record.
+        minutes: 50
+        difficulty: advanced
+        tracks: [programmer]
+        skills: [sdtm.supp, sdtm.mapping, sdtm.roles]
+        prerequisites: [sdtm-ae-domain, sdtm-identifiers-and-keys]
+        keywords: [SUPPQUAL, SUPPAE, SUPPDM, QNAM, QLABEL, QVAL, QORIG, QEVAL, IDVAR, IDVARVAL, RDOMAIN, RELREC, Findings About, custom domain, non-standard variable]
+      - id: sdtm-define-and-acrf
+        title: Define-XML and the annotated CRF
+        summary: The two documents that make a dataset readable by someone who has never met your study - what Define-XML carries (origin, codelists, computational methods, value-level metadata) and how the aCRF proves where collected data came from.
+        minutes: 50
+        difficulty: advanced
+        tracks: [programmer]
+        skills: [sdtm.acrf-define, regulatory.define, regulatory.data-standards]
+        prerequisites: [sdtm-suppqual-relrec, sdtm-controlled-terminology]
+        keywords: [Define-XML, define.xml, aCRF, annotated CRF, origin, CRF page, Assigned, Derived, Protocol, value-level metadata, cSDRG, Pinnacle 21, conformance]

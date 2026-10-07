@@ -1,0 +1,629 @@
+items:
+  - id: excel.lookup.first-match
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [excel.lookups, qc.compare]
+    lesson: excel-lookups
+    title: The answer that is one of five
+    prompt: |
+      A medical monitor asks what adverse events subject 1001-0002 had. The AE listing is in a sheet, and
+      you write:
+
+      ```excel
+      =XLOOKUP("1001-0002",A2:A2467,B2:B2467)
+      ```
+
+      It returns `Diarrhea`. The subject actually had five adverse events.
+
+      What is the right description of what happened?
+    choices:
+      - text: "The formula returned the first matching row and gave no indication that four more existed — which is what a lookup always does with a repeated key."
+        correct: true
+        feedback: "Correct. The guard is `=COUNTIF(A2:A2467,\"1001-0002\")` beside it: if that is above 1, the lookup is answering \"one of the matches\"."
+      - text: "The lookup range was too short and stopped before the other four rows."
+        feedback: "The range covers all 2,466 AE rows. Even a range covering the whole sheet would return one value."
+      - text: "`XLOOKUP` returned the alphabetically first term among the matches."
+        feedback: "It returns the first match by position in the range, not by sort order. `Diarrhea` happens to be the subject's first AE by date."
+      - text: "The subject id should have been the full `USUBJID`, which would have found all five."
+        feedback: "A different key would find a different row, not more rows. One `XLOOKUP` returns one value regardless."
+    solution: |
+      **A lookup returns one value. Always exactly one, whether the key matches zero, one or seventeen
+      rows.**
+
+      That is the whole difficulty. A join from DM to AE produces 2,520 rows from DM's 468, and the changed
+      row count is impossible to miss. A lookup filled down beside DM produces 468 rows no matter what,
+      because 468 is how many cells you filled — so the duplicates never announce themselves.
+
+      ```excel
+      =XLOOKUP("1001-0002",A2:A2467,B2:B2467)   → Diarrhea
+      =COUNTIF(A2:A2467,"1001-0002")            → 5
+      ```
+
+      In this study `USUBJID` is not a key in AE — the key is `USUBJID` plus `AESEQ`. The maximum number
+      of AE rows for a single subject is **17**.
+
+      When the key repeats, the honest tool is not a lookup at all. It is an aggregation: `COUNTIFS` for
+      how many, `MAXIFS` for the worst, `SUMIFS` for a total.
+    explanation:
+      objective: "Recognise the first-match behaviour of a lookup on a non-unique key."
+      given: "An XLOOKUP against an AE listing for a subject with five events."
+      relevant: "That USUBJID is not unique in AE."
+      irrelevant: "The range length and the choice of identifier, neither of which changes how many values a lookup returns."
+      method: "COUNTIF the key in the table being looked into, before trusting the lookup."
+      numbers: "2,466 AE rows across 414 subjects; up to 17 rows for one subject."
+      interpretation: "A complete-looking answer to a question the tool silently narrowed."
+      changes: "When the COUNTIF is 1 the lookup is a complete answer; above 1 it is one of several."
+      interviewer: "That you name the guard rather than only the problem."
+
+  - id: excel.lookup.vlookup-default
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [excel.lookups, excel.risk]
+    lesson: excel-lookups
+    title: The fourth argument nobody types
+    prompt: |
+      An inherited workbook is full of formulas like:
+
+      ```excel
+      =VLOOKUP(A2,Sites!$A$2:$H$60,7)
+      ```
+
+      The site list is not sorted. What is wrong with this, and how would it show up?
+    choices:
+      - text: "With the fourth argument omitted, `VLOOKUP` does an approximate match that assumes the key column is sorted ascending — on unsorted data it returns a real value from an arbitrary row, with no error."
+        correct: true
+        feedback: "Correct, and the `7` is a second problem: it is a column position, so inserting a column anywhere in the first seven silently changes what is returned."
+      - text: "The fourth argument is optional and defaults to exact match, so the formula is fine."
+        feedback: "That is `XLOOKUP`'s default. `VLOOKUP` defaults to approximate — the opposite, and the reason to prefer XLOOKUP."
+      - text: "It will return `#N/A` on every row because no match type was given."
+        feedback: "It will return values. That is the problem: approximate match on unsorted data does not fail, it returns the wrong row."
+      - text: "`VLOOKUP` cannot use an absolute range reference across sheets."
+        feedback: "It can, and anchoring the range is correct here — it is one of the few things this formula gets right."
+    solution: |
+      **Two defects, and both return plausible values rather than errors.**
+
+      **The omitted fourth argument** means `TRUE` — approximate match. It performs a binary search over a
+      column *assumed* to be sorted ascending and returns the largest key less than or equal to the lookup
+      value. On unsorted data the search lands wherever the halving takes it; the result is a real value
+      from an arbitrary row.
+
+      **The `7`** is a count of columns from the left edge of the table. Insert a column anywhere in the
+      first seven and every one of these formulas starts returning the neighbouring column. If both are
+      numeric, nothing looks different.
+
+      The same lookup with neither defect:
+
+      ```excel
+      =XLOOKUP(A2,Sites!$A$2:$A$60,Sites!$G$2:$G$60,"Site not found")
+      ```
+
+      Exact match by default, the return column named rather than counted, and a visible marker for a
+      key that is not there.
+
+      **If you inherit a workbook of `VLOOKUP`s, auditing the fourth argument of every one is a reasonable
+      first task**, because the ones that are wrong will not be showing any symptom.
+    explanation:
+      objective: "Identify the two silent defects in a typical inherited VLOOKUP."
+      given: "A VLOOKUP with three arguments against an unsorted table."
+      relevant: "That the omitted match type means approximate, and that the return column is positional."
+      method: "Ask what each failure would look like on screen — both look like ordinary values."
+      interpretation: "Neither defect produces an error, so neither will have been noticed."
+      changes: "Adding FALSE fixes the match type; only XLOOKUP or INDEX/MATCH fixes the positional column."
+      interviewer: "That you know VLOOKUP and XLOOKUP default oppositely, which is the single most useful fact about the pair."
+
+  - id: excel.lookup.ifna-vs-iferror
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [excel.lookups, qc.discrepancy]
+    lesson: excel-lookups
+    title: IFNA or IFERROR
+    prompt: |
+      A reconciliation looks each EDC subject up in a vendor file:
+
+      ```excel
+      =IFERROR(XLOOKUP(A2,vendor_ids,vendor_alt),"Missing")
+      ```
+
+      Why should this be `IFNA` instead?
+    choices:
+      - text: "`IFERROR` also catches `#REF!` and `#VALUE!`, so a structurally broken formula reports `Missing` — indistinguishable from a subject the vendor genuinely did not send."
+        correct: true
+        feedback: "Correct. `IFNA` catches only `#N/A`, which is the only error a correctly written lookup should ever produce."
+      - text: "`IFERROR` is slower to calculate on large ranges."
+        feedback: "Performance is not the issue. The issue is which failures it conceals."
+      - text: "`IFERROR` cannot be used with `XLOOKUP`."
+        feedback: "It can. It just catches more than you want it to."
+      - text: "`IFERROR` returns the fallback for a blank match as well as for an error."
+        feedback: "A blank match is not an error; `XLOOKUP` returns an empty cell and neither wrapper intervenes."
+    solution: |
+      **Catch the error you expect, not every error.**
+
+      A lookup can fail for two entirely different reasons:
+
+      | Error | Means | Who fixes it |
+      |---|---|---|
+      | `#N/A` | The key is not in the other table | The vendor, or the site |
+      | `#REF!` | The range no longer exists — someone deleted rows or columns | You |
+      | `#VALUE!` | An argument is the wrong type | You |
+
+      `IFERROR` maps all three to `Missing`. A workbook where someone deleted a column now reports every
+      subject as missing from the vendor file, which is a dramatic and completely false finding — and one
+      that looks exactly like a real transfer failure.
+
+      There is a second point hiding in this formula and it is worth more than the first: `"Missing"` is a
+      good fallback because it is **countable**. `IFNA(…,"")` gives empty cells, which cannot be
+      distinguished from cells nobody filled in, cannot be counted with `COUNTIF`, and cannot be filtered
+      into an exceptions listing.
+    explanation:
+      objective: "Choose the narrower error handler and justify it."
+      given: "A reconciliation lookup wrapped in IFERROR."
+      relevant: "That IFERROR catches structural errors as well as not-found."
+      irrelevant: "Calculation speed, and blank-versus-missing behaviour, which is the same for both."
+      interpretation: "A broken workbook would report itself as a failed data transfer."
+      changes: "IFNA restricts the catch to #N/A; a visible marker keeps the unmatched rows countable."
+      interviewer: "That you also flag the empty-string fallback, which is the more common version of the same mistake."
+
+  - id: excel.lookup.direction
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [excel.lookups, sdtm.identifiers]
+    lesson: excel-lookups
+    title: Which direction is safe
+    prompt: |
+      You have the AE listing (2,466 rows) and DM (468 rows, one per subject).
+
+      Which of these is a complete answer, and which silently returns one of several?
+    choices:
+      - text: "Looking `ARM` up from DM onto each AE row is complete; looking an AE term up from AE onto each DM row is not."
+        correct: true
+        feedback: "Correct. The test is mechanical: COUNTIF the key in the table you are looking *into*. In DM it is always 1; in AE it can be 17."
+      - text: "Both are complete, because both use `USUBJID` as the key."
+        feedback: "The key being the same on both sides says nothing about whether it is *unique* on the side being searched."
+      - text: "Neither is complete, because `USUBJID` is not unique in either dataset."
+        feedback: "`USUBJID` is unique in DM — one row per subject is DM's defining structure."
+      - text: "Looking an AE term up onto DM is complete; the other direction duplicates rows."
+        feedback: "This is backwards. Looking up never duplicates rows; it is the direction into a many-row table that loses information."
+    solution: |
+      **Look into a table where the key is unique.**
+
+      `USUBJID` is unique in DM and ADSL, and in nothing else. AE, LB, VS, EX and CM all have many rows per
+      subject, and their keys are `USUBJID` plus a sequence number.
+
+      | Direction | Key unique in target? | Result |
+      |---|---|---|
+      | AE row → DM, to get `ARM` | Yes | One correct value per AE row |
+      | DM row → AE, to get a term | No | The first of up to 17, silently |
+
+      The test costs one formula. `COUNTIF` the key against the table being searched; if the maximum is 1
+      the lookup is a complete answer, and if it is above 1 you want an aggregation instead.
+
+      This is also why DM and ADSL are the datasets everything else is looked up *against* rather than
+      *from*: one row per subject is what makes them safe targets.
+    explanation:
+      objective: "Choose the safe direction for a lookup between a one-row-per-subject and a many-row table."
+      given: "DM with 468 rows and AE with 2,466."
+      relevant: "That USUBJID is unique in DM and not in AE."
+      method: "COUNTIF the key in the table being searched and look at the maximum."
+      numbers: "468 DM rows, 2,466 AE rows across 414 subjects, up to 17 rows for one subject."
+      interpretation: "Direction, not the key, decides whether the answer is complete."
+      changes: "Into a many-row table, the right tool is COUNTIFS, SUMIFS or MAXIFS rather than a lookup."
+
+  - id: excel.lookup.fanout
+    format: numeric
+    modes: [guided, check]
+    difficulty: intermediate
+    skills: [excel.lookups, qc.compare]
+    lesson: excel-lookups
+    title: How many rows does the join produce
+    prompt: |
+      `oncology/sdtm/dm.csv` has **468** rows, one per subject. `oncology/sdtm/ae.csv` has **2,466** rows
+      across **414** subjects.
+
+      A left join from DM to AE keeps every DM row and multiplies it by its number of AE matches.
+
+      How many rows does the join produce?
+    answer: 2520
+    tolerance: 0
+    unit: rows
+    hints:
+      - "Every AE row appears exactly once, because every AE row has exactly one subject."
+      - "Subjects with no AE still contribute one row each."
+      - "468 − 414 subjects have no AE. Add them to 2,466."
+    solution: |
+      $$2466 + \underbrace{(468 - 414)}_{54 \text{ subjects with no AE}} = 2520$$
+
+      Verified against the study database:
+
+      ```sql
+      SELECT COUNT(*) FROM dm LEFT JOIN ae ON ae.usubjid = dm.usubjid;   -- 2520
+      ```
+
+      **The 54 are worth knowing.** Forty-eight are screen failures, who were never dosed. The other
+      **six are randomized subjects with no adverse event recorded at all** — which is a fact about the
+      study rather than a data problem, and one you would never see from a lookup.
+
+      Filling an `XLOOKUP` down beside DM produces 468 rows no matter what AE contains. That is the
+      difference the whole lesson turns on: **a join's row count carries information and a lookup's does
+      not.**
+    explanation:
+      objective: "Compute the row count of a one-to-many left join."
+      given: "468 DM rows, 2,466 AE rows across 414 subjects."
+      relevant: "That every AE row has exactly one subject, and unmatched DM rows are kept."
+      calculating: "Matched rows plus unmatched left-hand rows."
+      numbers: "2466 + 54 = 2520."
+      assumptions: "No AE row refers to a subject absent from DM — checked, and there are none."
+      interpretation: "The fan-out is visible in a join and invisible in a lookup."
+      changes: "An inner join would give 2,466 and drop the 54 subjects entirely, including the six randomized ones."
+
+  - id: excel.lookup.guard
+    format: sql
+    db: oncology
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [excel.lookups, qc.compare, qc.discrepancy]
+    lesson: excel-lookups
+    title: The rows a lookup would have hidden
+    minutes: 8
+    prompt: |
+      In Excel this is a column of `#N/A` that somebody wraps in `IFNA` and forgets about. As a query it
+      is the deliverable.
+
+      List the `USUBJID` of every subject in `dm` who has **no** record in `ae`, sorted by subject.
+
+      There are 54 of them: the 48 screen failures, plus six randomized subjects with no adverse event
+      recorded.
+    starter: |
+      SELECT dm.USUBJID
+      FROM   dm
+      ___ JOIN ae ON ___
+      WHERE  ___
+      ORDER BY dm.USUBJID;
+    reference: |
+      SELECT dm.USUBJID
+      FROM   dm
+      LEFT JOIN ae ON ae.USUBJID = dm.USUBJID
+      WHERE  ae.USUBJID IS NULL
+      ORDER BY dm.USUBJID;
+    orderMatters: true
+    hints:
+      - "Keep every DM row, matched or not — that is a LEFT JOIN."
+      - "After a left join, an unmatched row has NULL in every column from the right-hand table."
+      - "`WHERE ae.USUBJID IS NULL` keeps exactly the rows that found no match."
+    solution: |
+      **This is the anti-join**, and it is the one join whose entire purpose is the rows that did not
+      match.
+
+      ```sql
+      SELECT dm.USUBJID
+      FROM   dm
+      LEFT JOIN ae ON ae.USUBJID = dm.USUBJID
+      WHERE  ae.USUBJID IS NULL
+      ORDER BY dm.USUBJID;
+      ```
+
+      The left join keeps all 468 DM rows; unmatched ones arrive with every `ae` column `NULL`; the
+      `WHERE` keeps exactly those. **54 rows.**
+
+      The Excel equivalent is a column of `=IFNA(XLOOKUP(A2,ae_subject,ae_term),"No AE")` filled down
+      beside DM, then `=COUNTIF(range,"No AE")`. That works, and it depends on two choices people
+      routinely get wrong: using `IFNA` rather than `IFERROR`, and using a **visible marker** rather than
+      `""`. With an empty string the 54 rows become empty cells and stop being countable.
+
+      Worth separating the two populations before reporting: 48 screen failures with no AE is expected and
+      uninteresting; **six randomized subjects with no AE at all** is a number a data manager will want to
+      look at, because "no adverse events" and "no adverse events entered" look identical from here.
+    explanation:
+      objective: "Express an anti-join and connect it to the spreadsheet form of the same question."
+      given: "DM with 468 subjects and AE with 2,466 rows across 414 of them."
+      relevant: "That a left join gives NULL on the right for unmatched left rows."
+      method: "LEFT JOIN then filter on the right-hand key being NULL."
+      numbers: "468 - 414 = 54 rows: 48 screen failures and 6 randomized subjects."
+      interpretation: "In QC the unmatched rows are the output, not a nuisance."
+      changes: "IFNA with an empty string in the Excel version makes the same 54 rows uncountable."
+      interviewer: "That you split the 54 into expected and interesting before reporting a number."
+
+  - id: excel.lookup.compare-forms
+    format: mapping
+    modes: [guided, check, speed]
+    difficulty: intermediate
+    skills: [excel.lookups]
+    lesson: excel-lookups
+    title: Which form has which weakness
+    prompt: |
+      Match each lookup form to the specific way it fails when nobody is careful.
+    sourceLabel: Written as
+    targetLabel: Fails by
+    pairs:
+      - source: "=VLOOKUP(A2,tbl,7)"
+        target: "Approximate match on unsorted data — a real value from an arbitrary row"
+        note: "An omitted fourth argument means TRUE. This is VLOOKUP's default and the opposite of XLOOKUP's."
+      - source: "=VLOOKUP(A2,tbl,7,FALSE)"
+        target: "Returns a different column after one is inserted"
+        note: "The 7 is a position, not a reference. Exact match is now correct; the column count is still fragile."
+      - source: "=XLOOKUP(A2,$G$2:$G$500,$H$2:$H$500)"
+        target: "Returns the first of several matches when the key repeats"
+        note: "Correct in every other respect. This weakness is shared by all three forms and is the one nothing fixes for you."
+      - source: "=XLOOKUP(A2,G2:G500,H2:H500) filled down"
+        target: "The search range walks down the sheet and misses rows near the end"
+        note: "Unanchored ranges shift with the fill. An Excel Table column reference does not shift at all."
+      - source: "=IFERROR(XLOOKUP(...),\"Missing\")"
+        target: "Reports a broken range as a missing subject"
+        note: "IFERROR catches #REF! and #VALUE! too. Use IFNA."
+      - source: "=IFNA(XLOOKUP(...),\"\")"
+        target: "Unmatched rows become uncountable empty cells"
+        note: "The right function with the wrong fallback. Use a visible marker."
+    solution: |
+      **Every form shares one weakness and each adds its own.**
+
+      The shared one is first-match on a repeated key. No function in the family fixes it, `XLOOKUP`
+      included, and the only defence is a `COUNTIF` beside the lookup.
+
+      Everything else is avoidable by construction:
+
+      - `XLOOKUP` over `VLOOKUP` removes the approximate-match default and the positional column.
+      - Absolute ranges, or an Excel Table, remove the walking-range problem.
+      - `IFNA` over `IFERROR` stops a structural break masquerading as a data finding.
+      - A visible marker over `""` keeps the unmatched rows countable.
+
+      Four of the five are a one-time decision about how you write lookups. The fifth is a judgement you
+      have to make every time.
+    explanation:
+      objective: "Attribute each failure mode to the specific form that causes it."
+      given: "Six lookup formulas differing in one respect each."
+      relevant: "Default match type, how the return column is identified, range anchoring, and error handling."
+      method: "Change one thing at a time and ask what breaks."
+      interpretation: "Most of these are fixed by a house style; first-match is not."
+      changes: "Only the repeated-key weakness survives every improvement in how the formula is written."
+
+  - id: excel.lookup.distinct-helper
+    format: mcq
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [excel.lookups, excel.conditional-aggregation]
+    lesson: excel-lookups
+    title: The growing range in a distinct-count helper
+    prompt: |
+      A helper column beside a ten-row AE listing holds, on row 2:
+
+      ```excel
+      =IF(COUNTIF($A$2:A2,A2)=1,1,0)
+      ```
+
+      filled down to row 11. `=SUM(E2:E11)` returns **3**, and there are three subjects in the ten rows.
+
+      Why does it work?
+    choices:
+      - text: "The range is anchored at the top and open at the bottom, so on each row it counts occurrences of that subject in all rows up to and including the current one — which is 1 only on a subject's first appearance."
+        correct: true
+        feedback: "Correct. On row 5 it reads `COUNTIF($A$2:A5,A5)`, and a subject seen earlier already has a count above 1."
+      - text: "`COUNTIF` deduplicates the range before counting."
+        feedback: "`COUNTIF` counts every matching cell. The deduplication comes from the range growing, not from COUNTIF."
+      - text: "Both ends are anchored, so every row sees the whole column."
+        feedback: "If both ends were anchored, every row would get the subject's full count and the SUM would be 10, not 3."
+      - text: "`SUM` counts each distinct value once because the helper column contains only ones and zeros."
+        feedback: "A column of ones and zeros sums to the number of ones. What makes the ones land on first appearances is the growing range."
+    solution: |
+      **`$A$2:A2` is anchored at the top and relative at the bottom.** Filling it down gives `$A$2:A3`,
+      `$A$2:A4`, `$A$2:A5` and so on — on every row, *everything above and including this row*.
+
+      A subject's first appearance has exactly one occurrence in that window, so the `IF` writes 1. Every
+      later appearance has a count of 2 or more and writes 0. Summing the column counts first appearances,
+      which is a distinct count.
+
+      **Ten rows, three subjects.** The same helper across the full AE dataset gives 414 — the number of
+      subjects with at least one adverse event, from 2,466 rows.
+
+      This is the standard spreadsheet answer to a distinct count, and it is worth knowing for a reason
+      beyond the arithmetic: the working is *visible*. A reviewer can look at the helper column and see
+      which rows were counted. A single clever formula giving 414 shows nothing.
+
+      A PivotTable can also produce a distinct count, and that is the subject of
+      `excel-pivots-and-when-to-stop`.
+    explanation:
+      objective: "Explain why a half-anchored range produces a distinct count."
+      given: "A helper formula filled down a ten-row listing, summing to 3."
+      relevant: "That $A$2:A2 grows as it fills while staying anchored at the top."
+      irrelevant: "Any deduplication by COUNTIF, which does not happen."
+      method: "Evaluate the formula on a later row and see what window it looks at."
+      numbers: "10 rows, 3 subjects here; 2,466 rows and 414 subjects across the full AE dataset."
+      interpretation: "Distinct counting is a per-row test made visible, not a single opaque formula."
+      changes: "Anchoring both ends gives every row the subject's full count and the SUM becomes the row count."
+
+  - id: excel.lookup.silent-first
+    format: diff
+    modes: [qc, debug]
+    difficulty: advanced
+    skills: [excel.lookups, tlf.denominators, qc.compare]
+    lesson: excel-lookups
+    title: Two counts of the same adverse event
+    prompt: |
+      A study manager builds a quick AE summary in Excel by filling a lookup down beside the subject list.
+      The programmer's table comes from the AE dataset directly.
+
+      Both are counting fatigue. What explains the difference?
+    left:
+      title: From the spreadsheet lookup
+      columns: [Preferred term, Count]
+      rows:
+        - [Fatigue, 170]
+        - [Nausea, 130]
+      footnote: "=XLOOKUP(subject, ae_subject, ae_decod) filled down beside the subject list, then COUNTIF over the result."
+    right:
+      title: From the AE dataset
+      columns: [Preferred term, Events, Subjects]
+      rows:
+        - [Fatigue, 202, 170]
+        - [Nausea, 162, 130]
+      footnote: "Verified from oncology/sdtm/ae.csv."
+    choices:
+      - text: "The lookup returns one row per subject, so its counts are subject counts. They match the programmer's subject column exactly and are simply a different quantity from the event counts."
+        correct: true
+        feedback: "Correct — and this is the benign case. The numbers are right; the column heading is what is wrong."
+      - text: "The lookup dropped subjects whose ids did not match, so 170 is an undercount of 202."
+        feedback: "170 matches the verified subject count exactly. Nothing was dropped; a different quantity was measured."
+      - text: "The programmer counted screen failures and the study manager did not."
+        feedback: "Screen failures have no AE records at all, so they cannot contribute to either count."
+      - text: "The lookup matched verbatim terms rather than coded terms, inflating the programmer's figure."
+        feedback: "Both columns here are the coded preferred term. Verbatim spelling variation would move the numbers the other way."
+    solution: |
+      **Nothing is broken. The two tables are measuring different things and only one of them says so.**
+
+      | | Fatigue | Nausea |
+      |---|---:|---:|
+      | Events (AE records) | 202 | 162 |
+      | Subjects with at least one | 170 | 130 |
+
+      The lookup produces exactly one row per subject — that is what a lookup does — so counting its output
+      counts **subjects**, and it happens to be right. The heading `Count` is what is wrong, and a reader
+      will assume events.
+
+      This is the well-behaved version of the first-match problem, which makes it a good one to study. The
+      spreadsheet returned a correct number to a question nobody asked out loud. Present it as an event
+      count in a safety table and the denominators stop making sense: the percentages would be subjects
+      over subjects while the label says events.
+
+      **A safety table needs both**, labelled: *n* subjects with at least one event, and the number of
+      events. `excel-conditional-aggregation` builds them.
+
+      One more thing hiding here: the 202 fatigue records were typed by sites as `fatigue`, `Fatigue`,
+      `FATIGUE`, `Feeling tired`, `tiredness` and `Tiredness`. Counting on the verbatim term would have
+      given six numbers instead of one.
+    explanation:
+      objective: "Attribute a discrepancy to a difference in quantity rather than an error."
+      given: "A spreadsheet count of 170 against an event count of 202 and a subject count of 170."
+      relevant: "That a lookup emits one row per subject, so counting it counts subjects."
+      irrelevant: "Screen failures, which have no AE records, and verbatim coding, which is not what differs here."
+      numbers: "Fatigue: 202 events in 170 subjects. Nausea: 162 events in 130 subjects."
+      interpretation: "A correct number under a label that implies a different one."
+      changes: "COUNTIFS over the AE rows gives events; the distinct-subject helper gives subjects. A safety table reports both."
+      interviewer: "That you check whether a discrepancy is an error or a definition before you call it an error."
+
+  - id: excel.lookup.hotspot
+    format: hotspot
+    language: text
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [excel.lookups, qc.discrepancy]
+    lesson: excel-lookups
+    title: The reconciliation that cannot report anything
+    minutes: 8
+    prompt: |
+      A lab reconciliation column, written once and filled down beside 300 EDC subjects. The summary cell
+      underneath reports **0 discrepancies**, and the vendor file is known to be missing two subjects.
+
+      Click the line that makes the two missing subjects impossible to count.
+    code: |
+      A2:  1001-0002                         (EDC subject id)
+      B2:  =IFERROR(XLOOKUP(A2,$F$2:$F$300,$G$2:$G$300),"")
+      C2:  =IF(B2=D2,"OK","DIFF")
+      D2:  25                                (EDC ALT value)
+      E2:  =COUNTIF(C2:C301,"DIFF")
+    answerLines: [2]
+    lineNotes:
+      - line: 2
+        note: "Two defects in one formula. `IFERROR` catches #REF! and #VALUE! as well as #N/A, so a broken range would also report as not-found. And the `\"\"` fallback turns every unmatched subject into an empty cell — uncountable, unfilterable, and indistinguishable from a blank. Use `IFNA(...,\"Not in vendor file\")`."
+      - line: 3
+        note: "This comparison has its own problem — an unmatched row gives `\"\" = 25`, which is FALSE, so it reports DIFF rather than distinguishing missing from different. But it is downstream of the real defect and would work correctly against a visible marker."
+      - line: 5
+        note: "Counting `DIFF` is reasonable. It cannot count what line 2 erased, and it does not separate 'value differs' from 'subject absent' — two findings with two different owners."
+    fixed: |
+      A2:  1001-0002                         (EDC subject id)
+      B2:  =IFNA(XLOOKUP(A2,$F$2:$F$300,$G$2:$G$300),"Not in vendor file")
+      C2:  =IFS(B2="Not in vendor file","MISSING", B2=D2,"OK", TRUE,"DIFF")
+      D2:  25                                (EDC ALT value)
+      E2:  =COUNTIF(C2:C301,"DIFF") & " differing, " & COUNTIF(C2:C301,"MISSING") & " missing"
+    hints:
+      - "The summary counts cells reading DIFF. What do the two missing subjects' cells actually contain?"
+      - "What does `IFERROR(...,\"\")` leave behind when the lookup finds nothing?"
+      - "An empty string is not a value you can count, filter or name in a listing."
+    solution: |
+      **Line 2.** `IFERROR(…,"")` does two separate kinds of damage.
+
+      **The `""`.** An unmatched subject becomes an empty cell, which is indistinguishable from a cell
+      nobody filled in. It cannot be counted with `COUNTIF`, cannot be filtered into an exceptions listing,
+      and cannot be named in a discrepancy log. The reconciliation's most important output — *which
+      subjects the vendor did not send* — has been deleted at the moment it was produced.
+
+      **The `IFERROR`.** It catches `#REF!` and `#VALUE!` as well as `#N/A`. If someone deletes a column
+      from the vendor sheet, every row reports as not-found, and the workbook reports a total transfer
+      failure that is actually a broken formula.
+
+      The fixed version writes a **visible marker** and then separates the two findings in `C`. They have
+      different owners: a differing value is a query to the site or the vendor about a number, and an
+      absent subject is a question about the transfer itself.
+
+      **A reconciliation that reports zero discrepancies against a file known to be missing two subjects
+      is not a passing reconciliation.** It is a broken one, and the only reason it looked like a pass is
+      that the evidence was replaced with blanks.
+    explanation:
+      objective: "Find the step that destroys a reconciliation's output while leaving it looking successful."
+      given: "A lookup-based reconciliation reporting zero discrepancies against a file missing two subjects."
+      relevant: "That IFERROR with an empty-string fallback converts every non-match into a blank cell."
+      irrelevant: "The COUNTIF summary, which is correct given what it is counting."
+      method: "Ask what the unmatched rows contain, then ask whether anything can count that."
+      interpretation: "A clean result produced by deleting the findings."
+      changes: "IFNA with a visible marker keeps the unmatched rows countable and separable from value differences."
+      interviewer: "That a zero-discrepancy result makes you more suspicious rather than less."
+
+  - id: excel.lookup.open-join
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [excel.lookups, qc.compare, communication.interviewing]
+    lesson: excel-lookups
+    title: Explain a lookup to someone who writes SQL
+    prompt: |
+      **Interviewer:** "You've been asked to QC a spreadsheet that uses lookups where our pipeline uses a
+      join. What would you check, and what would you tell the person who built it?"
+    modelAnswer: |
+      I'd frame it as the same operation with different defaults, because that is what it is and because
+      telling someone their tool is wrong ends the conversation.
+
+      `XLOOKUP(key, key_range, return_range)` is a left join restricted to one column and one row. What a
+      join makes you decide and a lookup decides for you is two things, and both are what I'd check.
+
+      **Duplicate keys.** A join fans out — DM joined to AE gives 2,520 rows from 468 subjects, and the row
+      count changing is impossible to miss. A lookup gives you 468 rows whatever AE contains, because 468
+      is how many cells were filled, so a subject with seventeen adverse events looks identical to a
+      subject with one. I'd run `COUNTIF` on the key in the table being searched and look at the maximum.
+      If it is above 1, the lookup is returning one of several matches and the honest tool is `COUNTIFS`
+      or `SUMIFS`, not a lookup.
+
+      **Unmatched rows.** In SQL the unmatched left rows arrive with NULLs and I can count them. In Excel
+      they are `#N/A` until somebody wraps them, and the wrapping is where the information usually dies. I
+      look for `IFERROR` where it should be `IFNA` — `IFERROR` swallows a `#REF!` from a deleted range and
+      reports it as a missing subject — and for an empty-string fallback, which turns every non-match into
+      a blank cell that cannot be counted. In a reconciliation those rows are the deliverable, so a
+      reconciliation reporting zero discrepancies is the one I'd look at hardest.
+
+      Then the ordinary mechanical things: whether the ranges are anchored, because an unanchored range
+      walks down the sheet as the formula fills and rows near the bottom stop finding matches; and if it is
+      `VLOOKUP`, the fourth argument, because omitting it means approximate match, which on unsorted data
+      returns a real value from an arbitrary row with no error at all.
+
+      And the types. If one file came through Excel and the other did not, one key can be the number 1011
+      and the other the text `"1011"`, and Excel's comparison operators never treat those as equal.
+      `ISNUMBER` on both sides settles it in one formula.
+
+      What I'd actually say to the person is that the lookups are fine for what they were built for — one
+      value, one question, quickly — and that the specific risk is the column that got filled down 468
+      rows and now feeds a number in a document. That one is a join, and it should be checked like one.
+    rubric:
+      - States that a lookup is a left join restricted to one row and one column
+      - Names duplicate keys as the first thing to check, with COUNTIF as the test
+      - Explains why a lookup's fixed row count hides the fan-out
+      - Treats unmatched rows as the deliverable in a QC context
+      - Distinguishes IFNA from IFERROR and says why it matters
+      - Flags an empty-string fallback as destroying countability
+      - Mentions range anchoring and VLOOKUP's approximate-match default
+      - Checks key types on both sides
+      - Frames the advice without dismissing the tool
+    redFlags:
+      - "Says spreadsheets should not be used and offers nothing further"
+      - "Does not check whether the key is unique"
+      - "Treats #N/A as noise to be suppressed"
+      - "Assumes a zero-discrepancy reconciliation has passed"

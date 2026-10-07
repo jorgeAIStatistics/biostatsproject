@@ -1,0 +1,239 @@
+items:
+  - id: trials.lifecycle.stage-order
+    format: order
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.lifecycle]
+    lesson: trials-drug-development-lifecycle
+    title: Put the data lifecycle in order
+    prompt: |
+      Put these stages of the clinical data lifecycle in the order data flows through them for a single study.
+    steps:
+      - "Protocol (objectives, endpoints, schedule of assessments)"
+      - "eCRF design and EDC build"
+      - "Raw data entry and vendor transfers"
+      - "Data management: queries, coding, reconciliation, database lock"
+      - "SDTM tabulation datasets"
+      - "ADaM analysis datasets"
+      - "Statistical analysis and TLF production"
+      - "Independent QC of outputs"
+      - "Clinical study report"
+    hints:
+      - "Analysis datasets are derived from tabulation datasets, not the other way round."
+      - "The CRF is designed from the protocol's schedule of assessments, before any patient data exist."
+    solution: |
+      Protocol → CRF → raw → data management → SDTM → ADaM → analysis/TLF → QC → CSR. Ad hoc requests come after, and reuse the same locked data and validated programs. In real projects SDTM and ADaM programming starts on blinded or early data *before* lock, but the flow of dependencies is the same.
+
+  - id: trials.lifecycle.edit-check-owner
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [trials.lifecycle, trials.data-management]
+    lesson: trials-drug-development-lifecycle
+    title: Who owns edit checks and queries?
+    prompt: |
+      A site entered an AE start date that is before the subject's informed-consent date. Which role is responsible for detecting this with an edit check and resolving it through a query to the site?
+    choices:
+      - text: "Clinical data manager"
+        correct: true
+        feedback: "Data management specifies and programs edit checks in the EDC, reviews discrepancies and raises queries to sites until the data are corrected or confirmed."
+      - text: "Statistical programmer"
+        feedback: "Programmers often find such issues during SDTM/ADaM work and report them, but raising and closing site queries is a data-management process."
+      - text: "Biostatistician"
+        feedback: "The statistician defines how data are analyzed; cleaning the source data is not their responsibility."
+      - text: "Medical writer"
+        feedback: "Medical writers author documents such as the protocol and CSR; they do not clean EDC data."
+    solution: |
+      The clinical data manager. Programmers should report anomalies they find to data management instead of "fixing" them in code, so the correction happens at source and stays traceable.
+
+  - id: trials.lifecycle.why-adam
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.lifecycle]
+    lesson: trials-drug-development-lifecycle
+    title: Why ADaM exists alongside SDTM
+    prompt: |
+      Which statement best explains why tables are programmed from ADaM datasets rather than directly from SDTM?
+    choices:
+      - text: "ADaM holds analysis-ready derived values (baseline, flags, imputed dates, censoring) with documented traceability to SDTM"
+        correct: true
+        feedback: "ADaM implements each derivation once, documents it, and keeps a link to the source records, so every table uses the same rules."
+      - text: "SDTM is only a draft of the data; ADaM is the cleaned version"
+        feedback: "SDTM is built from locked, cleaned data. It is a complete tabulation of what was collected, not a draft."
+      - text: "Regulators do not accept SDTM datasets"
+        feedback: "SDTM datasets are part of standardized study data submissions to FDA. ADaM complements SDTM; it does not replace it."
+      - text: "ADaM removes subjects who are not in the analysis population"
+        feedback: "ADaM datasets usually keep all relevant subjects and use population flags (for example SAFFL) so each analysis can select its population."
+    solution: |
+      SDTM shows what was collected; ADaM adds what analysis needs — derived and imputed values, population and analysis flags, time-to-event variables — with metadata tracing each value back to SDTM.
+
+  - id: trials.lifecycle.artifact-stage
+    format: mapping
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.lifecycle, trials.documents]
+    lesson: trials-drug-development-lifecycle
+    title: Which stage produces this artifact?
+    prompt: |
+      Map each artifact to the lifecycle stage in which it is primarily produced.
+    sourceLabel: Artifact
+    targetLabel: Lifecycle stage
+    pairs:
+      - { source: "Schedule of assessments", target: "Protocol" }
+      - { source: "Annotated CRF (aCRF)", target: "CRF / SDTM mapping" }
+      - { source: "Data management plan with edit check specifications", target: "Data management" }
+      - { source: "ADSL with ITTFL and SAFFL", target: "ADaM" }
+      - { source: "Mock table shells", target: "SAP / analysis planning" }
+      - { source: "Section 14 tables", target: "TLF production" }
+    targets: ["Protocol", "CRF / SDTM mapping", "Data management", "ADaM", "SAP / analysis planning", "TLF production", "CSR writing"]
+    solution: |
+      The aCRF sits at the join between the CRF and SDTM: it shows, on the blank CRF, which SDTM variable each field maps to. Shells are written with the SAP, before any results exist. Section 14 tables are produced by TLF programs and then referenced by the CSR.
+
+  - id: trials.lifecycle.role-classify
+    format: classify
+    modes: [guided]
+    difficulty: foundation
+    skills: [trials.lifecycle]
+    lesson: trials-drug-development-lifecycle
+    title: Who does this task?
+    prompt: |
+      Classify each task by the role that usually owns it on a CBX417-301-style study.
+    categories: [Data manager, Statistical programmer, Biostatistician, Medical writer]
+    entries:
+      - { text: "Write the SAS program that derives `TRTEMFL` in ADAE", category: Statistical programmer }
+      - { text: "Specify the rule for imputing partial AE start dates", category: Biostatistician, note: "The rule belongs in the SAP; the programmer implements it." }
+      - { text: "Reconcile serious AEs in EDC against the safety database", category: Data manager }
+      - { text: "Calculate the number of PFS events needed for 90% power", category: Biostatistician }
+      - { text: "Write the safety section of the CSR text", category: Medical writer }
+      - { text: "Map the vital-signs page to the SDTM VS domain", category: Statistical programmer }
+      - { text: "Design edit checks for impossible dates", category: Data manager }
+      - { text: "Independently reproduce Table 14.3.1.2 for QC", category: Statistical programmer }
+    hints:
+      - "Ask whether the task defines a rule, cleans source data, implements a rule in code, or writes narrative text."
+      - "Programmers implement and QC; statisticians decide methods; data managers own the EDC and its cleaning; writers own documents."
+    solution: |
+      Rules and methods → biostatistician; EDC cleaning, coding and reconciliation → data manager; datasets, outputs and QC → statistical programmer; narrative documents → medical writer. Real teams overlap, but interviewers expect you to know the default owner.
+
+  - id: trials.lifecycle.before-lock
+    format: multi
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.lifecycle, trials.data-management]
+    lesson: trials-drug-development-lifecycle
+    title: What must happen before database lock?
+    prompt: |
+      CBX417-301 is double-blind. Select **all** activities that must be completed before the database is locked and the treatment codes are released.
+    choices:
+      - text: "Resolution (or documented closure) of outstanding data queries"
+        correct: true
+        feedback: "Lock freezes the data; open queries would leave known errors in the analysis data."
+      - text: "SAE reconciliation between EDC and the safety database"
+        correct: true
+        feedback: "Discrepancies between the clinical and safety databases must be resolved before the data are frozen."
+      - text: "Final approval of the SAP"
+        correct: true
+        feedback: "The SAP must be finalized before unblinding so analysis choices cannot be influenced by results (ICH E9)."
+      - text: "Final production of efficacy tables by actual randomized treatment"
+        feedback: "Unblinded efficacy tables require the treatment codes, which are released only after lock."
+      - text: "Medical coding of all AE and medication terms"
+        correct: true
+        feedback: "Uncoded terms cannot be summarized by SOC/PT or drug class; coding is completed and reviewed before lock."
+    hints:
+      - "Lock freezes the data; unblinding reveals treatment assignment. Which items depend on knowing treatment?"
+      - "Anything that could be influenced by seeing unblinded results must be fixed before the blind is broken."
+    solution: |
+      Queries, SAE reconciliation, coding and SAP approval all precede lock/unblinding. Unblinded efficacy outputs come after, when the randomization codes are merged in. Programs are usually developed and validated earlier on blinded or dummy-randomized data so final outputs can be produced quickly after unblinding.
+
+  - id: trials.lifecycle.trace-discrepancy
+    format: order
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [trials.lifecycle, qc.discrepancy]
+    lesson: trials-drug-development-lifecycle
+    title: Tracing a questioned number
+    prompt: |
+      The medical lead doubts the count of subjects with *Diarrhea* in the TEAE table. Put the investigation steps in the most efficient order.
+    steps:
+      - "Confirm which output version, data cut and population the number came from (footer, program header)"
+      - "Reproduce the cell from ADAE: `TRTEMFL = 'Y'`, `SAFFL = 'Y'`, `AEDECOD = 'Diarrhea'`, count distinct `USUBJID` by `TRTA`"
+      - "For surprising subjects, check `ASTDT`, `ASTDTF` and `TRTEMFL` against the SAP rules"
+      - "Trace those records back to SDTM AE (`AESEQ`, `AESPID`) and the raw EDC rows"
+      - "Report findings with record-level evidence and route any source-data issue to data management"
+    hints:
+      - "Start by making sure you are looking at the same output everyone else is looking at."
+      - "Work backwards one layer at a time: TLF → ADaM → SDTM → raw."
+    solution: |
+      Pin down the version first (many 'discrepancies' are two different data cuts), then reproduce the cell from ADaM, check the derivations that drive inclusion, and only then trace to SDTM and raw. End with evidence and route source problems to their owner.
+
+  - id: trials.lifecycle.fix-location
+    format: mcq
+    modes: [debug]
+    difficulty: intermediate
+    skills: [trials.lifecycle, trials.data-management]
+    lesson: trials-drug-development-lifecycle
+    title: Where should this be fixed?
+    prompt: |
+      While programming SDTM AE you find that 6 records have the verbatim term "Nausia" coded to the preferred term *Nausea*, and 2 records with verbatim "Nausia" were left **uncoded**. A colleague suggests adding `if AETERM = 'Nausia' then AEDECOD = 'Nausea';` to the SDTM program. What is the right action?
+    choices:
+      - text: "Report the uncoded terms to data management so they are coded in the coding system; do not hard-code dictionary terms in the SDTM program"
+        correct: true
+        feedback: "Coding is a data-management process with its own review. Hard-coding bypasses it, diverges from the source, and breaks on the next dictionary version or data transfer."
+      - text: "Add the IF statement; it produces the correct result"
+        feedback: "It may produce the right value today, but the fix lives outside the coding system, is invisible to data management and will silently diverge from source data."
+      - text: "Correct the verbatim term to 'Nausea' in AETERM"
+        feedback: "AETERM must keep the verbatim text exactly as collected; misspellings are resolved by coding, not by editing the verbatim."
+      - text: "Drop the 2 uncoded records from AE until the next transfer"
+        feedback: "Dropping collected AEs would under-report safety data. Every collected AE must appear in SDTM."
+    solution: |
+      Route the problem to its owner. Data management codes the two terms (the coder will likely match them to *Nausea*), the next transfer carries the coded values, and your program stays a pure mapping. If a deadline forces a temporary workaround, document it, get agreement, and log it for removal.
+    explanation:
+      objective: "Decide where in the lifecycle a data problem should be corrected."
+      given: "Two uncoded verbatim terms and a proposed code-level patch."
+      relevant: "Who owns coding (data management), and the rule that SDTM should be a traceable mapping of source data."
+      irrelevant: "Whether the IF statement is syntactically correct — it is, and that is why the shortcut is tempting."
+      method: "Apply the ownership principle: fix at the stage that produced the problem."
+      interpretation: "A hard-coded dictionary term is an undocumented derivation in a tabulation dataset — a traceability defect even when the value is right."
+      changes: "If the study were already locked and the issue discovered at the CSR stage, the team would document it (for example in the cSDRG) rather than silently patch it."
+      interviewer: "That you know the data-management process exists, respect ownership boundaries, and protect traceability."
+
+  - id: trials.lifecycle.interview-flow
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [trials.lifecycle, communication.interviewing]
+    lesson: trials-drug-development-lifecycle
+    title: The data flow question
+    prompt: |
+      **Interviewer:** "Walk me through how clinical trial data get from the patient to the clinical study report. Where does a statistical programmer fit?"
+    modelAnswer: |
+      The protocol defines objectives, endpoints and the schedule of assessments. Data management designs the eCRF and edit checks from it; sites enter data in EDC, and vendors transfer lab and randomization data. Data management cleans the data with queries, codes AEs and medications, reconciles SAEs and IxRS data, and locks the database.
+
+      Programmers map the data to SDTM using the SDTM specification and annotated CRF, then derive ADaM datasets such as ADSL, ADAE and ADTTE following the ADaM specification. From ADaM we produce the tables, listings and figures defined by the SAP and shells; a second programmer independently reproduces each output for QC. The outputs feed the CSR, and the datasets plus define.xml and reviewer guides form the study data package. Traceability is the thread: every number in the CSR can be traced back through ADaM and SDTM to the CRF.
+    rubric:
+      - Names the stages in the right order (protocol, CRF/EDC, data management, SDTM, ADaM, TLF, QC, CSR)
+      - Names at least three artifacts (aCRF, specs, SAP/shells, define.xml)
+      - Identifies owners (data manager, programmer, statistician)
+      - Mentions independent QC
+      - Mentions traceability
+    redFlags:
+      - "Says ADaM is built directly from raw data"
+      - "Describes QC as rerunning the same program"
+      - "Cannot say what SDTM is for"
+    followUps:
+      - "What would you do if a TLF count disagreed with the CSR text?"
+      - "Why are imputed dates kept out of SDTM?"
+
+  - id: trials.lifecycle.speed-cro
+    format: text
+    modes: [speed]
+    difficulty: foundation
+    skills: [trials.lifecycle]
+    lesson: trials-drug-development-lifecycle
+    title: Expand the acronym
+    prompt: |
+      A sponsor outsources data management and programming to a **CRO**. What does CRO stand for?
+    accept: ["Contract Research Organization", "Contract Research Organisation"]
+    acceptPatterns: ["^contract\\s+research\\s+organi[sz]ations?$"]
+    solution: |
+      Contract Research Organization — a company that performs trial activities (monitoring, data management, programming, statistics, writing) under contract to the sponsor, who keeps overall responsibility.

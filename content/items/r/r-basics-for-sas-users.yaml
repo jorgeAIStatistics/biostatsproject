@@ -1,0 +1,688 @@
+items:
+  - id: r.basics.na-comparison
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: intermediate
+    skills: [r.basics, r.sas-translation, qc.compare]
+    lesson: r-basics-for-sas-users
+    title: The same conditional, two answers
+    prompt: |
+      A subject has a **missing** age. Both programs derive an elderly flag:
+
+      ```text
+      SAS:  if age >= 65 then elderly = 'Y'; else elderly = 'N';
+      R:    elderly <- ifelse(age >= 65, "Y", "N")
+      ```
+
+      What value does that subject get in each?
+    choices:
+      - text: "SAS gives `'N'`; R gives `NA`."
+        correct: true
+        feedback: "A SAS missing numeric sorts below every real number, so the comparison is false and the record falls into the else. R propagates NA rather than resolving it."
+      - text: "Both give `'N'`."
+        feedback: "R's `NA >= 65` evaluates to `NA`, not `FALSE`, so `ifelse` returns `NA` for that element."
+      - text: "Both give `NA` or missing."
+        feedback: "SAS does not propagate. The comparison evaluates to false and the else branch runs, producing a definite 'N'."
+      - text: "SAS errors; R gives `NA`."
+        feedback: "SAS does not error on a missing value in a comparison — that is exactly what makes this dangerous."
+    solution: |
+      **SAS: `'N'`. R: `NA`.**
+
+      SAS represents a missing numeric as a value below every real number, so `age >= 65` is *false* and the record lands in the `else` branch — counted as "not elderly".
+
+      R returns `NA` from the comparison and `ifelse` passes it through.
+
+      **Neither is wrong**, and the difference decides how many subjects appear in a table cell. Which behaviour you want is a SAP decision — if missing age should count as not-elderly, say so and write it explicitly in both languages:
+
+      ```r
+      case_when(is.na(AGE) ~ NA_character_, AGE >= 65 ~ "Y", .default = "N")
+      ```
+    explanation:
+      objective: "Predict how each language handles a missing value in a comparison."
+      given: "A subject with a missing age and equivalent conditionals in SAS and R."
+      relevant: "Each language's representation of missing and its comparison semantics."
+      method: "SAS orders missing below all numbers, so comparisons resolve. R treats NA as unknown, so comparisons propagate."
+      assumptions: "SAS special missing values (.A to .Z) sort above plain . but still below every real number, so the behaviour is the same."
+      interpretation: "A definite answer derived from an unknown input is the dangerous outcome, and SAS produces it silently."
+      changes: "In pandas, NaN >= 65 is False, so a float column behaves like SAS; a nullable Int64 column propagates like R. The behaviour depends on the dtype."
+      interviewer: "That you can state both behaviours and frame the choice as a SAP decision rather than a language preference."
+
+  - id: r.basics.factor-levels
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [r.basics, stats.linear-regression]
+    lesson: r-basics-for-sas-users
+    title: Which arm becomes the reference
+    prompt: |
+      `TRT01P` is a character column with values `"Placebo"`, `"VTX-221 10 mg"` and `"VTX-221 20 mg"`.
+
+      You fit `lm(CHG ~ TRT01P + BASE, data = adsl)` **without** converting it to a factor first.
+
+      Which arm becomes the reference level?
+    choices:
+      - text: "Placebo — because it sorts first alphabetically, which is coincidence rather than intent."
+        correct: true
+        feedback: "Correct, and the word that matters is coincidence. R converts the character column to a factor with alphabetically sorted levels; 'P' happens to precede 'V'."
+      - text: "VTX-221 20 mg — R uses the last level as the reference."
+        feedback: "That is SAS PROC GLM's default. R uses the *first* level."
+      - text: "Whichever appears first in the data."
+        feedback: "`factor()` sorts levels alphabetically; it does not use order of appearance."
+      - text: "There is no reference level until you set one."
+        feedback: "R always has one — it is the first factor level, chosen for you if you do not choose."
+    solution: |
+      **Placebo**, because it sorts first alphabetically.
+
+      That is the right answer here and the wrong reason. The code works by accident, and it would break silently if an arm were renamed to something sorting before "Placebo" — `"Active 10 mg"`, say.
+
+      Set it explicitly, once, immediately after reading the data:
+
+      ```r
+      adsl$TRT01P <- factor(adsl$TRT01P,
+                            levels = c("Placebo", "VTX-221 10 mg", "VTX-221 20 mg"))
+      ```
+
+      Note the cross-language trap: **R uses the first level as the reference; SAS `PROC GLM` uses the last.** The same model in the two produces coefficients that look completely different while describing the same fit.
+    explanation:
+      objective: "Identify the reference level R chooses and why relying on it is unsafe."
+      given: "A character treatment column entering a linear model without explicit conversion."
+      relevant: "That R coerces character to factor with alphabetically sorted levels."
+      method: "The first factor level is the reference in R's treatment contrasts."
+      assumptions: "No contrast option has been set globally; the default contr.treatment applies."
+      interpretation: "The coefficients are differences from the reference, so the reference determines what every coefficient means."
+      changes: "Renaming an arm changes the alphabetical order and therefore the reference, with no error — which is why explicit levels are not optional."
+      interviewer: "That you note R and SAS PROC GLM pick opposite ends, since that is the practical cross-language consequence."
+
+  - id: r.basics.factor-to-number
+    format: numeric
+    modes: [check, debug, speed]
+    difficulty: intermediate
+    skills: [r.basics]
+    lesson: r-basics-for-sas-users
+    title: A factor of numbers
+    prompt: |
+      ```r
+      g <- factor(c("10", "2", "30"))
+      as.integer(g)
+      ```
+
+      What is the **first** element of the result?
+    answer: 1
+    tolerance: 0
+    hints:
+      - "A factor stores integer codes plus a levels attribute."
+      - "What order are the levels in? They are strings, so they sort as strings."
+      - "`levels(g)` gives \"10\" \"2\" \"30\" — string order, not numeric order."
+    solution: |
+      **1.**
+
+      The levels sort as *strings*: `"10"`, `"2"`, `"30"` — because `"1"` precedes `"2"` precedes `"3"` character by character. So `"10"` is level 1, `"2"` is level 2, `"30"` is level 3, and `as.integer(g)` returns `1 2 3`.
+
+      Those are the **internal codes**, not the values. The correct conversion goes via character:
+
+      ```r
+      as.numeric(as.character(g))   # 10 2 30
+      ```
+
+      **Why this survives review:** the codes are plausible small integers. A column that should hold 10, 2 and 30 showing 1, 2 and 3 looks like a different but not obviously wrong variable, and nothing errors.
+    explanation:
+      objective: "Predict the result of converting a factor of numeric strings to integer."
+      given: "A factor built from three numeric-looking strings."
+      relevant: "That levels are sorted as strings and that as.integer returns codes."
+      calculating: "The internal level code of the first element."
+      method: "levels(g) sorts lexically: '10' < '2' < '30'. The first element '10' is therefore code 1."
+      numbers: "as.integer(g) returns 1 2 3; the values were 10 2 30."
+      interpretation: "The result is a valid integer vector of the wrong quantity, which is what makes it dangerous."
+      changes: "as.numeric(as.character(g)) gives the values. In readr, specifying col_double() on import avoids the factor entirely."
+      interviewer: "That you know the idiom as.numeric(as.character(x)) and can say why the error is invisible in output."
+
+  - id: r.basics.bracket-types
+    format: mcq
+    modes: [check, debug]
+    difficulty: intermediate
+    skills: [r.basics]
+    lesson: r-basics-for-sas-users
+    title: Single versus double brackets
+    prompt: |
+      ```r
+      adsl <- read.csv("adsl.csv")   # a base data.frame
+
+      class(adsl[, "AGE"])
+      class(adsl[, c("AGE", "SEX")])
+      ```
+
+      What do the two lines return?
+    choices:
+      - text: "`\"integer\"` and `\"data.frame\"` — one column drops to a vector, two stay a data frame."
+        correct: true
+        feedback: "Correct. `[` on a base data.frame drops to the lower dimension when the result has one column. This is why a function expecting a data frame breaks when given a single-column selection."
+      - text: "Both return `\"data.frame\"`."
+        feedback: "That is tibble behaviour. Base `data.frame` drops by default."
+      - text: "Both return the column type."
+        feedback: "Selecting two columns of different types cannot return a single vector type."
+      - text: "`\"data.frame\"` and `\"list\"`."
+        feedback: "A data frame *is* a list internally, but `class()` reports `\"data.frame\"`."
+    solution: |
+      **`"integer"` and `"data.frame"`.**
+
+      Base `data.frame` indexing has `drop = TRUE` by default: when the result has exactly one column, it drops to a vector. With two columns there is nothing to drop to, so it stays a data frame.
+
+      **The same syntax returns different types depending on the data**, which is exactly the property that breaks code downstream.
+
+      Three ways to be explicit:
+
+      ```r
+      adsl[, "AGE", drop = FALSE]   # always a data frame
+      adsl[["AGE"]]                 # always a vector
+      tibble::as_tibble(adsl)[, "AGE"]   # tibbles never drop
+      ```
+    explanation:
+      objective: "Predict the type returned by data frame indexing."
+      given: "Two selections from a base data.frame, one column and two."
+      relevant: "The drop argument's default value of TRUE for base data frames."
+      method: "A result with a single column is simplified to a vector; multiple columns cannot be."
+      interpretation: "Type depends on how many columns matched, so the same line behaves differently as the data changes."
+      changes: "Tibbles set drop = FALSE always, which is one of the main reasons to prefer them in pipelines."
+      interviewer: "That you know drop = FALSE and can explain why tibbles changed the behaviour."
+
+  - id: r.basics.coercion
+    format: mcq
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [r.basics, r.import]
+    lesson: r-basics-for-sas-users
+    title: One text value in a numeric column
+    prompt: |
+      A lab results column in a CSV holds `5.2`, `6.1`, `4.8` and, on row 3,481, the text `NOT DONE`.
+
+      You read it with `read.csv()`. What type is the column, and what does `mean()` return?
+    choices:
+      - text: "Character, and `mean()` returns `NA` with a warning about coercion."
+        correct: true
+        feedback: "A vector holds one type, so the whole column becomes character. `mean()` on a character vector warns and returns NA."
+      - text: "Numeric, with `NOT DONE` read as `NA`."
+        feedback: "`read.csv` does not treat arbitrary text as missing. Only values listed in `na.strings` become NA, and `NOT DONE` is not in the default list."
+      - text: "Numeric, with `NOT DONE` read as 0."
+        feedback: "R never silently converts text to zero."
+      - text: "The read fails with an error."
+        feedback: "It succeeds. That is the problem — the failure is silent and surfaces later."
+    solution: |
+      **Character**, and `mean()` returns `NA` with a coercion warning.
+
+      An R vector holds exactly one type, so a single text value forces the entire column to character. The read succeeds, nothing looks wrong, and the failure appears thousands of rows later when a summary returns `NA`.
+
+      **Two fixes, and the second is better:**
+
+      ```r
+      # Treat the value as missing on import
+      readr::read_csv("labs.csv", na = c("", "NA", "NOT DONE"))
+
+      # Better: declare the type and inspect what failed
+      d <- readr::read_csv("labs.csv", col_types = readr::cols(LBSTRESN = readr::col_double()))
+      readr::problems(d)   # lists every value that would not parse
+      ```
+
+      `problems()` is the important habit: it tells you *which* values failed rather than leaving you to find them. And in clinical data those values are usually meaningful — `NOT DONE`, `<0.1`, `QNS` — so they belong in a character `LBSTRESC` rather than being discarded.
+    explanation:
+      objective: "Predict and diagnose silent type coercion on import."
+      given: "A numeric column containing one text value."
+      relevant: "That an atomic vector holds a single type."
+      method: "Combining types promotes the whole vector to the most general one — here character."
+      assumptions: "read.csv's default na.strings covers only 'NA' and empty strings."
+      interpretation: "The import succeeds and the failure appears far downstream, which is the worst combination."
+      changes: "readr's col_types plus problems() turns a silent coercion into an explicit report of which rows failed."
+      interviewer: "That you reach for declared column types rather than post-hoc cleaning, and that you know clinical non-numeric results are meaningful rather than noise."
+
+  - id: r.basics.na-count
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: foundation
+    skills: [r.basics, qc.data-cleaning]
+    lesson: r-basics-for-sas-users
+    title: Summarise without hiding the missing values
+    minutes: 10
+    prompt: |
+      Write `safe_summary(x)` for a numeric vector, returning a named vector with:
+
+      - `n` — the number of **non-missing** values
+      - `n_missing` — how many were missing
+      - `mean`, `sd` — computed on the non-missing values
+      - `pct_missing` — missing as a percentage of the total, to one decimal
+
+      The point is that `na.rm = TRUE` silences a problem; reporting the count tells you how big it was.
+    starter: |
+      safe_summary <- function(x) {
+        n_total   <- ___
+        n_missing <- ___
+        n         <- ___
+
+        c(n = n, n_missing = n_missing, mean = ___, sd = ___,
+          pct_missing = ___)
+      }
+    reference: |
+      safe_summary <- function(x) {
+        n_total   <- length(x)
+        n_missing <- sum(is.na(x))
+        n         <- n_total - n_missing
+
+        c(n           = n,
+          n_missing   = n_missing,
+          mean        = mean(x, na.rm = TRUE),
+          sd          = sd(x, na.rm = TRUE),
+          pct_missing = round(100 * n_missing / n_total, 1))
+      }
+    hints:
+      - "`is.na(x)` returns a logical vector; `sum()` of it counts the TRUEs."
+      - "Never use `x == NA` — it returns NA for every element."
+      - "`mean()` and `sd()` both need `na.rm = TRUE` or a single NA returns NA for the whole vector."
+    checks:
+      - pattern: "sum\\s*\\(\\s*is\\.na\\s*\\(\\s*x\\s*\\)\\s*\\)"
+        message: "Counts missing values with sum(is.na(x))"
+      - pattern: "na\\.rm\\s*=\\s*TRUE"
+        message: "Passes na.rm = TRUE so a single NA does not blank the summary"
+      - pattern: "length\\s*\\(\\s*x\\s*\\)"
+        message: "Uses the total length to compute the missing percentage"
+      - pattern: "round\\s*\\("
+        message: "Rounds the percentage"
+    expectedOutput: |
+      ```text
+                n   n_missing        mean          sd pct_missing
+         270.0000      0.0000     55.7111     10.0381      0.0000
+      ```
+    solution: |
+      ```r
+      safe_summary <- function(x) {
+        n_total   <- length(x)
+        n_missing <- sum(is.na(x))
+        c(n           = n_total - n_missing,
+          n_missing   = n_missing,
+          mean        = mean(x, na.rm = TRUE),
+          sd          = sd(x, na.rm = TRUE),
+          pct_missing = round(100 * n_missing / n_total, 1))
+      }
+      ```
+
+      **Why `n` and `n_missing` both belong in the output.** `na.rm = TRUE` makes the summary succeed but changes the denominator, and a mean over 240 of 270 subjects is a different statistic from a mean over all 270. Reporting both makes that visible to whoever reads the number.
+
+      This is also the R answer to a SAS habit: `PROC MEANS` prints `N` and `NMiss` side by side by default, and the equivalent in R is something you have to write.
+    explanation:
+      objective: "Build a summary that reports its own denominator rather than hiding it."
+      given: "A numeric vector that may contain missing values."
+      relevant: "The distinction between the total length and the non-missing count."
+      method: "Count missing explicitly with sum(is.na(x)); use na.rm on the statistics; report both counts."
+      assumptions: "Complete-case summarisation is appropriate, which is a decision the SAP should state rather than the code make silently."
+      computation: "length(x) is the total; sum(is.na(x)) the missing; their difference the usable n."
+      interpretation: "A mean over a reduced denominator is a different statistic, and the reader needs to know the denominator."
+      changes: "PROC MEANS prints N and NMiss by default; R requires you to ask, which is why this wrapper is worth having."
+      interviewer: "That you treat na.rm as something to report rather than something to apply and forget."
+
+  - id: r.basics.set-levels
+    format: code
+    language: r
+    modes: [guided, independent, qc]
+    difficulty: intermediate
+    skills: [r.basics, tlf.demographics]
+    lesson: r-basics-for-sas-users
+    title: Make the treatment column safe for modelling
+    minutes: 10
+    prompt: |
+      Write `prepare_trt(data, arms)` that:
+
+      1. Converts `data$TRT01P` to a factor with levels **exactly** in the order given by `arms`.
+      2. **Errors** if any value in the column is not in `arms` — an unexpected arm value must not become `NA` silently.
+      3. Returns the modified data.
+
+      Step 2 is the point. `factor()` turns any value not in `levels` into `NA` without warning, which is how a whole treatment arm silently disappears from a table.
+    starter: |
+      prepare_trt <- function(data, arms) {
+        unexpected <- ___
+
+        if (___) {
+          stop(___)
+        }
+
+        data$TRT01P <- factor(___)
+        data
+      }
+    reference: |
+      prepare_trt <- function(data, arms) {
+        unexpected <- setdiff(unique(data$TRT01P), arms)
+
+        if (length(unexpected) > 0) {
+          stop("Unexpected treatment value(s): ",
+               paste(unexpected, collapse = ", "))
+        }
+
+        data$TRT01P <- factor(data$TRT01P, levels = arms)
+        data
+      }
+    hints:
+      - "`setdiff(unique(x), arms)` gives the values present in the data but not in your expected list."
+      - "`length(unexpected) > 0` is the condition; `stop()` raises the error."
+      - "Include the offending values in the message — an error that does not say what was wrong wastes the next person's time."
+    checks:
+      - pattern: "setdiff\\s*\\("
+        message: "Finds values present in the data but not in the expected list"
+      - pattern: "stop\\s*\\("
+        message: "Fails loudly rather than letting values become NA"
+      - pattern: "paste\\s*\\("
+        message: "Includes the offending values in the error message"
+      - pattern: "factor\\s*\\(\\s*data\\$TRT01P\\s*,\\s*levels\\s*=\\s*arms\\s*\\)"
+        message: "Sets the factor levels explicitly in the supplied order"
+    expectedOutput: |
+      ```text
+      > adsl <- prepare_trt(adsl, c("Placebo", "VTX-221 10 mg", "VTX-221 20 mg"))
+      > levels(adsl$TRT01P)
+      [1] "Placebo"       "VTX-221 10 mg" "VTX-221 20 mg"
+
+      > prepare_trt(adsl, c("Placebo", "VTX-221 10 mg"))
+      Error in prepare_trt(adsl, c("Placebo", "VTX-221 10 mg")) :
+        Unexpected treatment value(s): VTX-221 20 mg
+      ```
+    solution: |
+      The validation is what makes this worth writing as a function rather than a line.
+
+      **`factor(x, levels = arms)` silently converts anything not in `arms` to `NA`.** A trailing space, a renamed arm, a typo in the SAP-derived level list — any of these makes a whole arm vanish from every downstream table, with no error and no warning. The subjects are still in the data frame; they are simply `NA` on treatment and get dropped by the first `group_by` or `lm`.
+
+      Checking with `setdiff` first turns a silent data loss into an error naming the offending value.
+
+      A production version would also check the reverse direction — an arm in `arms` with no subjects — because an empty arm usually means a filter ran earlier than intended.
+    explanation:
+      objective: "Set factor levels safely, failing loudly on unexpected values."
+      given: "A data frame with a character treatment column and an expected arm list."
+      relevant: "That factor() maps unmatched values to NA without warning."
+      method: "Compare the observed distinct values against the expected list before converting."
+      assumptions: "The arm list comes from the SAP or the protocol, so a mismatch indicates either a data problem or a stale list — both worth an error."
+      computation: "setdiff(unique(x), arms) returns exactly the values that would become NA."
+      interpretation: "An arm silently becoming NA removes those subjects from every grouped summary, changing denominators everywhere."
+      changes: "Checking the reverse direction catches an arm with zero subjects, which usually means a filter ran too early."
+      interviewer: "That you validate before converting, since the failure mode here is silent data loss rather than an error."
+
+  - id: r.basics.summary-code
+    format: code
+    language: r
+    modes: [independent, guided]
+    difficulty: intermediate
+    skills: [r.basics, r.dplyr, tlf.demographics]
+    lesson: r-basics-for-sas-users
+    title: A by-arm baseline summary
+    minutes: 12
+    prompt: |
+      Write `baseline_summary(adsl)` returning one row per treatment arm with `n`, `mean_age`,
+      `sd_age`, `n_female` and `pct_female`.
+
+      Requirements:
+
+      - Restrict to the ITT population (`ITTFL == "Y"`).
+      - Handle missing ages without letting them blank the summary.
+      - Return the rows in **factor level order**, not the order the arms happen to appear in the data.
+
+      That last requirement is the one people miss: `.by` returns groups in order of first appearance, not in level order.
+    starter: |
+      library(dplyr)
+
+      baseline_summary <- function(adsl) {
+        adsl |>
+          filter(___) |>
+          summarise(
+            # your summaries
+            .by = TRT01P
+          ) |>
+          arrange(___)
+      }
+    reference: |
+      library(dplyr)
+
+      baseline_summary <- function(adsl) {
+        adsl |>
+          filter(ITTFL == "Y") |>
+          summarise(
+            n          = dplyr::n(),
+            mean_age   = mean(AGE, na.rm = TRUE),
+            sd_age     = sd(AGE, na.rm = TRUE),
+            n_female   = sum(SEX == "F", na.rm = TRUE),
+            pct_female = 100 * sum(SEX == "F", na.rm = TRUE) / dplyr::n(),
+            .by        = TRT01P
+          ) |>
+          arrange(TRT01P)
+      }
+    hints:
+      - "`dplyr::n()` counts rows in the group; qualify it because `n` is also a common variable name."
+      - "`sum(SEX == \"F\", na.rm = TRUE)` counts, because a logical sums as 0/1. Without `na.rm` a missing SEX blanks the cell."
+      - "`arrange(TRT01P)` on a factor sorts by level order, which is why setting the levels earlier matters."
+    checks:
+      - pattern: "filter\\s*\\(\\s*ITTFL\\s*==\\s*[\"']Y[\"']"
+        message: "Restricts to the ITT population"
+      - pattern: "na\\.rm\\s*=\\s*TRUE"
+        message: "Handles missing values in the summaries"
+      - pattern: "sum\\s*\\(\\s*SEX\\s*==\\s*[\"']F[\"']"
+        message: "Counts females by summing a logical"
+      - pattern: "\\.by\\s*=\\s*TRT01P|group_by\\s*\\(\\s*TRT01P"
+        message: "Groups by treatment arm"
+      - pattern: "arrange\\s*\\(\\s*TRT01P\\s*\\)"
+        message: "Sorts the output by factor level order"
+    expectedOutput: |
+      ```text
+             TRT01P  n mean_age   sd_age n_female pct_female
+      1       Placebo 91 56.72527  9.775327       47   51.64835
+      2 VTX-221 10 mg 90 54.90000 10.393440       41   45.55556
+      3 VTX-221 20 mg 89 55.49438  9.962570       39   43.82022
+      ```
+    solution: |
+      ```r
+      baseline_summary <- function(adsl) {
+        adsl |>
+          filter(ITTFL == "Y") |>
+          summarise(
+            n          = dplyr::n(),
+            mean_age   = mean(AGE, na.rm = TRUE),
+            sd_age     = sd(AGE, na.rm = TRUE),
+            n_female   = sum(SEX == "F", na.rm = TRUE),
+            pct_female = 100 * sum(SEX == "F", na.rm = TRUE) / dplyr::n(),
+            .by        = TRT01P
+          ) |>
+          arrange(TRT01P)
+      }
+      ```
+
+      The results match the study's R-computed facts: 91 / 90 / 89 subjects, mean ages 56.7 / 54.9 / 55.5, and 47 / 41 / 39 female (51.6% / 45.6% / 43.8%).
+
+      **Three things this encodes that a shorter version would not:**
+
+      The `arrange(TRT01P)` — because `.by` returns groups in order of first appearance in the data, not in factor level order. Without it your table's rows are in whatever order subject 1's arm happened to be.
+
+      The `na.rm` on every statistic — one missing age otherwise blanks the whole cell.
+
+      The percentage denominator is `dplyr::n()`, the group size. Whether that is the right denominator is a SAP question; making it visible is a code-quality one.
+    explanation:
+      objective: "Produce a by-arm baseline summary whose ordering and missing handling are explicit."
+      given: "An ADSL data frame with a factor treatment column."
+      relevant: "The population filter, the missing-value handling and the row ordering."
+      method: "Filter, summarise with .by, then arrange by the factor to impose level order."
+      numbers: "Placebo n = 91, mean age 56.73, 47 female (51.6%); 10 mg n = 90, 54.90, 41 (45.6%); 20 mg n = 89, 55.49, 39 (43.8%)."
+      assumptions: "ITT is the correct population for a demographics table, and complete-case summarisation of age is acceptable."
+      computation: "sum() of a logical counts TRUEs because TRUE coerces to 1."
+      interpretation: "Row order in an output table is not cosmetic — it has to match the shell."
+      changes: "Replacing .by with group_by() would sort by level automatically but leave the result grouped, which silently changes what later verbs do."
+      interviewer: "That you add the arrange without being told, since .by's ordering behaviour is a known trap."
+
+  - id: r.basics.silent-drop
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [r.basics, r.joins, qc.discrepancy]
+    lesson: r-basics-for-sas-users
+    title: Thirty-two subjects vanished
+    minutes: 10
+    prompt: |
+      This QC program should summarise **all 270 ITT subjects** by treatment arm. It reports **238**,
+      with no error and no warning.
+
+      `adsl` has 270 ITT subjects. `advs` holds Week 12 systolic BP for the 238 subjects who had a
+      Week 12 assessment — 32 subjects discontinued before it.
+
+      Click the line that loses them.
+    code: |
+      library(dplyr)
+
+      w12 <- advs |>
+        filter(PARAMCD == "SYSBP", AVISITN == 12)
+
+      summary_tbl <- adsl |>
+        filter(ITTFL == "Y") |>
+        inner_join(w12, by = "USUBJID") |>
+        summarise(n = dplyr::n(), .by = TRT01P)
+
+      sum(summary_tbl$n)
+    answerLines: [8]
+    lineNotes:
+      - line: 8
+        note: "`inner_join` keeps only subjects present in BOTH tables, so the 32 ITT subjects with no Week 12 record are dropped. If the summary is meant to cover the ITT population, this must be a `left_join` — and the subjects without a Week 12 value then carry `NA`, which is the honest representation."
+      - line: 4
+        note: "Filtering ADVS to the Week 12 systolic records is intended. It is what makes the join lose subjects, but it is not the defect."
+      - line: 7
+        note: "The ITT filter is correct and keeps all 270 subjects — the loss happens on the next line."
+    fixed: |
+      library(dplyr)
+
+      w12 <- advs |>
+        filter(PARAMCD == "SYSBP", AVISITN == 12)
+
+      summary_tbl <- adsl |>
+        filter(ITTFL == "Y") |>
+        left_join(w12, by = "USUBJID", relationship = "one-to-one") |>
+        summarise(n            = dplyr::n(),
+                  n_with_week12 = sum(!is.na(AVAL)),
+                  .by = TRT01P)
+
+      stopifnot(sum(summary_tbl$n) == sum(adsl$ITTFL == "Y"))
+    hints:
+      - "The count is short by exactly 32 — the number of ITT subjects with no Week 12 record. Which line could remove them?"
+      - "What does `inner_join` keep that `left_join` does not?"
+      - "Is the denominator of this table supposed to be the ITT population, or the subjects with data?"
+    solution: |
+      **Line 8.** `inner_join` keeps only subjects present in both tables, silently dropping the 32 ITT
+      subjects who discontinued before Week 12.
+
+      **Why this matters more than it looks.** The choice between `inner_join` and `left_join` here *is*
+      the choice between an observed-case and an ITT denominator — a missing-data decision that belongs
+      in the SAP, not in a join verb. A table reporting "n = 238" where the shell says ITT has a wrong
+      denominator in every cell, and every percentage computed from it is too high.
+
+      The fixed version keeps all 270 and reports both counts, so the reader can see how many subjects
+      contributed data. The `stopifnot` is the general defence: **assert that the total matches the
+      population**, because this class of loss produces no error and every individual number stays
+      internally consistent.
+
+      Note also the `relationship = "one-to-one"`: if ADVS contained two Week 12 records for a subject,
+      a plain `left_join` would duplicate them and inflate the count instead. Declaring the expected
+      relationship turns that into an error.
+    explanation:
+      objective: "Find a silent row loss caused by a join type."
+      given: "A QC count of 238 against an ITT population of 270, and 32 subjects without a Week 12 record."
+      relevant: "That inner_join requires a match on both sides."
+      irrelevant: "The PARAMCD and visit filters, which are intended."
+      method: "A discrepancy equal to the number of subjects missing from one table points at the join."
+      numbers: "270 ITT subjects; 238 with a Week 12 SYSBP record; 270 - 238 = 32."
+      assumptions: "The join type encodes a missing-data decision — observed cases versus ITT — which the SAP should specify."
+      interpretation: "Every percentage computed against 238 rather than 270 is too high, while each individual count looks correct."
+      changes: "A left_join keeps all 270 and produces NA for the missing values, which is the honest representation and lets the SAP's imputation rule be applied deliberately."
+      interviewer: "That you connect the join type to the estimand rather than treating it as a technical detail, and that you assert the row count."
+
+  - id: r.basics.sas-translation
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: advanced
+    skills: [r.sas-translation, r.dplyr]
+    lesson: r-basics-for-sas-users
+    title: Translating a RETAIN pattern
+    prompt: |
+      A SAS programmer translates this DATA step to R:
+
+      ```text
+      data cum;
+        set doses;
+        by usubjid;
+        if first.usubjid then total = 0;
+        total + exdose;
+      run;
+      ```
+
+      Which R approach is correct **and** idiomatic?
+    choices:
+      - text: "`doses |> group_by(USUBJID) |> mutate(total = cumsum(EXDOSE))` — a grouped window function."
+        correct: true
+        feedback: "Correct. `cumsum` within a group is exactly what RETAIN plus the reset at `first.` achieves, and it vectorises rather than looping."
+      - text: "A `for` loop over rows, tracking a running total and resetting when USUBJID changes."
+        feedback: "It produces the right answer and is the wrong instinct — slow, hard to review, and it translates SAS's implementation rather than its intent."
+      - text: "`doses |> mutate(total = cumsum(EXDOSE))` without grouping."
+        feedback: "This accumulates across subject boundaries, which is precisely what the `if first.usubjid then total = 0` prevents."
+      - text: "`doses |> group_by(USUBJID) |> summarise(total = sum(EXDOSE))`"
+        feedback: "That gives one total per subject. The DATA step produces a running total on *every* row, which is a different result."
+    solution: |
+      ```r
+      doses |>
+        arrange(USUBJID, EXSTDT) |>
+        mutate(total = cumsum(EXDOSE), .by = USUBJID)
+      ```
+
+      The `RETAIN`-plus-reset idiom is a **cumulative window function within a group**. R has one, so use it.
+
+      **Why the loop is the wrong instinct even though it works.** The DATA step loops because that is how SAS processes data, not because looping is the intent. The intent is "running total, restarting per subject". Translating the mechanism rather than the intent produces R that is slower, longer and harder for a reviewer to check — and this is the single most common way a SAS programmer writes bad R.
+
+      The wider mapping worth memorising:
+
+      | SAS DATA step idiom | R equivalent |
+      |---|---|
+      | `RETAIN` + reset at `first.` | `cumsum()`, `cummax()` within a group |
+      | `LAG(x)` | `dplyr::lag(x)` — but see the note below |
+      | `if last.usubjid then output` | `slice_tail(n = 1, by = ...)` |
+      | `if first.usubjid` | `row_number() == 1` within a group |
+
+      **The `LAG` caveat:** SAS's `LAG()` is a queue of values from previous *executions* of the statement, so a `LAG` inside a conditional does not do what it looks like. `dplyr::lag()` is a straightforward positional shift. They agree only when the SAS `LAG` is executed unconditionally on every row.
+    explanation:
+      objective: "Translate a DATA step pattern into idiomatic R rather than transliterating it."
+      given: "A RETAIN-based running total that resets per subject."
+      relevant: "That the intent is a grouped cumulative sum."
+      method: "Identify what the SAS idiom accomplishes, then use R's native construct for that, rather than reproducing the row-by-row mechanism."
+      assumptions: "The data must be sorted within subject for cumsum to be meaningful, just as the DATA step required a prior PROC SORT."
+      interpretation: "A running total appears on every row; a group summary appears once per subject. They are different outputs."
+      changes: "SAS's LAG() is a queue tied to statement execution, so a conditional LAG has no direct dplyr::lag equivalent — that translation needs care."
+      interviewer: "That you translate intent rather than mechanism, and that you can name the LAG discrepancy as the one that does not map cleanly."
+
+  - id: r.basics.types-open
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [r.basics, r.sas-translation, communication.interviewing]
+    lesson: r-basics-for-sas-users
+    title: The first week in R
+    prompt: |
+      **Interviewer:** "You've been a SAS programmer for two years and we'd want you writing QC programs in R. What do you expect to find hardest, and how would you protect against it?"
+    modelAnswer: |
+      I'd name specific traps rather than saying "the syntax", because syntax is a week and semantics is where the bugs are.
+
+      **Missing values, first.** In SAS a missing numeric sorts below every number, so `if x > 3` is false for a missing value and the record lands in the else — a definite answer derived from an unknown input. R returns `NA` and propagates it. So the same derivation puts subjects in different table cells in the two languages, and neither warns you. When a QC count differs from production by exactly the number of subjects with missing data, that is almost always the cause. My protection is to write the missing branch explicitly in both languages — `case_when(is.na(x) ~ NA_character_, ...)` — so the SAP's rule is visible rather than inherited from a default.
+
+      **Factors, second.** The level order determines the reference level in every model and the column order in every table, and it is alphabetical unless you set it. That means code can work by coincidence and break when an arm is renamed. I'd set `factor(levels = ...)` immediately after reading the data, every time, and I'd validate that no value falls outside the expected list — because `factor()` turns unmatched values into `NA` silently, which loses a whole arm.
+
+      **Vectorisation, third** — but as a habit rather than a trap. The DATA step loops and R does not, so a `RETAIN` pattern becomes a grouped `cumsum` rather than a `for` loop. Writing the loop produces R that works and that nobody wants to review.
+
+      **How I'd protect against all of it:** assertions. Before any summary I check the grain — the row count against the distinct subject count — and after it I check the total against the population size from ADSL. Most of these failures are silent, so the only reliable defence is to state what you expect and let the code fail when it is not true.
+
+      And honestly, I'd expect the first few QC discrepancies I find to be my own errors rather than production's. That is normal, and a QC programmer who has never written a finding against their own program probably is not reading the spec closely enough.
+    rubric:
+      - Names missing-value semantics as the primary difference, with the direction of each language's behaviour
+      - Explains why the discrepancy count equals the number of missing values
+      - Raises factor level ordering and its effect on reference levels and column order
+      - Notes that factor() silently converts unmatched values to NA
+      - Distinguishes vectorisation as a style issue from the semantic traps
+      - Proposes assertions as the general defence against silent failures
+      - Shows appropriate humility about QC findings against their own work
+    redFlags:
+      - "Says the syntax is the hard part and stops there"
+      - "Cannot state what SAS does with a missing value in a comparison"
+      - "Proposes writing loops to mirror the DATA step"
+      - "Does not mention any verification habit"

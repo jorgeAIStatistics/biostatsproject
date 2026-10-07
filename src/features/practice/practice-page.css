@@ -1,0 +1,82 @@
+.practice-page {
+  max-width: 980px;
+}
+.practice-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+.practice-head__title {
+  font-size: var(--text-xl);
+  letter-spacing: -0.02em;
+}
+.practice-head__progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  width: 220px;
+}
+.practice-head__progress .progress {
+  width: 100%;
+}
+.practice-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: var(--space-4);
+}
+.practice-dots__dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.practice-dots__dot:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.practice-dots__dot.is-current {
+  border-color: var(--accent);
+  color: var(--accent-text);
+  box-shadow: var(--ring);
+}
+.practice-dots__dot.is-right {
+  background: var(--success-soft);
+  border-color: color-mix(in srgb, var(--success) 50%, transparent);
+  color: var(--success-text);
+}
+.practice-dots__dot.is-wrong {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  color: var(--danger-text);
+}
+.practice-dots__dot.is-known {
+  border-style: dashed;
+  border-color: var(--success);
+}
+.practice-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: var(--space-4);
+}
+.session-summary li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+}
+.mode-card {
+  min-height: 118px;
+}
+.mode-card.is-empty {
+  opacity: 0.6;
+}

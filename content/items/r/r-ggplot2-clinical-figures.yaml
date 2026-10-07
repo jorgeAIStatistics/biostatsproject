@@ -1,0 +1,858 @@
+items:
+  - id: r.ggplot.scale-vs-coord
+    format: mcq
+    modes: [check, debug, qc]
+    difficulty: intermediate
+    skills: [r.ggplot, tlf.figures, qc.discrepancy]
+    lesson: r-ggplot2-clinical-figures
+    title: Why the box plot changed shape
+    prompt: |
+      A reviewer asks for the outliers to be cropped on a change-from-baseline box plot. The programmer adds
+      `+ ylim(-30, 10)` and the console prints:
+
+      ```text
+      Warning message:
+      Removed 27 rows containing non-finite outside the scale range
+      (`stat_boxplot()`).
+      ```
+
+      The placebo upper quartile in the figure is now **+2.6 mmHg**; the table beside it still says **+5.3**.
+
+      What happened?
+    choices:
+      - text: "`ylim()` sets a scale limit, which runs before `stat_boxplot()`, so the 27 out-of-range subjects were removed before the quartiles were computed."
+        correct: true
+        feedback: "Correct. Scales run before stats. `coord_cartesian(ylim = c(-30, 10))` zooms the viewport after the stat and leaves the quartiles alone."
+      - text: "The figure and the table use different quartile definitions — type 7 versus SAS's default."
+        feedback: "A quartile-definition difference is real (R type 7 vs SAS's QNTLDEF=5) but it would not produce a warning about removed rows, and it would move the value by a fraction, not by 2.7 mmHg."
+      - text: "`ylim()` only affects the display; the warning is about missing CHG values in the source data."
+        feedback: "The warning says the rows were removed *outside the scale range*, not that they were already missing. A scale limit genuinely filters."
+      - text: "The box plot is drawn from the plotted points, so cropping the axis necessarily crops the box."
+        feedback: "It is not necessary — `coord_cartesian()` crops the view while the box is still computed from every row. The behaviour depends on which layer you used."
+    solution: |
+      **`ylim()` is a filter, not a zoom.**
+
+      ggplot2 evaluates the specification in a fixed order, and **scales run before stats**:
+
+      $$\text{data} \rightarrow \text{aes} \rightarrow \textbf{scale} \rightarrow \textbf{stat} \rightarrow \text{geom} \rightarrow \textbf{coord} \rightarrow \text{theme}$$
+
+      A value outside the scale limits has no position, becomes `NA`, and never reaches `stat_boxplot()`.
+
+      | | Rows the stat sees | Placebo Q1 / median / Q3 |
+      |---|---|---|
+      | all 238 records | 238 | −11.7 / −4.3 / **+5.3** |
+      | `+ ylim(-30, 10)` | 211 | −12.25 / −5.0 / **+2.6** |
+      | `+ coord_cartesian(ylim = c(-30, 10))` | 238 | −11.7 / −4.3 / **+5.3** |
+
+      **The direction of the error is what makes it dangerous.** Trimming the extremes pulled the placebo
+      arm's upper quartile down by 2.7 mmHg, which makes the control arm look like it did better than it
+      did. Nobody intended that; the request was cosmetic.
+
+      The rule: **`coord_cartesian()` zooms, `scale_*(limits = )` subsets.** In clinical figures you almost
+      always want the first.
+    explanation:
+      objective: "Diagnose a figure/table discrepancy caused by a cosmetic axis change."
+      given: "A removed-rows warning, and a quartile in the figure that disagrees with the table."
+      relevant: "That ggplot2 applies scales before stats, so a scale limit removes rows from the computation."
+      irrelevant: "The quartile definition, which would produce a much smaller difference and no warning."
+      method: "Match the warning text to the layer it names — `stat_boxplot()` — and ask what that stat was given."
+      numbers: "27 of 238 records fell outside [-30, 10]; placebo Q3 moved from +5.3 to +2.6 mmHg."
+      interpretation: "The figure and the table are computed from different subsets, so both cannot be right."
+      changes: "`coord_cartesian(ylim = ...)` gives the same viewport with the original quartiles."
+      interviewer: "That you know a scale limit filters, and that you check the direction of the resulting bias rather than just fixing the code."
+
+  - id: r.ggplot.aes-constant
+    format: mcq
+    modes: [check, debug]
+    difficulty: foundation
+    skills: [r.ggplot, r.basics]
+    lesson: r-ggplot2-clinical-figures
+    title: The mysterious pink line
+    prompt: |
+      A programmer wants a grey reference line at zero and writes:
+
+      ```r
+      ggplot(chg, aes(AVISIT, mean)) +
+        geom_hline(aes(yintercept = 0, colour = "grey50")) +
+        geom_line()
+      ```
+
+      The line renders in a salmon-pink colour and a legend appears beside the panel with a single entry
+      reading `grey50`.
+
+      What is wrong?
+    choices:
+      - text: "`colour = \"grey50\"` is inside `aes()`, so the literal string is mapped to the colour scale as a one-level factor and gets the default palette's first colour."
+        correct: true
+        feedback: "Correct. Constants go outside `aes()`: `geom_hline(yintercept = 0, colour = \"grey50\")`."
+      - text: "`grey50` is not a valid R colour name; it should be `gray50`."
+        feedback: "Both spellings are valid R colour names. The problem is where the argument was placed, not how it was spelled."
+      - text: "`geom_hline()` does not accept a colour argument."
+        feedback: "It does. The issue is that this one was placed inside `aes()` and therefore treated as data."
+      - text: "The `aes()` in `ggplot()` overrides the one in `geom_hline()`."
+        feedback: "Layer aesthetics add to and override the plot-level ones, not the reverse."
+    solution: |
+      **`aes()` maps data to visual properties. Anything inside it is treated as data.**
+
+      `colour = "grey50"` inside `aes()` creates a hidden one-element character column whose only value is
+      the string `"grey50"`, maps it to the discrete colour scale, and gives it the first colour of
+      ggplot2's default hue palette — which is the salmon-pink you see. The legend is the scale announcing
+      itself.
+
+      ```r
+      geom_hline(yintercept = 0, colour = "grey50")   # set: a constant
+      geom_line(aes(colour = TRTP))                    # map: a column
+      ```
+
+      **The general test:** if the value would be the same no matter which row you looked at, it is a
+      setting and belongs outside `aes()`. If it varies by row, it is a mapping.
+
+      The same mistake with `size`, `shape` or `linetype` produces the same symptom — an unwanted legend
+      and a value you did not ask for — and the unwanted legend is usually what people notice first.
+    explanation:
+      objective: "Distinguish setting an aesthetic from mapping one."
+      given: "A reference line rendered in the wrong colour with a spurious single-entry legend."
+      relevant: "That the colour argument sits inside aes()."
+      method: "Anything inside aes() is interpreted as a column of data, even a bare string literal."
+      interpretation: "The legend entry reading 'grey50' is the diagnostic — a scale was created for a constant."
+      changes: "Moving the argument outside aes() removes the legend and uses the literal colour."
+      interviewer: "That you can state the rule — constant outside, column inside — rather than only recognising the symptom."
+
+  - id: r.ggplot.errorbar-meaning
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [r.ggplot, stats.descriptive, communication.visualization]
+    lesson: r-ggplot2-clinical-figures
+    title: What do the bars mean?
+    prompt: |
+      A by-visit figure shows a mean change of **−12.28 mmHg** at Week 12 with bars running from about
+      **−23.8 to −0.8**. The arm has **80** subjects and a standard deviation of **11.50**.
+
+      The figure's subtitle says only "mean change from baseline with error bars".
+
+      What are the bars, and why does it matter?
+    choices:
+      - text: "They are ± 1 SD — a description of how much subjects vary, not of how precisely the mean is estimated, and a reader will assume they are a confidence interval."
+        correct: true
+        feedback: "Correct. The half-width 11.50 is the SD exactly. The SE is 11.50/√80 = 1.29 and the 95% CI half-width is 2.56 — nine and four times narrower."
+      - text: "They are a 95% confidence interval for the mean."
+        feedback: "A 95% CI here would run from −14.84 to −9.72. The bars are much wider than that."
+      - text: "They are ± 1 standard error."
+        feedback: "The SE is 11.50/√80 = 1.29, so SE bars would run from −13.56 to −10.99 — far narrower than what is drawn."
+      - text: "They are the interquartile range."
+        feedback: "The IQR is a quantile-based spread that would not be symmetric around the mean; these bars are exactly ± 11.50."
+    solution: |
+      **The half-width is 11.50, which is the SD.**
+
+      $$\mathrm{SE} = \frac{s}{\sqrt{n}} = \frac{11.497}{\sqrt{80}} = 1.285
+      \qquad
+      \text{95\% CI half-width} = t_{0.975,\,79}\times\mathrm{SE} = 1.9905 \times 1.285 = 2.558$$
+
+      | Bar | Interval at Week 12, VTX-221 20 mg |
+      |---|---|
+      | ± 1 SD | −23.77 to −0.78 |
+      | ± 1 SE | −13.56 to −10.99 |
+      | 95% CI | −14.84 to −9.72 |
+
+      **They differ by a factor of nine, and neither is wrong.** SD describes how much *subjects* differ
+      from each other; SE and CI describe how precisely the *mean* is estimated.
+
+      A reader who assumes a confidence interval and sees SD bars overlapping the zero line will conclude
+      the effect is not established, which is the opposite of what the data shows. The fix is one clause in
+      the subtitle or footnote — `"error bars are +/- 1 standard error"` — not a different geom.
+
+      Efficacy figures conventionally show SE or a 95% CI; SD appears more often in safety and laboratory
+      figures where the spread of individual values is the point.
+    explanation:
+      objective: "Identify which dispersion measure a set of error bars represents and why it must be stated."
+      given: "A mean, an n, an SD and the drawn interval."
+      relevant: "That the half-width equals the SD exactly rather than SD/sqrt(n)."
+      calculating: "SE = 11.497/sqrt(80) = 1.285; CI half-width = 1.9905 x 1.285 = 2.558."
+      numbers: "SD bars span −23.77 to −0.78; SE bars −13.56 to −10.99; the 95% CI −14.84 to −9.72."
+      assumptions: "The t-based CI assumes approximate normality of the mean, reasonable at n = 80."
+      interpretation: "SD bars crossing zero say nothing about whether the mean differs from zero."
+      changes: "Naming the bars in the subtitle removes the ambiguity without changing the figure."
+      interviewer: "That you can compute all three from the same summary and say which convention an efficacy figure uses."
+
+  - id: r.ggplot.greyscale
+    format: mcq
+    modes: [check, qc]
+    difficulty: foundation
+    skills: [r.ggplot, communication.visualization, tlf.figures]
+    lesson: r-ggplot2-clinical-figures
+    title: The figure that failed on a photocopier
+    prompt: |
+      A two-arm Kaplan–Meier figure uses ggplot2's default colours and `aes(colour = arm)`. It is legible
+      on screen. Printed in black and white for the reviewer's binder, the two curves are indistinguishable.
+
+      What is the minimum change that fixes it, and why does the default palette make it worse?
+    choices:
+      - text: "Map the arm to `linetype` as well as `colour`, and take the colours from a palette whose entries differ in lightness — ggplot2's default hue scale picks colours of equal lightness, so they all become the same grey."
+        correct: true
+        feedback: "Correct. Redundant encoding fixes the greyscale problem; an Okabe-Ito or viridis palette fixes the colourblind one, and both are one extra line."
+      - text: "Increase the line width so the curves are easier to tell apart."
+        feedback: "Two equally thick grey lines are still two equally thick grey lines. Width would work only if it also differed between arms — which is redundant encoding again, just a poorer choice than linetype."
+      - text: "Use `scale_colour_grey()` so the figure is designed in greyscale from the start."
+        feedback: "That helps for print, but throws away colour for on-screen readers and still relies on a single channel. Redundant encoding keeps both."
+      - text: "Add direct labels at the end of each curve instead of a legend."
+        feedback: "Direct labelling is a genuine improvement to a KM figure, but it does not make the lines themselves distinguishable where they cross or run close together."
+    solution: |
+      **Two separate problems, one extra aesthetic mapping:**
+
+      ```r
+      ggplot(curve, aes(time, surv, colour = arm, linetype = arm)) + geom_step()
+      ```
+
+      **Greyscale.** Mapping the arm to `linetype` as well as `colour` means either channel alone identifies
+      the curve. A solid and a dashed line survive a photocopier, a grayscale printer and a monochrome PDF.
+      For points, `shape` plays the same role.
+
+      **Colour vision deficiency.** ggplot2's default `scale_colour_hue()` walks around a colour wheel at
+      **constant lightness and chroma**. That is what makes the palette look balanced on screen, and it is
+      exactly what makes every colour collapse to the same grey and what makes red–green pairs
+      indistinguishable to roughly 1 in 12 men.
+
+      Base R ships a colourblind-safe set:
+
+      ```r
+      palette.colors(palette = "Okabe-Ito")
+      #> "#000000" "#E69F00" "#56B4E9" "#009E73" "#F0E442" "#0072B2" "#D55E00" "#CC79A7" "#999999"
+      ```
+
+      Its entries vary in lightness as well as hue, so `scale_colour_manual(values = ...[c(6, 7)])` — blue
+      and vermilion — is distinguishable both in colour and in greyscale. `scale_colour_viridis_d()` is the
+      other common choice and has the same property.
+    explanation:
+      objective: "Make a two-arm figure readable in greyscale and to a colourblind reader."
+      given: "A figure that distinguishes arms by colour alone using ggplot2's default palette."
+      relevant: "That the default hue scale holds lightness constant across its colours."
+      method: "Redundant encoding — the same variable mapped to two channels — so either channel alone suffices."
+      assumptions: "Figures will be printed, photocopied or read by someone with a colour vision deficiency; all three are routine."
+      interpretation: "Colour is a convenience channel, not a reliable one."
+      changes: "`shape` replaces `linetype` for point geoms; viridis replaces Okabe-Ito when a continuous scale is needed."
+      interviewer: "That you name a specific safe palette rather than saying 'use colourblind-friendly colours'."
+
+  - id: r.ggplot.summarise-first
+    format: numeric
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [r.ggplot, stats.descriptive, r.dplyr]
+    lesson: r-ggplot2-clinical-figures
+    title: The error bar you are about to draw
+    prompt: |
+      You are drawing ± 1 standard error bars on a by-visit mean-change figure. At Week 8 the VTX-221 20 mg
+      arm has:
+
+      | | |
+      |---|---:|
+      | n (non-missing change) | 82 |
+      | mean change | −12.270 |
+      | SD | 10.185 |
+
+      What is the **half-width** of the error bar, to three decimal places?
+    answer: 1.125
+    tolerance: 0.003
+    unit: mmHg
+    hints:
+      - "A standard error is the standard deviation divided by the square root of the sample size."
+      - "$10.185 / \\sqrt{82}$."
+      - "$\\sqrt{82} = 9.0554$."
+    solution: |
+      $$\mathrm{SE} = \frac{s}{\sqrt{n}} = \frac{10.185}{\sqrt{82}} = \frac{10.185}{9.0554} = 1.125$$
+
+      So the bar runs from **−13.395 to −11.145**.
+
+      ```r
+      chg <- advs |>
+        filter(PARAMCD == "SYSBP", ANL01FL == "Y", AVISITN > 0) |>
+        summarise(n    = sum(!is.na(CHG)),
+                  mean = mean(CHG, na.rm = TRUE),
+                  se   = sd(CHG, na.rm = TRUE) / sqrt(sum(!is.na(CHG))),
+                  .by  = c(TRTP, AVISITN))
+      ```
+
+      **`sum(!is.na(CHG))`, not `n()`.** `n()` counts the rows that reached the summarise, including any
+      with a missing change. Using it would put a larger number under the square root and report an error
+      bar narrower than the data supports — and would also print the wrong denominator on the figure.
+
+      **Compute the summary first, then plot it.** The twelve-row data frame is what a QC programmer
+      compares against the corresponding table. A mean that exists only inside a `stat_summary()` layer
+      cannot be checked without redrawing the figure.
+    explanation:
+      objective: "Compute the quantity a standard-error bar actually draws."
+      given: "An n, a mean and a standard deviation for one arm at one visit."
+      relevant: "The SD and the n; the mean only positions the bar."
+      calculating: "The standard error of the mean."
+      numbers: "10.185 / sqrt(82) = 10.185 / 9.0554 = 1.125 mmHg."
+      assumptions: "n is the number of non-missing changes, which is also the number printed on the figure."
+      interpretation: "A bar from −13.40 to −11.15, about a ninth as wide as an SD bar would be."
+      changes: "Using `n()` instead of `sum(!is.na(CHG))` inflates n, narrows the bar and mislabels the denominator."
+      interviewer: "That you use the non-missing count for both the divisor and the printed n, and that they are the same number."
+
+  - id: r.ggplot.risk-table-n
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [r.ggplot, r.survival, tlf.denominators]
+    lesson: r-ggplot2-clinical-figures
+    title: How much of the curve is left
+    prompt: |
+      The number-at-risk table under the CBX417-301 PFS figure reads:
+
+      | Months | 0 | 3 | 6 | 9 | 12 | 15 | 18 | 21 | 24 |
+      |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+      | Placebo + Docetaxel | 210 | 115 | 63 | 37 | 28 | 23 | 11 | 6 | 4 |
+      | CBX-417 + Docetaxel | 210 | 125 | 92 | 65 | 40 | 32 | 20 | 11 | 7 |
+
+      A single additional progression in the placebo arm just after month 21 would drop that curve by what
+      fraction of its remaining height?
+
+      Give the answer as a percentage, to the nearest whole number.
+    answer: 17
+    tolerance: 1
+    unit: "%"
+    hints:
+      - "The Kaplan-Meier estimator multiplies the current survival by $(1 - d_j / n_j)$ at each event time."
+      - "How many subjects are at risk just after month 21?"
+      - "One event out of 6 at risk."
+    solution: |
+      **17%.** At month 21 the placebo arm has **6** subjects at risk, so one event multiplies the curve by
+
+      $$1 - \frac{d_j}{n_j} = 1 - \frac{1}{6} = 0.8333$$
+
+      — a **16.7%** drop in the remaining survival estimate, from one subject.
+
+      Compare month 3, where 115 are at risk and one event moves the curve by $1/115 = 0.87\%$.
+
+      **This is the entire argument for the number-at-risk table.** The curve's visual appearance carries no
+      information about how many subjects support it: a long flat stretch at the right-hand end looks like
+      a plateau and is usually just an absence of anyone left to have an event. A step of the same pixel
+      height near the origin represents a hundred times more evidence than one at month 21.
+
+      It is also why a KM figure normally stops before follow-up runs out — the axis is truncated at a
+      pre-specified horizon such as 24 months, and the tail beyond it is not drawn at all rather than drawn
+      on four subjects.
+    explanation:
+      objective: "Quantify how little evidence supports the tail of a Kaplan-Meier curve."
+      given: "A number-at-risk table at three-month intervals for two arms."
+      relevant: "The risk-set size at month 21, which is 6."
+      calculating: "The multiplicative drop from a single event: d/n."
+      numbers: "1/6 = 0.1667, so 16.7%, rounding to 17%. At month 3 the same event gives 1/115 = 0.87%."
+      assumptions: "The Kaplan-Meier estimator multiplies by (1 - d/n) at each event time, so the effect of one event depends entirely on the current risk set."
+      interpretation: "Steps of equal height on the figure represent very unequal amounts of evidence."
+      changes: "Truncating the x-axis at a pre-specified horizon avoids drawing a tail nobody should interpret."
+      interviewer: "That you connect the risk table to the estimator's arithmetic rather than describing it as a labelling convention."
+
+  - id: r.ggplot.forest-axis
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: intermediate
+    skills: [r.ggplot, stats.subgroups, communication.visualization]
+    lesson: r-ggplot2-clinical-figures
+    title: The subgroup that looks like nothing
+    prompt: |
+      A PFS subgroup forest plot is drawn on a **linear** x-axis with no n column. Two of its rows:
+
+      | Subgroup | n | Events | HR | 95% CI |
+      |---|---:|---:|---:|---|
+      | ECOG 2 | 15 | 15 | 0.997 | 0.348 to 2.858 |
+      | PD-L1 ≥ 50% | 94 | 75 | 0.506 | 0.315 to 0.811 |
+
+      Which criticism of the figure is the most serious?
+    choices:
+      - text: "A linear axis draws the ECOG 2 interval asymmetrically and makes its upper limit dominate the plot, while omitting n lets a reader treat an HR of 1.00 from 15 subjects as evidence of no effect in that subgroup."
+        correct: true
+        feedback: "Correct. Hazard ratios are multiplicative, so the axis should be `scale_x_log10()`, and the n and event counts belong beside every row."
+      - text: "The ECOG 2 hazard ratio should be omitted because its confidence interval crosses 1."
+        feedback: "Crossing 1 is not a reason to suppress a row — the pre-specified subgroups are all reported. The problem is how this one is presented, not that it appears."
+      - text: "The PD-L1 row should be flagged as significant, since its interval excludes 1."
+        feedback: "Subgroup intervals are nominal and unadjusted for multiplicity; a forest plot deliberately avoids declaring subgroup significance."
+      - text: "The point estimates should be drawn as boxes sized by subgroup n rather than as points."
+        feedback: "Precision-weighted boxes are a common and useful convention, but a printed n column conveys the same thing unambiguously. The axis scale is the more serious problem."
+    solution: |
+      **Two defects, both of which change what a reader concludes.**
+
+      **The axis must be logarithmic.** A hazard ratio of 0.5 and one of 2.0 are the same magnitude of
+      effect in opposite directions. On a linear axis, 0.5 sits 0.5 units from the null and 2.0 sits 1.0
+      units away — the figure draws harm as twice the size of the equivalent benefit. The ECOG 2 interval
+      (0.348 to 2.858) becomes wildly asymmetric and stretches the axis so that every other row is
+      compressed into the left third of the panel.
+
+      ```r
+      scale_x_log10(breaks = c(0.25, 0.5, 1, 2, 4)) +
+        geom_vline(xintercept = 1, linetype = 2)
+      ```
+
+      On the log scale the interval is nearly symmetric about its point estimate — which is where `coxph`
+      computed it, since the model is linear in $\log(\mathrm{HR})$.
+
+      **The n and event counts must be printed.** ECOG 2 has **15 subjects**. Its hazard ratio of 0.997 is
+      not evidence that the drug does not work in poor-performance-status patients; it is a number with
+      essentially no information in it, as the interval from 0.35 to 2.86 says. Without the n beside it, a
+      reader sees a point estimate sitting exactly on the null line and draws a conclusion the data cannot
+      support.
+
+      **A note on what is and is not a rule.** Printing n, events and the interval beside each row, with
+      the overall estimate at the top and a reference line at 1, is common industry and journal practice —
+      not a CDISC or regulatory requirement. ICH E9 section 5.7 cautions about interpreting subgroup
+      analyses; it does not specify a figure format.
+    explanation:
+      objective: "Judge whether a forest plot represents its estimates fairly."
+      given: "Two subgroup rows with very different sample sizes, drawn on a linear axis with no n column."
+      relevant: "That hazard ratios are multiplicative and that one subgroup has only 15 subjects."
+      irrelevant: "Whether the intervals exclude 1, which is not the basis for including or excluding a row."
+      method: "Ratios are symmetric on a log scale; the Cox model estimates on that scale too."
+      numbers: "ECOG 2: n = 15, HR 0.997 (0.348 to 2.858). PD-L1 >= 50%: n = 94, HR 0.506 (0.315 to 0.811)."
+      assumptions: "Subgroup estimates are nominal and unadjusted for multiplicity."
+      interpretation: "An HR of 1.00 from 15 subjects is an absence of information, not evidence of no effect."
+      changes: "`scale_x_log10()` plus printed n and event counts fixes both defects."
+      interviewer: "That you name the log axis specifically and connect it to where the model estimated the interval."
+
+  - id: r.ggplot.chg-figure-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [r.ggplot, r.dplyr, tlf.figures]
+    lesson: r-ggplot2-clinical-figures
+    title: A by-visit mean-change figure
+    minutes: 18
+    prompt: |
+      Write `plot_mean_change(advs, paramcd)` returning a list with `data` and `plot`.
+
+      `data` must have one row per arm and visit, with columns `TRTP`, `AVISITN`, `n`, `mean` and `se`,
+      computed from records where `ANL01FL == "Y"` and `AVISITN > 0`. `n` is the number of **non-missing**
+      changes; `se` is $s/\sqrt{n}$.
+
+      `plot` must:
+
+      - map `TRTP` to `colour`, `shape` **and** `linetype`, so the figure survives greyscale
+      - draw a reference line at zero
+      - draw dodged points, lines and `mean ± se` error bars
+      - zoom the y-axis with `coord_cartesian()`, never `ylim()`
+      - label the y-axis with its **unit**
+
+      Assert that every visit contributes at least one subject.
+    starter: |
+      library(ggplot2); library(dplyr)
+
+      plot_mean_change <- function(advs, paramcd = "SYSBP",
+                                   ylab = "Mean change from baseline in seated SBP (mmHg)") {
+        d <- advs |>
+          filter(___) |>
+          summarise(n    = ___,
+                    mean = ___,
+                    se   = ___,
+                    .by  = c(TRTP, AVISITN)) |>
+          arrange(AVISITN, TRTP)
+
+        stopifnot(___)
+
+        p <- ggplot(d, aes(___)) +
+          geom_hline(yintercept = 0, colour = "grey50") +
+          ___
+
+        list(data = d, plot = p)
+      }
+    reference: |
+      library(ggplot2); library(dplyr)
+
+      plot_mean_change <- function(advs, paramcd = "SYSBP",
+                                   ylab = "Mean change from baseline in seated SBP (mmHg)") {
+        d <- advs |>
+          filter(PARAMCD == paramcd, ANL01FL == "Y", AVISITN > 0) |>
+          summarise(n    = sum(!is.na(CHG)),
+                    mean = mean(CHG, na.rm = TRUE),
+                    se   = sd(CHG, na.rm = TRUE) / sqrt(sum(!is.na(CHG))),
+                    .by  = c(TRTP, AVISITN)) |>
+          arrange(AVISITN, TRTP)
+
+        stopifnot(all(d$n > 0))
+
+        p <- ggplot(d, aes(factor(AVISITN), mean, colour = TRTP, shape = TRTP,
+                           linetype = TRTP, group = TRTP)) +
+          geom_hline(yintercept = 0, colour = "grey50") +
+          geom_line(position = position_dodge(0.55)) +
+          geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+                        width = 0.25, linetype = 1,
+                        position = position_dodge(0.55)) +
+          geom_point(size = 2.2, position = position_dodge(0.55)) +
+          coord_cartesian(ylim = c(-18.5, 2)) +
+          labs(x = "Visit (week)", y = ylab,
+               colour = NULL, shape = NULL, linetype = NULL)
+
+        list(data = d, plot = p)
+      }
+    hints:
+      - "`sum(!is.na(CHG))` for n, not `n()` — the denominator on the figure must be the number of non-missing changes."
+      - "Map `TRTP` to `linetype` and `shape` as well as `colour`; that is what makes the figure work in greyscale."
+      - "`position_dodge()` has to be passed to every layer that should move together, including the error bars."
+      - "`linetype = 1` set inside `geom_errorbar()` keeps the bars solid while the connecting lines stay dashed."
+    checks:
+      - pattern: "sum\\s*\\(\\s*!\\s*is\\.na\\s*\\(\\s*CHG\\s*\\)\\s*\\)"
+        message: "Counts non-missing changes rather than rows"
+      - pattern: "sd\\s*\\(\\s*CHG\\s*,\\s*na\\.rm\\s*=\\s*TRUE\\s*\\)\\s*/\\s*sqrt"
+        message: "Computes the standard error as SD over root n"
+      - pattern: "linetype\\s*=\\s*TRTP"
+        message: "Encodes the arm redundantly so the figure survives greyscale"
+      - pattern: "shape\\s*=\\s*TRTP"
+        message: "Maps the arm to point shape as well"
+      - pattern: "coord_cartesian\\s*\\("
+        message: "Zooms with coord_cartesian rather than filtering with ylim"
+      - pattern: "ylim\\s*\\("
+        absent: true
+        message: "Does not use ylim(), which would drop rows before the stats"
+      - pattern: "position_dodge\\s*\\("
+        message: "Dodges the layers so points, lines and bars stay together"
+      - pattern: "geom_errorbar\\s*\\("
+        message: "Draws the error bars"
+      - pattern: "stopifnot\\s*\\("
+        message: "Asserts that every visit contributes subjects"
+      - pattern: "mmHg"
+        message: "Labels the y-axis with its unit"
+    expectedOutput: |
+      ```text
+      > res <- plot_mean_change(advs)
+      > as.data.frame(res$data)
+                  TRTP AVISITN  n    mean     se
+      1        Placebo       2 87  -1.925 0.8427
+      2  VTX-221 10 mg       2 85  -5.719 0.8832
+      3  VTX-221 20 mg       2 85  -7.869 0.7189
+      4        Placebo       4 84  -3.052 1.0724
+      5  VTX-221 10 mg       4 85  -6.711 0.9313
+      6  VTX-221 20 mg       4 81 -10.802 0.9254
+      7        Placebo       8 82  -3.282 1.1283
+      8  VTX-221 10 mg       8 79  -7.877 1.1650
+      9  VTX-221 20 mg       8 82 -12.270 1.1247
+      10       Placebo      12 77  -3.300 1.3231
+      11 VTX-221 10 mg      12 81  -8.828 1.2760
+      12 VTX-221 20 mg      12 80 -12.276 1.2854
+      ```
+    solution: |
+      **Returning the data alongside the plot is the point of the exercise.** A figure whose numbers exist
+      only inside the graphics object cannot be QC'd against the corresponding table without redrawing it.
+      Here `res$data` is twelve rows a reviewer can compare directly.
+
+      **Three defaults deliberately overridden:**
+
+      | Line | Decision |
+      |---|---|
+      | `sum(!is.na(CHG))` | The denominator is non-missing changes, not records |
+      | `linetype = TRTP`, `shape = TRTP` | Redundant encoding for greyscale and colour vision deficiency |
+      | `coord_cartesian()` | Zoom, not filter — `ylim()` would delete rows before the means were drawn |
+
+      **`linetype = 1` inside `geom_errorbar()`** overrides the inherited mapping for that layer only.
+      Without it, the error bars inherit the arm's dashed line type and become illegible at print size.
+
+      **`factor(AVISITN)` rather than `AVISITN`.** Weeks 2, 4, 8 and 12 are not equally spaced, and a
+      continuous axis draws a gap between Weeks 4 and 8 that encodes nothing the study measured. A
+      by-visit figure is conventionally categorical; use a continuous time axis when the x value is an
+      actual elapsed time.
+
+      The denominators fall from 87 to 77 in the placebo arm — which is why the figure prints them.
+    explanation:
+      objective: "Build a by-visit efficacy figure that a reviewer can check and read in print."
+      given: "A BDS vital-signs dataset with a change column and an analysis flag."
+      relevant: "The analysis flag, the non-missing change count, and which layer computes what."
+      method: "Summarise first, assert, then plot the summary — so the figure and the table share one object."
+      numbers: "Twelve rows; Week 12 means −3.300 / −8.828 / −12.276 with SEs 1.323 / 1.276 / 1.285."
+      assumptions: "Observed cases, not model-based LS means — the figure's footnote must say so."
+      computation: "se = sd(CHG, na.rm = TRUE) / sqrt(sum(!is.na(CHG)))."
+      interpretation: "Dose ordering is maintained at every visit and the denominators decline over time."
+      changes: "`ylim()` in place of `coord_cartesian()` would silently drop any arm/visit mean outside the window."
+      interviewer: "That the function returns the summarised data, not only the plot."
+
+  - id: r.ggplot.truncated-axis
+    format: hotspot
+    language: r
+    modes: [debug, qc]
+    difficulty: advanced
+    skills: [r.ggplot, qc.discrepancy, tlf.figures]
+    lesson: r-ggplot2-clinical-figures
+    title: The figure that flattered the control arm
+    minutes: 10
+    prompt: |
+      This produces a box plot of Week 12 change from baseline. It runs, and the figure looks clean.
+
+      The placebo box's upper quartile reads **+2.6 mmHg**. The summary table produced from the same
+      filtered dataset says **+5.3**.
+
+      Click the line responsible.
+    code: |
+      library(ggplot2); library(dplyr)
+
+      w12 <- advs |>
+        filter(PARAMCD == "SYSBP", ANL01FL == "Y", AVISITN == 12)
+
+      ggplot(w12, aes(TRTP, CHG, fill = TRTP)) +
+        geom_boxplot() +
+        ylim(-30, 10) +
+        labs(y = "Change from baseline in seated SBP (mmHg)")
+    answerLines: [8]
+    lineNotes:
+      - line: 8
+        note: "`ylim()` sets a scale limit, and scales run **before** stats. The 27 subjects whose change fell outside [-30, 10] were converted to NA and never reached `stat_boxplot()`, so the quartiles were computed on 211 of 238 records. ggplot2 warns once — `Removed 27 rows containing non-finite outside the scale range (stat_boxplot())` — and continues. Use `coord_cartesian(ylim = c(-30, 10))`, which zooms after the stat."
+      - line: 4
+        note: "The filter is the population definition and is correct: 238 records, one per subject with a Week 12 systolic reading flagged for analysis."
+      - line: 6
+        note: "`fill = TRTP` is a legitimate mapping, though filling by a variable that is already on the x-axis is redundant. It is not what moved the quartile."
+      - line: 7
+        note: "`geom_boxplot()` runs `stat_boxplot()` to compute the quartiles — this is the layer that was starved of data, but the cause is one line below it."
+    fixed: |
+      library(ggplot2); library(dplyr)
+
+      w12 <- advs |>
+        filter(PARAMCD == "SYSBP", ANL01FL == "Y", AVISITN == 12)
+
+      stopifnot(nrow(w12) == n_distinct(w12$USUBJID))
+
+      ggplot(w12, aes(TRTP, CHG)) +
+        geom_boxplot() +
+        coord_cartesian(ylim = c(-30, 10)) +
+        labs(y = "Change from baseline in seated SBP (mmHg)")
+    hints:
+      - "The figure and the table were built from the same filtered data frame, so the difference was introduced after the filter."
+      - "Which of these lines could remove rows from the computation rather than from the display?"
+      - "In ggplot2, do scales run before or after stats?"
+    solution: |
+      **Line 8.** `ylim(-30, 10)` is `scale_y_continuous(limits = c(-30, 10))` in disguise, and **scales run
+      before stats.**
+
+      A value outside the limits has no position on the scale, so it becomes `NA` and `stat_boxplot()`
+      never sees it. Twenty-seven of the 238 records fell outside the window:
+
+      ```text
+      Warning message:
+      Removed 27 rows containing non-finite outside the scale range
+      (`stat_boxplot()`).
+      ```
+
+      | Arm | Q1 / median / Q3, all 238 | after `ylim()` |
+      |---|---|---|
+      | Placebo | −11.7 / −4.3 / **+5.3** | −12.25 / −5.0 / **+2.6** |
+      | VTX-221 10 mg | −16.0 / −9.6 / −1.0 | −15.6 / −9.5 / −2.1 |
+      | VTX-221 20 mg | −19.7 / −12.7 / −6.0 | −17.3 / −12.0 / −7.3 |
+
+      **Notice which direction it moved.** Trimming both tails pulled the placebo upper quartile down by
+      2.7 mmHg and pulled the 20 mg arm's quartiles *in* from both sides. The figure now shows a smaller
+      separation between the arms than the data does, and the control arm looks better than it was — from
+      a change that was requested for cosmetic reasons.
+
+      **The fix:**
+
+      ```r
+      coord_cartesian(ylim = c(-30, 10))
+      ```
+
+      The coordinate system runs after the stats, so the quartiles come from all 238 records and only the
+      viewport changes.
+    explanation:
+      objective: "Locate the line that silently subset the data feeding a statistical geom."
+      given: "A figure quartile that disagrees with a table built from the same filtered dataset."
+      relevant: "That ylim() is a scale limit and scales run before stats in ggplot2's evaluation order."
+      irrelevant: "The fill mapping and the filter, both of which are correct."
+      method: "The figure and the table share a data frame, so the divergence must come from a plotting layer."
+      numbers: "27 of 238 records outside [-30, 10]; placebo Q3 moved from +5.3 to +2.6 mmHg."
+      assumptions: "ggplot2 warns rather than erroring on removed rows, so the script completes."
+      interpretation: "The truncation biased the comparison toward the control arm, which is the opposite of a harmless cosmetic change."
+      changes: "coord_cartesian() gives the identical viewport with the quartiles computed on every record."
+      interviewer: "That you check the direction of the induced bias, not just that a warning appeared."
+
+  - id: r.ggplot.km-panel-code
+    format: code
+    language: r
+    modes: [independent, qc]
+    difficulty: advanced
+    skills: [r.ggplot, r.survival, tlf.denominators]
+    lesson: r-ggplot2-clinical-figures
+    title: The number-at-risk table under the curve
+    minutes: 15
+    prompt: |
+      Write `risk_table(fit, times)` that turns a stratified `survfit` object into the data frame a
+      number-at-risk panel needs: one row per stratum and requested time, with columns `arm`, `time` and
+      `n.risk`.
+
+      Requirements:
+
+      - strip the `"TRTP="` style prefix that `survfit` puts on stratum names
+      - return a row for **every** requested time in **every** stratum, even where follow-up has run out
+      - assert that the row count is exactly `length(times) × length(fit$strata)`, so a misaligned table
+        fails immediately rather than rendering with ragged columns
+    starter: |
+      library(survival)
+
+      risk_table <- function(fit, times) {
+        s <- summary(fit, times = times, ___)
+
+        out <- data.frame(
+          arm    = ___,
+          time   = s$time,
+          n.risk = s$n.risk
+        )
+
+        stopifnot(___)
+        out
+      }
+    reference: |
+      library(survival)
+
+      risk_table <- function(fit, times) {
+        s <- summary(fit, times = times, extend = TRUE)
+
+        out <- data.frame(
+          arm    = sub("^[^=]+=", "", as.character(s$strata)),
+          time   = s$time,
+          n.risk = s$n.risk
+        )
+
+        stopifnot(nrow(out) == length(times) * length(fit$strata))
+        out
+      }
+    hints:
+      - "`summary.survfit` has an `extend` argument; without it, requested times beyond a stratum's last observation are dropped."
+      - "`sub(\"^[^=]+=\", \"\", ...)` removes everything up to and including the first equals sign."
+      - "`s$strata` is a factor, so wrap it in `as.character()` before the substitution."
+      - "The expected row count is the number of requested times multiplied by the number of strata."
+    checks:
+      - pattern: "extend\\s*=\\s*TRUE"
+        message: "Requests a row for every time even where follow-up has run out"
+      - pattern: "sub\\s*\\("
+        message: "Strips the stratum-name prefix"
+      - pattern: "as\\.character\\s*\\(\\s*s\\$strata\\s*\\)"
+        message: "Converts the stratum factor to character before substituting"
+      - pattern: "n\\.risk\\s*=\\s*s\\$n\\.risk"
+        message: "Takes the risk counts from the summary object"
+      - pattern: "stopifnot\\s*\\("
+        message: "Asserts the table is rectangular"
+      - pattern: "length\\s*\\(\\s*times\\s*\\)\\s*\\*\\s*length\\s*\\(\\s*fit\\$strata\\s*\\)"
+        message: "Checks the row count against times times strata"
+    expectedOutput: |
+      ```text
+      > fit <- survfit(Surv(months, event) ~ TRTP, data = pfs, conf.type = "log-log")
+      > risk_table(fit, seq(0, 24, by = 6))
+                         arm time n.risk
+      1  Placebo + Docetaxel    0    210
+      2  Placebo + Docetaxel    6     63
+      3  Placebo + Docetaxel   12     28
+      4  Placebo + Docetaxel   18     11
+      5  Placebo + Docetaxel   24      4
+      6  CBX-417 + Docetaxel    0    210
+      7  CBX-417 + Docetaxel    6     92
+      8  CBX-417 + Docetaxel   12     40
+      9  CBX-417 + Docetaxel   18     20
+      10 CBX-417 + Docetaxel   24      7
+      ```
+    solution: |
+      **`extend = TRUE` is the whole exercise.** Maximum follow-up on CBX417-301 PFS is **29.67 months** on
+      placebo and **31.87** on CBX-417. Ask for `seq(0, 36, by = 6)` without it and you get:
+
+      ```text
+       1  TRTP=Placebo + Docetaxel    0 210
+       ...
+       5  TRTP=Placebo + Docetaxel   24   4
+       6  TRTP=CBX-417 + Docetaxel    0 210
+       ...
+      11  TRTP=CBX-417 + Docetaxel   30   1
+      ```
+
+      **Five rows for placebo, six for CBX-417.** The 30-month placebo row does not exist, so the two rows
+      of the rendered table carry different numbers of entries and the numbers stop lining up under the
+      axis. It looks like a rendering artefact, which is why it survives review.
+
+      **The assertion is what catches it.** `nrow(out) == length(times) * length(fit$strata)` is one line
+      and fails loudly at exactly the point where the shape went wrong.
+
+      **The prefix substitution.** `survfit` names its strata `"TRTP=Placebo + Docetaxel"`, carrying the
+      variable name. `sub("^[^=]+=", "", ...)` removes everything up to the first `=`. It is deliberately
+      written to be independent of the grouping variable's name, so the same function works on a fit
+      stratified by `ARM` or `TRT01P`.
+
+      For the panel itself, the arm needs reversing so the top row of the table matches the top curve:
+
+      ```r
+      ggplot(rt, aes(time, factor(arm, levels = rev(unique(arm))))) +
+        geom_text(aes(label = n.risk))
+      ```
+    explanation:
+      objective: "Extract a rectangular number-at-risk table from a stratified survfit object."
+      given: "A survfit object with two strata and a vector of requested times."
+      relevant: "That summary.survfit drops times past a stratum's last observation unless extend = TRUE."
+      method: "Request every time explicitly, then assert the resulting shape."
+      numbers: "Placebo 210/63/28/11/4 and CBX-417 210/92/40/20/7 at 0, 6, 12, 18 and 24 months. Maximum follow-up 29.67 and 31.87 months."
+      assumptions: "The panel is drawn as a separate plot sharing the curve's x scale and coordinate range."
+      computation: "sub(\"^[^=]+=\", \"\", ...) strips the variable name survfit prepends to each stratum label."
+      interpretation: "Four and seven subjects at 24 months — the tail of the figure rests on almost nobody."
+      changes: "Without extend = TRUE the strata return different row counts and the table columns misalign."
+      interviewer: "That you assert the shape rather than trusting summary() to return what you asked for."
+
+  - id: r.ggplot.open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [r.ggplot, communication.visualization, qc.code-review]
+    lesson: r-ggplot2-clinical-figures
+    title: Reviewing a figure package
+    prompt: |
+      **Interviewer:** "You've been asked to QC a set of R-generated figures for a CSR before they go to the
+      medical writer. What do you look at, and in what order?"
+    modelAnswer: |
+      I'd separate two questions that get conflated: **is the figure a true picture of the data**, and **is
+      it the figure the shell asked for**. The first is a QC finding; the second is a deviation. They go to
+      different people.
+
+      **First, did anything get dropped.** In ggplot2 a scale limit is a filter. `ylim()` and
+      `scale_y_continuous(limits = )` remove out-of-range rows *before* the stat runs, so a box plot's
+      quartiles, a smoother's fit or a `stat_summary()` mean can be computed on a subset. The symptom is a
+      `Removed n rows containing non-finite outside the scale range` warning, and in a batch script nobody
+      reads it. I'd grep the programs for scale limits on any stat-bearing geom and check the logs for that
+      warning. On the study I've been working with, a −30 to +10 crop on a change-from-baseline box plot
+      dropped 27 of 238 subjects and moved the placebo upper quartile by 2.7 mmHg — in the direction that
+      flattered the control arm, from a change requested purely for appearance. `coord_cartesian()` is the
+      fix, and it is a one-word difference.
+
+      **Second, do the figure's numbers match the table's.** They should come from the same summarised data
+      frame. If a figure computes its means inside a `stat_` layer there is nothing to compare, so I'd want
+      the program to summarise first, assert on the result, and hand the same object to both outputs. Where
+      a figure shows observed means and the table shows model-based LS means — which is common and often
+      correct — the footnote has to say so, or someone will raise it as a discrepancy later at a worse time.
+
+      **Third, denominators.** An observed-case mean at the last visit can rest on 60% of the randomized
+      population, and a Kaplan–Meier tail can rest on four subjects. I want the n at each visit printed on
+      the figure and a number-at-risk table under every KM curve, and I want to check that the risk table
+      is rectangular — `summary(fit, times = )` silently drops times past a stratum's last observation, so
+      without `extend = TRUE` the arms can end up with different numbers of columns and the misalignment
+      looks like a rendering artefact.
+
+      **Fourth, whether the axes are honest.** No truncated axis on a change or a ratio; a reference line at
+      the null on a change-from-baseline figure; a log axis on a forest plot, because hazard ratios are
+      multiplicative and a linear axis draws harm as larger than the equivalent benefit.
+
+      **Fifth, whether it works for the reader.** Does it survive greyscale, since it will be printed —
+      which means the arm is mapped to linetype or shape as well as colour — and is the palette safe for
+      colour vision deficiency, which ggplot2's default hue scale is not, because it holds lightness
+      constant. Units on every axis. Font size at the delivered physical dimensions, not on screen.
+
+      **Then the shell comparison**, which is mechanical: title, subtitle, axis labels, footnotes,
+      population, dimensions. Anything that differs is a deviation even if the figure is better.
+
+      And a process point: figures should be generated by the same program run that generates the
+      corresponding table, from the same analysis-ready dataset, so the two cannot drift. Most of the
+      findings I'd expect to raise are not bugs in the plotting code — they are a figure and a table that
+      were built from two slightly different subsets.
+    rubric:
+      - Separates "true to the data" from "matches the shell"
+      - Names the scale-limit-versus-coordinate-limit trap and the warning it produces
+      - Checks the figure's numbers against the corresponding table's
+      - Expects the summary to be pre-computed rather than produced inside a stat layer
+      - Checks denominators — visit-level n and the number-at-risk table
+      - Flags the extend = TRUE issue or otherwise checks the risk table is rectangular
+      - Checks axis honesty, including a log scale for a forest plot
+      - Checks greyscale and colourblind safety, and knows why the default palette fails
+      - Treats a figure that is "better than the shell" as a deviation
+    redFlags:
+      - "Starts with aesthetics rather than with whether the data reached the stat"
+      - "Treats a Removed rows warning as routine noise"
+      - "Accepts a figure whose numbers exist only inside the graphics object"
+      - "Does not mention denominators or the number-at-risk table"
+      - "Assumes a colourful figure is an accessible one"

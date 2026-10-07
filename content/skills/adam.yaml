@@ -1,0 +1,49 @@
+domain: adam
+title: ADaM
+description: The CDISC Analysis Data Model — analysis-ready, traceable datasets.
+skills:
+  - id: adam.purpose
+    name: Purpose and principles of ADaM
+    description: Analysis readiness, traceability, one-PROC-away, ADaM classes (ADSL, BDS, OCCDS).
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: adam.adsl
+    name: ADSL
+    description: Subject-level variables, treatment variables (TRTxxP/TRTxxA), dates, population flags, baseline covariates.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: adam.bds
+    name: Basic Data Structure (BDS)
+    description: PARAM/PARAMCD, AVAL/AVALC, AVISIT, ADT/ADY, DTYPE and analysis flags.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: adam.baseline
+    name: Baseline and change from baseline
+    description: ABLFL selection rules, BASE, CHG, PCHG, BNRIND and shift variables.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: adam.windows
+    name: Analysis visits and windows
+    description: AVISIT windowing, ANL01FL record selection, handling unscheduled and repeated assessments.
+    weight: 2
+    tracks: [programmer]
+  - id: adam.occds
+    name: OCCDS and ADAE
+    description: Occurrence data structure, TRTEMFL, date imputation (ASTDTF), first-occurrence flags.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: adam.adtte
+    name: ADTTE
+    description: Time-to-event parameters, STARTDT/ADT, AVAL, CNSR, EVNTDESC/CNSDTDSC and censoring rules.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: adam.traceability
+    name: Traceability
+    description: SRCDOM/SRCVAR/SRCSEQ, derivation documentation, tracing results back to source.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: adam.specs
+    name: ADaM specifications
+    description: Reading and writing dataset/variable specifications and derivation rules.
+    weight: 2
+    tracks: [programmer]

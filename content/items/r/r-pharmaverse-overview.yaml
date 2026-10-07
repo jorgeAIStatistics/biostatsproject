@@ -1,0 +1,802 @@
+items:
+  - id: r.pharma.fda-position
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [regulatory.submission, r.reporting, communication.audiences]
+    lesson: r-pharmaverse-overview
+    title: "\"The FDA accepts R now\""
+    prompt: |
+      A colleague says the FDA now accepts R for submissions, citing the R Consortium's pilot submissions.
+
+      Which response is accurate?
+    choices:
+      - text: "FDA's published position is that it does not require any specific statistical software; what it requires is reliable results with the sponsor supplying the code and documentation. The pilots demonstrated the mechanics work end to end — they are not an approval of a language."
+        correct: true
+        feedback: "Correct. The obligation sits with the sponsor to evidence the result, not with the tool to be blessed. Separately, the Study Data Technical Conformance Guide does impose a file-format requirement — XPORT v5 — which is a different kind of constraint."
+      - text: "Correct — since the pilot submissions were accepted, R is now an approved submission language alongside SAS."
+        feedback: "No regulator maintains a list of approved languages. A pilot demonstrating that files transfer and code runs is not an approval of a tool."
+      - text: "Incorrect — FDA requires SAS for all statistical analyses in an NDA or BLA."
+        feedback: "FDA has published a clarifying statement saying the opposite: it does not require specific software. The XPORT v5 requirement is about the data file format, not about which software wrote it."
+      - text: "Correct for analysis datasets but not for tables, listings and figures, which must still be produced in SAS."
+        feedback: "No such split exists in any guidance. The only concrete format requirement is XPORT v5 for study data in eCTD."
+    solution: |
+      **Two separate documents, and people conflate them.**
+
+      **FDA's *Statistical Software Clarifying Statement*** says the agency does not require the use of any
+      specific software for statistical analysis, and that the software used must be able to produce
+      reliable results, with the sponsor supplying the code and documentation. That is a statement about
+      **evidence**, not about tools.
+
+      **FDA's *Study Data Technical Conformance Guide*** separately specifies **SAS Transport (XPORT)
+      Version 5** as the format for study data in an eCTD submission. That *is* a hard technical
+      requirement — and it is about a **file format**, not about which software produced it. R can write
+      XPORT v5, which is what `xportr` and `haven::write_xpt()` do.
+
+      **What the pilots establish.** The R Consortium's R Submissions Working Group has run public pilot
+      submissions to FDA specifically to show the end-to-end process works: the files transfer, the code
+      runs, reviewers can reproduce the results. That is a demonstration of viability, publicly
+      documented. It removes none of a sponsor's obligations and confers no status on a language.
+
+      **The practical constraint is rarely the regulator.** It is the validated environment, the SOP, and
+      who is qualified to review the code.
+
+      *Guidance documents are revised — check the current version before quoting either one.*
+    explanation:
+      objective: "State the regulatory position on statistical software accurately."
+      given: "A claim that pilot submissions mean FDA accepts R."
+      relevant: "The distinction between a software requirement and a file-format requirement."
+      method: "Separate the Statistical Software Clarifying Statement from the Study Data Technical Conformance Guide."
+      assumptions: "Guidance is periodically revised, so the current version should be checked before quoting."
+      interpretation: "The obligation is on the sponsor to evidence the result, not on the tool to be approved."
+      changes: "XPORT v5 remains required for study data regardless of which language produced it."
+      interviewer: "That you can state the position precisely rather than repeating a headline in either direction."
+
+  - id: r.pharma.xportr-why
+    format: mcq
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [r.reporting, regulatory.submission, adam.specs]
+    lesson: r-pharmaverse-overview
+    title: Why a package just to write a file
+    prompt: |
+      An R data frame holding a complete, correct ADSL is written to a transport file. Every variable name
+      is within 8 characters and no character value exceeds 200 bytes.
+
+      The delivery is rejected by the receiving organisation's conformance check.
+
+      What is the most likely reason?
+    choices:
+      - text: "The data frame carries no variable labels, declared lengths, types or formats — an R data frame has no concept of them, so a file written straight from it has correct values and no submission metadata."
+        correct: true
+        feedback: "Correct. That is the gap `xportr` fills: it applies label, length, type, format and variable order from a specification, then writes."
+      - text: "R cannot produce a valid XPORT v5 file; only SAS can."
+        feedback: "R writes XPORT v5 perfectly well — `haven::write_xpt()` and `xportr_write()` both do. The file is valid; its metadata is empty."
+      - text: "The variables are in alphabetical order rather than the specification's order."
+        feedback: "Variable order does matter and `xportr_order()` exists for it, but a data frame read from CSV keeps its source order, and order alone is a lesser finding than absent labels."
+      - text: "Numeric columns were written as double precision rather than integer."
+        feedback: "XPORT v5 stores all numerics the same way; there is no integer type to get wrong."
+    solution: |
+      **An R data frame has no submission metadata, and nothing warns you.**
+
+      ```r
+      attributes(adsl$AGE)
+      #> NULL
+      ```
+
+      A CSV or a data frame carries values and column names. It does not carry:
+
+      | | What the submission needs it for |
+      |---|---|
+      | Variable **label** | The define.xml description and every listing header |
+      | Declared **length** | Reproducible character column widths across deliveries |
+      | **Type** | Whether a column is text or numeric in the transport file |
+      | **Format** | How dates and decimals display |
+      | Variable **order** | Matching the specification |
+
+      In SAS these live with the data by default — `LABEL` and `FORMAT` are statements in the language —
+      which is most of why this problem is invisible to a SAS programmer and immediate to an R one.
+
+      **`xportr` is the step between the data frame and the file.** Each function applies one piece of
+      metadata from the same specification object and warns where the data and the spec disagree:
+
+      ```r
+      adsl |>
+        xportr_type(spec)  |> xportr_length(spec) |>
+        xportr_label(spec) |> xportr_order(spec)  |>
+        xportr_write("adsl.xpt", label = "Subject-Level Analysis Dataset")
+      ```
+
+      **This is the narrowest and least controversial reason to adopt anything from the pharmaverse**, and
+      it is the one step with no reasonable hand-written alternative across forty datasets.
+    explanation:
+      objective: "Identify what a transport file needs beyond correct values."
+      given: "A correct ADSL data frame within the XPORT v5 name and value limits, rejected on conformance."
+      relevant: "That an R data frame carries no labels, lengths, types or formats."
+      irrelevant: "Whether R can write the format at all, which it can."
+      method: "Separate the values from the metadata; the values were stated to be fine."
+      assumptions: "The receiving check looks at metadata, which a define.xml-driven check does."
+      interpretation: "SAS attaches this metadata by default; R requires it to be applied deliberately."
+      changes: "Applying the spec with xportr, or by hand with attr(), closes the gap."
+      interviewer: "That you name the specific metadata rather than saying 'formatting'."
+
+  - id: r.pharma.package-roles
+    format: mapping
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [r.reporting, regulatory.submission]
+    lesson: r-pharmaverse-overview
+    title: What is each package for?
+    prompt: |
+      Match each pharmaverse package to the job it does.
+    sourceLabel: Package
+    targetLabel: Job
+    pairs:
+      - source: "`admiral`"
+        target: "A library of derivation functions for common ADaM patterns"
+        note: "A function library over dplyr, not a framework. Community-maintained; no regulator requires or endorses it."
+      - source: "`metacore`"
+        target: "Loads a dataset specification into a queryable R object"
+        note: "Reads a define.xml or a specification workbook so the spec becomes an input to the program rather than something a person retypes."
+      - source: "`metatools`"
+        target: "Uses spec metadata to select variables, apply codelists and check conformance"
+        note: "`drop_unspec_vars()` keeps only the specified variables — the right default and the most dangerous line in the style, because a spec error becomes a silently missing variable."
+      - source: "`xportr`"
+        target: "Applies labels, lengths, types and order, then writes an XPT v5 file"
+        note: "The narrowest and least controversial pharmaverse package, and the step with no reasonable hand-written alternative at scale."
+      - source: "`pharmaversesdtm`"
+        target: "Public example SDTM data to write examples and tests against"
+        note: "Shared test data is what lets packages document themselves with runnable examples rather than with prose."
+      - source: "`riskmetric`"
+        target: "Scores a package against maintenance and testing metrics for a risk assessment"
+        note: "It tells you how much evidence exists about a package, not whether it is correct."
+      - source: "`rtables` / `Tplyr`"
+        target: "Two different families for building clinical summary tables"
+        note: "rtables models a table as a tree of splits; Tplyr as a stack of typed layers producing a tidy data frame. Both are used in production."
+    targets:
+      - "A library of derivation functions for common ADaM patterns"
+      - "Loads a dataset specification into a queryable R object"
+      - "Uses spec metadata to select variables, apply codelists and check conformance"
+      - "Applies labels, lengths, types and order, then writes an XPT v5 file"
+      - "Public example SDTM data to write examples and tests against"
+      - "Scores a package against maintenance and testing metrics for a risk assessment"
+      - "Two different families for building clinical summary tables"
+      - "A CDISC-published reference implementation of ADaM"
+      - "A validated environment that certifies R packages for submission"
+    solution: |
+      **The pharmaverse is a set of independent packages, not a framework.** Each covers one stage, and
+      you can adopt one and ignore the rest — which is what most organisations do.
+
+      | Stage | Package |
+      |---|---|
+      | Example data | `pharmaversesdtm` |
+      | Read the spec | `metacore` |
+      | Build to the spec | `metatools` |
+      | Derive ADaM | `admiral` (plus therapeutic extensions) |
+      | Write transport files | `xportr` |
+      | Build tables | `rtables` + `tern`, or `Tplyr` |
+      | Assess package risk | `riskmetric` |
+
+      **The two distractors are both things people believe exist and do not.**
+
+      There is no CDISC-published reference implementation of ADaM. CDISC publishes the **standard** —
+      ADaMIG v1.3 and the associated controlled terminology — not code. `admiral`'s function names follow
+      ADaM concepts closely, which helps traceability, but that mapping is the package's design choice.
+
+      There is no environment that certifies R packages for submission. Qualification is **your use of a
+      package in your environment**, under your SOP, evidenced by a lockfile and a risk assessment.
+      `riskmetric` and the R Validation Hub's framework give you a defensible way to build that
+      assessment; neither issues a certificate.
+    explanation:
+      objective: "Map the pharmaverse packages to the pipeline stage each one covers."
+      given: "Seven packages and nine candidate descriptions, two of which describe things that do not exist."
+      relevant: "That each package covers one stage and they are independently adoptable."
+      method: "Locate each package on the SDTM-to-submission pipeline."
+      assumptions: "All of these are community-maintained open source; none is a CDISC or regulatory deliverable."
+      interpretation: "There is no reference implementation and no certification body — qualification is the sponsor's."
+      changes: "Adopting one package does not require adopting the rest."
+      interviewer: "That you can say what admiral is not, as precisely as what it is."
+
+  - id: r.pharma.validation
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: advanced
+    skills: [regulatory.gxp, repro.testing, r.reporting]
+    lesson: r-pharmaverse-overview
+    title: "\"Is admiral validated?\""
+    prompt: |
+      Quality assurance asks whether `admiral` is validated before approving its use on a study.
+
+      What is the right answer?
+    choices:
+      - text: "The question is not well posed — packages are not validated in the abstract. What gets qualified is our use of a specific version in our environment, evidenced by a lockfile, a risk assessment and reproducible programs."
+        correct: true
+        feedback: "Correct, and `riskmetric` plus the R Validation Hub's risk-based framework give a defensible way to produce that assessment."
+      - text: "Yes — it is maintained by a consortium of major pharmaceutical companies and is widely used in production."
+        feedback: "Adoption is not validation and will not survive an audit question. An inspector asks which version, what evidence you hold, and whether you can rebuild the result."
+      - text: "No — no open-source R package can be validated, so it cannot be used for regulated work."
+        feedback: "Open source is not a bar. Plenty of regulated analysis runs on open-source software; what is required is a documented, risk-based assessment and reproducible output."
+      - text: "Yes, provided you install it from a validated CRAN snapshot."
+        feedback: "A pinned source improves reproducibility and is worth doing, but installing from a fixed snapshot says nothing about whether the package behaves correctly."
+    solution: |
+      **"Is package X validated?" has no answer, because validation attaches to a use, not to an artefact.**
+
+      What an inspector actually asks:
+
+      1. **Which version** of which package produced this result?
+      2. **What evidence** do you hold that it does what you believed?
+      3. **Can you rebuild** the result today?
+
+      Those are answered by a **lockfile**, a **risk assessment** and a **reproducible program** — not by
+      who else uses the package.
+
+      **`riskmetric` supports the second question.** It scores a package against objective metrics: does
+      it have unit tests, is it actively maintained, does it have documentation and vignettes, how many
+      packages depend on it. That turns "we think it's fine" into a document with numbers in it.
+
+      **What it does not do is tell you the package is correct.** It tells you how much evidence exists
+      about it, which is what lets you decide **where to spend your own testing effort**. A widely-used,
+      well-tested package needs less of your testing than an obscure one, and your assertions in your own
+      derivation functions are what cover the rest.
+
+      **The R Validation Hub** is the cross-industry effort that developed this risk-based framework, and
+      reading it before the conversation with quality assurance is worth the hour, because it gives you
+      their vocabulary rather than yours.
+    explanation:
+      objective: "Answer a validation question about an open-source package correctly."
+      given: "A QA request to confirm that admiral is validated."
+      relevant: "That qualification attaches to a use of a version in an environment, not to a package."
+      irrelevant: "How many companies use the package."
+      method: "Reframe to the three questions an inspector asks: which version, what evidence, can you rebuild it."
+      assumptions: "The organisation has an SOP covering software qualification, which is what the answer has to satisfy."
+      interpretation: "Risk assessment decides where your own testing effort goes, not whether the package is correct."
+      changes: "A pinned CRAN snapshot improves reproducibility but is not itself evidence of correctness."
+      interviewer: "That you reframe the question rather than answering yes or no, and that you name a concrete framework."
+
+  - id: r.pharma.xpt-limits
+    format: multi
+    modes: [check, qc, debug]
+    difficulty: intermediate
+    skills: [regulatory.submission, adam.specs, r.reporting]
+    lesson: r-pharmaverse-overview
+    title: What will fail the transport file?
+    prompt: |
+      A team is preparing an analysis dataset for delivery as SAS Transport (XPORT) Version 5.
+
+      Select every item below that the **format itself** cannot carry.
+    choices:
+      - text: "A variable named `TRTEMFLAG` (9 characters)"
+        correct: true
+        feedback: "Correct — XPORT v5 limits variable names to 8 characters. `TRTEMFL` is the ADaM-conformant name, and ADaM's naming was designed with this limit in mind."
+      - text: "A variable label of 47 characters"
+        correct: true
+        feedback: "Correct — labels are limited to 40 characters. Long verbatim terms are the usual offender."
+      - text: "A character variable whose longest value is 240 bytes"
+        correct: true
+        feedback: "Correct — character values are limited to 200 bytes. Verbatim adverse event terms and comment fields are where this bites."
+      - text: "A dataset containing 25,443 rows"
+        feedback: "There is no row limit that a clinical dataset would approach. ADLB here has 25,443 rows and is unremarkable."
+      - text: "A numeric variable stored as an R integer rather than a double"
+        feedback: "XPORT v5 stores all numerics the same way. There is no integer type to violate — though the specification's declared type still matters for define.xml."
+      - text: "A dataset with 55 variables"
+        feedback: "There is no variable-count limit of any relevance here. ADSL has 55 and is fine."
+    solution: |
+      **Three real limits, and they come from a 1990s file format rather than from CDISC.**
+
+      | | Limit |
+      |---|---|
+      | Variable name | **8 characters** |
+      | Variable label | **40 characters** |
+      | Dataset name | 8 characters |
+      | Character variable value | **200 bytes** |
+
+      FDA's *Study Data Technical Conformance Guide* specifies XPORT v5 for study data in eCTD, so these
+      limits apply to every submitted analysis dataset.
+
+      **The CBX417-301 datasets already satisfy all of them on the values side:**
+
+      | Dataset | Variables | Names over 8 chars | Longest character value |
+      |---|---:|---:|---:|
+      | ADSL | 55 | 0 | 45 (`DCTREAS`) |
+      | ADAE | 46 | 0 | 52 (`AEBODSYS`) |
+      | ADTTE | 30 | 0 | 73 (`CNSDTDSC`) |
+      | ADLB | 30 | 0 | 32 (`PARAM`) |
+
+      That is not luck. **ADaM variable naming was designed around the 8-character limit**, which is why
+      `TRTEMFL` and not `TRTEMFLAG`, and why ADaM has a supplemental-qualifier mechanism for long text.
+
+      **The three distractors are worth knowing as non-problems.** Row counts, variable counts and R's
+      integer-versus-double distinction are not XPORT v5 constraints. Type still matters — the
+      specification declares it and define.xml records it — but the file format does not distinguish
+      integers from doubles.
+
+      **What actually fails in practice** is not the values at all. It is the metadata: a data frame read
+      from CSV has correct values and no labels, no declared lengths and no formats.
+    explanation:
+      objective: "Distinguish real XPORT v5 constraints from imagined ones."
+      given: "Six candidate dataset properties."
+      relevant: "The format's limits on variable name length, label length and character value length."
+      irrelevant: "Row counts, variable counts and R's numeric storage type."
+      numbers: "8-character names, 40-character labels, 200-byte character values; ADSL 55 variables, longest value 45 characters."
+      assumptions: "The delivery is eCTD study data, where the Study Data Technical Conformance Guide specifies XPORT v5."
+      interpretation: "ADaM naming was designed around these limits, so conformant data rarely violates them."
+      changes: "The common real failure is absent metadata rather than out-of-range values."
+      interviewer: "That you attribute the limits to the file format rather than to CDISC, and know why ADaM names are short."
+
+  - id: r.pharma.metadata-gap
+    format: numeric
+    modes: [check, guided, qc]
+    difficulty: foundation
+    skills: [r.reporting, adam.specs, qc.mindset]
+    lesson: r-pharmaverse-overview
+    title: How many variables just disappeared?
+    prompt: |
+      A programmer applies a dataset specification to the CBX417-301 ADSL using a
+      `drop_unspec_vars()`-style step, which keeps only the variables the specification lists.
+
+      ADSL has **55** variables. The specification being used lists **5**.
+
+      How many variables are silently removed from the delivery?
+    answer: 50
+    tolerance: 0
+    unit: variables
+    hints:
+      - "The step keeps exactly the variables the specification names."
+      - "55 in the dataset, 5 in the spec."
+    solution: |
+      **50.** $55 - 5 = 50$.
+
+      Keeping only the specified variables is the **right default** — the specification decides what is in
+      the dataset, and a variable that is not in the spec has no define.xml entry and no business being
+      delivered.
+
+      It is also the single most dangerous line in this style of program, because the failure mode is
+      **silence**. A spec that is missing a variable produces a delivery that is missing a variable, and
+      nothing objects.
+
+      **Return the dropped list and review it:**
+
+      ```r
+      apply_spec <- function(d, spec) {
+        stopifnot(all(spec$variable %in% names(d)))
+        list(data    = d[, spec$variable, drop = FALSE],
+             dropped = setdiff(names(d), spec$variable),
+             missing = setdiff(spec$variable, names(d)))
+      }
+      ```
+
+      Two lists, two different failures:
+
+      | | Meaning |
+      |---|---|
+      | `dropped` | The program produced it, the spec does not want it — check the spec is complete |
+      | `missing` | The spec wants it, the program did not produce it — a build failure |
+
+      The second is caught by the `stopifnot` and fails loudly. **The first never fails on its own**,
+      which is exactly why it has to be returned rather than discarded.
+    explanation:
+      objective: "Quantify the silent effect of a spec-driven variable selection."
+      given: "A dataset with 55 variables and a specification listing 5."
+      relevant: "That the step keeps only the specified variables."
+      calculating: "Variables in the dataset minus variables in the spec."
+      numbers: "55 - 5 = 50 variables removed."
+      assumptions: "Every specified variable exists in the data, which the assertion checks separately."
+      interpretation: "A spec error becomes a missing variable in the delivery, with no error raised."
+      changes: "Returning the dropped list makes the outcome reviewable rather than invisible."
+      interviewer: "That you distinguish the dropped list from the missing list and say which one fails loudly."
+
+  - id: r.pharma.spec-apply
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [r.reporting, adam.specs, r.functions]
+    lesson: r-pharmaverse-overview
+    title: Applying a specification by hand
+    minutes: 15
+    prompt: |
+      Write `apply_spec(d, spec)` doing by hand what `metatools` and `xportr` do between them.
+
+      `spec` is a data frame with columns `variable`, `label`, `type` and `length`.
+
+      Return a list with:
+
+      - `data` — only the specified variables, in the specification's order, each carrying a `"label"`
+        attribute and a `"width"` attribute
+      - `dropped` — variables in the data but not in the spec
+      - `name_too_long` — specified variables whose **name** exceeds 8 characters
+      - `label_too_long` — specified variables whose **label** exceeds 40 characters
+
+      Assert up front that every specified variable exists in the data.
+    starter: |
+      apply_spec <- function(d, spec) {
+        stopifnot(___)
+
+        out <- d[, ___, drop = FALSE]
+        for (i in seq_len(nrow(spec))) {
+          v <- spec$variable[i]
+          attr(out[[v]], "label") <- ___
+          attr(out[[v]], "width") <- ___
+        }
+
+        list(
+          data           = out,
+          dropped        = ___,
+          name_too_long  = ___,
+          label_too_long = ___
+        )
+      }
+    reference: |
+      apply_spec <- function(d, spec) {
+        stopifnot(all(spec$variable %in% names(d)))
+
+        out <- d[, spec$variable, drop = FALSE]
+        for (i in seq_len(nrow(spec))) {
+          v <- spec$variable[i]
+          attr(out[[v]], "label") <- spec$label[i]
+          attr(out[[v]], "width") <- spec$length[i]
+        }
+
+        list(
+          data           = out,
+          dropped        = setdiff(names(d), spec$variable),
+          name_too_long  = spec$variable[nchar(spec$variable) > 8],
+          label_too_long = spec$variable[nchar(spec$label) > 40]
+        )
+      }
+    hints:
+      - "`d[, spec$variable, drop = FALSE]` both selects and reorders in one step."
+      - "`attr(out[[v]], \"label\") <- ...` attaches the label; this is exactly what haven and xportr write into the transport file."
+      - "`setdiff(names(d), spec$variable)` is the dropped list — return it rather than discarding it."
+      - "The XPORT v5 limits are 8 characters for a variable name and 40 for a label."
+    checks:
+      - pattern: "stopifnot\\s*\\(\\s*all\\s*\\(\\s*spec\\$variable\\s*%in%\\s*names\\s*\\(\\s*d\\s*\\)"
+        message: "Asserts every specified variable exists in the data"
+      - pattern: "d\\[\\s*,\\s*spec\\$variable\\s*,\\s*drop\\s*=\\s*FALSE\\s*\\]"
+        message: "Selects and reorders to the specification"
+      - pattern: "attr\\s*\\(\\s*out\\[\\[\\s*v\\s*\\]\\]\\s*,\\s*[\"']label[\"']\\s*\\)\\s*<-"
+        message: "Attaches the label attribute"
+      - pattern: "attr\\s*\\(\\s*out\\[\\[\\s*v\\s*\\]\\]\\s*,\\s*[\"']width[\"']\\s*\\)\\s*<-"
+        message: "Attaches the declared length"
+      - pattern: "setdiff\\s*\\(\\s*names\\s*\\(\\s*d\\s*\\)\\s*,\\s*spec\\$variable\\s*\\)"
+        message: "Returns the dropped variables rather than discarding them"
+      - pattern: "nchar\\s*\\(\\s*spec\\$variable\\s*\\)\\s*>\\s*8"
+        message: "Checks the 8-character variable-name limit"
+      - pattern: "nchar\\s*\\(\\s*spec\\$label\\s*\\)\\s*>\\s*40"
+        message: "Checks the 40-character label limit"
+    expectedOutput: |
+      ```text
+      > spec <- data.frame(
+      +   variable = c("USUBJID", "AGE", "SEX", "TRT01P", "SAFFL"),
+      +   label    = c("Unique Subject Identifier", "Age", "Sex",
+      +                "Planned Treatment for Period 01", "Safety Population Flag"),
+      +   type     = c("text", "integer", "text", "text", "text"),
+      +   length   = c(30L, 8L, 1L, 30L, 1L),
+      +   stringsAsFactors = FALSE)
+
+      > r <- apply_spec(adsl, spec)
+      > cat("kept:", ncol(r$data), " dropped:", length(r$dropped), "\n")
+      kept: 5  dropped: 50
+
+      > str(r$data$AGE)
+       int [1:420] 59 54 63 55 56 47 64 60 52 66 ...
+       - attr(*, "label")= chr "Age"
+       - attr(*, "width")= int 8
+
+      > nchar(attr(r$data$TRT01P, "label"))
+      [1] 31
+
+      > length(r$name_too_long); length(r$label_too_long)
+      [1] 0
+      [1] 0
+      ```
+    solution: |
+      **This is the step that has no native concept in R.** A data frame has values and column names; a
+      submission dataset has labels, declared lengths, types, formats and a specified variable order. In
+      SAS those are statements in the language and come along for free, which is why the gap is invisible
+      to a SAS programmer and immediate to an R one.
+
+      **`attr(x, "label") <- ...` is all a label is.** `haven::write_xpt()` and `xportr_write()` read that
+      attribute when they write the file, so a hand-rolled version like this genuinely produces a
+      correctly-labelled transport file.
+
+      **The two failure directions, and only one of them is loud:**
+
+      | | What it means | Signal |
+      |---|---|---|
+      | `stopifnot(all(spec$variable %in% names(d)))` | The spec wants something the program did not build | **Errors** |
+      | `dropped` | The program built something the spec does not list | **Silent** — hence the return value |
+
+      Here fifty of ADSL's fifty-five variables were dropped, because the spec names five. That is correct
+      behaviour for a five-variable spec and catastrophic for an incomplete one, and nothing in the
+      function can tell the difference. **Review the list.**
+
+      **The limit checks are cheap and belong here** rather than in whatever reads the file later. Eight
+      characters for a name and forty for a label are XPORT v5 constraints, and finding out about them at
+      build time is considerably better than finding out from a partner's conformance report.
+    explanation:
+      objective: "Attach submission metadata to an R data frame from a specification."
+      given: "A specification data frame with variable names, labels, types and lengths."
+      relevant: "That R has no native label or length concept and that XPORT v5 limits both."
+      method: "Select and reorder to the spec, attach attributes per variable, then report what was dropped and what exceeds the limits."
+      numbers: "5 variables kept, 50 dropped; the longest label used here is 31 characters against a 40-character limit."
+      assumptions: "Every specified variable exists in the data, which the assertion enforces before anything else runs."
+      computation: "attr(x, 'label') <- ... is exactly what write_xpt reads when writing the transport file."
+      interpretation: "The dropped list is the only visible signal of an incomplete specification."
+      changes: "xportr splits this across xportr_type, xportr_length, xportr_label and xportr_order, applied from one spec object."
+      interviewer: "That you return the dropped list, and that you know a label is just an attribute."
+
+  - id: r.pharma.admiral-equivalent
+    format: code
+    language: r
+    modes: [independent, qc]
+    difficulty: advanced
+    skills: [r.reporting, r.dplyr, adam.adsl]
+    lesson: r-pharmaverse-overview
+    title: The derivation without the package
+    minutes: 15
+    prompt: |
+      `admiral::derive_vars_merged()` is the "look something up from another dataset, with a filter, a sort
+      and a first/last rule" pattern. Write it by hand for one concrete case.
+
+      `derive_first_dose(dm, ex)` should return DM with two added columns:
+
+      - `TRTSDT` — the date of the subject's **earliest** exposure record with a non-missing `EXSTDTC` and
+        `EXDOSE > 0`, as a `Date`
+      - `SAFFL` — `"Y"` where `TRTSDT` is present, `"N"` otherwise
+
+      Break ties on `EXSTDTC` with `EXSEQ` so the selection is deterministic. Assert that the row count is
+      unchanged and that `SAFFL` takes only the two allowed values.
+    starter: |
+      library(dplyr)
+
+      derive_first_dose <- function(dm, ex) {
+        first_ex <- ex |>
+          filter(___) |>
+          arrange(___) |>
+          slice_head(n = 1, by = USUBJID) |>
+          transmute(USUBJID, TRTSDT = ___)
+
+        out <- dm |>
+          left_join(first_ex, by = "USUBJID", relationship = ___) |>
+          mutate(SAFFL = ___)
+
+        stopifnot(___)
+        out
+      }
+    reference: |
+      library(dplyr)
+
+      derive_first_dose <- function(dm, ex) {
+        first_ex <- ex |>
+          filter(!is.na(EXSTDTC), EXSTDTC != "", EXDOSE > 0) |>
+          arrange(USUBJID, EXSTDTC, EXSEQ) |>
+          slice_head(n = 1, by = USUBJID) |>
+          transmute(USUBJID, TRTSDT = as.Date(EXSTDTC))
+
+        out <- dm |>
+          left_join(first_ex, by = "USUBJID", relationship = "one-to-one") |>
+          mutate(SAFFL = if_else(is.na(TRTSDT), "N", "Y"))
+
+        stopifnot(nrow(out) == nrow(dm),
+                  all(out$SAFFL %in% c("Y", "N")))
+        out
+      }
+    hints:
+      - "ISO 8601 dates sort correctly as text, so `arrange(USUBJID, EXSTDTC, EXSEQ)` needs no conversion first."
+      - "`EXSTDTC != \"\"` as well as `!is.na()` — a CSV read with base `read.csv()` gives empty strings, not NA."
+      - "`relationship = \"one-to-one\"` turns an unexpected duplicate into an error rather than a silently inflated DM."
+      - "`slice_head(n = 1, by = USUBJID)` takes the first row per subject after the arrange."
+    checks:
+      - pattern: "EXDOSE\\s*>\\s*0"
+        message: "Restricts to records with a non-zero dose"
+      - pattern: "arrange\\s*\\(\\s*USUBJID\\s*,\\s*EXSTDTC\\s*,\\s*EXSEQ\\s*\\)"
+        message: "Sorts with a tie-breaker so the selection is deterministic"
+      - pattern: "slice_head\\s*\\(\\s*n\\s*=\\s*1\\s*,\\s*by\\s*=\\s*USUBJID\\s*\\)"
+        message: "Takes the earliest qualifying record per subject"
+      - pattern: "as\\.Date\\s*\\(\\s*EXSTDTC\\s*\\)"
+        message: "Converts the ISO 8601 text to a Date"
+      - pattern: "left_join\\s*\\("
+        message: "Keeps every DM record"
+      - pattern: "relationship\\s*=\\s*[\"']one-to-one[\"']"
+        message: "Declares the expected join relationship"
+      - pattern: "stopifnot\\s*\\("
+        message: "Asserts the row count and the flag values"
+      - pattern: "%in%\\s*c\\s*\\(\\s*[\"']Y[\"']\\s*,\\s*[\"']N[\"']\\s*\\)"
+        message: "Checks the flag against its codelist"
+    expectedOutput: |
+      ```text
+      > res <- derive_first_dose(dm, ex)
+      > nrow(dm); nrow(res)
+      [1] 468
+      [1] 468
+
+      > table(res$SAFFL)
+
+        N   Y
+       52 416
+
+      > # compared against the delivered ADSL on the 420 randomized subjects
+      > sum(as.character(chk$TRTSDT) == chk$TRTSDT_adam)
+      [1] 420
+      > sum(chk$SAFFL == chk$SAFFL_adam)
+      [1] 420
+      ```
+    solution: |
+      **416 treated subjects out of 468 in DM**, and the derived `TRTSDT` and `SAFFL` agree with the
+      delivered ADSL on all **420** randomized subjects.
+
+      The 52 with `SAFFL = "N"` are the 48 screen failures who never reached randomization plus the 4
+      subjects randomized but never dosed. DM holds all 468 screened subjects; ADSL holds the 420
+      randomized.
+
+      **What `admiral` would add, and what it would not.**
+
+      It would not add correctness — this is fifteen lines and it reproduces the delivered values exactly.
+      What it adds is that the **record-selection rule becomes named arguments**:
+
+      ```r
+      derive_vars_merged(dm, dataset_add = ex,
+                         filter_add = !is.na(EXSTDTC) & EXDOSE > 0,
+                         by_vars = exprs(USUBJID),
+                         order   = exprs(EXSTDTC, EXSEQ),
+                         mode    = "first",
+                         new_vars = exprs(TRTSDT = convert_dtc_to_dt(EXSTDTC)))
+      ```
+
+      A reviewer reads `mode = "first"` and `order = exprs(EXSTDTC, EXSEQ)` rather than reconstructing
+      them from an `arrange()` and a `slice_head()`. **That is a traceability argument, and it is the
+      strongest one for adopting the package.**
+
+      **Three decisions in this code that would be decisions either way:**
+
+      | | Why |
+      |---|---|
+      | `EXDOSE > 0` | Whether a zero-dose record starts treatment is a SAP decision |
+      | `EXSEQ` as tie-breaker | Without it, two records on the same date make the result non-reproducible |
+      | `relationship = "one-to-one"` | A duplicated exposure row would otherwise silently inflate DM |
+
+      **`EXSTDTC != ""` alongside `!is.na()`** because base `read.csv()` reads a blank field as an empty
+      string rather than `NA`. `readr::read_csv()` treats it as `NA` by default. That difference is its
+      own category of bug and it is why the import step deserves its own attention.
+    explanation:
+      objective: "Write an admiral-style merged derivation in plain dplyr and verify it against a delivered dataset."
+      given: "SDTM DM and EX, and the requirement to derive a first-dose date and a safety flag."
+      relevant: "The qualifying-record filter, the sort with a tie-breaker, and the join relationship."
+      method: "Filter, sort deterministically, take the first per subject, left join onto DM, then assert."
+      numbers: "468 DM rows preserved; 416 treated and 52 untreated; agreement with ADSL on all 420 randomized subjects."
+      assumptions: "A non-zero dose starts treatment, which is a SAP decision rather than a data fact."
+      computation: "ISO 8601 dates sort correctly as text, so the arrange needs no conversion first."
+      interpretation: "admiral adds named arguments for the selection rule, not correctness the hand-written version lacks."
+      changes: "Without the EXSEQ tie-breaker, two exposures on the same date make the result depend on input order."
+      interviewer: "That you can write the derivation without the package, and say precisely what the package adds."
+
+  - id: r.pharma.adoption-case
+    format: order
+    modes: [interview, check]
+    difficulty: advanced
+    skills: [regulatory.submission, r.reporting, communication.audiences]
+    lesson: r-pharmaverse-overview
+    title: Sequencing an adoption plan
+    prompt: |
+      Your group wants to move some clinical reporting work to R. Put the steps in the order that gets you
+      there with the least risk and the most evidence at each stage.
+    steps:
+      - "Use R for exploratory analysis and figures, which produce no submission artefact and need no validated pipeline."
+      - "Take on QC programming in R against SAS production, so every R result is checked against an independent one."
+      - "Build the risk assessment and qualification record for the specific packages and versions you need, using riskmetric and the R Validation Hub framework."
+      - "Establish reproducibility infrastructure: a lockfile, sessionInfo() in every log, and assertions inside the derivation functions."
+      - "Make the dataset specifications machine-readable, so metacore and metatools have something to read."
+      - "Produce ADaM datasets in R with xportr writing the transport files, in parallel with the SAS production for one study."
+      - "Retire the parallel SAS production once the two have agreed across a full study."
+    solution: |
+      **The ordering principle is: build evidence before you need it, and never let the first R deliverable
+      be the first R programme.**
+
+      **Steps 1 and 2 cost nothing in regulatory terms.** Figures and exploratory work produce no
+      submission artefact. QC programming produces one that is *checked against an independent one by
+      construction* — which is the safest possible place to run unfamiliar tooling, because the SAS
+      production is the control.
+
+      **Step 3 before step 6, not after.** The risk assessment and qualification record are what quality
+      assurance will ask for, and producing them retrospectively after a deliverable exists is a much
+      worse conversation than producing them in advance.
+
+      **Step 4 is the foundation everything else rests on.** Without a lockfile and reproducible programs,
+      none of the later steps can be evidenced, and "we got the same answer" is an anecdote rather than a
+      record.
+
+      **Step 5 is the one people underestimate.** `metacore` and `metatools` turn the specification into
+      an input to the program — which requires the specification to be machine-readable in the first
+      place. If your specs are spreadsheets that a person reads and retypes, making them machine-readable
+      *is* the project, and it is worth doing on its own merits regardless of language.
+
+      **Step 6 in parallel, for one study.** Two independent implementations, compared cell by cell, which
+      is the same double-programming logic that governs everything else in clinical reporting.
+
+      **Step 7 last, and only after a full study has agreed.** Anyone proposing to skip from step 1 to step
+      6 is proposing that the first R deliverable be the first R programme.
+    explanation:
+      objective: "Sequence an R adoption plan by risk and by evidence."
+      given: "Seven candidate steps covering tooling, infrastructure, qualification and delivery."
+      relevant: "Which steps produce a submission artefact and which do not."
+      method: "Start where a mistake costs nothing, build the evidence base, then run in parallel before switching."
+      assumptions: "The organisation already double-programmes primary outputs, which is what makes the parallel step natural."
+      interpretation: "QC programming is the safest entry point because the SAS production acts as a control."
+      changes: "If specifications are already machine-readable, step 5 disappears and the plan shortens considerably."
+      interviewer: "That you put the qualification record before the first deliverable, and that you name the specification work as the underestimated cost."
+
+  - id: r.pharma.open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [regulatory.submission, r.reporting, communication.interviewing]
+    lesson: r-pharmaverse-overview
+    title: Explaining the pharmaverse to a sceptical manager
+    prompt: |
+      **Interviewer:** "A SAS-based team lead tells you the pharmaverse is hype and that nothing about it
+      is validated. How do you respond?"
+    modelAnswer: |
+      I'd agree with the second half and disagree with the first, and I'd want to be careful about what
+      "validated" means, because that is where the conversation usually goes wrong.
+
+      **On validation, they are right and the question is badly posed.** No R package is validated in the
+      abstract — and neither is SAS, for that matter. What gets qualified is a specific version used in a
+      specific environment for a specific purpose, under an SOP. An inspector asks which version produced
+      this result, what evidence we hold that it behaves as we believed, and whether we can rebuild it
+      today. That is a lockfile, a risk assessment and a reproducible program. "Lots of big companies use
+      it" is not an answer to any of those three, and I would not offer it as one. The R Validation Hub's
+      risk-based framework, and `riskmetric` as its implementation, give a defensible way to produce the
+      assessment — objective metrics about tests, maintenance and documentation — and that is what I'd
+      bring to quality assurance rather than an adoption argument.
+
+      **On hype, I'd narrow it to what each package actually does**, because the general claim is too big
+      to defend and the specific ones are easy.
+
+      `xportr` is the strongest case and the least controversial. FDA's Study Data Technical Conformance
+      Guide requires XPORT v5 for study data in eCTD, and an R data frame has no labels, no declared
+      lengths, no types and no formats — SAS attaches all of that by default and R has no native concept
+      of it. `xportr` applies the metadata from a spec and writes the file. There is no reasonable
+      hand-written alternative across forty datasets, and it is doing something narrow and checkable.
+
+      `admiral` is a weaker but real case, and I'd be honest that it is a **traceability** argument rather
+      than a productivity one. Deriving a first-dose date in dplyr is fifteen lines, and I've written it —
+      it reproduces the delivered ADSL exactly. What admiral adds is that the record-selection rule becomes
+      named arguments: a reviewer reads `mode = "first"` and `order = exprs(EXSTDTC, EXSEQ)` instead of
+      reconstructing the tie-breaking from an `arrange()` and a `slice_head()`. That is worth something,
+      and it is not "it saves typing".
+
+      `metacore` and `metatools` I'd be most sceptical about, in their direction. They turn the
+      specification into an input to the program, which is genuinely valuable — the spec and the code
+      cannot drift. But that requires the specification to be machine-readable in the first place, and if
+      ours are spreadsheets that someone reads and retypes, then making them machine-readable is the
+      actual project and it is much bigger than learning a package.
+
+      **And on the regulatory framing**, I'd be careful in both directions. I would not say FDA accepts R,
+      because no regulator endorses a language; FDA's published position is that it does not require
+      specific software and that the sponsor must supply reliable results with the code and documentation
+      behind them. Submissions with R-based analyses have been made, and the R Consortium's pilot
+      submissions were run specifically to demonstrate the mechanics end to end. What that establishes is
+      viability, not approval, and it removes none of our obligations.
+
+      **Where I'd actually want to start** is not ADaM. Figures and QC programming: neither produces a
+      submission artefact, both build the skill base, and QC in R against SAS production means every R
+      result is checked against an independent one by construction. That generates the evidence for a
+      bigger conversation later, and if the tooling turns out not to suit us, we have lost nothing.
+    rubric:
+      - Concedes the validation point and reframes what validation attaches to
+      - Names the three questions an inspector asks (version, evidence, rebuild)
+      - Rejects adoption-as-validation explicitly
+      - Names riskmetric and the R Validation Hub as the route to a defensible assessment
+      - Makes the case package by package rather than for "the pharmaverse"
+      - Identifies xportr as the strongest case and says why R specifically needs it
+      - Frames admiral as a traceability argument, not a productivity one
+      - Flags machine-readable specifications as the underestimated cost of metacore/metatools
+      - States the regulatory position accurately in both directions
+      - Proposes figures and QC programming as the low-risk entry point
+    redFlags:
+      - "Claims FDA accepts or approves R"
+      - "Offers industry adoption as evidence of validation"
+      - "Defends the pharmaverse as a whole rather than package by package"
+      - "Proposes starting with ADaM production"
+      - "Dismisses the manager's concern rather than engaging with it"

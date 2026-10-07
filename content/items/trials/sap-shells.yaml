@@ -1,0 +1,306 @@
+items:
+  - id: trials.sap.when-final
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.sap]
+    lesson: trials-sap-and-shells
+    title: When is the SAP finalized?
+    prompt: |
+      In a double-blind trial such as CBX417-301, by when must the statistical analysis plan be finalized?
+    choices:
+      - text: "Before the blind is broken (before database lock and release of treatment codes)"
+        correct: true
+        feedback: "ICH E9 expects the detailed SAP to be finalized before unblinding, so analysis choices cannot be influenced by results."
+      - text: "Before the first patient is enrolled"
+        feedback: "The protocol's statistical section exists then; the detailed SAP is often finalized later, but always before unblinding."
+      - text: "Before the CSR is written"
+        feedback: "Too late: by then the results are known."
+      - text: "It is never finalized; it evolves with the analysis"
+        feedback: "The SAP is a controlled document. Post-unblinding changes are allowed only with documentation and are reported as such."
+    solution: |
+      Before unblinding. Changes after that are documented and discussed in the CSR as post hoc or changed analyses.
+
+  - id: trials.sap.text-to-variable
+    format: mapping
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.sap, adam.specs]
+    lesson: trials-sap-and-shells
+    title: SAP phrase to ADaM variable
+    prompt: |
+      Map each SAP phrase to the ADaM variable (or condition) that implements it in CBX417-301.
+    sourceLabel: SAP phrase
+    targetLabel: ADaM implementation
+    pairs:
+      - { source: "Safety population", target: "SAFFL = 'Y'" }
+      - { source: "Analyzed according to treatment actually received", target: "TRTA (from TRT01A)" }
+      - { source: "Stratified by ECOG PS as recorded in IxRS", target: "STRAT1R" }
+      - { source: "Treatment-emergent adverse events", target: "TRTEMFL = 'Y'" }
+      - { source: "Subjects censored for starting new anticancer therapy", target: "CNSR = 3 (PARAMCD = 'PFS')" }
+    targets:
+      - "SAFFL = 'Y'"
+      - "TRTA (from TRT01A)"
+      - "STRAT1R"
+      - "TRTEMFL = 'Y'"
+      - "CNSR = 3 (PARAMCD = 'PFS')"
+      - "ECOGBL"
+      - "TRTP (from TRT01P)"
+    solution: |
+      `ECOGBL` (CRF baseline) and `TRTP` (planned) are the classic wrong choices for strata and safety analyses respectively.
+
+  - id: trials.sap.ties-default
+    format: mcq
+    modes: [check, speed]
+    difficulty: intermediate
+    skills: [trials.sap, stats.cox]
+    lesson: trials-sap-and-shells
+    title: Default tie handling
+    prompt: |
+      Which statement about default handling of tied event times in Cox regression is correct?
+    choices:
+      - text: "SAS PROC PHREG defaults to Breslow; R coxph() defaults to Efron"
+        correct: true
+        feedback: "That is why the SAP must name the method and both programs should set it explicitly."
+      - text: "Both default to Efron"
+        feedback: "PHREG's default is TIES=BRESLOW."
+      - text: "Both default to Breslow"
+        feedback: "R's coxph() default is ties = \"efron\"."
+      - text: "Both use the exact method by default"
+        feedback: "The exact (discrete/exact) methods must be requested explicitly."
+    solution: |
+      PHREG: `TIES=BRESLOW` by default; `coxph()`: `ties = "efron"` by default. With many tied event days (progression dated at scheduled scans) the choice can change the HR in the second decimal.
+
+  - id: trials.sap.conftype-default
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.sap, stats.survival]
+    lesson: trials-sap-and-shells
+    title: Median CI transformation defaults
+    prompt: |
+      The SAP says: "95% CIs for median PFS will be computed with the Brookmeyer–Crowley method using a log-log transformation." Which program settings implement it?
+    choices:
+      - text: "SAS `conftype=loglog` (the LIFETEST default); R `survfit(..., conf.type = \"log-log\")` (not the R default)"
+        correct: true
+        feedback: "R's default is conf.type = \"log\"; without the option, R QC will disagree with SAS on the confidence limits."
+      - text: "No options needed; both software packages use log-log by default"
+        feedback: "R survfit's default is \"log\"."
+      - text: "SAS `conftype=linear`; R default"
+        feedback: "Linear ('plain') is a different transformation."
+      - text: "Only the median is affected by the transformation"
+        feedback: "The median itself is the same; the CI limits change."
+    solution: |
+      Set the transformation explicitly in both. The medians match regardless; the limits depend on the transformation.
+
+  - id: trials.sap.which-document
+    format: classify
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.sap, trials.documents, tlf.shells]
+    lesson: trials-sap-and-shells
+    title: Which document does this belong in?
+    prompt: |
+      Classify each statement by the document where it primarily belongs.
+    categories: [SAP, Shell, ADaM specification]
+    entries:
+      - { text: "The hazard ratio will be estimated with a Cox model stratified by the randomization factors; ties handled by the Efron method", category: SAP }
+      - { text: "Footnote [b]: Cox model stratified by ECOG PS and prior anti-PD-(L)1 (IxRS); Efron ties", category: Shell }
+      - { text: "Column header: CBX-417 + Docetaxel (N=xxx)", category: Shell }
+      - { text: "STRAT1R = STRAT_ECOG from the IxRS randomization transfer", category: "ADaM specification" }
+      - { text: "Subgroup analyses of PFS by age group, sex, region, ECOG, histology, PD-L1, brain metastases and prior anti-PD-(L)1", category: SAP }
+      - { text: "CNSR = 3 and ADT = last adequate assessment on or before NATDT when new therapy starts before PD or death", category: "ADaM specification" }
+    hints:
+      - "The SAP states methods and rules in words; the shell shows how results are displayed; the ADaM spec defines variables."
+    solution: |
+      Methods → SAP; display and footnote text → shell; variable-level derivation → ADaM specification. The same rule often appears in all three at different levels of detail, which is why they must be kept consistent.
+
+  - id: trials.sap.phreg-code
+    format: code
+    language: sas
+    modes: [independent]
+    difficulty: intermediate
+    skills: [trials.sap, stats.cox, sas.stat-procs]
+    lesson: trials-sap-and-shells
+    title: Write the stratified Cox model
+    minutes: 10
+    prompt: |
+      SAP §9.3: "The hazard ratio (CBX-417 vs placebo) and its 95% CI will be estimated with a Cox model with treatment as the only covariate, stratified by the randomization stratification factors (`STRAT1R`, `STRAT2R`). Ties will be handled with the Efron method." Write the `PROC PHREG` step on `ADAM.ADTTE` for PFS in the ITT population. Censoring codes are 1–4.
+    starter: |
+      proc phreg data=adam.adtte;
+        /* your code */
+      run;
+    hints:
+      - "Restrict with a WHERE statement on PARAMCD and ITTFL."
+      - "Use CLASS with `ref='Placebo + Docetaxel'` so the HR is CBX-417 vs placebo."
+      - "`model AVAL*CNSR(1,2,3,4) = TRTP / ties=efron risklimits;` and a STRATA statement."
+    checks:
+      - pattern: "where[^;]*paramcd\\s*=\\s*['\"]pfs['\"]"
+        message: "Selects PARAMCD = 'PFS'"
+      - pattern: "where[^;]*ittfl\\s*=\\s*['\"]y['\"]"
+        message: "Restricts to ITTFL = 'Y'"
+      - pattern: "ref\\s*=\\s*['\"]placebo \\+ docetaxel['\"]"
+        message: "Sets placebo as the reference level"
+      - pattern: "cnsr\\s*\\(\\s*1\\s*[, ]\\s*2\\s*[, ]\\s*3\\s*[, ]\\s*4\\s*\\)"
+        message: "Treats all censoring codes 1-4 as censored"
+      - pattern: "ties\\s*=\\s*efron"
+        message: "Uses TIES=EFRON as the SAP requires"
+      - pattern: "\\bstrata\\s+strat1r\\s+strat2r"
+        message: "Stratifies by STRAT1R and STRAT2R"
+    reference: |
+      proc phreg data=adam.adtte;
+        where PARAMCD = 'PFS' and ITTFL = 'Y';
+        class TRTP (ref='Placebo + Docetaxel') / param=ref;
+        model AVAL*CNSR(1,2,3,4) = TRTP / ties=efron risklimits;
+        strata STRAT1R STRAT2R;
+      run;
+    solution: |
+      The HR is invariant to the time unit, so `AVAL` in days is fine here. `risklimits` gives the Wald CI for the HR. The R QC equivalent: `coxph(Surv(AVAL, CNSR == 0) ~ TRTP + strata(STRAT1R, STRAT2R), ties = "efron")` with placebo as the first factor level.
+
+  - id: trials.sap.decimals
+    format: numeric
+    modes: [guided]
+    difficulty: foundation
+    skills: [trials.sap, tlf.summary-stats]
+    lesson: trials-sap-and-shells
+    title: Decimal places from the SAP
+    prompt: |
+      SAP §5.1 (CBX417-301): minimum and maximum use the precision of the collected data; mean and median use one more decimal; SD uses two more. Weight is collected with 1 decimal (for example 72.4 kg). How many decimals does the **SD** of weight have in Table 14.1.2?
+    answer: 3
+    tolerance: 0
+    unit: decimals
+    hints:
+      - "Start from the collected precision (1 decimal) and add the SAP's increment for SD."
+    solution: |
+      1 + 2 = **3** decimals for SD (mean and median: 2; min and max: 1). The shell shows this as `xx.xxx`. Conventions like this are sponsor-defined; the SAP is where they are fixed.
+
+  - id: trials.sap.median-ci-qc
+    format: diff
+    modes: [qc]
+    difficulty: advanced
+    skills: [trials.sap, qc.discrepancy, stats.survival]
+    lesson: trials-sap-and-shells
+    title: Medians match, confidence limits do not
+    prompt: |
+      Production (SAS) and QC (R) versions of a PFS median row, computed on the same **simulated** dataset (not CBX417-301 results). What is the most likely cause of the difference?
+    left:
+      title: "Production (SAS PROC LIFETEST)"
+      columns: ["Arm", "Median PFS, months (95% CI)"]
+      rows:
+        - ["Experimental", "6.74 (5.45, 7.00)"]
+        - ["Control", "4.24 (2.79, 4.37)"]
+      footnote: "95% CI: Brookmeyer-Crowley, log-log transformation."
+    right:
+      title: "QC (R survfit)"
+      columns: ["Arm", "Median PFS, months (95% CI)"]
+      rows:
+        - ["Experimental", "6.74 (5.55, 7.06)"]
+        - ["Control", "4.24 (2.83, 5.29)"]
+      footnote: "survfit(Surv(AVALM, EVENT) ~ TRTP)"
+    choices:
+      - text: "QC used R's default `conf.type = \"log\"` instead of the SAP's log-log transformation"
+        correct: true
+        feedback: "Identical medians with different limits point to the CI method. Adding `conf.type = \"log-log\"` reproduces the production limits."
+      - text: "QC treated censoring codes 2-4 as events"
+        feedback: "That would change the medians too, not only the limits."
+      - text: "Production used a different month conversion"
+        feedback: "A different constant would shift the medians as well."
+      - text: "Production used Efron ties"
+        feedback: "Tie handling affects Cox models, not Kaplan-Meier limits."
+    solution: |
+      The limits depend on the transformation used for the pointwise CIs of S(t); the medians do not. Fix QC with `conf.type = "log-log"` and make sure the SAP and shell footnote name the method.
+    explanation:
+      objective: "Locate the cause of differing CI limits with identical medians."
+      given: "Two outputs from the same simulated data and the QC code call."
+      relevant: "Which statistics differ (limits only) and the missing conf.type argument."
+      irrelevant: "Cox tie handling."
+      calculating: "Simulated values from the lesson: log (R default) gives (2.83, 5.29) for control; log-log gives (2.79, 4.37)."
+      method: "Ask which inputs affect the medians and which affect only the limits."
+      interpretation: "Neither output is 'wrong' mathematically; only one follows the SAP."
+      changes: "If the SAP specified the log transformation, production would need to change instead."
+      interviewer: "That you know SAS and R default differences in survival analysis."
+
+  - id: trials.sap.shell-review
+    format: hotspot
+    language: text
+    modes: [debug]
+    difficulty: intermediate
+    skills: [trials.sap, tlf.shells, trials.populations]
+    lesson: trials-sap-and-shells
+    title: Review a draft AE shell
+    prompt: |
+      Review this draft shell for the CBX417-301 TEAE-by-SOC/PT table against the SAP (safety population, actual treatment, subjects counted once per SOC and PT). Click every line that is wrong.
+    code: |
+      Table 14.3.1.2
+      Treatment-Emergent Adverse Events by System Organ Class and Preferred Term
+      ITT Population
+                                 CBX-417 + Docetaxel     Placebo + Docetaxel
+                                      (N=xxx)                 (N=xxx)
+      System organ class
+        Preferred term                 n (%)                   n (%)
+      Any TEAE                       xxx (xx.x)              xxx (xx.x)
+      Gastrointestinal disorders     xxx (xx.x)              xxx (xx.x)
+        Diarrhea                     xxx (xx.x)              xxx (xx.x)
+      n = number of events.
+      MedDRA version xx.x. Subjects are summarized according to randomized treatment.
+      Program: /cbx417-301/csr/prod/tlf/t_ae_soc_pt.sas   Output: t_14_3_1_2.rtf
+    answerLines: [3, 11, 12]
+    lineNotes:
+      - line: 3
+        note: "Safety tables use the Safety Population (SAFFL = 'Y'), not ITT."
+      - line: 11
+        note: "Incidence tables count subjects: n = number of subjects with at least one TEAE in the SOC/PT, each counted once."
+      - line: 12
+        note: "Safety summaries are by actual treatment (TRTA from TRT01A), not randomized treatment."
+    fixed: |
+      Table 14.3.1.2
+      Treatment-Emergent Adverse Events by System Organ Class and Preferred Term
+      Safety Population
+                                 CBX-417 + Docetaxel     Placebo + Docetaxel
+                                      (N=xxx)                 (N=xxx)
+      System organ class
+        Preferred term                 n (%)                   n (%)
+      Any TEAE                       xxx (xx.x)              xxx (xx.x)
+      Gastrointestinal disorders     xxx (xx.x)              xxx (xx.x)
+        Diarrhea                     xxx (xx.x)              xxx (xx.x)
+      n = number of subjects with at least one TEAE; a subject is counted once per SOC and once per PT.
+      MedDRA version xx.x. Subjects are summarized according to actual treatment received.
+      Program: /cbx417-301/csr/prod/tlf/t_ae_soc_pt.sas   Output: t_14_3_1_2.rtf
+    hints:
+      - "Check the population line, the unit of counting and the treatment grouping against the SAP's safety rules."
+    solution: |
+      Population, unit and treatment grouping are all wrong in the draft. Catching shell errors before programming is far cheaper than catching them in QC.
+    explanation:
+      objective: "Check a shell against SAP rules before programming."
+      given: "A draft AE shell and the SAP's safety conventions."
+      relevant: "Population line, footnote describing n, treatment grouping statement."
+      irrelevant: "Row indentation and the program path format."
+      method: "Compare each shell element with the SAP section on AE summaries."
+      interpretation: "Shell errors propagate into programs, QC and the CSR if not caught."
+      changes: "An 'events' column could be legitimate if the SAP asked for event counts in addition to subject counts."
+      interviewer: "That you review shells actively rather than programming whatever is drawn."
+
+  - id: trials.sap.interview-sap-review
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [trials.sap, communication.interviewing]
+    lesson: trials-sap-and-shells
+    title: Reviewing a SAP as a programmer
+    prompt: |
+      **Interviewer:** "You're asked to review a draft SAP and shells before programming starts. What do you look for?"
+    modelAnswer: |
+      I read it as a specification I will have to implement. For each analysis: is the population defined with a flag I can derive; is the treatment variable (planned vs actual) stated; are models fully specified — covariates, strata and their source, tie handling, CI methods and transformations, sidedness of tests; are time units and conversion constants stated; are baseline, visit windows and imputation rules defined with tie-breaks; are censoring rules complete and ordered.
+
+      For the shells: population lines, N in headers, denominators, decimal rules, sort orders, footnotes that match the SAP, and consistent numbering with the TLF list. I list every ambiguity as a question with a proposed wording, because anything unspecified will be filled by software defaults — which differ between SAS and R and make independent QC fail.
+    rubric:
+      - Checks populations and treatment variables
+      - Checks model options (strata source, ties, CI transformations, sidedness)
+      - Checks definitions (baseline, windows, imputation, censoring order)
+      - Checks shells (headers, denominators, decimals, footnotes)
+      - Frames findings as questions with proposed wording
+    redFlags:
+      - "Says programmers don't need to read the SAP"
+      - "Would rely on defaults"
+    followUps:
+      - "What would you do if the SAP and shell footnote disagree?"

@@ -1,0 +1,110 @@
+.path-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: var(--space-6);
+}
+.path {
+  display: flex;
+  flex-direction: column;
+}
+.phase {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 16px;
+}
+.phase__rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.phase__rail::before {
+  content: '';
+  position: absolute;
+  top: 36px;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+.phase:last-child .phase__rail::before {
+  display: none;
+}
+.phase__num {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+}
+[data-theme='dark'] .phase__num {
+  color: #0d1330;
+}
+.phase__body {
+  padding-bottom: var(--space-8);
+  min-width: 0;
+}
+.phase__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.phase__title {
+  font-size: 19px;
+  letter-spacing: -0.015em;
+}
+.phase__focus {
+  font-size: 13.5px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+.phase__modules {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+.path-module {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.path-module__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.path-module__title {
+  font-size: 14px;
+  font-weight: 620;
+  color: var(--text);
+}
+.path-lesson {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  margin: 0 -6px;
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 13px;
+  text-decoration: none !important;
+}
+.path-lesson svg {
+  color: var(--text-4);
+  flex-shrink: 0;
+}
+.path-lesson:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.path-lesson.is-done svg {
+  color: var(--success);
+}

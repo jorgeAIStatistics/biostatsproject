@@ -1,0 +1,943 @@
+items:
+  # ---------------------------------------------------------------- protocol
+  - id: trials.documents.prot-primary-endpoint
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.protocol, trials.endpoints, trials.documents]
+    title: The primary endpoint in the synopsis
+    prompt: |
+      Read Section 1 of the CBX417-301 protocol synopsis. What is the primary endpoint, and who assesses it?
+    choices:
+      - text: "PFS — time from randomization to documented progression per RECIST 1.1 or death from any cause — assessed by the investigator"
+        correct: true
+        feedback: "The synopsis states PFS per investigator assessment using RECIST 1.1; OS is the key secondary endpoint."
+      - text: "PFS assessed by blinded independent central review"
+        feedback: "The synopsis specifies investigator assessment; this study has no central review."
+      - text: "Overall survival"
+        feedback: "OS is the key secondary endpoint, tested only if PFS is significant."
+      - text: "Confirmed objective response rate"
+        feedback: "ORR is a secondary endpoint."
+    solution: |
+      PFS per investigator (RECIST 1.1), from randomization to documented progression or death from any cause, whichever comes first. The assessor matters: investigator-assessed endpoints are more vulnerable to assessment bias than centrally reviewed ones.
+
+  - id: trials.documents.prot-strata
+    format: multi
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.protocol, trials.randomization, trials.documents]
+    title: Stratification factors
+    prompt: |
+      According to the synopsis, which factors stratify randomization in CBX417-301? Select all that apply.
+    choices:
+      - text: "ECOG performance status (0 vs 1)"
+        correct: true
+        feedback: "One of the two stratification factors; it becomes STRAT1R in ADSL."
+      - text: "Prior anti-PD-(L)1 therapy (Yes vs No)"
+        correct: true
+        feedback: "The second stratification factor; it becomes STRAT2R."
+      - text: "Histology (squamous vs non-squamous)"
+        feedback: "Collected and used as a subgroup, but not a stratification factor."
+      - text: "Region"
+        feedback: "Summarized and used as a subgroup; randomization is not stratified by region."
+      - text: "PD-L1 TPS category"
+        feedback: "An exploratory biomarker subgroup, not a stratification factor."
+    solution: |
+      ECOG PS and prior anti-PD-(L)1 therapy — 2 × 2 = 4 strata. These two reappear in the stratified log-rank test and the stratified Cox model.
+
+  - id: trials.documents.prot-scan-anchor
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.protocol, trials.oncology, trials.documents]
+    title: What anchors the tumor assessment schedule?
+    prompt: |
+      The schedule of assessments says tumor assessments follow a calendar "from randomization regardless of dose delays". What does this mean for a subject who interrupts study drug for three weeks?
+    choices:
+      - text: "Their scans stay on the original calendar; the interruption does not postpone them"
+        correct: true
+        feedback: "The calendar is anchored to randomization, so both arms have the same opportunity to detect progression."
+      - text: "Their scans are postponed by three weeks"
+        feedback: "That would make assessment timing depend on dosing and could bias PFS between arms."
+      - text: "Scans stop until dosing resumes"
+        feedback: "Assessments continue, and they even continue after treatment stops for reasons other than progression."
+      - text: "The subject is censored at the interruption"
+        feedback: "Interruptions do not affect PFS analysis; discontinuation is handled with a treatment-policy strategy."
+    solution: |
+      Scans stay on the randomization calendar. This protects PFS from assessment-time bias and is why the SAP can define missed assessments by scheduled windows.
+
+  - id: trials.documents.prot-ecg-baseline
+    format: mcq
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.protocol, adam.baseline, trials.documents]
+    title: Reading the schedule for a baseline definition
+    prompt: |
+      Using the schedule of assessments table in the synopsis, which ECG is the last **pre-dose** assessment?
+    choices:
+      - text: "The screening ECG"
+        correct: true
+        feedback: "The C1D1 ECG is marked post-dose, so the screening ECG is the last pre-dose one."
+      - text: "The C1D1 ECG"
+        feedback: "The table marks it as post-dose — it cannot serve as baseline even though its date equals the first-dose date."
+      - text: "The C2D1 ECG"
+        feedback: "C2D1 is about three weeks after the first dose."
+      - text: "There is no pre-dose ECG"
+        feedback: "Screening includes an ECG."
+    hints:
+      - "Look at the parenthetical note next to the C1D1 ECG entry."
+    solution: |
+      Screening. A generic "last value on or before first dose" rule compared on dates alone would wrongly pick the C1D1 post-dose ECG, which is why the SAP states the ECG baseline explicitly.
+
+  - id: trials.documents.prot-events
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [trials.protocol, stats.power, trials.documents]
+    title: Planned number of PFS events
+    prompt: |
+      How many PFS events does the synopsis require for the final analysis?
+    answer: 331
+    tolerance: 0
+    unit: events
+    solution: |
+      331 events, giving 90% power for HR = 0.70 at two-sided α = 0.05 (Schoenfeld: 330.4 rounded up). The study is event-driven: the analysis timing depends on events, not on a calendar date.
+
+  # ---------------------------------------------------------------- CRF
+  - id: trials.documents.crf-partial-date
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.data-management, trials.documents]
+    title: Recording an unknown day
+    prompt: |
+      Per the CRF completion conventions, how does a site record an adverse event that started in March 2023 on an unknown day?
+    choices:
+      - text: "`UN MAR 2023`"
+        correct: true
+        feedback: "`UN` marks an unknown day and `UNK` an unknown month; the known parts are kept."
+      - text: "`01 MAR 2023`"
+        feedback: "Entering a guessed day would put invented precision in the source data. Imputation happens in ADaM, flagged."
+      - text: "Leave the field blank"
+        feedback: "Blank loses the known month and year."
+      - text: "`15 MAR 2023` (mid-month)"
+        feedback: "Also an invented value; the EDC supports partial dates for exactly this reason."
+    solution: |
+      `UN MAR 2023`. SDTM keeps `AESTDTC = "2023-03"`; ADaM imputes a full date per the SAP and records the imputation in `ASTDTF`.
+
+  - id: trials.documents.crf-units
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.data-management, sdtm.findings, trials.documents]
+    title: Why the CRF collects the unit
+    prompt: |
+      The vital signs page has `TEMP` with `TEMP_UNIT` (C/F) and `WEIGHT` with `WEIGHT_UNIT` (kg/lb), and the completion note says "record the unit actually used; do not convert". Why?
+    choices:
+      - text: "So the value stays faithful to source, and conversion to standard units happens once, in a documented mapping (SDTM `--STRESN`/`--STRESU`)"
+        correct: true
+        feedback: "Site-level conversion introduces rounding and errors that cannot be traced; SDTM standardizes centrally."
+      - text: "Because SDTM does not allow unit variables"
+        feedback: "SDTM has both original (`--ORRESU`) and standard (`--STRESU`) units."
+      - text: "Because analysis uses original units"
+        feedback: "Analysis uses standard units; originals are retained for traceability."
+      - text: "To let each site choose its preferred analysis unit"
+        feedback: "Analysis units are fixed by the specification, not by sites."
+    solution: |
+      Collect what was measured, convert once in a documented mapping. The same principle applies to the central laboratory data, where some sites report conventional units.
+
+  - id: trials.documents.crf-ae-serious
+    format: multi
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.safety, trials.data-management, trials.documents]
+    title: Completing a serious adverse event
+    prompt: |
+      A site marks `AE_SERIOUS = Yes` on the adverse event log. Based on the CRF page and the DMP edit checks, what else must be true?
+    choices:
+      - text: "At least one seriousness criterion checkbox is checked"
+        correct: true
+        feedback: "Edit check AE-007 blocks a serious AE with no criterion."
+      - text: "The event is also reported to pharmacovigilance within 24 hours of site awareness"
+        correct: true
+        feedback: "Stated in the CRF completion note and reconciled later against the safety database."
+      - text: "`AE_GRADE` must be 3 or higher"
+        feedback: "Seriousness and severity are independent: a grade 2 event requiring hospitalization is serious."
+      - text: "`AE_REL_CBX` must be 'Related'"
+        feedback: "Causality is assessed independently of seriousness."
+      - text: "If `AE_OUTCOME` is Fatal, the Death page must be completed"
+        correct: true
+        feedback: "Edit check AE-011 flags a fatal outcome with no Death page."
+    solution: |
+      A seriousness criterion, expedited reporting to pharmacovigilance, and consistency with the Death page when the outcome is fatal. Grade and causality are separate assessments.
+
+  - id: trials.documents.crf-last-dose
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.data-management, trials.documents]
+    title: Last dose date on the End of Treatment page
+    prompt: |
+      The End of Treatment page collects `LAST_DOSE_DATE`, and the annotated CRF marks it `[NOT SUBMITTED]`. Why collect it at all?
+    choices:
+      - text: "It is used to reconcile the dosing pages; the submitted last-dose date (`RFXENDTC`) is derived from the exposure records"
+        correct: true
+        feedback: "Two independent sources of the same fact allow a consistency check; only the derived value is submitted."
+      - text: "It is the only source of the last dose date"
+        feedback: "The dosing pages record every administration; `RFXENDTC` comes from them."
+      - text: "It is submitted in `DS`"
+        feedback: "`DS` carries the end-of-treatment disposition date and reason, not the last dose date."
+      - text: "It is used to derive TEAE windows directly from the CRF page"
+        feedback: "The TEAE window uses `TRTEDT` in ADSL, derived from exposure data."
+    solution: |
+      Reconciliation. Discrepancies between the page and the dosing records are queried before lock; the analysis uses the derived exposure-based dates.
+
+  # ---------------------------------------------------------------- aCRF
+  - id: trials.documents.acrf-sysbp
+    format: text
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [sdtm.acrf-define, sdtm.findings, trials.documents]
+    title: Annotation for systolic blood pressure
+    prompt: |
+      Which SDTM variable does the aCRF annotate for the `SYSBP` field on the vital signs page (give the variable name only)?
+    accept: ["VSORRES", "VS.VSORRES"]
+    acceptPatterns: ["^vs\\.?vsorres$"]
+    monospace: true
+    solution: |
+      `VS.VSORRES when VSTESTCD = "SYSBP"` — a value-level annotation: the wide CRF field becomes one record in the long `VS` domain, identified by its test code, with `VSORRESU = "mmHg"` pre-printed on the page.
+
+  - id: trials.documents.acrf-aereldoc
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sdtm.supp, sdtm.acrf-define, trials.documents]
+    title: Where does the docetaxel relationship go?
+    prompt: |
+      The AE page collects relationship to CBX-417/placebo (`AE_REL_CBX`) and to docetaxel (`AE_REL_DOC`). How are they annotated?
+    choices:
+      - text: "`AE_REL_CBX` → `AE.AEREL`; `AE_REL_DOC` → `SUPPAE.QVAL when QNAM = \"AERELDOC\"`"
+        correct: true
+        feedback: "`AEREL` holds one causality assessment; the second treatment's assessment goes to a supplemental qualifier linked by `AESEQ`."
+      - text: "Both go to `AE.AEREL`, separated by a delimiter"
+        feedback: "Packing two values into one variable breaks analysis and controlled terminology."
+      - text: "`AE_REL_DOC` is not submitted"
+        feedback: "It is analysis-relevant (docetaxel causality) and is submitted as a supplemental qualifier."
+      - text: "`AE_REL_DOC` → `CM.CMREL`"
+        feedback: "Docetaxel is study treatment recorded in `EX`, and causality belongs with the adverse event."
+    solution: |
+      `AEREL` plus `SUPPAE` with `QNAM = "AERELDOC"` (and `AEACNDOC` for the action taken with docetaxel). ADaM copies them into `AREL` and `AERELDOC`/`AEACNDOC`.
+
+  - id: trials.documents.acrf-not-submitted
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sdtm.acrf-define, trials.documents]
+    title: Reading [NOT SUBMITTED]
+    prompt: |
+      `ECOG_SCREEN` on the baseline disease page is annotated `[NOT SUBMITTED]`. What does that tell a reviewer?
+    choices:
+      - text: "The field is collected but deliberately not mapped to SDTM; the reason is explained in the cSDRG (here, the analyzed ECOG comes from the vital signs page)"
+        correct: true
+        feedback: "The annotation documents an intentional decision so a reviewer does not look for the data in vain."
+      - text: "The field was removed from the CRF"
+        feedback: "It exists on the CRF; it is simply not submitted."
+      - text: "The data were lost"
+        feedback: "[NOT SUBMITTED] is a mapping decision, not a data problem."
+      - text: "The field is submitted in ADaM only"
+        feedback: "ADaM derives from SDTM; a field not in SDTM would break traceability if it appeared in ADaM."
+    solution: |
+      It marks a deliberate mapping decision. Duplicated or operational fields (eligibility checks, reconciliation aids) are often not submitted, with the rationale in the reviewer's guide.
+
+  - id: trials.documents.acrf-race
+    format: mcq
+    modes: [guided]
+    difficulty: intermediate
+    skills: [sdtm.dm, sdtm.supp, trials.documents]
+    title: Multiple race checkboxes
+    prompt: |
+      A subject checks both "White" and "Asian" on the demographics page. According to the aCRF, what happens in SDTM?
+    choices:
+      - text: "`DM.RACE = \"MULTIPLE\"`, with each selected category carried in `SUPPDM` (`QNAM = \"RACE1\"`, `\"RACE2\"`)"
+        correct: true
+        feedback: "`RACE` holds one value, so multiple selections collapse to MULTIPLE and the detail is preserved in supplemental qualifiers."
+      - text: "Two `DM` records are created for the subject"
+        feedback: "`DM` has exactly one record per subject."
+      - text: "`DM.RACE` holds \"WHITE;ASIAN\""
+        feedback: "A delimited value is not valid controlled terminology."
+      - text: "The first checkbox wins and the second is dropped"
+        feedback: "That loses collected information."
+    hints:
+      - "How many records does DM have per subject, and how many values can RACE hold?"
+    solution: |
+      `RACE = "MULTIPLE"` plus `SUPPDM` qualifiers. ADSL copies `RACE`, so demographic tables show a "Multiple" category; analyses needing the detail read `SUPPDM`.
+
+  - id: trials.documents.acrf-death-cause
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sdtm.acrf-define, sdtm.events, trials.documents]
+    title: Where the cause of death is submitted
+    prompt: |
+      The Death page collects `DEATH_DATE` and `DEATH_CAUSE`. According to the aCRF, where does each go?
+    choices:
+      - text: "`DEATH_DATE` → `DM.DTHDTC` (with `DTHFL = \"Y\"`) and a `DS` record; `DEATH_CAUSE` → `DD.DDORRES when DDTESTCD = \"PRCDTH\"`"
+        correct: true
+        feedback: "Death details have their own domain; the date also appears in DM and in disposition."
+      - text: "Both go to `DM` only"
+        feedback: "`DM` carries the death date and flag, not the cause."
+      - text: "Both go to `AE`"
+        feedback: "A fatal adverse event is recorded in `AE` with outcome Fatal, but the death record itself is not an AE."
+      - text: "`DEATH_CAUSE` is not submitted"
+        feedback: "It is submitted in the death details domain and feeds `ADSL.DTHCAUS`."
+    solution: |
+      `DM.DTHDTC`/`DTHFL` and a disposition record for the date; the death details domain (`DDTESTCD = "PRCDTH"`) for the cause. `ADSL.DTHCAUS` is derived from it.
+
+  # ---------------------------------------------------------------- DMP
+  - id: trials.documents.dmp-hard-vs-query
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.data-management, trials.documents]
+    title: Hard check or query?
+    prompt: |
+      In the DMP's edit check specification, a weight above 250 kg raises a **query** while an invalid calendar date is a **hard** check. Why the difference?
+    choices:
+      - text: "An invalid date cannot be correct, so entry is blocked; an extreme weight might be correct and must be verified rather than blocked"
+        correct: true
+        feedback: "Hard checks are reserved for impossible values; plausibility limits raise queries so genuine extremes can be confirmed."
+      - text: "Dates are more important than weights"
+        feedback: "Importance is not the criterion; possibility is."
+      - text: "Weight is not used in analysis"
+        feedback: "Weight drives BSA and docetaxel dosing."
+      - text: "Hard checks are used for numeric fields only"
+        feedback: "The opposite here: the hard check is on a date."
+    solution: |
+      Block the impossible; query the implausible. Blocking plausible-but-unusual values pressures sites into changing true data.
+
+  - id: trials.documents.dmp-reconciliation
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.data-management, trials.documents]
+    title: Which reconciliation finds this?
+    prompt: |
+      Two subjects have study-drug dispensing records in EDC but no randomization record in the IxRS transfer. Which reconciliation described in the DMP detects this?
+    choices:
+      - text: "IxRS reconciliation"
+        correct: true
+        feedback: "It compares randomization records, strata and dispensed kits against EDC dosing."
+      - text: "SAE reconciliation"
+        feedback: "That compares adverse event data between EDC and the safety database."
+      - text: "Laboratory reconciliation"
+        feedback: "That compares the central laboratory transfer with EDC visit records."
+      - text: "Coding reconciliation"
+        feedback: "Coding review checks dictionary terms, not randomization."
+    solution: |
+      IxRS reconciliation. The cause is usually a transfer gap (the subject was randomized but omitted from the file); if the subject truly was not randomized, dosing without randomization is a serious deviation.
+
+  - id: trials.documents.dmp-confirmed-value
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [qc.data-cleaning, trials.data-management, trials.documents]
+    title: A confirmed laboratory value
+    prompt: |
+      The DMP says confirmed clinically significant values are flagged for the medical monitor "rather than re-queried". A site confirms ALT = 1850 U/L against the source report. What happens to the value?
+    choices:
+      - text: "It stays in the database and flows into SDTM, ADaM and the liver-safety analyses"
+        correct: true
+        feedback: "Confirmed values are data. This one likely belongs to a clinically important hepatotoxicity signal."
+      - text: "It is capped at the upper plausibility limit"
+        feedback: "Capping confirmed values would hide a safety signal."
+      - text: "It is excluded from summaries as an outlier"
+        feedback: "Exclusion would understate toxicity."
+      - text: "It is deleted and re-entered at the next visit"
+        feedback: "Collected, confirmed data are never deleted."
+    solution: |
+      It stays. It will appear in shift tables, the liver-safety listing and possibly the potential Hy's law screen if bilirubin is also elevated.
+
+  - id: trials.documents.dmp-unlock
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.data-management, regulatory.gxp, trials.documents]
+    title: Changing data after lock
+    prompt: |
+      An error is found in one subject's death date two weeks after database lock. Per the DMP, what is required?
+    choices:
+      - text: "A documented unlock request with impact assessment and approvals, correction, re-lock, and regeneration and re-QC of affected outputs"
+        correct: true
+        feedback: "Unlocks are formal, documented events; affected outputs must be regenerated and checked."
+      - text: "The programmer corrects the value in the ADaM program"
+        feedback: "That would put an undocumented correction outside the database and break traceability."
+      - text: "Nothing; post-lock errors are accepted as-is"
+        feedback: "Material errors are corrected through the unlock process."
+      - text: "The medical writer notes the correct value in the CSR text only"
+        feedback: "The datasets and the CSR must agree."
+    solution: |
+      A formal unlock: request, impact assessment, approvals from data management, medical and biostatistics, correction, re-lock, and regeneration plus re-QC of every affected output. Unlocks are listed in the CSR.
+
+  # ---------------------------------------------------------------- SAP
+  - id: trials.documents.sap-primary-population
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [trials.sap, trials.populations, trials.documents]
+    title: Population for the primary PFS analysis
+    prompt: |
+      Which population and treatment variable does the SAP specify for the primary PFS analysis?
+    choices:
+      - text: "ITT population (`ITTFL = \"Y\"`), analyzed by randomized treatment (`TRT01P`/`TRTP`)"
+        correct: true
+        feedback: "Efficacy analyses use ITT as randomized; safety uses the safety population as treated."
+      - text: "Safety population, by actual treatment"
+        feedback: "That is the safety convention (Section 10)."
+      - text: "Per-protocol population, by randomized treatment"
+        feedback: "Per-protocol is a sensitivity analysis (S4)."
+      - text: "Efficacy-evaluable population, by randomized treatment"
+        feedback: "Efficacy-evaluable supports the response analyses, not the primary PFS analysis."
+    solution: |
+      ITT by randomized treatment — all 420 randomized subjects, including the 4 never treated and the 3 with dispensing errors (in their randomized arm).
+
+  - id: trials.documents.sap-model
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.sap, stats.cox, trials.documents]
+    title: What model and covariates?
+    prompt: |
+      According to SAP Section 9.3, what model estimates the hazard ratio, and which covariates does it contain?
+    choices:
+      - text: "A Cox proportional hazards model with treatment as the only covariate, stratified by ECOG PS and prior anti-PD-(L)1 therapy (IxRS), Efron ties"
+        correct: true
+        feedback: "Stratification factors enter as strata (separate baseline hazards), not as covariates."
+      - text: "A Cox model with treatment, ECOG and prior anti-PD-(L)1 as covariates"
+        feedback: "The SAP stratifies on those factors rather than adjusting for them; a covariate-adjusted model is sensitivity analysis S6."
+      - text: "A logistic regression with treatment and strata"
+        feedback: "Logistic regression is for binary endpoints such as ORR."
+      - text: "An unstratified Cox model with treatment only"
+        feedback: "Unstratified is sensitivity analysis S2."
+    solution: |
+      Stratified Cox, treatment only, Efron ties, Wald 95% CI. In SAS: `strata STRAT1R STRAT2R;` with `model ... / ties=efron risklimits;`.
+
+  - id: trials.documents.sap-ci-method
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.sap, stats.survival, trials.documents]
+    title: Confidence interval for the median
+    prompt: |
+      Which method does the SAP specify for the 95% CI of median PFS, and what must an R programmer do to match it?
+    choices:
+      - text: "Brookmeyer-Crowley with a log-log transformation; in R, set `conf.type = \"log-log\"` because the default is \"log\""
+        correct: true
+        feedback: "SAS `PROC LIFETEST` uses log-log by default; R does not."
+      - text: "Normal approximation; no action needed in R"
+        feedback: "The SAP names Brookmeyer-Crowley with a log-log transformation."
+      - text: "Bootstrap percentile intervals"
+        feedback: "Not specified in this SAP."
+      - text: "Greenwood only, with no transformation"
+        feedback: "Greenwood variance is used, but with the log-log transformation specified."
+    solution: |
+      Brookmeyer-Crowley with log-log. Medians agree across software; the confidence limits do not unless the transformation is set explicitly.
+
+  - id: trials.documents.sap-teae-window
+    format: text
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [trials.sap, trials.safety, trials.documents]
+    title: End of the treatment-emergent window
+    prompt: |
+      Per SAP Section 10.1.1, a TEAE has an analysis start date between the first dose and which upper limit? (Give the expression used in the SAP.)
+    accept: ["TRTEDT + 30", "TRTEDT+30", "last dose + 30 days", "TRTEDT + 30 days"]
+    acceptPatterns: ["^(trtedt|last dose)\\s*\\+\\s*30(\\s*days)?$"]
+    monospace: true
+    solution: |
+      `TRTEDT + 30` — 30 days after the last dose of any study drug. For subjects still on treatment at the cutoff, `TRTEDT` is the last dose on or before the data cutoff.
+
+  - id: trials.documents.sap-partial-date
+    format: mcq
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.sap, adam.occds, trials.documents]
+    title: How are partial AE start dates imputed?
+    prompt: |
+      SAP Section 10.1.2. An AE has `AESTDTC = "2023"` (year only) and `AEENDTC = "2023-11-20"`. The subject's `TRTSDT` is 2023-06-12. What is `ASTDT` and `ASTDTF`?
+    choices:
+      - text: "`ASTDT = 2023-06-12`, `ASTDTF = \"M\"`"
+        correct: true
+        feedback: "Year matches the first-dose year, so the rule uses TRTSDT; the end date (November) does not cap it. Month and day were imputed, so the flag is M."
+      - text: "`ASTDT = 2023-01-01`, `ASTDTF = \"M\"`"
+        feedback: "1 January is the default, but the same-year exception applies here."
+      - text: "`ASTDT = 2023-11-20`, `ASTDTF = \"M\"`"
+        feedback: "The end-date cap applies only when the imputed start date would be later than the end date."
+      - text: "`ASTDT` missing, `ASTDTF = \"Y\"`"
+        feedback: "The year is known, so the date is imputed and flagged M (month and day imputed)."
+    hints:
+      - "Apply the default, then the same-year exception, then the end-date cap."
+    solution: |
+      `ASTDT = TRTSDT = 2023-06-12`, `ASTDTF = "M"`, and the AE is treatment-emergent. Had the end date been 2023-05-01, the cap would set `ASTDT = 2023-05-01` and the AE would not be treatment-emergent.
+
+  - id: trials.documents.sap-censor-rule
+    format: mcq
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.sap, trials.oncology, adam.adtte, trials.documents]
+    title: Which censoring rule applies to this subject?
+    prompt: |
+      SAP Section 9.4. A subject was randomized on 2023-08-14, had adequate assessments through 2024-02-02 (all SD), started a new chemotherapy on 2024-03-05, and had progression documented on 2024-04-16. What does `ADTTE` record for PFS?
+    choices:
+      - text: "Censored at 2024-02-02 with `CNSR = 3` (new anticancer therapy before progression)"
+        correct: true
+        feedback: "The new therapy started before the documented progression, so the subject is censored at the last adequate assessment on or before it."
+      - text: "Event at 2024-04-16 with `CNSR = 0`"
+        feedback: "The primary estimand uses a hypothetical strategy for new therapy; counting this event is supplementary analysis S5."
+      - text: "Censored at 2024-03-05 with `CNSR = 3`"
+        feedback: "The censoring date is the last adequate tumor assessment on or before the therapy start, not the therapy start itself."
+      - text: "Censored at randomization with `CNSR = 2`"
+        feedback: "That rule is for subjects with no baseline or no post-baseline assessment."
+      - text: "Censored at 2024-02-02 with `CNSR = 4`"
+        feedback: "CNSR = 4 is for events after two or more missed assessments; here the new therapy rule applies first."
+    hints:
+      - "Apply the rules in the SAP's stated order: 2, then 3, then 4, then event."
+    solution: |
+      `ADT = 2024-02-02`, `CNSR = 3`, `AVAL = 173` days, with `CNSDTDSC` recording that the censoring date is the last adequate assessment before the new therapy.
+
+  - id: trials.documents.sap-multiplicity
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.sap, stats.multiplicity, trials.documents]
+    title: The testing hierarchy
+    prompt: |
+      SAP Section 9.11. Under what condition is overall survival formally tested?
+    choices:
+      - text: "Only if the PFS null hypothesis is rejected; OS is then tested at two-sided α = 0.05"
+        correct: true
+        feedback: "A fixed-sequence procedure: testing stops at the first non-significant result, keeping the family-wise error rate at 0.05."
+      - text: "Always, at α = 0.025 to adjust for two endpoints"
+        feedback: "The SAP uses a hierarchy, not a Bonferroni split."
+      - text: "Only if ORR is significant first"
+        feedback: "ORR is a secondary endpoint outside the confirmatory hierarchy."
+      - text: "Always, at α = 0.05, independently of PFS"
+        feedback: "That would inflate the family-wise error rate."
+    solution: |
+      Fixed sequence: PFS first at its alpha-spending boundary, then OS at 0.05 if PFS succeeds. If PFS fails, the OS p-value is nominal only.
+
+  - id: trials.documents.sap-interim-boundary
+    format: numeric
+    modes: [independent]
+    difficulty: advanced
+    skills: [trials.sap, stats.interim, trials.documents]
+    title: The final analysis boundary
+    prompt: |
+      SAP Section 3.5 gives the planned group-sequential boundaries. If the interim analysis occurs at 219 of 331 events, what nominal two-sided p-value must the final PFS analysis achieve to declare significance? Give 4 decimals.
+    answer: 0.0441
+    tolerance: 0.0002
+    hints:
+      - "Read the final row of the boundary table in SAP Section 3.5."
+      - "The interim spends 0.0160 of the two-sided alpha, leaving a final boundary below 0.05."
+    solution: |
+      **0.0441** (boundary |Z| = 2.013). The interim spends 0.0160 of the 0.05 two-sided alpha under the Lan-DeMets O'Brien-Fleming spending function at information fraction 219/331 = 0.662, so the final test is slightly stricter than 0.05. Boundaries are recomputed from the actual information fraction at the analyses.
+    explanation:
+      objective: "Read a group-sequential boundary from the SAP and understand what it implies."
+      given: "The boundary table in SAP Section 3.5 and the planned event counts."
+      relevant: "The final-analysis row: cumulative alpha 0.05, boundary Z = 2.013, nominal p ≤ 0.0441."
+      irrelevant: "The hazard-ratio equivalent, which is an approximation for orientation."
+      method: "The O'Brien-Fleming spending function spends little alpha early (0.0160 at 66% information), leaving almost all of it for the final analysis."
+      interpretation: "A final p-value of 0.046 would not meet the boundary, even though it is below 0.05 — the price of the interim look."
+      changes: "An interim at a lower information fraction would spend less alpha and leave a final boundary closer to 0.05."
+      interviewer: "That you can read alpha-spending boundaries and explain why the final test is not exactly 0.05."
+
+  # ---------------------------------------------------------------- shells
+  - id: trials.documents.shells-cox
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [tlf.shells, trials.sap, trials.documents]
+    title: Which shell shows the stratified Cox result?
+    prompt: |
+      Which mock shell contains the stratified hazard ratio with its 95% CI and the stratified log-rank p-value?
+    choices:
+      - text: "Table 14.2.1.1, Summary of Progression-Free Survival (`t-pfs`)"
+        correct: true
+        feedback: "Its footnotes [c] and [d] define the stratified Cox model and the stratified log-rank test."
+      - text: "Figure 14.2.1.2, Kaplan-Meier plot (`f-km-pfs`)"
+        feedback: "The figure shows the curves and an annotation box, but the shell that defines the analysis cells is the PFS summary table."
+      - text: "Figure 14.2.1.3, Forest plot (`f-forest-pfs`)"
+        feedback: "The forest plot shows subgroup hazard ratios from unstratified models."
+      - text: "Table 14.2.3.1, Confirmed objective response (`t-orr`)"
+        feedback: "That table uses Clopper-Pearson CIs and a stratified CMH analysis of the response difference."
+    solution: |
+      `t-pfs` (Table 14.2.1.1). Its footnotes name the model, the stratification factors, the tie handling and the sidedness — everything a programmer needs to reproduce the cells.
+
+  - id: trials.documents.shells-population-line
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [tlf.shells, trials.populations, trials.documents]
+    title: Population line of the AE table
+    prompt: |
+      What do the population line and the note of shell `t-ae-soc-pt` (Table 14.3.1.2) require?
+    choices:
+      - text: "Safety population, subjects summarized by actual treatment received, each subject counted once per SOC and once per preferred term"
+        correct: true
+        feedback: "All three requirements appear in the shell: population line, note on counting, and treatment grouping."
+      - text: "ITT population, by randomized treatment, counting events"
+        feedback: "That would be wrong on all three counts for a safety table."
+      - text: "Safety population, by randomized treatment, counting subjects"
+        feedback: "Safety summaries use actual treatment."
+      - text: "Efficacy-evaluable population, by actual treatment, counting subjects"
+        feedback: "Efficacy-evaluable is for response analyses."
+    solution: |
+      Safety population, actual treatment (`TRTA`), subjects counted once per SOC and per PT. The denominators are the safety population counts per arm (209 and 207 in this study).
+
+  - id: trials.documents.shells-orr-denominator
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [tlf.shells, tlf.denominators, trials.documents]
+    title: The ORR denominator
+    prompt: |
+      Per the footnotes of shell `t-orr`, which subjects are in the denominator of the objective response rate?
+    choices:
+      - text: "All ITT subjects in the arm, including subjects without a post-baseline tumor assessment (counted as non-responders)"
+        correct: true
+        feedback: "The shell states this explicitly, which keeps ORR a proportion of randomized subjects."
+      - text: "Only subjects with at least one post-baseline tumor assessment"
+        feedback: "That would inflate ORR; the supportive efficacy-evaluable analysis is reported separately."
+      - text: "Only subjects with measurable disease at baseline who received treatment"
+        feedback: "That describes a different (evaluable) population."
+      - text: "All treated subjects (safety population)"
+        feedback: "Efficacy uses ITT."
+    solution: |
+      All ITT subjects in the arm. Subjects with no post-baseline assessment have a best overall response of NE and count as non-responders.
+
+  - id: trials.documents.shells-km-number
+    format: text
+    modes: [speed]
+    difficulty: foundation
+    skills: [tlf.shells, trials.documents]
+    title: Find the KM figure number
+    prompt: |
+      What output number does the Kaplan-Meier plot of PFS (`f-km-pfs`) carry in the shells?
+    accept: ["14.2.1.2", "Figure 14.2.1.2"]
+    acceptPatterns: ["^(figure\\s*)?14\\.2\\.1\\.2$"]
+    monospace: true
+    solution: |
+      Figure 14.2.1.2. The numbering follows ICH E3 Section 14 grouping (14.1 demographics, 14.2 efficacy, 14.3 safety) — a convention, not a requirement.
+
+  - id: trials.documents.shells-sae-listing
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [tlf.listings, trials.safety, trials.documents]
+    title: Scope of the SAE listing
+    prompt: |
+      Shell `l-sae` (Listing 16.2.7.2) lists serious adverse events. Does it include SAEs that are **not** treatment-emergent?
+    choices:
+      - text: "Yes — all serious adverse events are listed, with a treatment-emergent flag column"
+        correct: true
+        feedback: "The note says so explicitly; the TE flag lets a reviewer see which events also appear in the serious TEAE table."
+      - text: "No — only treatment-emergent SAEs are listed"
+        feedback: "That is the scope of Table 14.3.1.4, not of the listing."
+      - text: "Only SAEs assessed as related to study drug"
+        feedback: "Causality is a column, not a filter."
+      - text: "Only fatal SAEs"
+        feedback: "All SAEs are listed; deaths are also summarized separately."
+    solution: |
+      All SAEs, with the treatment-emergent flag shown. Tables summarize TEAEs; listings give the reviewer the complete safety picture.
+
+  # ---------------------------------------------------------------- SDTM spec
+  - id: trials.documents.sdtm-origin
+    format: mapping
+    modes: [check]
+    difficulty: intermediate
+    skills: [sdtm.mapping, sdtm.acrf-define, trials.documents]
+    title: Origin of each SDTM variable
+    prompt: |
+      Using the DM and AE sections of the SDTM specification, map each variable to its origin.
+    sourceLabel: Variable
+    targetLabel: Origin
+    pairs:
+      - { source: "DM.SEX", target: "Collected" }
+      - { source: "DM.USUBJID", target: "Derived" }
+      - { source: "DM.AGEU", target: "Assigned" }
+      - { source: "AE.AETERM", target: "Collected" }
+      - { source: "AE.AEDECOD", target: "Derived (coding)" }
+      - { source: "AE.AESTDY", target: "Derived" }
+    targets: ["Collected", "Derived", "Assigned", "Derived (coding)", "Protocol"]
+    solution: |
+      Collected values come from a CRF field or vendor transfer; derived values are computed (identifiers, study days); assigned values are constants; coded terms come from the coding process. Origins are recorded in define.xml and drive what a reviewer expects to find on the annotated CRF.
+
+  - id: trials.documents.sdtm-partial-date
+    format: text
+    modes: [check]
+    difficulty: foundation
+    skills: [sdtm.dates, trials.documents]
+    title: Partial date in SDTM
+    prompt: |
+      The site entered `UN MAR 2023` as an AE start date. Per the SDTM specification, what is the value of `AESTDTC`? (Write it exactly.)
+    accept: ["2023-03"]
+    monospace: true
+    solution: |
+      `2023-03`. ISO 8601 keeps the known components; SDTM never imputes. The full date appears only in `ADAE.ASTDT`, with `ASTDTF = "D"`.
+
+  - id: trials.documents.sdtm-unit-conversion
+    format: numeric
+    modes: [guided]
+    difficulty: foundation
+    skills: [sdtm.findings, trials.documents]
+    title: Convert a laboratory result
+    prompt: |
+      A site laboratory reports total bilirubin as 1.2 mg/dL. Using the conversion factor in the SDTM specification (mg/dL × 17.1 → µmol/L), what is `LBSTRESN` in µmol/L? Give one decimal.
+    answer: 20.5
+    tolerance: 0.05
+    unit: umol/L
+    hints:
+      - "Multiply the conventional value by the factor given for bilirubin."
+    solution: |
+      1.2 × 17.1 = 20.52 → **20.5 µmol/L**. `LBORRES` keeps 1.2 with `LBORRESU = "mg/dL"`; the converted value and unit go in `LBSTRESN`/`LBSTRESU`, and the reference limits are converted with the same factor.
+
+  - id: trials.documents.sdtm-armnrs
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sdtm.dm, trials.populations, trials.documents]
+    title: A randomized subject who was never treated
+    prompt: |
+      Per the DM specification, what do `ARM`, `ACTARM` and `ARMNRS` contain for a subject who was randomized to placebo but never received any study drug?
+    choices:
+      - text: "`ARM` populated with the planned arm, `ACTARM` null, `ARMNRS = \"ASSIGNED, NOT TREATED\"`"
+        correct: true
+        feedback: "The planned arm is known from randomization; there is no actual arm, and the null reason explains why."
+      - text: "`ARM` and `ACTARM` both null, `ARMNRS = \"SCREEN FAILURE\"`"
+        feedback: "Screen failures were never randomized; this subject was."
+      - text: "`ARM` and `ACTARM` both populated with placebo"
+        feedback: "`ACTARM` describes treatment actually received, which was none."
+      - text: "`ARM` null, `ACTARM` populated"
+        feedback: "The reverse of the correct pattern."
+    solution: |
+      `ARM` populated, `ACTARM` null, `ARMNRS = "ASSIGNED, NOT TREATED"`. In ADSL the subject has `ITTFL = "Y"`, `SAFFL = "N"` and a missing `TRT01A`.
+
+  # ---------------------------------------------------------------- ADaM spec
+  - id: trials.documents.adam-ablfl
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [adam.baseline, trials.documents]
+    title: Which record gets ABLFL?
+    prompt: |
+      Per the ADLB specification, a subject has ALT values on 2023-05-02 (screening), 2023-05-20 08:05 (C1D1 pre-dose, first dose on 2023-05-20) and 2023-06-10. Which record is flagged `ABLFL = "Y"`?
+    choices:
+      - text: "The C1D1 record of 2023-05-20"
+        correct: true
+        feedback: "Baseline is the last non-missing value on or before the first dose date; C1D1 pre-dose qualifies and is later than screening."
+      - text: "The screening record of 2023-05-02"
+        feedback: "Screening is earlier; the rule takes the last qualifying record."
+      - text: "The 2023-06-10 record"
+        feedback: "That is post-baseline."
+      - text: "None, because the C1D1 sample shares its date with the first dose"
+        feedback: "The rule is 'on or before' the first dose date, so a same-day pre-dose sample qualifies (unlike the post-dose ECG, which the SAP handles separately)."
+    solution: |
+      The C1D1 pre-dose record. Its `AVAL` becomes `BASE` on all of the subject's ALT records, `CHG` is computed from it, and `BTOXGR`/`BNRIND` come from it.
+
+  - id: trials.documents.adam-anl01fl
+    format: mcq
+    modes: [guided]
+    difficulty: intermediate
+    skills: [adam.windows, trials.documents]
+    title: Choosing the record for a visit
+    prompt: |
+      A subject has two ALT results inside the Cycle 3 Day 1 window: the scheduled C3D1 sample on study day 44 and an unscheduled sample on day 50. Per the ADLB specification, which record has `ANL01FL = "Y"` for `AVISIT = "Cycle 3 Day 1"`?
+    choices:
+      - text: "The scheduled C3D1 record (day 44)"
+        correct: true
+        feedback: "The rule prefers the scheduled record; the unscheduled one is used only when no scheduled record exists in the window."
+      - text: "The unscheduled record (day 50), because it is later"
+        feedback: "Latest applies only among unscheduled records when there is no scheduled record."
+      - text: "Both records"
+        feedback: "ANL01FL selects exactly one record per subject, parameter and analysis visit."
+      - text: "Neither; the visit is excluded when there is more than one record"
+        feedback: "The rule exists precisely to resolve this situation."
+    hints:
+      - "Read the ANL01FL rule: scheduled first, otherwise the latest unscheduled record within the window."
+    solution: |
+      The scheduled record. Both records still contribute to worst post-baseline summaries through `ONTRTFL`, which is why shift tables and by-visit tables can legitimately differ.
+
+  - id: trials.documents.adam-chg
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [adam.bds, trials.documents]
+    title: When is CHG null?
+    prompt: |
+      Per the ADLB specification, on which records is `CHG` null?
+    choices:
+      - text: "On the baseline record and on any record of a subject and parameter with no baseline value"
+        correct: true
+        feedback: "Change from baseline is defined for post-baseline records only, and needs a baseline to subtract."
+      - text: "Only where `AVAL` is missing"
+        feedback: "That is one case, but the baseline record and missing-baseline subjects also have null CHG."
+      - text: "Never; CHG is 0 at baseline"
+        feedback: "The specification leaves CHG null at baseline; showing 0 would add a spurious row to change summaries."
+      - text: "On unscheduled records"
+        feedback: "Unscheduled records have CHG like any other post-baseline record."
+    solution: |
+      Null at baseline and when `BASE` is missing. Subjects without a baseline stay in the population and in value summaries but drop out of change-from-baseline summaries, which is why the n differs between those columns.
+
+  - id: trials.documents.adam-cnsr-order
+    format: order
+    modes: [guided]
+    difficulty: advanced
+    skills: [adam.adtte, trials.oncology, trials.documents]
+    title: Order of the PFS censoring rules
+    prompt: |
+      Put the PFS rules from the ADTTE specification in the order they are applied.
+    steps:
+      - "No baseline or no post-baseline assessment, and no early death (CNSR = 2, censored at randomization)"
+      - "New anticancer therapy started before progression or death (CNSR = 3)"
+      - "Progression or death after two or more consecutive missed assessments (CNSR = 4)"
+      - "Progression or death on or before the data cutoff (CNSR = 0, event)"
+      - "Otherwise censored at the last adequate assessment (CNSR = 1)"
+    hints:
+      - "The event rule is not first: several censoring rules take precedence over it."
+      - "The last rule is the catch-all for subjects with no event."
+    solution: |
+      2 → 3 → 4 → event → 1. Testing the event first would silently convert the hypothetical strategy for new therapy into a treatment-policy analysis, and would accept progression dates that follow long gaps in assessment.
+    explanation:
+      objective: "Understand why censoring rules need an explicit precedence."
+      given: "Five rules from the ADaM specification."
+      relevant: "Which subjects satisfy more than one rule — for example new therapy followed by progression."
+      method: "Follow the SAP order, which places the censoring rules that represent estimand and missing-data decisions before the event rule."
+      interpretation: "Precedence changes the estimand, not just the bookkeeping."
+      changes: "Under a treatment-policy estimand for new therapy, rule 3 would disappear and those subjects would become events."
+      interviewer: "That you implement rule order deliberately and can explain its effect on the estimand."
+
+  - id: trials.documents.adam-trtemfl
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [adam.occds, trials.safety, trials.documents]
+    title: Values of TRTEMFL
+    prompt: |
+      Per the ADAE specification, what values does `TRTEMFL` take, and what happens when `ASTDT` is missing entirely?
+    choices:
+      - text: "`\"Y\"` or null; with a missing start date the event is treated as treatment-emergent unless the end date is before the first dose"
+        correct: true
+        feedback: "Record-level flags are Y or null, and the missing-date rule is deliberately conservative for safety."
+      - text: "`\"Y\"` or `\"N\"`; a missing start date makes it `\"N\"`"
+        feedback: "Subject-level population flags are Y/N; record-level analysis flags are Y or null, and a missing date does not automatically exclude the event."
+      - text: "`\"Y\"` only for related events"
+        feedback: "Treatment emergence is about timing, not causality."
+      - text: "`\"Y\"` or null; a missing start date always makes it null"
+        feedback: "The specification keeps such events treatment-emergent unless the end date proves otherwise."
+    solution: |
+      `"Y"` or null. The conservative missing-date rule avoids hiding potential drug-related events; `ASTDTF` documents any imputation applied to partial dates.
+
+  - id: trials.documents.adam-ontrtfl
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [adam.bds, trials.safety, trials.documents]
+    title: The on-treatment window for laboratory records
+    prompt: |
+      Per the ADLB specification, which records have `ONTRTFL = "Y"`?
+    choices:
+      - text: "Records with `TRTSDT < ADT ≤ TRTEDT + 30`"
+        correct: true
+        feedback: "Strictly after the first dose (so the C1D1 pre-dose baseline is excluded) and up to 30 days after the last dose."
+      - text: "Records with `TRTSDT ≤ ADT ≤ TRTEDT`"
+        feedback: "That would include the baseline record and exclude the 30-day follow-up window."
+      - text: "All post-baseline records up to the data cutoff"
+        feedback: "Records more than 30 days after the last dose are outside the on-treatment window."
+      - text: "Only records with `ANL01FL = \"Y\"`"
+        feedback: "ANL01FL selects records for by-visit summaries; ONTRTFL defines the on-treatment period and includes records outside visit windows."
+    solution: |
+      `TRTSDT < ADT ≤ TRTEDT + 30`. Worst post-baseline values in shift tables use `ONTRTFL = "Y"` records, including unscheduled samples that no analysis visit window covers.
+
+  # ---------------------------------------------------------------- ADRG
+  - id: trials.documents.adrg-purpose
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [regulatory.define, trials.documents]
+    title: What the ADRG adds
+    prompt: |
+      According to its purpose section, what does the ADRG provide that define.xml does not?
+    choices:
+      - text: "Human-readable explanation of conventions, special derivations, dependencies, traceability and known conformance findings"
+        correct: true
+        feedback: "Define.xml is structured metadata; the guide explains context and decisions a reviewer would otherwise have to infer."
+      - text: "The variable-level metadata for each dataset"
+        feedback: "That is exactly what define.xml provides."
+      - text: "The analysis results"
+        feedback: "Results are in the CSR and its tables."
+      - text: "The raw CRF data"
+        feedback: "Collected data are in SDTM; the CRF is annotated in acrf.pdf."
+    solution: |
+      Narrative context: cross-dataset conventions, special derivations (imputation, censoring, windows), data dependencies, traceability and explanations of conformance findings.
+
+  - id: trials.documents.adrg-dependency
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [adam.traceability, adam.adtte, trials.documents]
+    title: What ADTTE depends on
+    prompt: |
+      Per the ADRG's data dependency table, which inputs are needed to build `ADTTE`?
+    choices:
+      - text: "`ADRS` (progression dates), `ADSL` (randomization, death, last known alive) and SDTM `CM` (subsequent anticancer therapy start dates)"
+        correct: true
+        feedback: "That is why ADTTE must be produced after ADRS and ADSL."
+      - text: "SDTM `TR` only"
+        feedback: "`TR` holds tumor measurements; response determination happens in ADRS."
+      - text: "`ADSL` only"
+        feedback: "Progression dates and subsequent therapy dates come from elsewhere."
+      - text: "`ADAE` and `ADLB`"
+        feedback: "Safety datasets are not inputs to the time-to-event derivations."
+    solution: |
+      ADRS, ADSL and the subsequent-therapy records. Reproducing the censoring decisions requires all three, which is why the guide states the production order.
+
+  - id: trials.documents.adrg-strat-discordance
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [adam.adsl, trials.randomization, trials.documents]
+    title: Why STRAT1R and ECOGBL disagree
+    prompt: |
+      A reviewer notices that a few subjects have `STRAT1R = "0"` but `ECOGBL = "1"`. What does the ADRG say about this?
+    choices:
+      - text: "It is expected: `STRAT1R` records the IxRS value used at randomization, `ECOGBL` the CRF assessment; mis-stratified subjects differ, and stratified analyses use the IxRS value"
+        correct: true
+        feedback: "The guide flags this so a reviewer does not treat it as a data error."
+      - text: "It is a data error to be corrected before lock"
+        feedback: "The IxRS record correctly documents what happened at randomization; it is not changed."
+      - text: "`ECOGBL` should be overwritten with `STRAT1R`"
+        feedback: "That would destroy the CRF-based baseline value used in subgroup analyses."
+      - text: "Those subjects are excluded from efficacy analyses"
+        feedback: "ITT includes all randomized subjects."
+    solution: |
+      Expected and documented. The stratified analyses use `STRAT1R`; a sensitivity analysis uses CRF values, and the number of discordant subjects is reported.
+
+  - id: trials.documents.adrg-traceability
+    format: mcq
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [adam.traceability, trials.documents]
+    title: Tracing an ADLB value back to SDTM
+    prompt: |
+      Which variables does the ADRG identify as the link from an `ADLB` analysis value back to its SDTM source record?
+    choices:
+      - text: "`SRCDOM`, `SRCVAR` and `SRCSEQ`"
+        correct: true
+        feedback: "They name the source domain, the source variable and the source record's sequence number."
+      - text: "`PARAMCD` and `AVISIT`"
+        feedback: "These identify the parameter and the analysis visit, not the source record."
+      - text: "`USUBJID` and `ADT`"
+        feedback: "They narrow the search but do not identify the exact record."
+      - text: "`ANL01FL` and `ABLFL`"
+        feedback: "These are analysis flags."
+    solution: |
+      `SRCDOM = "LB"`, `SRCVAR = "LBSTRESN"`, `SRCSEQ = LBSEQ`. With them, a table cell can be followed to the analysis record, the SDTM record and — through the annotated CRF — the collected field.

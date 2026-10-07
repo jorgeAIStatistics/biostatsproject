@@ -1,0 +1,288 @@
+.codeblock {
+  margin: var(--space-5) 0;
+  border: 1px solid var(--code-border);
+  border-radius: var(--radius-md);
+  background: var(--code-bg);
+  overflow: hidden;
+  font-size: 13px;
+}
+.codeblock__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--code-border);
+  background: color-mix(in srgb, var(--code-bg) 70%, var(--surface-3));
+}
+.codeblock__lang {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.codeblock__title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.codeblock__explain-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: var(--weight-medium);
+}
+.codeblock__explain-toggle svg {
+  width: 13px;
+  height: 13px;
+}
+.codeblock__explain-toggle.is-on {
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft);
+}
+.codeblock__scroll {
+  overflow: auto;
+}
+.codeblock__code {
+  display: inline-block;
+  min-width: 100%;
+  padding: 10px 0;
+  font-family: var(--font-mono);
+  font-size: 12.8px;
+  line-height: 1.62;
+  color: var(--code-text);
+  font-variant-ligatures: none;
+}
+.codeblock--compact .codeblock__code {
+  padding: 6px 0;
+  font-size: 12.3px;
+}
+.codeblock__line {
+  display: flex;
+  align-items: flex-start;
+  min-height: 1.62em;
+  padding-right: 16px;
+  white-space: pre;
+}
+.codeblock__line.is-highlight {
+  background: var(--code-highlight);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.codeblock__line.is-explained,
+.codeblock__line.is-clickable {
+  cursor: pointer;
+}
+.codeblock__line.is-explained:hover,
+.codeblock__line.is-clickable:hover {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.codeblock__line.is-selected {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.codeblock__line.is-correct {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  box-shadow: inset 3px 0 0 var(--success);
+}
+.codeblock__line.is-missed {
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+  box-shadow: inset 3px 0 0 var(--warning);
+}
+.codeblock__line.is-wrong {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+.codeblock__line:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
+}
+.codeblock__num {
+  flex-shrink: 0;
+  width: 44px;
+  padding-right: 14px;
+  text-align: right;
+  color: var(--code-line);
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.codeblock__marker {
+  flex-shrink: 0;
+  width: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.62em;
+  color: var(--accent);
+  opacity: 0.75;
+  user-select: none;
+}
+.codeblock__marker svg {
+  width: 12px;
+  height: 12px;
+}
+.codeblock__text {
+  flex: 1;
+  padding-left: 4px;
+}
+.codeblock:not(:has(.codeblock__num)) .codeblock__text {
+  padding-left: 14px;
+}
+.codeblock__explanation {
+  display: flex;
+  gap: 12px;
+  margin: 4px 12px 8px 52px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-2);
+  white-space: normal;
+  animation: disclosure-in var(--duration-base) var(--ease-out);
+}
+.codeblock__explanation--note.is-correct {
+  border-left-color: var(--success);
+}
+.codeblock__explanation--note.is-missed {
+  border-left-color: var(--warning);
+}
+.codeblock__explanation--note.is-wrong {
+  border-left-color: var(--danger);
+}
+.codeblock__explanation-range {
+  flex-shrink: 0;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  padding-top: 2px;
+  min-width: 58px;
+}
+.codeblock__explanation-body {
+  flex: 1;
+  min-width: 0;
+}
+.codeblock__explanation-body > :first-child {
+  margin-top: 0;
+}
+.codeblock__explanation-body > :last-child {
+  margin-bottom: 0;
+}
+.codeblock__explanation-body p {
+  margin: 0 0 6px;
+}
+.codeblock__explanation-body code {
+  font-size: 12px;
+}
+
+/* SAS output listings look like listings */
+.codeblock--output .codeblock__code,
+.codeblock--text .codeblock__code {
+  line-height: 1.5;
+}
+
+/* SAS log colouring */
+.codeblock__line.log-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+.codeblock__line.log-warning {
+  color: var(--warning);
+  font-weight: 600;
+}
+.codeblock__line.log-note {
+  color: var(--info);
+}
+.codeblock__line.log-echo {
+  color: var(--text-2);
+}
+.codeblock__line.log-plain {
+  color: var(--text-3);
+}
+
+/* Token colours (shared by static blocks) */
+.tok-keyword {
+  color: var(--tok-keyword);
+  font-weight: 520;
+}
+.tok-string {
+  color: var(--tok-string);
+}
+.tok-number {
+  color: var(--tok-number);
+}
+.tok-comment {
+  color: var(--tok-comment);
+  font-style: italic;
+}
+.tok-function {
+  color: var(--tok-function);
+}
+.tok-builtin {
+  color: var(--tok-function);
+}
+.tok-macro {
+  color: var(--tok-macro);
+}
+.tok-def {
+  color: var(--tok-type);
+}
+.tok-type {
+  color: var(--tok-type);
+}
+.tok-property {
+  color: var(--tok-type);
+}
+.tok-operator {
+  color: var(--tok-operator);
+}
+.tok-meta {
+  color: var(--tok-meta);
+}
+.tok-inserted {
+  color: var(--success);
+}
+.tok-deleted {
+  color: var(--danger);
+}
+.tok-heading {
+  color: var(--tok-keyword);
+  font-weight: 600;
+}
+.tok-invalid {
+  color: var(--danger);
+}
+
+/* ---------- Editor ---------- */
+.editor {
+  border: 1px solid var(--code-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--code-bg);
+}
+.editor:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: var(--ring);
+}
+.editor .cm-editor {
+  height: 100%;
+}
+.editor .cm-editor.cm-focused {
+  outline: none;
+}

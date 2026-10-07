@@ -1,0 +1,279 @@
+items:
+  - id: trials.estimands.attributes-map
+    format: mapping
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.estimands]
+    lesson: trials-estimands
+    title: Which attribute is this?
+    prompt: |
+      Each phrase comes from the CBX417-301 PFS estimand. Map it to the estimand attribute it specifies.
+    sourceLabel: Phrase from the estimand
+    targetLabel: Attribute
+    pairs:
+      - { source: "CBX-417 200 mg QD + docetaxel vs placebo + docetaxel, including permitted dose reductions", target: "Treatment" }
+      - { source: "Adults with previously treated advanced NSCLC meeting eligibility criteria", target: "Population" }
+      - { source: "Time from randomization to RECIST 1.1 progression or death", target: "Variable" }
+      - { source: "New anticancer therapy before progression: PFS had it not been started", target: "Intercurrent event handling" }
+      - { source: "Hazard ratio from a stratified Cox model", target: "Population-level summary" }
+    targets: ["Treatment", "Population", "Variable", "Intercurrent event handling", "Population-level summary", "Estimator"]
+    solution: |
+      The five attributes are treatment, population, variable, intercurrent event handling and population-level summary. "Estimator" is a distractor: the estimator (method) is chosen to estimate the estimand, but it is not one of its attributes.
+
+  - id: trials.estimands.censor-new-therapy
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.estimands, trials.oncology]
+    lesson: trials-estimands
+    title: Censoring at new anticancer therapy
+    prompt: |
+      The CBX417-301 SAP censors PFS at the last adequate assessment on or before the start of a new anticancer therapy (CNSR = 3). Which intercurrent-event strategy does this implement?
+    choices:
+      - text: "Hypothetical"
+        correct: true
+        feedback: "It targets PFS in a scenario where new therapy had not been started, relying on non-informative censoring."
+      - text: "Treatment policy"
+        feedback: "Treatment policy would ignore the new therapy and keep counting subsequent progression as an event."
+      - text: "Composite variable"
+        feedback: "A composite strategy would make starting new therapy itself an event, not a reason to censor."
+      - text: "While on treatment"
+        feedback: "While-on-treatment would stop follow-up at discontinuation of *study* treatment, not at the start of new therapy."
+    solution: |
+      Hypothetical. The accompanying assumption — subjects censored at new therapy have the same future risk as comparable subjects still followed — should be probed with a supplementary treatment-policy analysis.
+
+  - id: trials.estimands.strategy-classify
+    format: classify
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.estimands]
+    lesson: trials-estimands
+    title: Name the strategy
+    prompt: |
+      Classify each handling rule by the ICH E9(R1) strategy it represents.
+    categories: [Treatment policy, Hypothetical, Composite variable, While on treatment, Principal stratum]
+    entries:
+      - { text: "PFS continues to be followed and counted after the patient stops study drug", category: Treatment policy }
+      - { text: "Death before documented progression counts as a PFS event", category: Composite variable }
+      - { text: "SBP values after rescue medication are set to missing and modeled as if rescue had not occurred", category: Hypothetical }
+      - { text: "Adverse events are summarized from first dose until 30 days after the last dose", category: While on treatment }
+      - { text: "Effect of the drug among patients who would adhere to either treatment", category: Principal stratum }
+      - { text: "Patients who need rescue therapy are classified as non-responders", category: Composite variable }
+    hints:
+      - "Composite strategies fold the event into the outcome definition (as an event or a failure)."
+      - "While-on-treatment restricts the observation period; hypothetical imagines the event away."
+    solution: |
+      Treatment policy ignores the event; hypothetical imagines it did not occur; composite makes it part of the outcome; while-on-treatment stops observation at it; principal stratum restricts the population by potential occurrence of the event.
+
+  - id: trials.estimands.missed-scans
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [trials.estimands, stats.missing-data]
+    lesson: trials-estimands
+    title: Missed scans — intercurrent event?
+    prompt: |
+      A subject misses two consecutive scheduled scans and progression is documented at the next one. How should this situation be classified in the estimand framework?
+    choices:
+      - text: "As missing data: an estimation problem handled by an assumption (the CNSR = 4 rule) and tested in sensitivity analyses"
+        correct: true
+        feedback: "The scans should have happened and were relevant to the estimand; the data are missing. The CNSR = 4 rule is a missing-data assumption."
+      - text: "As an intercurrent event handled with a hypothetical strategy"
+        feedback: "Nothing happened to the patient's treatment or outcome that changes the question; data are just missing."
+      - text: "As an intercurrent event handled with a treatment-policy strategy"
+        feedback: "Strategies are for events that affect interpretation or existence of outcomes, not for missed assessments."
+      - text: "As a protocol deviation that removes the subject from ITT"
+        feedback: "ITT includes every randomized subject; deviations never remove subjects from ITT."
+    solution: |
+      Missing data. That is why sensitivity analyses for PFS often vary the missed-scan rule (for example, counting the event at the actual PD date) — the estimand stays the same while the assumption changes.
+
+  - id: trials.estimands.sensitivity-vs-supplementary
+    format: classify
+    modes: [guided]
+    difficulty: advanced
+    skills: [trials.estimands, stats.sensitivity]
+    lesson: trials-estimands
+    title: Sensitivity or supplementary?
+    prompt: |
+      The primary PFS estimand for CBX417-301 uses a hypothetical strategy for new anticancer therapy and the CNSR = 4 rule for progression after two or more missed scans. Classify each additional analysis.
+    categories: [Sensitivity analysis (same estimand), Supplementary analysis (different estimand)]
+    entries:
+      - { text: "Count progression after two or more missed scans as an event at the documented PD date", category: "Sensitivity analysis (same estimand)" }
+      - { text: "Count progression after new anticancer therapy as an event (no censoring at new therapy)", category: "Supplementary analysis (different estimand)" }
+      - { text: "Use an interval-censored model because progression is only known to occur between two scans", category: "Sensitivity analysis (same estimand)" }
+      - { text: "Unstratified Cox model instead of stratified", category: "Sensitivity analysis (same estimand)" }
+      - { text: "PFS per blinded independent central review instead of investigator", category: "Supplementary analysis (different estimand)", note: "The variable changes (assessor), so strictly this is a different variable — often reported as supportive/supplementary." }
+    hints:
+      - "Ask whether the analysis changes the question (an attribute) or only an assumption about missing information."
+      - "Changing the intercurrent-event strategy or the variable changes the estimand."
+    solution: |
+      Missed-scan handling, interval-censored modeling and stratification choices vary assumptions or the estimator for the same question. Dropping the hypothetical strategy for new therapy, or changing who assesses progression, changes the estimand.
+    explanation:
+      objective: "Separate robustness checks from analyses of a different question."
+      given: "The primary estimand's strategies and five candidate analyses."
+      relevant: "Which attribute (if any) each analysis changes."
+      method: "Compare each analysis attribute by attribute with the primary estimand."
+      interpretation: "A 'sensitivity' analysis that changes the estimand cannot tell you whether the primary result is robust; it answers another question."
+      changes: "If the primary estimand used a treatment-policy strategy for new therapy, the no-censoring analysis would become the primary and the censored one supplementary."
+      interviewer: "That you know the ICH E9(R1) distinction and can apply it to PFS censoring choices."
+
+  - id: trials.estimands.cardio-ice-map
+    format: mapping
+    modes: [guided]
+    difficulty: intermediate
+    skills: [trials.estimands]
+    lesson: trials-estimands
+    title: Blood-pressure trial — consequences of each choice
+    prompt: |
+      In a 12-week antihypertensive trial with change from baseline in SBP as the variable, map each strategy choice to its main data or analysis consequence.
+    sourceLabel: Strategy choice
+    targetLabel: Consequence
+    pairs:
+      - { source: "Treatment policy for study drug discontinuation", target: "Sites must keep measuring SBP at week 12 after patients stop the drug" }
+      - { source: "Hypothetical for rescue medication", target: "Post-rescue SBP values are not used as observed; they are modeled under an assumption" }
+      - { source: "Composite for rescue medication", target: "Rescue is folded into the outcome, e.g. counted as treatment failure in a responder endpoint" }
+      - { source: "Treatment policy for rescue medication", target: "Observed SBP is used whether or not rescue was taken; the difference usually shrinks" }
+    targets:
+      - "Sites must keep measuring SBP at week 12 after patients stop the drug"
+      - "Post-rescue SBP values are not used as observed; they are modeled under an assumption"
+      - "Rescue is folded into the outcome, e.g. counted as treatment failure in a responder endpoint"
+      - "Observed SBP is used whether or not rescue was taken; the difference usually shrinks"
+      - "Patients who take rescue are excluded from the ITT population"
+    hints:
+      - "Each strategy either needs extra data, needs a model, or changes the outcome definition."
+      - "No strategy removes randomized patients from the population."
+    solution: |
+      Treatment policy needs retrieved data; hypothetical needs modeling assumptions; composite redefines the variable. Excluding rescued patients from ITT is not an estimand strategy — it breaks randomization.
+
+  - id: trials.estimands.treatment-policy-data
+    format: multi
+    modes: [independent]
+    difficulty: intermediate
+    skills: [trials.estimands, trials.protocol]
+    lesson: trials-estimands
+    title: What must be collected for treatment policy?
+    prompt: |
+      CBX417-301 handles discontinuation of study treatment with a treatment-policy strategy for PFS and OS. Which protocol features are **necessary** to estimate these estimands well? Select all that apply.
+    choices:
+      - text: "Tumor assessments continue after treatment discontinuation (for reasons other than PD) until PD"
+        correct: true
+        feedback: "Without continued scans, progression after discontinuation cannot be observed."
+      - text: "Survival follow-up continues after end of treatment"
+        correct: true
+        feedback: "OS under treatment policy requires deaths after treatment ends to be captured."
+      - text: "New anticancer therapies are recorded with start dates"
+        correct: true
+        feedback: "The hypothetical strategy for new therapy needs the start date to censor correctly."
+      - text: "Study treatment continues until the data cutoff for all patients"
+        feedback: "Patients may stop treatment; the strategy handles that. Forcing treatment is neither ethical nor needed."
+      - text: "Patients who discontinue are withdrawn from the study"
+        feedback: "Withdrawing patients at discontinuation would make treatment-policy data impossible to collect."
+    solution: |
+      Continued scans, continued survival follow-up and recorded subsequent therapy. The CBX417-301 schedule of assessments includes all three, which is what makes its estimands estimable.
+
+  - id: trials.estimands.draft-os
+    format: open
+    modes: [independent]
+    difficulty: advanced
+    skills: [trials.estimands, trials.endpoints]
+    lesson: trials-estimands
+    title: Draft the OS estimand
+    prompt: |
+      Write the estimand for the CBX417-301 key secondary endpoint, overall survival, using the five attributes. State the strategy for (1) discontinuation of study treatment and (2) start of new anticancer therapy, and justify each.
+    modelAnswer: |
+      - **Treatment:** CBX-417 200 mg QD + docetaxel 75 mg/m² q3w vs placebo + docetaxel, including permitted dose modifications.
+      - **Population:** adults with previously treated advanced/metastatic NSCLC meeting eligibility (ITT).
+      - **Variable:** time from randomization to death from any cause.
+      - **Intercurrent events:** discontinuation of study treatment — treatment policy (survival is followed regardless); start of new anticancer therapy — treatment policy (deaths after new therapy are counted). Justification: OS is meant to reflect the overall consequence of assigning CBX-417 in a setting where later therapies are standard care; censoring at new therapy would require a strong, untestable assumption that subjects who switch have the same prognosis as those who do not.
+      - **Population-level summary:** hazard ratio from a Cox model stratified by the randomization factors, with KM medians descriptively.
+
+      Censoring is used only for subjects alive at their last known alive date (administrative censoring), which is a missing-data mechanism, not an intercurrent event.
+    rubric:
+      - All five attributes present and specific
+      - Treatment-policy strategy for discontinuation and for new therapy (or a well-justified alternative)
+      - Recognizes that OS censoring at last known alive is administrative, not an ICE strategy
+      - Population-level summary is a stratified HR
+    redFlags:
+      - "Censors OS at new anticancer therapy without discussing the assumption"
+      - "Lists only the population and endpoint"
+    followUps:
+      - "How would crossover to CBX-417 after progression affect this estimand?"
+      - "What supplementary analysis could address subsequent therapy imbalance?"
+
+  - id: trials.estimands.sap-inconsistency
+    format: mcq
+    modes: [debug]
+    difficulty: advanced
+    skills: [trials.estimands, trials.sap]
+    lesson: trials-estimands
+    title: Estimand text vs censoring table
+    prompt: |
+      A draft SAP states the PFS estimand uses a **treatment-policy** strategy for the start of new anticancer therapy. Section 9.4 of the same draft contains the censoring rule "new anticancer therapy before PD: censored at the last adequate assessment on or before the start of new therapy (CNSR = 3)". What is wrong?
+    choices:
+      - text: "The censoring rule implements a hypothetical strategy, so the estimator does not target the stated estimand; one of the two must change"
+        correct: true
+        feedback: "Treatment policy would count progression after new therapy. Censoring at new therapy imagines it away — a hypothetical strategy."
+      - text: "Nothing — censoring rules are separate from estimands"
+        feedback: "Censoring rules are how the intercurrent-event strategy is implemented in ADTTE; they must match."
+      - text: "The CNSR code should be 1, not 3"
+        feedback: "The code number is a sponsor convention; the problem is the strategy mismatch."
+      - text: "Treatment-policy strategies are not allowed for PFS"
+        feedback: "They are allowed and are commonly used as primary or supplementary analyses."
+    solution: |
+      Align them. Either change the estimand to a hypothetical strategy for new therapy (and keep CNSR = 3), or keep treatment policy and remove the new-therapy censoring rule (following subjects to PD after new therapy). Whichever is primary, the other can be a supplementary analysis.
+    explanation:
+      objective: "Check that the estimator (censoring rules) targets the stated estimand."
+      given: "An estimand statement and a censoring rule from the same SAP."
+      relevant: "The strategy named for new anticancer therapy and what the censoring rule does with post-therapy progression."
+      irrelevant: "The specific CNSR code value."
+      method: "Translate the censoring rule back into a strategy and compare."
+      interpretation: "A mismatch means the reported HR answers a different question than the one the SAP claims."
+      changes: "If the estimand said 'hypothetical', the SAP would be consistent."
+      interviewer: "That you can connect ICH E9(R1) language to concrete ADTTE derivations."
+
+  - id: trials.estimands.interview-what
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [trials.estimands, communication.interviewing]
+    lesson: trials-estimands
+    title: Explain estimands
+    prompt: |
+      **Interviewer:** "What is an estimand? Give me an example of an intercurrent event and two different ways of handling it."
+    modelAnswer: |
+      An estimand is the precise treatment effect a trial targets, defined by five attributes: treatment, population, variable, how intercurrent events are handled, and the population-level summary. Intercurrent events happen after treatment starts and affect the interpretation or existence of outcomes — for example, starting rescue medication in a blood-pressure trial.
+
+      Two ways to handle rescue: a treatment-policy strategy uses the observed blood pressure regardless, answering "what is the effect of being assigned the drug in a world where rescue exists?"; a hypothetical strategy asks what blood pressure would have been without rescue, treating post-rescue values as missing and modeling them. A composite strategy could instead count rescue as a treatment failure. Each answers a different question and needs different data — treatment policy needs measurements after rescue or discontinuation, hypothetical needs a modeling assumption.
+    rubric:
+      - Names the five attributes
+      - Defines intercurrent event correctly
+      - Gives two strategies with the question each answers
+      - Mentions data/assumption consequences
+    redFlags:
+      - "Equates the estimand with the analysis population"
+      - "Treats missing data and intercurrent events as the same thing"
+    followUps:
+      - "What is the difference between a sensitivity and a supplementary analysis?"
+      - "How does censoring at new anticancer therapy relate to estimands?"
+
+  - id: trials.estimands.speed-not-strategy
+    format: mcq
+    modes: [speed]
+    difficulty: foundation
+    skills: [trials.estimands]
+    lesson: trials-estimands
+    title: Odd one out
+    prompt: |
+      Which of these is **not** one of the five ICH E9(R1) strategies for intercurrent events?
+    choices:
+      - text: "Last observation carried forward"
+        correct: true
+        feedback: "LOCF is an imputation method (an estimator choice), not a strategy for defining the question."
+      - text: "Treatment policy"
+        feedback: "One of the five strategies."
+      - text: "While on treatment"
+        feedback: "One of the five strategies."
+      - text: "Principal stratum"
+        feedback: "One of the five strategies."
+    solution: |
+      The five strategies: treatment policy, hypothetical, composite variable, while on treatment, principal stratum. LOCF is a (now disfavored) single-imputation method.

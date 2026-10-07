@@ -1,0 +1,49 @@
+domain: tlf
+title: Tables, Listings & Figures
+description: Producing and interpreting clinical outputs from shells.
+skills:
+  - id: tlf.anatomy
+    name: Anatomy of a TLF
+    description: Titles, population, treatment columns, footnotes, program/source traceability, pagination.
+    weight: 2
+    tracks: [programmer, biostatistician]
+  - id: tlf.shells
+    name: Reading table shells
+    description: Translating a mock shell into data requirements and derivations.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: tlf.denominators
+    name: Denominators and percentages
+    description: N vs n, big-N headers, subject vs event counts, population-appropriate denominators.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: tlf.summary-stats
+    name: Summary statistics presentation
+    description: n, mean (SD), median, Q1–Q3, min–max, decimal precision conventions, missing counts.
+    weight: 2
+    tracks: [programmer]
+  - id: tlf.demographics
+    name: Demographics and baseline tables
+    description: Continuous and categorical summaries by treatment arm.
+    weight: 2
+    tracks: [programmer]
+  - id: tlf.safety-tables
+    name: Safety tables
+    description: AE overview, TEAE by SOC/PT, SAEs, lab shift and vital-sign summaries.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: tlf.efficacy-tables
+    name: Efficacy tables
+    description: Response tables, time-to-event summaries, model-based estimates with CIs and p-values.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: tlf.figures
+    name: Clinical figures
+    description: KM plots with numbers at risk, forest plots, waterfall and mean-change plots.
+    weight: 2
+    tracks: [programmer, biostatistician]
+  - id: tlf.listings
+    name: Listings
+    description: Subject-level listings, sorting, and what reviewers use them for.
+    weight: 1
+    tracks: [programmer]

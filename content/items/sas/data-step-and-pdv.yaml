@@ -1,0 +1,410 @@
+items:
+  - id: sas.data-step-and-pdv.iterations-numeric
+    format: numeric
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.pdv, sas.data-step]
+    lesson: sas-data-step-and-pdv
+    title: How high does _N_ go?
+    prompt: |
+      A DATA step reads `WORK.ADLB`, which has **12** observations, with a single `SET` statement. It has no `WHERE`, no `STOP` and no other statement that ends the step early.
+
+      What is the largest value `_N_` takes during execution?
+    answer: 13
+    tolerance: 0
+    hints:
+      - "`_N_` is incremented at the top of every iteration, before `SET` executes."
+      - "How does the step find out that there are no more observations?"
+    solution: |
+      13. Iterations 1–12 each read one observation and write it. Iteration 13 starts (so `_N_` becomes 13), `SET` tries to read a 13th observation, finds end-of-file, and the step stops before any later statement or output runs. A `putlog _N_=;` placed *before* the `SET` statement would print `_N_=13`.
+
+  - id: sas.data-step-and-pdv.compile-exec-classify
+    format: classify
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.pdv]
+    lesson: sas-data-step-and-pdv
+    title: Compile phase or execution phase?
+    prompt: |
+      Classify each event by the phase of the DATA step in which it happens.
+    categories: [Compile phase, Execution phase]
+    entries:
+      - text: "SAS checks the syntax of every statement in the step"
+        category: Compile phase
+      - text: "A PDV slot is created for each variable in the `SET` dataset's descriptor"
+        category: Compile phase
+      - text: "`length AGEGR1 $4;` fixes the length of `AGEGR1`"
+        category: Compile phase
+      - text: "The descriptor portion of the output dataset is created"
+        category: Compile phase
+      - text: "`_N_` is increased by 1"
+        category: Execution phase
+      - text: "Variables created by assignment statements are reset to missing"
+        category: Execution phase
+      - text: "`SET` copies the next observation into the PDV"
+        category: Execution phase
+      - text: "The implicit OUTPUT writes the PDV to the output dataset"
+        category: Execution phase
+        note: "At the end of each iteration, unless the step contains an explicit OUTPUT statement."
+    hints:
+      - "Compilation happens once, before any data is read. Execution happens once per observation."
+      - "Ask of each event: could it happen if the input dataset were empty? Anything that still has to happen (deciding names, types, lengths, and writing the output descriptor) is compile phase."
+      - "Anything that refers to *this row* — `_N_`, the reset, `SET`, the implicit OUTPUT — repeats, so it is execution phase."
+    solution: |
+      Compile phase: syntax check, PDV layout (names, types, lengths, order), descriptor creation. Execution phase: everything that happens per iteration — incrementing `_N_`, resetting created variables, reading with `SET`, running statements, and the implicit OUTPUT.
+
+  - id: sas.data-step-and-pdv.reset-mcq
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.pdv, sas.retain]
+    lesson: sas-data-step-and-pdv
+    title: Is a created variable remembered?
+    prompt: |
+      `WORK.ADSL_IN` has 4 observations.
+
+      ```sas
+      data flagged;
+        set adsl_in;
+        if _N_ = 1 then FIRSTROW = 'Y';
+      run;
+      ```
+
+      What is the value of `FIRSTROW` on the **second** observation of `WORK.FLAGGED`?
+    choices:
+      - text: "Blank (missing)"
+        correct: true
+        feedback: "`FIRSTROW` is created by an assignment statement, so it is reset to missing at the top of every iteration. It is only assigned on iteration 1."
+      - text: "'Y', because the value from the first row carries over"
+        feedback: "That would require `RETAIN FIRSTROW;`. Created variables are not retained by default."
+      - text: "'N', because the IF condition is false"
+        feedback: "Nothing assigns 'N'. When the condition is false, the variable keeps whatever it had at that point — which is missing after the automatic reset."
+      - text: "The step fails because FIRSTROW is not defined on every row"
+        feedback: "A variable does not have to be assigned on every iteration; it is simply missing where it is not assigned."
+    solution: |
+      Blank. The PDV resets variables created in the step at the start of each iteration. `FIRSTROW` is `'Y'` on observation 1 and blank on observations 2–4.
+
+  - id: sas.data-step-and-pdv.pdv-order-mcq
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.pdv, sas.attributes]
+    lesson: sas-data-step-and-pdv
+    title: What decides variable order?
+    prompt: |
+      `WORK.ADSL_IN` contains `USUBJID AGE HEIGHTBL WEIGHTBL` in that order.
+
+      ```sas
+      data adsl;
+        length AGEGR1 $4;
+        set adsl_in;
+        if AGE >= 65 then AGEGR1 = '>=65';
+        else AGEGR1 = '<65';
+      run;
+      ```
+
+      In what order does `proc contents data=adsl varnum;` list the variables?
+    choices:
+      - text: "`AGEGR1 USUBJID AGE HEIGHTBL WEIGHTBL`"
+        correct: true
+        feedback: "The PDV is built in order of first mention at compile time, and the LENGTH statement mentions AGEGR1 before SET brings in the input variables."
+      - text: "`USUBJID AGE HEIGHTBL WEIGHTBL AGEGR1`"
+        feedback: "That would be the order if the LENGTH statement came after SET. Position of the first mention decides order."
+      - text: "Alphabetical: `AGE AGEGR1 HEIGHTBL USUBJID WEIGHTBL`"
+        feedback: "VARNUM lists variables in storage (creation) order; alphabetical order is the default *listing* without VARNUM, not the storage order."
+      - text: "The order is undefined and can change between runs"
+        feedback: "Storage order is deterministic: first mention during compilation."
+    solution: |
+      `AGEGR1` comes first because the LENGTH statement is the first mention. Programmers use this deliberately (a `RETAIN` or `ATTRIB`/`LENGTH` statement listing variables before `SET`) to put variables in specification order — but the side effect surprises people who put LENGTH at the top without thinking about order.
+
+  - id: sas.data-step-and-pdv.derive-code
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: foundation
+    skills: [sas.data-step, sas.pdv, adam.adsl]
+    lesson: sas-data-step-and-pdv
+    title: Three row-wise ADSL derivations
+    minutes: 10
+    prompt: |
+      `WORK.ADSL1` has one row per subject with `USUBJID AGE HEIGHTBL WEIGHTBL TRTSDT TRTEDT` (the two dates are numeric SAS dates).
+
+      Create `WORK.ADSL2` with all input variables plus:
+
+      - `BMIBL` = weight (kg) / height (m)², displayed with one decimal place;
+      - `TRTDURD` = `TRTEDT - TRTSDT + 1` (treatment duration in days, counting both the first and last dose day);
+      - `AGEGR1` = `'<65'` or `'>=65'`, left blank when `AGE` is missing, declared with a LENGTH statement **before** it is first assigned.
+    starter: |
+      data adsl2;
+        set adsl1;
+        /* your derivations */
+      run;
+    hints:
+      - "Height is in cm, so divide by 100 before squaring: `(HEIGHTBL / 100)**2`."
+      - "Declare `length AGEGR1 $4;` before any statement that assigns AGEGR1 — otherwise the first assignment fixes the length."
+      - "Handle missing AGE first: `if missing(AGE) then AGEGR1 = ' '; else if AGE >= 65 then … ; else …;`. A format such as `5.1` controls the displayed decimals."
+    checks:
+      - pattern: 'set\s+(work\.)?adsl1\b'
+        message: "Reads WORK.ADSL1 with SET"
+      - pattern: 'bmibl\s*=[^;]*weightbl[^;]*heightbl[^;]*;'
+        message: "Derives BMIBL from WEIGHTBL and HEIGHTBL"
+      - pattern: 'trtdurd\s*=\s*trtedt\s*-\s*trtsdt\s*\+\s*1'
+        message: "Derives TRTDURD = TRTEDT - TRTSDT + 1"
+      - pattern: 'length\s+agegr1\s+\$\s*4'
+        message: "Declares AGEGR1 as character length 4"
+      - pattern: 'length\s+agegr1[\s\S]*agegr1\s*='
+        message: "The LENGTH statement comes before the first assignment of AGEGR1"
+      - pattern: 'missing\s*\(\s*age\s*\)|age\s*(=|eq|>|ne|\^=|~=)\s*\.'
+        message: "Handles a missing AGE explicitly"
+      - pattern: 'format\s+[^;]*bmibl\s+\d*\.1|round\s*\([^;]*bmibl|bmibl\s*=\s*round\s*\('
+        message: "Displays (or rounds) BMIBL to one decimal"
+    reference: |
+      data adsl2;
+        set adsl1;
+        length AGEGR1 $4;
+        BMIBL   = WEIGHTBL / (HEIGHTBL / 100)**2;
+        TRTDURD = TRTEDT - TRTSDT + 1;
+        if missing(AGE) then AGEGR1 = ' ';
+        else if AGE >= 65 then AGEGR1 = '>=65';
+        else AGEGR1 = '<65';
+        format BMIBL 5.1;
+      run;
+    expectedOutput: |
+      NOTE: There were <n subjects> observations read from the data set WORK.ADSL1.
+      NOTE: The data set WORK.ADSL2 has <n subjects> observations and 9 variables.
+    solution: |
+      All three are row-wise: each output row depends only on its own input row, so no RETAIN or BY is needed. The `+ 1` in `TRTDURD` counts both end days (a subject dosed on a single day has duration 1). The `if missing(AGE)` branch comes first so that a missing age is not swept into `'<65'` by the final ELSE. Check the log: rows in must equal rows out, and 6 input variables + 3 derived = 9 variables.
+
+  - id: sas.data-step-and-pdv.explicit-output-mcq
+    format: mcq
+    modes: [check, guided]
+    difficulty: foundation
+    skills: [sas.data-step, sas.pdv]
+    lesson: sas-data-step-and-pdv
+    title: Two datasets, one OUTPUT
+    prompt: |
+      `WORK.ADSL_IN` has 4 subjects, 2 of them aged 65 or older.
+
+      ```sas
+      data adsl elderly;
+        set adsl_in;
+        if AGE >= 65 then output elderly;
+      run;
+      ```
+
+      How many observations does `WORK.ADSL` have?
+    choices:
+      - text: "0"
+        correct: true
+        feedback: "Once a step contains any explicit OUTPUT statement, SAS stops writing rows automatically at the end of each iteration. Nothing ever executes `output adsl;`."
+      - text: "4"
+        feedback: "That would be true without the OUTPUT statement (implicit output to every dataset on the DATA statement)."
+      - text: "2"
+        feedback: "The two older subjects are written to ELDERLY only, because the OUTPUT statement names ELDERLY."
+      - text: "6 — each row goes to ADSL and the older ones also to ELDERLY"
+        feedback: "There is no implicit output once an explicit OUTPUT appears in the step."
+    hints:
+      - "When does SAS perform the implicit OUTPUT at the end of the step?"
+    solution: |
+      0 observations: the log would show `NOTE: The data set WORK.ADSL has 0 observations and 4 variables.` Add `output adsl;` (unconditionally) to write every subject to ADSL.
+
+  - id: sas.data-step-and-pdv.error-flag-multi
+    format: multi
+    modes: [check, independent]
+    difficulty: intermediate
+    skills: [sas.pdv, sas.log]
+    lesson: sas-data-step-and-pdv
+    title: When does _ERROR_ become 1?
+    prompt: |
+      Which of these events set `_ERROR_` to 1 for the current iteration? Select all that apply.
+    choices:
+      - text: "An `INPUT` statement reads the text `abc` into a numeric variable"
+        correct: true
+        feedback: "Invalid data is a data error: SAS writes a NOTE about invalid data, sets the variable to missing, sets `_ERROR_ = 1` and prints the PDV."
+      - text: "A division by zero"
+        correct: true
+        feedback: "A mathematical error: SAS writes a division-by-zero NOTE, sets the result to missing and sets `_ERROR_ = 1`."
+      - text: "`CHG = AVAL - BASE;` when `BASE` is missing"
+        feedback: "Arithmetic on a missing operand quietly gives missing and a summary NOTE; it is not a data error."
+      - text: "A subsetting IF whose condition is false"
+        feedback: "That simply ends the iteration without output; nothing is wrong."
+      - text: "A variable used in the step is uninitialized"
+        feedback: "That produces a compile-time NOTE, not a per-row data error."
+    hints:
+      - "`_ERROR_` is per-observation. It is raised when SAS could not do what the statement asked *for this row*, not when the result merely happens to be missing."
+      - "A useful test: does SAS dump the contents of the PDV to the log alongside the NOTE? That dump is the visible sign that `_ERROR_` was set."
+      - "Missing values are legal SAS values. Propagating one is a defined outcome, so it is reported in a summary NOTE at the end of the step rather than flagged row by row."
+    solution: |
+      Invalid data and mathematical errors (such as division by zero) set `_ERROR_ = 1` and make SAS print the PDV to the log. Missing-value propagation, false subsetting IFs and uninitialized variables do not — which is why you must search the log for their NOTEs yourself.
+
+  - id: sas.data-step-and-pdv.uninit-log
+    format: log
+    modes: [debug]
+    difficulty: foundation
+    skills: [sas.log, sas.pdv, sas.debugging]
+    lesson: sas-data-step-and-pdv
+    title: Every BMI is missing
+    minutes: 5
+    prompt: |
+      After this step, every value of `BMIBL` is missing. Click the log lines that tell you why (expected log; line and column numbers depend on the session).
+    program: |
+      data adsl;
+        set adsl_in;
+        length AGEGR1 $4;
+        BMIBL = WIEGHTBL / (HEIGHTBL / 100)**2;
+        if AGE >= 65 then AGEGR1 = '>=65';
+        else AGEGR1 = '<65';
+      run;
+    log: |
+      10   data adsl;
+      11     set adsl_in;
+      12     length AGEGR1 $4;
+      13     BMIBL = WIEGHTBL / (HEIGHTBL / 100)**2;
+      14     if AGE >= 65 then AGEGR1 = '>=65';
+      15     else AGEGR1 = '<65';
+      16   run;
+
+      NOTE: Variable WIEGHTBL is uninitialized.
+      NOTE: Missing values were generated as a result of performing an operation on missing values.
+            Each place is given by: (Number of times) at (Line):(Column).
+            4 at 13:20
+      NOTE: There were 4 observations read from the data set WORK.ADSL_IN.
+      NOTE: The data set WORK.ADSL has 4 observations and 7 variables.
+    issues: [9, 10]
+    lineNotes:
+      - line: 4
+        note: "The typo `WIEGHTBL` (for `WEIGHTBL`) compiles without error: SAS silently creates a new numeric variable."
+      - line: 9
+        note: "The root cause, stated plainly: the variable used in the formula never receives a value."
+      - line: 10
+        note: "The consequence: dividing a missing value gives missing."
+      - line: 12
+        note: "4 missing values at line 13, column 20 (the division) — on every one of the 4 rows. When the count equals the number of rows, suspect the formula, not the data."
+      - line: 14
+        note: "7 variables instead of 6: the empty WIEGHTBL column was written to the output. A variable count that is one too high is another fingerprint of a typo."
+    hints:
+      - "Which NOTE names a variable that never got a value?"
+      - "Compare the number of missing values generated with the number of observations."
+    solution: |
+      Lines 9 and 10: `WIEGHTBL` is uninitialized (a typo), so every division has a missing numerator. Fix the spelling. The counts corroborate it: 4 missing values for 4 rows, and 7 output variables instead of the expected 6.
+    explanation:
+      objective: "Diagnose why a derived variable is missing on every row."
+      given: "The program and its log."
+      relevant: "The 'uninitialized' NOTE, the missing-values NOTE with its count, and the variable count."
+      irrelevant: "The AGEGR1 logic and the observations-read NOTE."
+      numbers: "4 missing values = all 4 rows; 7 variables = 4 input + AGEGR1 + BMIBL + the accidental WIEGHTBL."
+      interpretation: "A problem on every row points to the code; a problem on a few rows points to the data."
+      interviewer: "That you treat 'uninitialized' notes as errors and use counts in the log as evidence."
+
+  - id: sas.data-step-and-pdv.output-hotspot
+    format: hotspot
+    language: sas
+    modes: [debug]
+    difficulty: intermediate
+    skills: [sas.data-step, sas.pdv, sas.debugging]
+    lesson: sas-data-step-and-pdv
+    title: ADSL came out empty
+    minutes: 5
+    prompt: |
+      The log for this step says:
+
+      ```log
+      NOTE: There were 4 observations read from the data set WORK.ADSL_IN.
+      NOTE: The data set WORK.ADSL has 0 observations and 5 variables.
+      NOTE: The data set WORK.ELDERLY has 2 observations and 5 variables.
+      ```
+
+      The intention was ADSL with all 4 subjects and ELDERLY with the subjects aged 65 or older. Click the line that causes ADSL to be empty.
+    code: |
+      data adsl elderly;
+        set adsl_in;
+        length AGEGR1 $4;
+        if AGE >= 65 then AGEGR1 = '>=65';
+        else if not missing(AGE) then AGEGR1 = '<65';
+        if AGEGR1 = '>=65' then output elderly;
+      run;
+    answerLines: [6]
+    lineNotes:
+      - line: 6
+        note: "An explicit OUTPUT anywhere in the step turns off the implicit OUTPUT for every dataset. Rows now reach a dataset only through an OUTPUT statement that names it, and nothing names ADSL."
+      - line: 1
+        note: "Listing two datasets is fine; without any OUTPUT statement both would receive every row."
+    fixed: |
+      data adsl elderly;
+        set adsl_in;
+        length AGEGR1 $4;
+        if AGE >= 65 then AGEGR1 = '>=65';
+        else if not missing(AGE) then AGEGR1 = '<65';
+        output adsl;
+        if AGEGR1 = '>=65' then output elderly;
+      run;
+    hints:
+      - "Under what condition does SAS write a row automatically at `run;`?"
+      - "The log accounts for 4 rows read and 2 rows written in total. Nothing is being filtered out — so ask which statement is *doing the writing*, not which one is doing the discarding."
+      - "An explicit OUTPUT is a switch for the whole step, not just for the dataset it names. Once the switch is off, every dataset in the DATA statement needs its own OUTPUT."
+    solution: |
+      Line 6. Add an unconditional `output adsl;` so every subject is written to ADSL, and keep the conditional `output elderly;`.
+    explanation:
+      objective: "Explain why one of two output datasets is empty."
+      given: "The step and its log counts (4 read, 0 and 2 written)."
+      relevant: "The explicit OUTPUT statement and the rule that it disables implicit output."
+      irrelevant: "The AGEGR1 derivation is correct."
+      method: "Ask, for each output dataset, which statement writes rows to it."
+      interpretation: "ELDERLY is correct; ADSL is empty because no OUTPUT statement names it."
+      changes: "Removing line 6 would write all 4 rows to both datasets; adding `output adsl;` gives the intended result."
+      interviewer: "That you know implicit OUTPUT is all-or-nothing for the step."
+
+  - id: sas.data-step-and-pdv.interview-pdv
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [sas.pdv, sas.data-step, communication.interviewing]
+    lesson: sas-data-step-and-pdv
+    title: Explain the PDV
+    prompt: |
+      **Interviewer:** "What is the program data vector, and what happens in the compile and execution phases of a DATA step?"
+    modelAnswer: |
+      The PDV is the working area where SAS builds one observation at a time. At **compile time** SAS checks syntax, creates a PDV slot for every variable in order of first mention — variables from the input datasets' descriptors and variables created by LENGTH, assignment, INPUT and so on — fixes each variable's type and length, adds the automatic variables `_N_` and `_ERROR_`, and creates the descriptor of the output dataset.
+
+      At **execution time** SAS loops: `_N_` is incremented, variables created in the step are reset to missing unless retained, the SET statement reads the next observation into the PDV, the statements run in order, and at the end of the step the PDV is written to the output dataset — unless the step has an explicit OUTPUT, in which case only OUTPUT statements write. The loop ends when SET tries to read past the last observation, so a step reading n observations starts n + 1 iterations.
+
+      This explains everyday behaviour: why a running count needs RETAIN, why a typo produces an uninitialized variable rather than an error, why an explicit OUTPUT can leave a dataset empty, and why values from a one-to-many MERGE carry across rows.
+    rubric:
+      - Defines the PDV as the one-observation working area
+      - Describes the compile phase (syntax, PDV layout, type/length fixed at first mention, descriptor)
+      - Names _N_ and _ERROR_ and says they are not written out
+      - Describes the reset-to-missing rule and its RETAIN exception
+      - Explains implicit versus explicit OUTPUT and how the step ends
+      - Connects the model to a real behaviour or bug
+    redFlags:
+      - "Says the DATA step processes the whole column at once"
+      - "Thinks variables read with SET are reset to missing each iteration"
+      - "Cannot say when output happens"
+    followUps:
+      - "Why does a variable created with an assignment need RETAIN to accumulate?"
+      - "What is in the PDV during a MERGE with a BY statement?"
+
+  - id: sas.data-step-and-pdv.speed-auto-vars
+    format: multi
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.pdv]
+    lesson: sas-data-step-and-pdv
+    title: Automatic variables in every DATA step
+    prompt: |
+      Which automatic variables exist in the PDV of **every** DATA step? Select all that apply.
+    choices:
+      - text: "`_N_`"
+        correct: true
+        feedback: "The iteration counter."
+      - text: "`_ERROR_`"
+        correct: true
+        feedback: "The data-error flag (0/1)."
+      - text: "`FIRST.USUBJID`"
+        feedback: "Created only when the step has `BY USUBJID`."
+      - text: "`_TYPE_`"
+        feedback: "A variable in PROC MEANS/SUMMARY output datasets, not a DATA step automatic variable."
+      - text: "`_NAME_`"
+        feedback: "A variable in PROC TRANSPOSE output, not a DATA step automatic variable."
+    solution: |
+      `_N_` and `_ERROR_`. `FIRST.`/`LAST.` appear only with a BY statement; `_TYPE_`, `_FREQ_` and `_NAME_` are columns created by procedures.

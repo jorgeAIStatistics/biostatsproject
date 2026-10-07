@@ -1,0 +1,872 @@
+RECORD_ID,SITE_ID,SUBJECT_ID,MH_LINE,MH_TERM,MH_START,MH_ONGOING,CODED_PT,CODED_SOC
+MH-000001,1001,1001-0002,1,Hyperlipidaemia,UN OCT 2019,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000002,1001,1001-0003,1,COPD,03 MAY 2015,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000003,1001,1001-0003,2,Osteoarthritis of hip,UN MAY 2018,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000004,1001,1001-0004,1,Raised lipids,24 AUG 2014,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000005,1001,1001-0006,1,HTN,02 OCT 2011,Y,Hypertension,Vascular disorders
+MH-000006,1001,1001-0006,2,Anxiety disorder,UN MAR 2021,Y,Anxiety,Psychiatric disorders
+MH-000007,1001,1001-0008,1,Raised lipids,11 JAN 2012,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000008,1001,1001-0010,1,Chronic obstructive pulmonary disease,UN OCT 2021,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000009,1001,1001-0010,2,Lower back pain,UN UNK 2013,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000010,1001,1001-0011,1,HTN,02 AUG 2017,N,Hypertension,Vascular disorders
+MH-000011,1001,1001-0011,2,Peripheral neuropathy,17 SEP 2022,Y,Neuropathy peripheral,Nervous system disorders
+MH-000012,1001,1001-0012,1,Hypertension,UN JUL 2018,Y,Hypertension,Vascular disorders
+MH-000013,1001,1001-0012,2,Raised lipids,01 AUG 2017,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000014,1001,1001-0012,3,Type 2 diabetes,UN SEP 2020,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000015,1001,1001-0014,1,Hypothyroidism secondary to immunotherapy,23 DEC 2022,Y,Hypothyroidism,Endocrine disorders
+MH-000016,1001,1001-0014,2,Peripheral neuropathy,13 DEC 2021,Y,Neuropathy peripheral,Nervous system disorders
+MH-000017,1001,1001-0014,3,Chronic back pain,20 JUL 2016,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000018,1001,1001-0016,1,Anxiety disorder,UN UNK 2021,Y,Anxiety,Psychiatric disorders
+MH-000019,1001,1001-0017,1,Raised lipids,20 OCT 2019,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000020,1002,1002-0001,1,Essential hypertension,UN AUG 2018,Y,Hypertension,Vascular disorders
+MH-000021,1002,1002-0001,2,Raised lipids,03 FEB 2015,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000022,1002,1002-0001,3,OA knees,01 NOV 2008,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000023,1002,1002-0001,4,Anaemia of chronic disease,UN JUN 2020,N,Anemia,Blood and lymphatic system disorders
+MH-000024,1002,1002-0003,1,Emphysema/COPD,11 JAN 2011,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000025,1002,1002-0005,1,Emphysema/COPD,11 APR 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000026,1002,1002-0006,1,Hypertension,UN JUN 2008,Y,Hypertension,Vascular disorders
+MH-000027,1002,1002-0006,2,Hypothyroidism secondary to immunotherapy,UN NOV 2019,Y,Hypothyroidism,Endocrine disorders
+MH-000028,1002,1002-0006,3,AF,01 NOV 2019,Y,Atrial fibrillation,Cardiac disorders
+MH-000029,1002,1002-0006,4,Chemotherapy-induced anemia,UN MAY 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000030,1002,1002-0007,1,Hyperlipidemia,12 AUG 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000031,1002,1002-0007,2,Difficulty sleeping,UN JUN 2020,Y,Insomnia,Psychiatric disorders
+MH-000032,1002,1002-0008,1,Anxiety disorder,UN UNK 2020,Y,Anxiety,Psychiatric disorders
+MH-000033,1002,1002-0008,2,BPH,01 OCT 2015,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000034,1002,1002-0008,3,Difficulty sleeping,UN JUL 2018,Y,Insomnia,Psychiatric disorders
+MH-000035,1002,1002-0009,1,AF,05 APR 2021,Y,Atrial fibrillation,Cardiac disorders
+MH-000036,1002,1002-0011,1,NIDDM,UN UNK 2005,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000037,1002,1002-0011,2,COPD,UN UNK 2008,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000038,1002,1002-0011,3,BPH,17 SEP 2013,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000039,1002,1002-0012,1,Emphysema/COPD,UN UNK 2017,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000040,1002,1002-0012,2,Anemia,03 NOV 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000041,1002,1002-0012,3,Bilateral cataracts,21 FEB 2019,Y,Cataract,Eye disorders
+MH-000042,1002,1002-0013,1,Emphysema/COPD,UN UNK 2013,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000043,1002,1002-0013,2,Osteoarthritis of hip,UN UNK 2011,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000044,1002,1002-0014,1,Essential hypertension,UN UNK 2017,Y,Hypertension,Vascular disorders
+MH-000045,1002,1002-0014,2,Emphysema/COPD,21 OCT 2013,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000046,1002,1002-0014,3,Ischemic heart disease,26 NOV 2010,N,Coronary artery disease,Cardiac disorders
+MH-000047,1002,1002-0015,1,Hyperlipidaemia,20 MAR 2018,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000048,1002,1002-0015,2,T2DM,UN UNK 2020,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000049,1002,1002-0017,1,Hyperlipidemia,UN JUN 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000050,1002,1002-0017,2,Bilateral cataracts,19 AUG 2015,N,Cataract,Eye disorders
+MH-000051,1003,1003-0001,1,Hypertension,09 FEB 2017,Y,Hypertension,Vascular disorders
+MH-000052,1003,1003-0001,2,NIDDM,UN UNK 2009,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000053,1003,1003-0001,3,CAD,30 JAN 2013,Y,Coronary artery disease,Cardiac disorders
+MH-000054,1003,1003-0001,4,GERD,UN APR 2018,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000055,1003,1003-0003,1,Hyperlipidemia,21 MAY 2018,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000056,1003,1003-0003,2,T2DM,UN UNK 2012,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000057,1003,1003-0003,3,Underactive thyroid,19 MAR 2023,Y,Hypothyroidism,Endocrine disorders
+MH-000058,1003,1003-0003,4,Osteoarthritis,UN OCT 2012,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000059,1003,1003-0003,5,Benign prostatic hyperplasia,UN AUG 2019,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000060,1003,1003-0004,1,Hypertension,UN UNK 2010,Y,Hypertension,Vascular disorders
+MH-000061,1003,1003-0004,2,Raised lipids,UN NOV 2020,N,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000062,1003,1003-0004,3,Type 2 diabetes,UN JUL 2011,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000063,1003,1003-0005,1,COPD,UN MAY 2016,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000064,1003,1003-0005,2,Asthma,18 NOV 2012,N,Asthma,"Respiratory, thoracic and mediastinal disorders"
+MH-000065,1003,1003-0006,1,Raised lipids,23 MAR 2020,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000066,1003,1003-0006,2,Chronic obstructive pulmonary disease,01 FEB 2010,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000067,1004,1004-0001,1,Hyperlipidaemia,20 AUG 2011,N,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000068,1004,1004-0001,2,Chemotherapy-induced peripheral neuropathy,UN JAN 2021,N,Neuropathy peripheral,Nervous system disorders
+MH-000069,1005,1005-0002,1,Raised lipids,UN UNK 2015,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000070,1005,1005-0002,2,Chronic back pain,30 JUN 2011,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000071,1005,1005-0003,1,Hyperlipidemia,UN MAY 2016,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000072,1005,1005-0003,2,Osteoarthritis,UN MAY 2008,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000073,1005,1005-0003,3,AF,UN MAR 2018,Y,Atrial fibrillation,Cardiac disorders
+MH-000074,1005,1005-0003,4,Enlarged prostate,UN JUL 2018,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000075,1005,1005-0003,5,Lower back pain,19 SEP 2008,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000076,1005,1005-0006,1,Raised lipids,UN UNK 2021,N,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000077,1005,1005-0006,2,Anaemia of chronic disease,18 OCT 2021,N,Anemia,Blood and lymphatic system disorders
+MH-000078,1005,1005-0006,3,Bilateral cataracts,UN MAY 2016,Y,Cataract,Eye disorders
+MH-000079,1005,1005-0007,1,High blood pressure,UN JUN 2016,Y,Hypertension,Vascular disorders
+MH-000080,1005,1005-0008,1,Essential hypertension,UN FEB 2013,N,Hypertension,Vascular disorders
+MH-000081,1005,1005-0008,2,COPD,UN UNK 2017,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000082,1005,1005-0009,1,Emphysema/COPD,05 NOV 2021,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000083,1005,1005-0009,2,Anemia,30 JAN 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000084,1005,1005-0010,1,OA knees,UN MAY 2020,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000085,1005,1005-0011,1,depression,10 NOV 2016,Y,Depression,Psychiatric disorders
+MH-000086,1005,1005-0012,1,HTN,21 DEC 2018,Y,Hypertension,Vascular disorders
+MH-000087,1005,1005-0013,1,Hyperlipidaemia,20 JAN 2013,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000088,1005,1005-0013,2,Emphysema/COPD,05 NOV 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000089,1006,1006-0001,1,Hyperlipidaemia,UN UNK 2017,N,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000090,1006,1006-0001,2,COPD,UN UNK 2017,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000091,1006,1006-0002,1,Type 2 diabetes,03 SEP 2011,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000092,1006,1006-0003,1,Anaemia of chronic disease,21 JUL 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000093,1006,1006-0005,1,High blood pressure,UN UNK 2020,Y,Hypertension,Vascular disorders
+MH-000094,1006,1006-0007,1,HTN,UN UNK 2016,Y,Hypertension,Vascular disorders
+MH-000095,1007,1007-0001,1,High blood pressure,UN NOV 2010,Y,Hypertension,Vascular disorders
+MH-000096,1007,1007-0002,1,Hyperlipidemia,08 AUG 2016,N,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000097,1007,1007-0002,2,Difficulty sleeping,UN UNK 2018,N,Insomnia,Psychiatric disorders
+MH-000098,1008,1008-0001,1,Diabetes mellitus type II,18 DEC 2008,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000099,1009,1009-0001,1,Hypertension,UN UNK 2019,Y,Hypertension,Vascular disorders
+MH-000100,1009,1009-0002,1,High blood pressure,UN UNK 2014,Y,Hypertension,Vascular disorders
+MH-000101,1009,1009-0002,2,Emphysema/COPD,21 JUL 2008,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000102,1009,1009-0003,1,High blood pressure,UN UNK 2016,Y,Hypertension,Vascular disorders
+MH-000103,1009,1009-0004,1,HTN,29 JUL 2012,Y,Hypertension,Vascular disorders
+MH-000104,1009,1009-0004,2,Anemia,09 APR 2021,N,Anemia,Blood and lymphatic system disorders
+MH-000105,1009,1009-0004,3,Bilateral cataracts,UN APR 2021,Y,Cataract,Eye disorders
+MH-000106,1009,1009-0004,4,Chronic kidney disease,26 FEB 2013,Y,Chronic kidney disease,Renal and urinary disorders
+MH-000107,1009,1009-0005,1,Hyperlipidaemia,04 APR 2018,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000108,1009,1009-0005,2,Neuropathy after paclitaxel,UN MAR 2022,Y,Neuropathy peripheral,Nervous system disorders
+MH-000109,1009,1009-0007,1,Anxiety disorder,03 MAY 2021,Y,Anxiety,Psychiatric disorders
+MH-000110,1009,1009-0007,2,Insomnia,27 JAN 2021,Y,Insomnia,Psychiatric disorders
+MH-000111,1009,1009-0007,3,Asthma,21 SEP 1983,Y,Asthma,"Respiratory, thoracic and mediastinal disorders"
+MH-000112,1009,1009-0010,1,Hyperlipidaemia,25 JUN 2008,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000113,1009,1009-0010,2,Underactive thyroid,UN APR 2020,Y,Hypothyroidism,Endocrine disorders
+MH-000114,1009,1009-0010,3,Osteoarthritis of hip,UN APR 2008,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000115,1009,1009-0010,4,Chemotherapy-induced anemia,17 JUN 2022,N,Anemia,Blood and lymphatic system disorders
+MH-000116,1009,1009-0011,1,Essential hypertension,UN UNK 2004,Y,Hypertension,Vascular disorders
+MH-000117,1009,1009-0011,2,T2DM,UN DEC 2016,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000118,1009,1009-0011,3,Emphysema/COPD,30 OCT 2017,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000119,1009,1009-0012,1,Hyperlipidaemia,UN UNK 2018,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000120,1009,1009-0012,2,T2DM,UN OCT 2008,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000121,1009,1009-0012,3,Chemotherapy-induced anemia,UN JUN 2022,N,Anemia,Blood and lymphatic system disorders
+MH-000122,1009,1009-0012,4,Peripheral neuropathy,UN JUL 2021,N,Neuropathy peripheral,Nervous system disorders
+MH-000123,1009,1009-0014,1,Hyperlipidaemia,UN MAR 2019,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000124,1009,1009-0014,2,COPD,UN UNK 2010,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000125,1009,1009-0015,1,Acid reflux,UN FEB 2015,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000126,1009,1009-0016,1,High blood pressure,06 JUL 2012,Y,Hypertension,Vascular disorders
+MH-000127,1009,1009-0016,2,Raised lipids,13 NOV 2015,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000128,1009,1009-0017,1,Chronic obstructive pulmonary disease,UN SEP 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000129,1009,1009-0017,2,depression,30 OCT 2017,Y,Depression,Psychiatric disorders
+MH-000130,1009,1009-0017,3,Insomnia,UN JAN 2020,Y,Insomnia,Psychiatric disorders
+MH-000131,1009,1009-0017,4,CKD stage 3,UN AUG 2020,Y,Chronic kidney disease,Renal and urinary disorders
+MH-000132,1009,1009-0018,1,Raised lipids,06 JAN 2012,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000133,1009,1009-0018,2,Chronic obstructive pulmonary disease,UN DEC 2014,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000134,1009,1009-0018,3,Underactive thyroid,UN MAY 2022,Y,Hypothyroidism,Endocrine disorders
+MH-000135,1009,1009-0018,4,Bronchial asthma,UN SEP 2003,N,Asthma,"Respiratory, thoracic and mediastinal disorders"
+MH-000136,1010,1010-0001,1,High blood pressure,11 SEP 2018,Y,Hypertension,Vascular disorders
+MH-000137,1010,1010-0005,1,Raised lipids,UN UNK 2009,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000138,1010,1010-0005,2,Emphysema/COPD,UN JAN 2013,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000139,1010,1010-0006,1,Neuropathy after paclitaxel,22 JUL 2022,N,Neuropathy peripheral,Nervous system disorders
+MH-000140,1010,1010-0007,1,HTN,UN UNK 2013,Y,Hypertension,Vascular disorders
+MH-000141,1010,1010-0007,2,Raised lipids,29 JUL 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000142,1010,1010-0007,3,Osteoarthritis,16 APR 2010,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000143,1010,1010-0009,1,HTN,UN AUG 2008,Y,Hypertension,Vascular disorders
+MH-000144,1010,1010-0009,2,Chronic obstructive pulmonary disease,23 MAR 2012,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000145,1010,1010-0009,3,Bronchial asthma,UN UNK 1988,Y,Asthma,"Respiratory, thoracic and mediastinal disorders"
+MH-000146,1011,1011-0001,1,COPD,04 JUL 2012,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000147,1011,1011-0001,2,AF,01 FEB 2016,Y,Atrial fibrillation,Cardiac disorders
+MH-000148,1011,1011-0002,1,Raised lipids,07 OCT 2012,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000149,1011,1011-0002,2,Depressive disorder,UN UNK 2013,N,Depression,Psychiatric disorders
+MH-000150,1011,1011-0002,3,Chemotherapy-induced anemia,10 APR 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000151,1011,1011-0004,1,Hypertension,UN UNK 2013,Y,Hypertension,Vascular disorders
+MH-000152,1011,1011-0004,2,Hyperlipidemia,UN UNK 2016,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000153,1011,1011-0004,3,AF,30 OCT 2018,N,Atrial fibrillation,Cardiac disorders
+MH-000154,1011,1011-0005,1,Hypertension,UN JUL 2014,N,Hypertension,Vascular disorders
+MH-000155,1011,1011-0005,2,Osteoarthritis of hip,UN UNK 2013,N,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000156,1011,1011-0005,3,Peripheral neuropathy,UN OCT 2021,Y,Neuropathy peripheral,Nervous system disorders
+MH-000157,1011,1011-0006,1,Essential hypertension,20 JAN 2004,N,Hypertension,Vascular disorders
+MH-000158,1011,1011-0006,2,NIDDM,03 AUG 2009,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000159,1011,1011-0006,3,COPD,28 JUN 2019,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000160,1011,1011-0006,4,Anemia,25 OCT 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000161,1011,1011-0006,5,Lower back pain,01 NOV 2009,N,"back pain ",Musculoskeletal and connective tissue disorders
+MH-000162,1011,1011-0007,1,NIDDM,25 DEC 2005,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000163,1011,1011-0007,2,Depressive disorder,15 MAY 2015,Y,Depression,Psychiatric disorders
+MH-000164,1011,1011-0008,1,Hyperlipidemia,UN DEC 2008,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000165,1011,1011-0008,2,Type 2 diabetes,13 AUG 2009,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000166,1011,1011-0008,3,Paroxysmal AF,13 MAY 2020,N,Atrial fibrillation,Cardiac disorders
+MH-000167,1011,1011-0009,1,HTN,30 DEC 2004,Y,Hypertension,Vascular disorders
+MH-000168,1011,1011-0009,2,Raised lipids,UN JUN 2011,N,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000169,1011,1011-0011,1,Paroxysmal AF,UN JAN 2021,N,Atrial fibrillation,Cardiac disorders
+MH-000170,1011,1011-0013,1,Raised lipids,UN FEB 2018,N,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000171,1011,1011-0013,2,NIDDM,14 JAN 2007,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000172,1011,1011-0013,3,Chronic obstructive pulmonary disease,UN SEP 2017,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000173,1011,1011-0013,4,CAD,UN UNK 2018,N,Coronary artery disease,Cardiac disorders
+MH-000174,1011,1011-0013,5,Paroxysmal AF,UN UNK 2021,Y,Atrial fibrillation,Cardiac disorders
+MH-000175,1011,1011-0013,6,Enlarged prostate,19 MAY 2017,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000176,1011,1011-0014,1,COPD,12 JUL 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000177,1011,1011-0014,2,Hypothyroidism secondary to immunotherapy,UN MAR 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000178,1011,1011-0014,3,Chemotherapy-induced anemia,UN APR 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000179,1011,1011-0015,1,Chronic obstructive pulmonary disease,UN OCT 2012,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000180,1011,1011-0015,2,Underactive thyroid,29 MAY 2023,Y,Hypothyroidism,Endocrine disorders
+MH-000181,1011,1011-0016,1,Hyperlipidemia,UN FEB 2011,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000182,1011,1011-0016,2,NIDDM,02 DEC 2020,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000183,1011,1011-0016,3,Emphysema/COPD,UN DEC 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000184,1011,1011-0016,4,Underactive thyroid,UN DEC 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000185,1011,1011-0016,5,Osteoarthritis,UN UNK 2016,N,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000186,1011,1011-0016,6,Lower back pain,17 SEP 2015,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000187,1011,1011-0019,1,Hyperlipidemia,05 APR 2019,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000188,1011,1011-0019,2,OA knees,UN UNK 2012,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000189,1012,1012-0001,1,Hyperlipidaemia,11 NOV 2008,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000190,1012,1012-0001,2,Depression,UN MAR 2020,Y,Depression,Psychiatric disorders
+MH-000191,1012,1012-0001,3,Anxiety disorder,UN MAR 2020,N,Anxiety,Psychiatric disorders
+MH-000192,1012,1012-0001,4,Chemotherapy-induced anemia,UN OCT 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000193,1012,1012-0001,5,Peripheral neuropathy,UN UNK 2022,Y,Neuropathy peripheral,Nervous system disorders
+MH-000194,1012,1012-0002,1,Essential hypertension,28 JAN 2004,Y,Hypertension,Vascular disorders
+MH-000195,1012,1012-0002,2,Hyperlipidaemia,10 MAR 2014,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000196,1012,1012-0002,3,Acid reflux,UN UNK 2016,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000197,1012,1012-0003,1,Essential hypertension,UN DEC 2020,Y,Hypertension,Vascular disorders
+MH-000198,1012,1012-0003,2,Anemia,UN OCT 2020,Y,Anemia,Blood and lymphatic system disorders
+MH-000199,1012,1012-0004,1,Gastro-oesophageal reflux,21 MAR 2016,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000200,1012,1012-0004,2,Anxiety disorder,UN UNK 2021,Y,Anxiety,Psychiatric disorders
+MH-000201,1012,1012-0005,1,COPD,UN APR 2011,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000202,1012,1012-0006,1,Benign prostatic hyperplasia,11 SEP 2013,N,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000203,1012,1012-0007,1,Lower back pain,UN UNK 2014,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000204,1012,1012-0008,1,Anxiety disorder,UN AUG 2018,N,Anxiety,Psychiatric disorders
+MH-000205,1012,1012-0008,2,Atrial fibrillation,10 JUL 2016,Y,Atrial fibrillation,Cardiac disorders
+MH-000206,1012,1012-0009,1,Essential hypertension,28 JAN 2021,Y,Hypertension,Vascular disorders
+MH-000207,1012,1012-0009,2,Type 2 diabetes,UN JUN 2016,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000208,1012,1012-0009,3,Hypothyroidism,UN UNK 2022,Y,Hypothyroidism,Endocrine disorders
+MH-000209,1012,1012-0009,4,Chronic back pain,UN DEC 2017,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000210,1012,1012-0010,1,Cataract,UN SEP 2020,Y,Cataract,Eye disorders
+MH-000211,1012,1012-0011,1,High blood pressure,UN UNK 2021,Y,Hypertension,Vascular disorders
+MH-000212,1012,1012-0011,2,Hyperlipidemia,24 JAN 2021,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000213,1012,1012-0012,1,Chronic obstructive pulmonary disease,UN UNK 2013,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000214,1012,1012-0012,2,Gastro-oesophageal reflux,UN MAR 2022,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000215,1012,1012-0012,3,Anxiety,UN JUL 2020,Y,Anxiety,Psychiatric disorders
+MH-000216,1012,1012-0012,4,CKD stage 3,UN UNK 2017,Y,Chronic kidney disease,Renal and urinary disorders
+MH-000217,1013,1013-0002,1,High blood pressure,06 NOV 2012,Y,Hypertension,Vascular disorders
+MH-000218,1013,1013-0002,2,Depressive disorder,UN MAY 2015,Y,Depression,Psychiatric disorders
+MH-000219,1013,1013-0002,3,Osteoarthritis,UN UNK 2016,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000220,1013,1013-0002,4,Lower back pain,UN UNK 2008,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000221,1013,1013-0003,1,BPH,UN OCT 2017,N,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000222,1013,1013-0006,1,Essential hypertension,UN UNK 2016,N,Hypertension,Vascular disorders
+MH-000223,1013,1013-0007,1,Coronary artery disease,UN UNK 2008,Y,Coronary artery disease,Cardiac disorders
+MH-000224,1013,1013-0009,1,Raised lipids,UN MAY 2014,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000225,1013,1013-0009,2,COPD,09 FEB 2017,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000226,1013,1013-0009,3,Insomnia,UN JUL 2022,Y,Insomnia,Psychiatric disorders
+MH-000227,1013,1013-0010,1,GERD,18 SEP 2020,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000228,1013,1013-0011,1,Hypertension,26 DEC 2021,Y,Hypertension,Vascular disorders
+MH-000229,1013,1013-0011,2,Raised lipids,UN JUN 2011,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000230,1013,1013-0011,3,GERD,UN OCT 2019,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000231,1013,1013-0011,4,Osteoarthritis,UN NOV 2011,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000232,1014,1014-0001,1,Essential hypertension,13 JAN 2014,Y,Hypertension,Vascular disorders
+MH-000233,1014,1014-0001,2,COPD,UN UNK 2008,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000234,1014,1014-0002,1,Hyperlipidaemia,UN UNK 2016,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000235,1014,1014-0002,2,T2DM,11 JUL 2020,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000236,1014,1014-0002,3,Chemotherapy-induced anemia,27 JAN 2022,N,Anemia,Blood and lymphatic system disorders
+MH-000237,1014,1014-0003,1,Essential hypertension,UN NOV 2019,Y,Hypertension,Vascular disorders
+MH-000238,1014,1014-0003,2,Type 2 diabetes,UN UNK 2010,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000239,1014,1014-0004,1,Acid reflux,UN AUG 2018,N,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000240,1014,1014-0004,2,Neuropathy after paclitaxel,UN UNK 2020,Y,Neuropathy peripheral,Nervous system disorders
+MH-000241,1014,1014-0005,1,Essential hypertension,06 APR 2015,Y,Hypertension,Vascular disorders
+MH-000242,1014,1014-0005,2,Hyperlipidemia,12 APR 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000243,1014,1014-0005,3,T2DM,UN JUN 2006,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000244,1014,1014-0005,4,Emphysema/COPD,07 JUN 2016,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000245,1014,1014-0005,5,Anaemia of chronic disease,24 JUL 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000246,1014,1014-0006,1,Hyperlipidemia,02 MAR 2015,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000247,1014,1014-0006,2,Chronic obstructive pulmonary disease,28 APR 2019,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000248,1014,1014-0006,3,Osteoarthritis of hip,UN UNK 2009,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000249,1014,1014-0007,1,Hypertension,UN UNK 2011,Y,Hypertension,Vascular disorders
+MH-000250,1014,1014-0007,2,COPD,UN UNK 2021,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000251,1014,1014-0008,1,Anxiety,UN UNK 2020,Y,Anxiety,Psychiatric disorders
+MH-000252,1014,1014-0008,2,Chronic back pain,UN UNK 2010,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000253,1014,1014-0009,1,High blood pressure,28 NOV 2009,N,Hypertension,Vascular disorders
+MH-000254,1014,1014-0009,2,COPD,27 MAY 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000255,1014,1014-0009,3,Hypothyroidism,12 OCT 2020,N,Hypothyroidism,Endocrine disorders
+MH-000256,1014,1014-0009,4,Cataract,18 DEC 2014,Y,Cataract,Eye disorders
+MH-000257,1014,1014-0009,5,Lower back pain,05 NOV 2016,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000258,1014,1014-0010,1,COPD,01 NOV 2016,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000259,1014,1014-0011,1,AF,UN AUG 2015,Y,Atrial fibrillation,Cardiac disorders
+MH-000260,1014,1014-0012,1,NIDDM,UN UNK 2010,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000261,1014,1014-0012,2,COPD,UN FEB 2017,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000262,1014,1014-0012,3,Enlarged prostate,UN JAN 2022,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000263,1014,1014-0013,1,Hypertension,UN MAR 2014,Y,Hypertension,Vascular disorders
+MH-000264,1014,1014-0013,2,Emphysema/COPD,UN UNK 2015,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000265,1014,1014-0014,1,Raised lipids,UN UNK 2020,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000266,1014,1014-0014,2,Hypothyroidism,UN NOV 2020,Y,Hypothyroidism,Endocrine disorders
+MH-000267,1014,1014-0014,3,GERD,30 MAR 2020,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000268,1014,1014-0015,1,Emphysema/COPD,01 MAR 2010,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000269,1014,1014-0015,2,Coronary artery disease,UN NOV 2009,N,Coronary artery disease,Cardiac disorders
+MH-000270,1014,1014-0016,1,Essential hypertension,08 AUG 2005,Y,Hypertension,Vascular disorders
+MH-000271,1015,1015-0002,1,T2DM,UN JAN 2018,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000272,1015,1015-0002,2,Chemotherapy-induced anemia,15 NOV 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000273,1015,1015-0003,1,Hyperlipidaemia,UN UNK 2021,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000274,1015,1015-0003,2,Emphysema/COPD,21 APR 2016,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000275,1015,1015-0003,3,Chemotherapy-induced anemia,26 AUG 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000276,1015,1015-0004,1,Hypertension,UN OCT 2006,Y,Hypertension,Vascular disorders
+MH-000277,1015,1015-0004,2,Emphysema/COPD,UN APR 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000278,1015,1015-0005,1,Chemotherapy-induced anemia,UN UNK 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000279,1015,1015-0007,1,T2DM,08 APR 2009,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000280,1015,1015-0007,2,Gastro-oesophageal reflux,UN JUN 2013,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000281,1015,1015-0009,1,Ischemic heart disease,26 JUL 2009,Y,Coronary artery disease,Cardiac disorders
+MH-000282,1015,1015-0010,1,Emphysema/COPD,UN DEC 2008,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000283,1015,1015-0010,2,Hypothyroidism,UN UNK 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000284,1015,1015-0010,3,Chronic back pain,20 MAR 2016,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000285,1015,1015-0011,1,Raised lipids,UN DEC 2017,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000286,1015,1015-0011,2,Chronic obstructive pulmonary disease,07 AUG 2019,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000287,1015,1015-0011,3,Gastro-oesophageal reflux,UN OCT 2017,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000288,1015,1015-0011,4,Anxiety,UN JUL 2020,Y,Anxiety,Psychiatric disorders
+MH-000289,1015,1015-0011,5,Cataract,10 MAY 2019,Y,Cataract,Eye disorders
+MH-000290,1015,1015-0012,1,Essential hypertension,UN SEP 2018,Y,Hypertension,Vascular disorders
+MH-000291,1015,1015-0012,2,Osteoarthritis of hip,12 JAN 2009,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000292,1015,1015-0014,1,Osteoarthritis,07 MAR 2018,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000293,1015,1015-0014,2,Atrial fibrillation,UN AUG 2020,Y,Atrial fibrillation,Cardiac disorders
+MH-000294,1016,1016-0001,1,Type 2 diabetes,UN JUN 2010,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000295,1016,1016-0001,2,Emphysema/COPD,UN UNK 2014,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000296,1016,1016-0001,3,Hypothyroidism secondary to immunotherapy,UN MAR 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000297,1016,1016-0001,4,Paroxysmal AF,14 JUL 2017,Y,Atrial fibrillation,Cardiac disorders
+MH-000298,1016,1016-0002,1,Hyperlipidaemia,UN MAY 2015,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000299,1016,1016-0002,2,COPD,UN FEB 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000300,1016,1016-0002,3,Acid reflux,UN UNK 2018,N,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000301,1016,1016-0003,1,Hypertension,09 NOV 2002,Y,Hypertension,Vascular disorders
+MH-000302,1016,1016-0003,2,Cataract,UN JUN 2019,N,Cataract,Eye disorders
+MH-000303,1016,1016-0004,1,Hypertension,26 SEP 2009,Y,Hypertension,Vascular disorders
+MH-000304,1016,1016-0004,2,Underactive thyroid,UN JUN 2020,Y,Hypothyroidism,Endocrine disorders
+MH-000305,1016,1016-0004,3,Cataract,UN UNK 2018,Y,Cataract,Eye disorders
+MH-000306,1016,1016-0005,1,Anaemia of chronic disease,UN NOV 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000307,1016,1016-0005,2,Neuropathy after paclitaxel,UN APR 2022,Y,Neuropathy peripheral,Nervous system disorders
+MH-000308,1016,1016-0008,1,HTN,UN UNK 2016,Y,Hypertension,Vascular disorders
+MH-000309,1016,1016-0008,2,Diabetes mellitus type II,23 JUN 2020,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000310,1016,1016-0008,3,GERD,09 MAR 2016,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000311,1016,1016-0010,1,Coronary artery disease,19 APR 2021,Y,Coronary artery disease,Cardiac disorders
+MH-000312,1016,1016-0011,1,HTN,09 DEC 2011,Y,Hypertension,Vascular disorders
+MH-000313,1016,1016-0011,2,Hyperlipidemia,11 SEP 2011,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000314,1016,1016-0011,3,Diabetes mellitus type II,UN DEC 2003,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000315,1016,1016-0011,4,CAD,02 SEP 2021,Y,Coronary artery disease,Cardiac disorders
+MH-000316,1016,1016-0011,5,Difficulty sleeping,14 JAN 2022,Y,Insomnia,Psychiatric disorders
+MH-000317,1016,1016-0012,1,Type 2 diabetes,07 JUN 2018,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000318,1016,1016-0012,2,AF,15 JUL 2015,Y,Atrial fibrillation,Cardiac disorders
+MH-000319,1016,1016-0013,1,Osteoarthritis,UN UNK 2009,N,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000320,1016,1016-0013,2,Difficulty sleeping,15 JUL 2020,Y,Insomnia,Psychiatric disorders
+MH-000321,1016,1016-0013,3,Chemotherapy-induced anemia,UN FEB 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000322,1016,1016-0014,1,NIDDM,11 APR 2005,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000323,1016,1016-0014,2,COPD,UN JAN 2019,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000324,1016,1016-0015,1,Chronic obstructive pulmonary disease,28 APR 2017,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000325,1016,1016-0015,2,Benign prostatic hyperplasia,03 NOV 2019,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000326,1016,1016-0016,1,HTN,UN JUL 2017,Y,Hypertension,Vascular disorders
+MH-000327,1016,1016-0016,2,Bilateral cataracts,01 SEP 2016,Y,Cataract,Eye disorders
+MH-000328,1016,1016-0017,1,T2DM,25 JUN 2012,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000329,1016,1016-0017,2,Hypothyroidism,01 AUG 2022,Y,Hypothyroidism,Endocrine disorders
+MH-000330,1016,1016-0017,3,Osteoarthritis,UN JUN 2011,N,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000331,1016,1016-0017,4,Benign prostatic hyperplasia,13 JUN 2016,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000332,1016,1016-0018,1,Hypertension,UN UNK 2012,Y,Hypertension,Vascular disorders
+MH-000333,1016,1016-0018,2,AF,UN UNK 2021,Y,Atrial fibrillation,Cardiac disorders
+MH-000334,1016,1016-0018,3,Chronic kidney disease,10 MAY 2017,Y,Chronic kidney disease,Renal and urinary disorders
+MH-000335,1016,1016-0018,4,Lower back pain,UN NOV 2013,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000336,1017,1017-0002,1,Essential hypertension,UN UNK 2004,Y,Hypertension,Vascular disorders
+MH-000337,1017,1017-0003,1,Hyperlipidaemia,UN AUG 2012,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000338,1017,1017-0003,2,Coronary artery disease,10 JUL 2016,N,Coronary artery disease,Cardiac disorders
+MH-000339,1017,1017-0003,3,GERD,02 SEP 2013,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000340,1017,1017-0004,1,Ischemic heart disease,UN UNK 2015,Y,Coronary artery disease,Cardiac disorders
+MH-000341,1017,1017-0004,2,Chemotherapy-induced anemia,30 JUN 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000342,1017,1017-0005,1,HTN,UN UNK 2021,Y,Hypertension,Vascular disorders
+MH-000343,1017,1017-0005,2,Hypothyroidism secondary to immunotherapy,UN UNK 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000344,1017,1017-0006,1,Hypertension,06 MAR 2009,Y,Hypertension,Vascular disorders
+MH-000345,1017,1017-0007,1,Raised lipids,UN SEP 2012,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000346,1017,1017-0007,2,Gastro-oesophageal reflux,21 JUL 2020,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000347,1017,1017-0007,3,depression,28 OCT 2014,Y,Depression,Psychiatric disorders
+MH-000348,1017,1017-0008,1,High blood pressure,19 JUL 2019,Y,Hypertension,Vascular disorders
+MH-000349,1017,1017-0008,2,Raised lipids,UN UNK 2011,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000350,1017,1017-0008,3,NIDDM,UN UNK 2013,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000351,1017,1017-0008,4,COPD,UN SEP 2018,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000352,1017,1017-0009,1,Hypothyroidism secondary to immunotherapy,UN SEP 2020,Y,Hypothyroidism,Endocrine disorders
+MH-000353,1017,1017-0010,1,Essential hypertension,28 FEB 2017,Y,Hypertension,Vascular disorders
+MH-000354,1017,1017-0010,2,Hyperlipidemia,05 NOV 2011,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000355,1017,1017-0010,3,COPD,UN JUN 2020,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000356,1017,1017-0010,4,OA knees,07 JUL 2019,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000357,1017,1017-0011,1,HTN,06 JAN 2017,Y,Hypertension,Vascular disorders
+MH-000358,1017,1017-0011,2,Raised lipids,UN JUL 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000359,1017,1017-0011,3,Anemia,UN JUN 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000360,1018,1018-0002,1,Anxiety disorder,UN MAY 2022,Y,Anxiety,Psychiatric disorders
+MH-000361,1018,1018-0003,1,Hypertension,25 SEP 2014,Y,Hypertension,Vascular disorders
+MH-000362,1018,1018-0003,2,Type 2 diabetes,14 MAR 2017,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000363,1018,1018-0003,3,COPD,05 NOV 2016,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000364,1018,1018-0003,4,Hypothyroidism,UN UNK 2023,Y,Hypothyroidism,Endocrine disorders
+MH-000365,1018,1018-0003,5,Osteoarthritis of hip,UN SEP 2018,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000366,1018,1018-0003,6,Lower back pain,UN UNK 2016,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000367,1019,1019-0001,1,Neuropathy after paclitaxel,UN UNK 2020,Y,Neuropathy peripheral,Nervous system disorders
+MH-000368,1019,1019-0001,2,Lower back pain,UN OCT 2014,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000369,1019,1019-0002,1,Hypothyroidism secondary to immunotherapy,UN DEC 2020,Y,Hypothyroidism,Endocrine disorders
+MH-000370,1019,1019-0003,1,Chronic obstructive pulmonary disease,21 JAN 2020,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000371,1019,1019-0003,2,Peripheral neuropathy,12 APR 2021,N,Neuropathy peripheral,Nervous system disorders
+MH-000372,1019,1019-0004,1,Ischemic heart disease,UN UNK 2017,Y,Coronary artery disease,Cardiac disorders
+MH-000373,1019,1019-0005,1,Anaemia of chronic disease,16 SEP 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000374,1019,1019-0005,2,Chronic back pain,17 JUL 2008,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000375,1019,1019-0006,1,Emphysema/COPD,07 FEB 2010,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000376,1019,1019-0006,2,Peripheral neuropathy,UN UNK 2021,Y,Neuropathy peripheral,Nervous system disorders
+MH-000377,1019,1019-0007,1,Bilateral cataracts,UN DEC 2020,Y,Cataract,Eye disorders
+MH-000378,1020,1020-0002,1,GERD,29 JUL 2020,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000379,1020,1020-0003,1,Anaemia of chronic disease,UN UNK 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000380,1020,1020-0003,2,Peripheral neuropathy,UN UNK 2021,Y,Neuropathy peripheral,Nervous system disorders
+MH-000381,1020,1020-0006,1,Essential hypertension,14 DEC 2012,Y,Hypertension,Vascular disorders
+MH-000382,1020,1020-0006,2,Hyperlipidemia,UN OCT 2018,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000383,1020,1020-0006,3,Benign prostatic hyperplasia,19 APR 2021,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000384,1020,1020-0007,1,Hypertension,01 SEP 2005,Y,Hypertension,Vascular disorders
+MH-000385,1020,1020-0007,2,Acid reflux,UN JAN 2020,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000386,1020,1020-0008,1,High blood pressure,23 JUL 2003,Y,Hypertension,Vascular disorders
+MH-000387,1020,1020-0008,2,Raised lipids,30 SEP 2020,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000388,1020,1020-0008,3,T2DM,UN NOV 2012,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000389,1020,1020-0008,4,Chemotherapy-induced anemia,UN MAY 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000390,1020,1020-0008,5,Bilateral cataracts,UN AUG 2016,N,Cataract,Eye disorders
+MH-000391,1020,1020-0008,6,Lower back pain,UN JUL 2020,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000392,1020,1020-0009,1,Essential hypertension,UN UNK 2004,Y,Hypertension,Vascular disorders
+MH-000393,1020,1020-0009,2,Raised lipids,25 MAR 2009,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000394,1020,1020-0009,3,Emphysema/COPD,28 MAY 2014,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000395,1020,1020-0010,1,Emphysema/COPD,27 SEP 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000396,1020,1020-0011,1,Chronic obstructive pulmonary disease,UN UNK 2009,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000397,1020,1020-0011,2,Osteoarthritis of hip,01 FEB 2014,N,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000398,1020,1020-0012,1,COPD,17 JAN 2019,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000399,1020,1020-0012,2,Lower back pain,03 NOV 2012,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000400,1020,1020-0013,1,Hyperlipidemia,UN UNK 2020,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000401,1020,1020-0013,2,Lower back pain,30 MAR 2014,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000402,1020,1020-0014,1,Hypertension,26 MAY 2015,Y,Hypertension,Vascular disorders
+MH-000403,1020,1020-0014,2,Underactive thyroid,UN UNK 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000404,1020,1020-0014,3,depression,UN JUN 2015,Y,Depression,Psychiatric disorders
+MH-000405,1020,1020-0014,4,Difficulty sleeping,UN OCT 2021,Y,Insomnia,Psychiatric disorders
+MH-000406,1020,1020-0014,5,Neuropathy after paclitaxel,21 NOV 2021,Y,Neuropathy peripheral,Nervous system disorders
+MH-000407,1020,1020-0015,1,High blood pressure,01 FEB 2018,Y,Hypertension,Vascular disorders
+MH-000408,1021,1021-0002,1,HTN,UN JUL 2003,Y,Hypertension,Vascular disorders
+MH-000409,1021,1021-0002,2,Chronic obstructive pulmonary disease,UN UNK 2016,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000410,1021,1021-0002,3,GERD,01 AUG 2021,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000411,1021,1021-0002,4,Bilateral cataracts,UN OCT 2016,Y,Cataract,Eye disorders
+MH-000412,1021,1021-0003,1,COPD,UN UNK 2013,Y,"chronic obstructive pulmonary disease ","Respiratory, thoracic and mediastinal disorders"
+MH-000413,1021,1021-0003,2,Anemia,11 FEB 2023,Y,Anemia,Blood and lymphatic system disorders
+MH-000414,1021,1021-0004,1,NIDDM,08 JUL 2020,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000415,1021,1021-0004,2,Osteoarthritis,27 MAR 2015,N,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000416,1021,1021-0004,3,Lower back pain,UN OCT 2018,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000417,1022,1022-0001,1,HTN,25 SEP 2006,Y,Hypertension,Vascular disorders
+MH-000418,1022,1022-0001,2,Chronic obstructive pulmonary disease,28 JUL 2014,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000419,1022,1022-0002,1,CAD,02 OCT 2021,Y,Coronary artery disease,Cardiac disorders
+MH-000420,1022,1022-0002,2,Neuropathy after paclitaxel,12 OCT 2021,Y,Neuropathy peripheral,Nervous system disorders
+MH-000421,1022,1022-0003,1,COPD,UN UNK 2009,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000422,1022,1022-0004,1,Hyperlipidaemia,UN UNK 2019,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000423,1022,1022-0004,2,Bilateral cataracts,17 MAY 2014,Y,Cataract,Eye disorders
+MH-000424,1022,1022-0005,1,Diabetes mellitus type II,15 NOV 2011,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000425,1022,1022-0006,1,Hypertension,15 JUL 2012,N,Hypertension,Vascular disorders
+MH-000426,1022,1022-0006,2,Hyperlipidaemia,UN DEC 2015,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000427,1022,1022-0006,3,Acid reflux,06 AUG 2020,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000428,1022,1022-0008,1,Hyperlipidaemia,UN DEC 2021,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000429,1022,1022-0008,2,Anxiety,09 SEP 2020,Y,Anxiety,Psychiatric disorders
+MH-000430,1022,1022-0009,1,Enlarged prostate,22 AUG 2015,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000431,1022,1022-0009,2,Anemia,05 JUN 2023,Y,Anemia,Blood and lymphatic system disorders
+MH-000432,1023,1023-0001,1,Emphysema/COPD,UN UNK 2009,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000433,1023,1023-0001,2,Hypothyroidism,UN SEP 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000434,1023,1023-0001,3,Bilateral cataracts,UN APR 2019,Y,Cataract,Eye disorders
+MH-000435,1023,1023-0001,4,Chronic back pain,UN MAY 2012,N,Back pain,Musculoskeletal and connective tissue disorders
+MH-000436,1023,1023-0002,1,Raised lipids,UN APR 2018,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000437,1023,1023-0002,2,Coronary artery disease,UN OCT 2014,Y,Coronary artery disease,Cardiac disorders
+MH-000438,1023,1023-0002,3,Anaemia of chronic disease,12 OCT 2020,Y,Anemia,Blood and lymphatic system disorders
+MH-000439,1023,1023-0004,1,Osteoarthritis,UN UNK 2014,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000440,1023,1023-0005,1,Diabetes mellitus type II,23 FEB 2018,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000441,1023,1023-0005,2,COPD,28 MAR 2021,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000442,1023,1023-0006,1,Chemotherapy-induced anemia,UN NOV 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000443,1023,1023-0007,1,Anemia,UN UNK 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000444,1023,1023-0009,1,BPH,UN UNK 2013,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000445,1023,1023-0010,1,Insomnia,UN FEB 2021,Y,Insomnia,Psychiatric disorders
+MH-000446,1023,1023-0011,1,Type 2 diabetes,14 AUG 2007,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000447,1023,1023-0011,2,Gastro-oesophageal reflux,20 DEC 2013,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000448,1023,1023-0012,1,Hyperlipidaemia,UN JUN 2021,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000449,1023,1023-0012,2,Atrial fibrillation,UN JUN 2019,Y,Atrial fibrillation,Cardiac disorders
+MH-000450,1023,1023-0013,1,Diabetes mellitus type II,UN SEP 2017,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000451,1023,1023-0014,1,COPD,05 JUL 2017,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000452,1023,1023-0014,2,BPH,UN UNK 2016,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000453,1024,1024-0001,1,Hypertension,UN JAN 2014,Y,Hypertension,Vascular disorders
+MH-000454,1024,1024-0002,1,Hyperlipidemia,UN UNK 2009,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000455,1024,1024-0002,2,AF,UN OCT 2020,Y,Atrial fibrillation,Cardiac disorders
+MH-000456,1024,1024-0003,1,Ischemic heart disease,UN UNK 2014,Y,Coronary artery disease,Cardiac disorders
+MH-000457,1024,1024-0003,2,Anaemia of chronic disease,19 SEP 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000458,1025,1025-0001,1,High blood pressure,UN DEC 2002,Y,Hypertension,Vascular disorders
+MH-000459,1025,1025-0001,2,Ischemic heart disease,24 OCT 2013,Y,Coronary artery disease,Cardiac disorders
+MH-000460,1025,1025-0001,3,OA knees,29 AUG 2018,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000461,1025,1025-0002,1,Hyperlipidaemia,UN OCT 2018,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000462,1025,1025-0002,2,depression,11 FEB 2018,Y,Depression,Psychiatric disorders
+MH-000463,1025,1025-0002,3,Osteoarthritis of hip,18 JUL 2019,N,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000464,1025,1025-0002,4,Anemia,UN AUG 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000465,1025,1025-0003,1,Osteoarthritis,18 APR 2013,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000466,1025,1025-0004,1,Emphysema/COPD,30 NOV 2009,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000467,1025,1025-0005,1,Essential hypertension,UN SEP 2013,Y,Hypertension,Vascular disorders
+MH-000468,1025,1025-0005,2,Type 2 diabetes,02 MAR 2008,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000469,1025,1025-0005,3,COPD,14 JUN 2014,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000470,1025,1025-0005,4,CAD,UN MAR 2014,N,Coronary artery disease,Cardiac disorders
+MH-000471,1025,1025-0005,5,Anemia,UN UNK 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000472,1025,1025-0006,1,Hypertension,08 JUL 2020,Y,Hypertension,Vascular disorders
+MH-000473,1025,1025-0006,2,COPD,UN UNK 2020,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000474,1025,1025-0006,3,Depressive disorder,26 FEB 2018,N,Depression,Psychiatric disorders
+MH-000475,1025,1025-0007,1,HTN,UN UNK 2006,Y,Hypertension,Vascular disorders
+MH-000476,1025,1025-0008,1,High blood pressure,25 MAY 2018,Y,Hypertension,Vascular disorders
+MH-000477,1025,1025-0008,2,Raised lipids,UN UNK 2011,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000478,1025,1025-0008,3,Insomnia,07 JUL 2021,Y,Insomnia,Psychiatric disorders
+MH-000479,1025,1025-0008,4,Peripheral neuropathy,UN UNK 2023,Y,Neuropathy peripheral,Nervous system disorders
+MH-000480,1025,1025-0009,1,Cataract,UN JAN 2019,Y,Cataract,Eye disorders
+MH-000481,1025,1025-0009,2,Asthma,26 MAY 2009,Y,Asthma,"Respiratory, thoracic and mediastinal disorders"
+MH-000482,1025,1025-0010,1,Hypertension,UN FEB 2012,Y,Hypertension,Vascular disorders
+MH-000483,1025,1025-0011,1,Hypertension,UN JUL 2004,Y,Hypertension,Vascular disorders
+MH-000484,1025,1025-0011,2,T2DM,27 APR 2005,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000485,1025,1025-0012,1,Hypothyroidism,UN JUN 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000486,1025,1025-0012,2,Enlarged prostate,30 APR 2020,N,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000487,1025,1025-0014,1,Raised lipids,UN DEC 2015,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000488,1025,1025-0016,1,Diabetes mellitus type II,23 JUN 2016,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000489,1026,1026-0001,1,High blood pressure,06 JUN 2013,Y,Hypertension,Vascular disorders
+MH-000490,1026,1026-0001,2,Coronary artery disease,UN OCT 2007,Y,Coronary artery disease,Cardiac disorders
+MH-000491,1026,1026-0002,1,Hyperlipidemia,UN AUG 2015,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000492,1026,1026-0004,1,Diabetes mellitus type II,02 JUL 2020,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000493,1026,1026-0004,2,COPD,UN UNK 2007,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000494,1026,1026-0004,3,CAD,UN NOV 2020,Y,Coronary artery disease,Cardiac disorders
+MH-000495,1026,1026-0005,1,Hyperlipidemia,UN DEC 2018,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000496,1026,1026-0006,1,Osteoarthritis,UN UNK 2018,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000497,1026,1026-0006,2,Bronchial asthma,04 OCT 1992,N,Asthma,"Respiratory, thoracic and mediastinal disorders"
+MH-000498,1026,1026-0007,1,Depressive disorder,19 SEP 2017,Y,"depression ",Psychiatric disorders
+MH-000499,1026,1026-0008,1,Hyperlipidaemia,UN UNK 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000500,1026,1026-0010,1,Benign prostatic hyperplasia,UN APR 2014,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000501,1026,1026-0010,2,Chronic back pain,UN JAN 2010,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000502,1026,1026-0011,1,HTN,UN JUN 2018,Y,Hypertension,Vascular disorders
+MH-000503,1026,1026-0011,2,Raised lipids,UN SEP 2014,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000504,1026,1026-0011,3,Enlarged prostate,23 NOV 2017,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000505,1026,1026-0013,1,COPD,UN UNK 2015,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000506,1026,1026-0013,2,Cataract,22 JUN 2021,Y,Cataract,Eye disorders
+MH-000507,1026,1026-0014,1,HTN,12 JUN 2004,Y,Hypertension,Vascular disorders
+MH-000508,1026,1026-0014,2,Chemotherapy-induced anemia,UN JAN 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000509,1026,1026-0015,1,Hyperlipidaemia,UN JUN 2020,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000510,1026,1026-0015,2,Chronic obstructive pulmonary disease,23 JUN 2015,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000511,1026,1026-0016,1,Raised lipids,UN SEP 2019,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000512,1026,1026-0016,2,Enlarged prostate,UN UNK 2016,N,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000513,1026,1026-0016,3,Chronic back pain,09 MAR 2018,N,Back pain,Musculoskeletal and connective tissue disorders
+MH-000514,1026,1026-0017,1,Essential hypertension,UN JAN 2020,Y,Hypertension,Vascular disorders
+MH-000515,1026,1026-0017,2,Ischemic heart disease,UN SEP 2015,Y,Coronary artery disease,Cardiac disorders
+MH-000516,1026,1026-0018,1,Essential hypertension,22 JUN 2022,N,Hypertension,Vascular disorders
+MH-000517,1026,1026-0019,1,Acid reflux,06 AUG 2019,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000518,1026,1026-0019,2,Chemotherapy-induced anemia,UN UNK 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000519,1026,1026-0020,1,Diabetes mellitus type II,24 APR 2018,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000520,1026,1026-0020,2,Benign prostatic hyperplasia,UN SEP 2022,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000521,1027,1027-0002,1,Hypertension,09 NOV 2008,Y,Hypertension,Vascular disorders
+MH-000522,1027,1027-0002,2,Chronic obstructive pulmonary disease,UN UNK 2009,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000523,1027,1027-0003,1,Essential hypertension,UN UNK 2005,Y,Hypertension,Vascular disorders
+MH-000524,1027,1027-0003,2,COPD,UN UNK 2020,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000525,1027,1027-0004,1,HTN,19 DEC 2006,Y,Hypertension,Vascular disorders
+MH-000526,1027,1027-0004,2,Chronic obstructive pulmonary disease,UN UNK 2011,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000527,1027,1027-0004,3,Chemotherapy-induced anemia,01 SEP 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000528,1027,1027-0005,1,HTN,UN UNK 2002,Y,Hypertension,Vascular disorders
+MH-000529,1027,1027-0005,2,Benign prostatic hyperplasia,UN SEP 2015,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000530,1027,1027-0006,1,HTN,UN APR 2011,Y,Hypertension,Vascular disorders
+MH-000531,1027,1027-0006,2,Osteoarthritis,UN FEB 2016,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000532,1027,1027-0007,1,Emphysema/COPD,UN UNK 2020,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000533,1027,1027-0007,2,Hypothyroidism,UN MAR 2021,N,Hypothyroidism,Endocrine disorders
+MH-000534,1027,1027-0007,3,Depressive disorder,UN UNK 2014,N,Depression,Psychiatric disorders
+MH-000535,1027,1027-0008,1,Bilateral cataracts,21 MAR 2018,N,Cataract,Eye disorders
+MH-000536,1027,1027-0009,1,Anxiety,UN NOV 2021,Y,Anxiety,Psychiatric disorders
+MH-000537,1027,1027-0010,1,Osteoarthritis,UN DEC 2010,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000538,1027,1027-0010,2,Lower back pain,UN UNK 2021,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000539,1027,1027-0011,1,High blood pressure,UN APR 2015,Y,Hypertension,Vascular disorders
+MH-000540,1027,1027-0012,1,Ischemic heart disease,04 MAR 2015,Y,Coronary artery disease,Cardiac disorders
+MH-000541,1027,1027-0012,2,depression,11 JAN 2015,Y,Depression,Psychiatric disorders
+MH-000542,1027,1027-0013,1,Hyperlipidemia,UN UNK 2014,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000543,1027,1027-0013,2,BPH,11 OCT 2020,N,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000544,1027,1027-0014,1,Hypothyroidism secondary to immunotherapy,UN UNK 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000545,1027,1027-0014,2,Gastro-oesophageal reflux,10 JUL 2020,N,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000546,1027,1027-0015,1,Hyperlipidemia,26 JUL 2016,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000547,1027,1027-0015,2,depression,UN UNK 2017,Y,Depression,Psychiatric disorders
+MH-000548,1027,1027-0015,3,Anxiety,10 JUN 2020,N,Anxiety,Psychiatric disorders
+MH-000549,1027,1027-0016,1,Hyperlipidemia,13 AUG 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000550,1027,1027-0016,2,CAD,03 JUL 2011,Y,Coronary artery disease,Cardiac disorders
+MH-000551,1027,1027-0016,3,Depression,UN UNK 2016,Y,Depression,Psychiatric disorders
+MH-000552,1027,1027-0016,4,Anxiety,15 OCT 2018,Y,Anxiety,Psychiatric disorders
+MH-000553,1027,1027-0018,1,Essential hypertension,02 JUL 2013,Y,Hypertension,Vascular disorders
+MH-000554,1027,1027-0018,2,BPH,UN FEB 2021,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000555,1027,1027-0019,1,Anaemia of chronic disease,16 FEB 2023,Y,Anemia,Blood and lymphatic system disorders
+MH-000556,1027,1027-0022,1,Difficulty sleeping,13 APR 2020,Y,Insomnia,Psychiatric disorders
+MH-000557,1027,1027-0022,2,Neuropathy after paclitaxel,UN UNK 2022,Y,Neuropathy peripheral,Nervous system disorders
+MH-000558,1027,1027-0023,1,Type 2 diabetes,29 MAR 2012,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000559,1027,1027-0023,2,Hypothyroidism,UN JAN 2022,Y,Hypothyroidism,Endocrine disorders
+MH-000560,1027,1027-0024,1,High blood pressure,20 JUN 2013,Y,Hypertension,Vascular disorders
+MH-000561,1027,1027-0024,2,Emphysema/COPD,23 FEB 2021,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000562,1027,1027-0024,3,GERD,UN UNK 2018,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000563,1027,1027-0024,4,Anxiety,UN SEP 2022,Y,Anxiety,Psychiatric disorders
+MH-000564,1027,1027-0025,1,Hyperlipidemia,14 NOV 2015,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000565,1027,1027-0026,1,Hyperlipidaemia,27 AUG 2011,N,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000566,1027,1027-0026,2,Depressive disorder,29 AUG 2020,Y,Depression,Psychiatric disorders
+MH-000567,1027,1027-0027,1,Anxiety disorder,22 JUL 2023,Y,Anxiety,Psychiatric disorders
+MH-000568,1027,1027-0028,1,Hypothyroidism secondary to immunotherapy,UN SEP 2022,Y,Hypothyroidism,Endocrine disorders
+MH-000569,1027,1027-0029,1,Anxiety,UN UNK 2023,Y,Anxiety,Psychiatric disorders
+MH-000570,1027,1027-0029,2,Anemia,19 SEP 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000571,1027,1027-0030,1,High blood pressure,UN UNK 2016,Y,Hypertension,Vascular disorders
+MH-000572,1027,1027-0030,2,Type 2 diabetes,UN UNK 2017,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000573,1027,1027-0030,3,Emphysema/COPD,03 APR 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000574,1028,1028-0001,1,Essential hypertension,UN UNK 2011,Y,Hypertension,Vascular disorders
+MH-000575,1028,1028-0001,2,T2DM,UN UNK 2008,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000576,1028,1028-0001,3,Acid reflux,05 APR 2013,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000577,1028,1028-0001,4,Insomnia,UN JUL 2020,Y,Insomnia,Psychiatric disorders
+MH-000578,1028,1028-0002,1,Chronic obstructive pulmonary disease,UN UNK 2013,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000579,1028,1028-0003,1,Essential hypertension,UN UNK 2012,Y,Hypertension,Vascular disorders
+MH-000580,1028,1028-0003,2,Hyperlipidaemia,10 APR 2019,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000581,1028,1028-0003,3,Anemia,18 SEP 2021,N,Anemia,Blood and lymphatic system disorders
+MH-000582,1028,1028-0004,1,Peripheral neuropathy,UN UNK 2021,Y,Neuropathy peripheral,Nervous system disorders
+MH-000583,1028,1028-0005,1,Emphysema/COPD,UN JAN 2010,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000584,1028,1028-0005,2,Anemia,UN FEB 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000585,1028,1028-0006,1,Chemotherapy-induced peripheral neuropathy,UN SEP 2021,Y,Neuropathy peripheral,Nervous system disorders
+MH-000586,1028,1028-0007,1,Hyperlipidemia,UN FEB 2020,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000587,1028,1028-0007,2,Emphysema/COPD,12 NOV 2017,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000588,1028,1028-0007,3,Depression,UN AUG 2020,Y,Depression,Psychiatric disorders
+MH-000589,1028,1028-0008,1,Chronic obstructive pulmonary disease,05 APR 2019,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000590,1028,1028-0009,1,HTN,UN JAN 2014,Y,Hypertension,Vascular disorders
+MH-000591,1028,1028-0009,2,Hyperlipidemia,10 SEP 2012,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000592,1028,1028-0010,1,Underactive thyroid,UN DEC 2020,Y,Hypothyroidism,Endocrine disorders
+MH-000593,1028,1028-0010,2,Depressive disorder,04 FEB 2015,N,Depression,Psychiatric disorders
+MH-000594,1028,1028-0010,3,BPH,UN DEC 2019,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000595,1028,1028-0011,1,OA knees,UN UNK 2008,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000596,1028,1028-0011,2,BPH,UN OCT 2019,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000597,1028,1028-0011,3,Anaemia of chronic disease,UN JUN 2023,Y,Anemia,Blood and lymphatic system disorders
+MH-000598,1028,1028-0012,1,High blood pressure,13 FEB 2014,Y,Hypertension,Vascular disorders
+MH-000599,1028,1028-0012,2,Hyperlipidaemia,UN UNK 2016,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000600,1028,1028-0013,1,Lower back pain,02 APR 2010,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000601,1028,1028-0014,1,Emphysema/COPD,UN UNK 2015,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000602,1028,1028-0014,2,Anxiety,14 NOV 2022,Y,Anxiety,Psychiatric disorders
+MH-000603,1028,1028-0014,3,Anemia,15 JAN 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000604,1028,1028-0015,1,Diabetes mellitus type II,UN NOV 2019,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000605,1028,1028-0015,2,CAD,25 JAN 2010,Y,Coronary artery disease,Cardiac disorders
+MH-000606,1028,1028-0015,3,Atrial fibrillation,UN JUL 2019,Y,Atrial fibrillation,Cardiac disorders
+MH-000607,1028,1028-0015,4,Benign prostatic hyperplasia,28 APR 2020,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000608,1028,1028-0016,1,Hyperlipidemia,UN MAR 2014,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000609,1028,1028-0017,1,Anaemia of chronic disease,UN UNK 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000610,1028,1028-0018,1,COPD,20 FEB 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000611,1029,1029-0001,1,Atrial fibrillation,27 NOV 2019,Y,Atrial fibrillation,Cardiac disorders
+MH-000612,1029,1029-0001,2,Chronic back pain,04 OCT 2015,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000613,1029,1029-0003,1,Essential hypertension,14 OCT 2013,Y,Hypertension,Vascular disorders
+MH-000614,1029,1029-0003,2,NIDDM,28 SEP 2004,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000615,1029,1029-0003,3,Osteoarthritis of hip,UN UNK 2016,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000616,1029,1029-0004,1,High blood pressure,UN NOV 2015,Y,Hypertension,Vascular disorders
+MH-000617,1029,1029-0005,1,Chemotherapy-induced peripheral neuropathy,08 MAY 2022,Y,Neuropathy peripheral,Nervous system disorders
+MH-000618,1029,1029-0006,1,Hypertension,UN UNK 2016,Y,Hypertension,Vascular disorders
+MH-000619,1029,1029-0006,2,Chronic obstructive pulmonary disease,03 MAY 2021,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000620,1029,1029-0007,1,Underactive thyroid,23 JAN 2022,N,Hypothyroidism,Endocrine disorders
+MH-000621,1029,1029-0008,1,Hyperlipidaemia,11 APR 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000622,1030,1030-0001,1,Emphysema/COPD,UN JUL 2010,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000623,1030,1030-0001,2,depression,07 SEP 2013,Y,Depression,Psychiatric disorders
+MH-000624,1030,1030-0001,3,Atrial fibrillation,UN UNK 2017,Y,Atrial fibrillation,Cardiac disorders
+MH-000625,1030,1030-0002,1,Anxiety disorder,UN SEP 2020,N,Anxiety,Psychiatric disorders
+MH-000626,1030,1030-0002,2,Enlarged prostate,UN APR 2018,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000627,1030,1030-0002,3,Chronic back pain,17 DEC 2010,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000628,1030,1030-0003,1,Chronic obstructive pulmonary disease,UN AUG 2016,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000629,1030,1030-0005,1,HTN,UN JUN 2004,N,Hypertension,Vascular disorders
+MH-000630,1030,1030-0005,2,BPH,UN UNK 2019,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000631,1030,1030-0005,3,Anaemia of chronic disease,UN OCT 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000632,1031,1031-0001,1,GERD,UN UNK 2018,N,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000633,1031,1031-0002,1,Essential hypertension,UN UNK 2009,Y,Hypertension,Vascular disorders
+MH-000634,1031,1031-0002,2,COPD,UN DEC 2013,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000635,1032,1032-0002,1,Essential hypertension,04 OCT 2002,N,Hypertension,Vascular disorders
+MH-000636,1032,1032-0002,2,Raised lipids,UN NOV 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000637,1032,1032-0002,3,Emphysema/COPD,UN DEC 2014,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000638,1032,1032-0002,4,Ischemic heart disease,UN JUN 2011,Y,Coronary artery disease,Cardiac disorders
+MH-000639,1032,1032-0002,5,Underactive thyroid,UN SEP 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000640,1032,1032-0003,1,Hyperlipidaemia,05 MAR 2014,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000641,1032,1032-0003,2,Chronic obstructive pulmonary disease,11 MAR 2010,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000642,1032,1032-0004,1,Essential hypertension,18 JUL 2013,Y,Hypertension,Vascular disorders
+MH-000643,1032,1032-0004,2,CAD,UN DEC 2019,Y,Coronary artery disease,Cardiac disorders
+MH-000644,1032,1032-0004,3,Anxiety,UN SEP 2021,Y,Anxiety,Psychiatric disorders
+MH-000645,1032,1032-0004,4,Chemotherapy-induced anemia,14 AUG 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000646,1032,1032-0006,1,Raised lipids,UN APR 2013,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000647,1032,1032-0006,2,T2DM,13 MAY 2010,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000648,1032,1032-0006,3,Coronary artery disease,19 JUN 2011,Y,Coronary artery disease,Cardiac disorders
+MH-000649,1032,1032-0006,4,Acid reflux,22 FEB 2013,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000650,1032,1032-0006,5,OA knees,UN MAY 2017,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000651,1032,1032-0007,1,Depression,UN UNK 2015,Y,Depression,Psychiatric disorders
+MH-000652,1032,1032-0007,2,Anaemia of chronic disease,01 DEC 2022,Y,Anemia,Blood and lymphatic system disorders
+MH-000653,1032,1032-0009,1,Diabetes mellitus type II,UN APR 2007,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000654,1032,1032-0009,2,COPD,UN AUG 2019,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000655,1032,1032-0010,1,Insomnia,UN JUN 2018,Y,Insomnia,Psychiatric disorders
+MH-000656,1032,1032-0011,1,Difficulty sleeping,05 AUG 2019,Y,Insomnia,Psychiatric disorders
+MH-000657,1032,1032-0011,2,Lower back pain,17 MAR 2022,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000658,1032,1032-0012,1,Hyperlipidaemia,UN JUL 2017,N,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000659,1033,1033-0001,1,Anxiety,UN UNK 2017,Y,Anxiety,Psychiatric disorders
+MH-000660,1033,1033-0001,2,OA knees,UN UNK 2015,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000661,1033,1033-0001,3,BPH,UN JAN 2016,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000662,1033,1033-0002,1,Essential hypertension,07 AUG 2013,Y,Hypertension,Vascular disorders
+MH-000663,1033,1033-0002,2,Underactive thyroid,UN DEC 2021,N,Hypothyroidism,Endocrine disorders
+MH-000664,1033,1033-0002,3,Insomnia,24 JUN 2021,Y,Insomnia,Psychiatric disorders
+MH-000665,1033,1033-0003,1,Hyperlipidemia,08 NOV 2014,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000666,1033,1033-0003,2,Benign prostatic hyperplasia,UN JAN 2019,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000667,1033,1033-0003,3,Lower back pain,UN SEP 2015,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000668,1033,1033-0004,1,Chronic obstructive pulmonary disease,27 JUL 2018,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000669,1033,1033-0004,2,GERD,09 AUG 2017,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000670,1034,1034-0001,1,HTN,UN SEP 2013,Y,Hypertension,Vascular disorders
+MH-000671,1034,1034-0001,2,Depressive disorder,06 MAY 2015,Y,Depression,Psychiatric disorders
+MH-000672,1034,1034-0001,3,Bilateral cataracts,27 SEP 2019,Y,Cataract,Eye disorders
+MH-000673,1034,1034-0002,1,Emphysema/COPD,25 FEB 2013,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000674,1034,1034-0005,1,Ischemic heart disease,16 JUN 2021,N,Coronary artery disease,Cardiac disorders
+MH-000675,1034,1034-0006,1,Acid reflux,07 NOV 2013,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000676,1034,1034-0006,2,Peripheral neuropathy,10 JAN 2022,Y,Neuropathy peripheral,Nervous system disorders
+MH-000677,1034,1034-0007,1,Essential hypertension,UN UNK 2014,N,Hypertension,Vascular disorders
+MH-000678,1034,1034-0008,1,Essential hypertension,16 JAN 2004,Y,Hypertension,Vascular disorders
+MH-000679,1034,1034-0008,2,Hyperlipidaemia,13 SEP 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000680,1034,1034-0008,3,NIDDM,UN NOV 2017,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000681,1034,1034-0008,4,Chronic obstructive pulmonary disease,02 NOV 2008,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000682,1034,1034-0009,1,Hypertension,UN JUL 2020,Y,Hypertension,Vascular disorders
+MH-000683,1034,1034-0009,2,Asthma,UN AUG 2005,Y,Asthma,"Respiratory, thoracic and mediastinal disorders"
+MH-000684,1034,1034-0011,1,Emphysema/COPD,22 SEP 2020,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000685,1034,1034-0011,2,Hypothyroidism secondary to immunotherapy,UN FEB 2023,Y,Hypothyroidism,Endocrine disorders
+MH-000686,1034,1034-0011,3,Difficulty sleeping,UN OCT 2019,Y,Insomnia,Psychiatric disorders
+MH-000687,1034,1034-0012,1,Essential hypertension,UN UNK 2018,Y,Hypertension,Vascular disorders
+MH-000688,1034,1034-0012,2,Raised lipids,20 OCT 2011,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000689,1034,1034-0012,3,Insomnia,UN APR 2021,Y,Insomnia,Psychiatric disorders
+MH-000690,1034,1034-0013,1,HTN,UN SEP 2004,Y,Hypertension,Vascular disorders
+MH-000691,1034,1034-0013,2,Anxiety disorder,18 DEC 2021,Y,Anxiety,Psychiatric disorders
+MH-000692,1034,1034-0014,1,Type 2 diabetes,UN UNK 2012,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000693,1034,1034-0014,2,Chronic obstructive pulmonary disease,UN JUL 2014,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000694,1034,1034-0015,1,Hypertension,01 DEC 2017,Y,Hypertension,Vascular disorders
+MH-000695,1034,1034-0015,2,Raised lipids,22 MAR 2014,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000696,1034,1034-0015,3,Emphysema/COPD,11 MAY 2012,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000697,1034,1034-0016,1,High blood pressure,11 JUL 2014,Y,Hypertension,Vascular disorders
+MH-000698,1034,1034-0016,2,Emphysema/COPD,UN JUN 2013,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000699,1034,1034-0016,3,Anxiety,UN JAN 2020,Y,Anxiety,Psychiatric disorders
+MH-000700,1034,1034-0017,1,Hyperlipidaemia,UN MAY 2013,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000701,1034,1034-0017,2,Ischemic heart disease,UN FEB 2016,Y,Coronary artery disease,Cardiac disorders
+MH-000702,1034,1034-0018,1,Chronic obstructive pulmonary disease,UN MAY 2022,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000703,1034,1034-0018,2,Hypothyroidism secondary to immunotherapy,UN FEB 2022,Y,Hypothyroidism,Endocrine disorders
+MH-000704,1034,1034-0018,3,Atrial fibrillation,16 JUL 2021,Y,Atrial fibrillation,Cardiac disorders
+MH-000705,1035,1035-0001,1,Hyperlipidaemia,UN AUG 2008,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000706,1035,1035-0001,2,Enlarged prostate,UN UNK 2013,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000707,1035,1035-0002,1,Hyperlipidaemia,13 JUN 2017,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000708,1035,1035-0002,2,Coronary artery disease,UN JUL 2011,Y,Coronary artery disease,Cardiac disorders
+MH-000709,1035,1035-0002,3,Underactive thyroid,UN JAN 2022,N,Hypothyroidism,Endocrine disorders
+MH-000710,1035,1035-0004,1,Essential hypertension,07 DEC 2007,Y,Hypertension,Vascular disorders
+MH-000711,1035,1035-0004,2,NIDDM,UN AUG 2006,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000712,1035,1035-0004,3,GERD,UN UNK 2021,N,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000713,1035,1035-0004,4,AF,UN UNK 2019,Y,Atrial fibrillation,Cardiac disorders
+MH-000714,1035,1035-0005,1,Hyperlipidemia,UN MAR 2013,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000715,1035,1035-0006,1,Gastro-oesophageal reflux,UN UNK 2016,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000716,1035,1035-0007,1,HTN,14 AUG 2019,N,Hypertension,Vascular disorders
+MH-000717,1035,1035-0007,2,Coronary artery disease,06 JAN 2016,Y,Coronary artery disease,Cardiac disorders
+MH-000718,1035,1035-0007,3,OA knees,04 FEB 2015,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000719,1035,1035-0007,4,Lower back pain,UN JAN 2021,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000720,1035,1035-0008,1,HTN,04 DEC 2007,Y,Hypertension,Vascular disorders
+MH-000721,1035,1035-0008,2,Emphysema/COPD,UN UNK 2019,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000722,1035,1035-0008,3,Atrial fibrillation,06 AUG 2018,Y,Atrial fibrillation,Cardiac disorders
+MH-000723,1035,1035-0010,1,Type 2 diabetes,UN UNK 2017,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000724,1035,1035-0010,2,Chronic obstructive pulmonary disease,29 JUL 2011,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000725,1035,1035-0010,3,GERD,05 APR 2014,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000726,1035,1035-0010,4,Osteoarthritis of hip,UN UNK 2018,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000727,1035,1035-0010,5,Anaemia of chronic disease,01 JAN 2023,Y,Anemia,Blood and lymphatic system disorders
+MH-000728,1035,1035-0011,1,Underactive thyroid,UN APR 2020,Y,Hypothyroidism,Endocrine disorders
+MH-000729,1035,1035-0011,2,Gastro-oesophageal reflux,29 JUN 2016,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000730,1035,1035-0013,1,Diabetes mellitus type II,UN DEC 2006,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000731,1035,1035-0013,2,GERD,UN MAY 2020,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000732,1035,1035-0014,1,Emphysema/COPD,01 JAN 2011,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000733,1035,1035-0014,2,GERD,UN OCT 2013,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000734,1035,1035-0014,3,Chemotherapy-induced peripheral neuropathy,07 FEB 2022,Y,Neuropathy peripheral,Nervous system disorders
+MH-000735,1036,1036-0001,1,Ischemic heart disease,UN UNK 2015,Y,Coronary artery disease,Cardiac disorders
+MH-000736,1036,1036-0001,2,Anxiety,UN UNK 2021,Y,Anxiety,Psychiatric disorders
+MH-000737,1036,1036-0001,3,Insomnia,25 APR 2020,Y,Insomnia,Psychiatric disorders
+MH-000738,1036,1036-0001,4,Lower back pain,11 AUG 2009,N,Back pain,Musculoskeletal and connective tissue disorders
+MH-000739,1036,1036-0002,1,Hyperlipidemia,UN SEP 2016,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000740,1036,1036-0002,2,Type 2 diabetes,UN UNK 2018,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000741,1036,1036-0002,3,CKD stage 3,21 DEC 2014,Y,Chronic kidney disease,Renal and urinary disorders
+MH-000742,1036,1036-0003,1,HTN,UN UNK 2004,Y,Hypertension,Vascular disorders
+MH-000743,1036,1036-0003,2,Raised lipids,UN UNK 2009,N,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000744,1036,1036-0003,3,Benign prostatic hyperplasia,UN FEB 2019,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000745,1036,1036-0004,1,Hypothyroidism,UN UNK 2022,Y,Hypothyroidism,Endocrine disorders
+MH-000746,1036,1036-0004,2,Gastro-oesophageal reflux,UN FEB 2020,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000747,1036,1036-0005,1,Chronic obstructive pulmonary disease,UN APR 2009,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000748,1036,1036-0005,2,Anxiety,04 APR 2021,N,Anxiety,Psychiatric disorders
+MH-000749,1036,1036-0005,3,Lower back pain,05 OCT 2016,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000750,1036,1036-0006,1,Diabetes mellitus type II,16 DEC 2021,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000751,1036,1036-0008,1,Difficulty sleeping,UN OCT 2022,N,Insomnia,Psychiatric disorders
+MH-000752,1036,1036-0009,1,Depression,09 NOV 2013,Y,Depression,Psychiatric disorders
+MH-000753,1036,1036-0009,2,Asthma,01 FEB 2008,Y,Asthma,"Respiratory, thoracic and mediastinal disorders"
+MH-000754,1036,1036-0010,1,Essential hypertension,10 DEC 2009,Y,Hypertension,Vascular disorders
+MH-000755,1036,1036-0011,1,Hypertension,UN OCT 2021,Y,Hypertension,Vascular disorders
+MH-000756,1036,1036-0011,2,Hyperlipidaemia,UN OCT 2015,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000757,1036,1036-0011,3,Type 2 diabetes,18 SEP 2019,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000758,1036,1036-0011,4,Depressive disorder,UN MAY 2016,N,Depression,Psychiatric disorders
+MH-000759,1037,1037-0001,1,NIDDM,UN UNK 2011,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000760,1037,1037-0001,2,Acid reflux,UN UNK 2018,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000761,1037,1037-0002,1,Essential hypertension,UN UNK 2010,Y,Hypertension,Vascular disorders
+MH-000762,1037,1037-0002,2,Underactive thyroid,UN SEP 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000763,1037,1037-0003,1,High blood pressure,UN AUG 2018,Y,Hypertension,Vascular disorders
+MH-000764,1037,1037-0003,2,Emphysema/COPD,UN APR 2016,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000765,1037,1037-0003,3,Bronchial asthma,05 APR 2014,Y,Asthma,"Respiratory, thoracic and mediastinal disorders"
+MH-000766,1037,1037-0005,1,High blood pressure,08 JUL 2005,Y,Hypertension,Vascular disorders
+MH-000767,1037,1037-0008,1,Hyperlipidemia,UN JUN 2011,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000768,1038,1038-0001,1,depression,UN UNK 2017,Y,Depression,Psychiatric disorders
+MH-000769,1038,1038-0001,2,Chronic back pain,17 NOV 2010,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000770,1038,1038-0002,1,Hypertension,10 MAR 2013,Y,Hypertension,Vascular disorders
+MH-000771,1038,1038-0002,2,Chronic obstructive pulmonary disease,19 JUN 2019,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000772,1038,1038-0002,3,CAD,09 JUL 2018,N,Coronary artery disease,Cardiac disorders
+MH-000773,1038,1038-0002,4,Anxiety,UN UNK 2018,Y,Anxiety,Psychiatric disorders
+MH-000774,1038,1038-0002,5,Atrial fibrillation,18 MAR 2019,Y,Atrial fibrillation,Cardiac disorders
+MH-000775,1038,1038-0002,6,Enlarged prostate,UN MAY 2021,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000776,1038,1038-0002,7,Chemotherapy-induced anemia,UN UNK 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000777,1038,1038-0002,8,Chemotherapy-induced peripheral neuropathy,UN MAR 2022,Y,Neuropathy peripheral,Nervous system disorders
+MH-000778,1038,1038-0004,1,Emphysema/COPD,UN UNK 2012,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000779,1038,1038-0004,2,Anxiety disorder,04 NOV 2022,Y,Anxiety,Psychiatric disorders
+MH-000780,1038,1038-0005,1,Lower back pain,28 JAN 2021,Y,Back pain,Musculoskeletal and connective tissue disorders
+MH-000781,1038,1038-0006,1,Acid reflux,24 MAR 2016,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000782,1038,1038-0008,1,High blood pressure,UN UNK 2004,N,Hypertension,Vascular disorders
+MH-000783,1038,1038-0008,2,Diabetes mellitus type II,UN DEC 2016,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000784,1038,1038-0008,3,Ischemic heart disease,UN MAR 2018,Y,Coronary artery disease,Cardiac disorders
+MH-000785,1038,1038-0009,1,Hyperlipidaemia,UN MAR 2021,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000786,1038,1038-0009,2,Underactive thyroid,UN DEC 2022,Y,Hypothyroidism,Endocrine disorders
+MH-000787,1038,1038-0009,3,Anemia,UN DEC 2021,Y,Anemia,Blood and lymphatic system disorders
+MH-000788,1038,1038-0009,4,Bilateral cataracts,11 FEB 2014,Y,Cataract,Eye disorders
+MH-000789,1038,1038-0009,5,CKD stage 3,UN FEB 2022,Y,Chronic kidney disease,Renal and urinary disorders
+MH-000790,1039,1039-0001,1,Raised lipids,UN AUG 2016,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000791,1039,1039-0001,2,Emphysema/COPD,14 OCT 2009,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000792,1039,1039-0001,3,Depression,12 SEP 2014,Y,Depression,Psychiatric disorders
+MH-000793,1039,1039-0001,4,Osteoarthritis,UN AUG 2010,N,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000794,1039,1039-0001,5,Anaemia of chronic disease,16 DEC 2020,Y,Anemia,Blood and lymphatic system disorders
+MH-000795,1039,1039-0002,1,HTN,27 MAY 2013,Y,Hypertension,Vascular disorders
+MH-000796,1039,1039-0002,2,Hyperlipidemia,UN NOV 2008,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000797,1039,1039-0002,3,COPD,24 FEB 2008,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000798,1039,1039-0002,4,Hypothyroidism,11 JUN 2022,Y,Hypothyroidism,Endocrine disorders
+MH-000799,1039,1039-0003,1,Hyperlipidemia,06 SEP 2014,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000800,1039,1039-0003,2,Chronic obstructive pulmonary disease,23 AUG 2015,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000801,1039,1039-0003,3,Chemotherapy-induced peripheral neuropathy,UN UNK 2021,N,Neuropathy peripheral,Nervous system disorders
+MH-000802,1039,1039-0004,1,Acid reflux,11 JUN 2021,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000803,1039,1039-0004,2,Anxiety,04 NOV 2022,Y,Anxiety,Psychiatric disorders
+MH-000804,1039,1039-0004,3,Difficulty sleeping,UN UNK 2022,Y,Insomnia,Psychiatric disorders
+MH-000805,1039,1039-0005,1,HTN,18 JUL 2013,N,Hypertension,Vascular disorders
+MH-000806,1039,1039-0005,2,Hyperlipidemia,10 JAN 2017,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000807,1039,1039-0005,3,Type 2 diabetes,UN DEC 2020,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000808,1039,1039-0005,4,Underactive thyroid,05 JAN 2022,N,Hypothyroidism,Endocrine disorders
+MH-000809,1039,1039-0005,5,depression,01 AUG 2016,Y,Depression,Psychiatric disorders
+MH-000810,1039,1039-0006,1,Hypertension,04 NOV 2003,Y,Hypertension,Vascular disorders
+MH-000811,1039,1039-0006,2,Raised lipids,07 JUN 2016,N,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000812,1039,1039-0006,3,Diabetes mellitus type II,12 NOV 2011,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000813,1039,1039-0007,1,High blood pressure,UN UNK 2008,Y,Hypertension,Vascular disorders
+MH-000814,1039,1039-0008,1,Essential hypertension,04 MAY 2010,Y,Hypertension,Vascular disorders
+MH-000815,1039,1039-0008,2,Gastro-oesophageal reflux,UN UNK 2013,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000816,1039,1039-0008,3,Benign prostatic hyperplasia,UN MAY 2017,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000817,1039,1039-0009,1,Hypertension,UN UNK 2005,Y,Hypertension,Vascular disorders
+MH-000818,1039,1039-0009,2,COPD,10 APR 2013,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000819,1039,1039-0009,3,Gastro-oesophageal reflux,26 AUG 2016,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000820,1039,1039-0010,1,BPH,25 MAR 2015,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000821,1039,1039-0011,1,Hyperlipidaemia,15 JUN 2015,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000822,1039,1039-0011,2,Ischemic heart disease,05 APR 2013,N,Coronary artery disease,Cardiac disorders
+MH-000823,1039,1039-0011,3,Underactive thyroid,20 OCT 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000824,1039,1039-0011,4,Osteoarthritis,21 MAY 2009,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000825,1039,1039-0011,5,Peripheral neuropathy,16 MAY 2022,N,Neuropathy peripheral,Nervous system disorders
+MH-000826,1039,1039-0011,6,Bronchial asthma,14 FEB 1986,Y,Asthma,"Respiratory, thoracic and mediastinal disorders"
+MH-000827,1039,1039-0012,1,High blood pressure,UN SEP 2019,Y,Hypertension,Vascular disorders
+MH-000828,1039,1039-0012,2,Anxiety disorder,UN UNK 2022,Y,Anxiety,Psychiatric disorders
+MH-000829,1039,1039-0012,3,Osteoarthritis of hip,UN MAY 2014,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000830,1039,1039-0013,1,Raised lipids,UN MAR 2017,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000831,1039,1039-0014,1,Hyperlipidemia,26 JUL 2020,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000832,1039,1039-0014,2,Coronary artery disease,06 SEP 2020,Y,Coronary artery disease,Cardiac disorders
+MH-000833,1039,1039-0014,3,Osteoarthritis,UN JAN 2019,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000834,1039,1039-0016,1,Hyperlipidemia,UN UNK 2013,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000835,1040,1040-0003,1,Anxiety disorder,UN UNK 2018,Y,Anxiety,Psychiatric disorders
+MH-000836,1040,1040-0004,1,CAD,18 DEC 2016,Y,Coronary artery disease,Cardiac disorders
+MH-000837,1040,1040-0004,2,Anxiety disorder,30 AUG 2020,Y,Anxiety,Psychiatric disorders
+MH-000838,1040,1040-0004,3,AF,UN FEB 2021,N,Atrial fibrillation,Cardiac disorders
+MH-000839,1040,1040-0006,1,Essential hypertension,UN DEC 2014,Y,Hypertension,Vascular disorders
+MH-000840,1040,1040-0006,2,Raised lipids,UN UNK 2016,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000841,1040,1040-0006,3,Anxiety,19 OCT 2019,Y,Anxiety,Psychiatric disorders
+MH-000842,1040,1040-0007,1,COPD,11 FEB 2021,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000843,1040,1040-0007,2,Ischemic heart disease,UN JUN 2020,Y,Coronary artery disease,Cardiac disorders
+MH-000844,1040,1040-0007,3,Hypothyroidism secondary to immunotherapy,UN JAN 2021,N,Hypothyroidism,Endocrine disorders
+MH-000845,1040,1040-0007,4,Benign prostatic hyperplasia,UN NOV 2015,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000846,1040,1040-0008,1,Chronic obstructive pulmonary disease,UN DEC 2008,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000847,1041,1041-0001,1,Hyperlipidemia,UN JUL 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000848,1041,1041-0001,2,T2DM,10 MAY 2010,N,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000849,1041,1041-0001,3,Emphysema/COPD,UN JAN 2019,N,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000850,1041,1041-0002,1,Essential hypertension,30 JUL 2007,Y,Hypertension,Vascular disorders
+MH-000851,1041,1041-0002,2,Bronchial asthma,19 OCT 2009,Y,Asthma,"Respiratory, thoracic and mediastinal disorders"
+MH-000852,1041,1041-0004,1,Hypertension,UN FEB 2013,Y,Hypertension,Vascular disorders
+MH-000853,1041,1041-0004,2,NIDDM,02 JUN 2014,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000854,1041,1041-0004,3,Hypothyroidism secondary to immunotherapy,UN UNK 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000855,1041,1041-0004,4,GERD,UN UNK 2018,Y,Gastroesophageal reflux disease,Gastrointestinal disorders
+MH-000856,1041,1041-0004,5,Osteoarthritis of hip,07 OCT 2015,N,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000857,1042,1042-0001,1,Hyperlipidemia,04 JUL 2013,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000858,1042,1042-0001,2,COPD,UN UNK 2011,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000859,1042,1042-0001,3,Hypothyroidism,27 SEP 2021,Y,Hypothyroidism,Endocrine disorders
+MH-000860,1042,1042-0002,1,Benign prostatic hyperplasia,UN UNK 2014,Y,Benign prostatic hyperplasia,Reproductive system and breast disorders
+MH-000861,1042,1042-0002,2,Peripheral neuropathy,UN AUG 2022,Y,Neuropathy peripheral,Nervous system disorders
+MH-000862,1042,1042-0003,1,Hyperlipidaemia,09 APR 2010,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000863,1042,1042-0003,2,Osteoarthritis,UN JUL 2008,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders
+MH-000864,1042,1042-0004,1,Raised lipids,30 NOV 2018,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000865,1042,1042-0004,2,Anxiety disorder,UN MAY 2019,Y,Anxiety,Psychiatric disorders
+MH-000866,1042,1042-0005,1,Diabetes mellitus type II,UN APR 2008,Y,Type 2 diabetes mellitus,Metabolism and nutrition disorders
+MH-000867,1042,1042-0006,1,Emphysema/COPD,UN FEB 2019,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000868,1042,1042-0006,2,Atrial fibrillation,04 JUL 2016,Y,Atrial fibrillation,Cardiac disorders
+MH-000869,1042,1042-0007,1,Hyperlipidemia,UN MAR 2009,Y,Hyperlipidemia,Metabolism and nutrition disorders
+MH-000870,1042,1042-0007,2,Chronic obstructive pulmonary disease,25 AUG 2020,Y,Chronic obstructive pulmonary disease,"Respiratory, thoracic and mediastinal disorders"
+MH-000871,1042,1042-0007,3,OA knees,UN UNK 2020,Y,Osteoarthritis,Musculoskeletal and connective tissue disorders

@@ -1,0 +1,412 @@
+{
+  "study": "manufacturing",
+  "title": "HBX-14 drug substance — biologics manufacturing process data (synthetic)",
+  "description": "Fictional CHO fed-batch manufacturing record for HBX-14 drug substance at Helix Biologics, Building 4 (fictional site): 240 batches across three production lines and two media suppliers, January 2023 to late 2025. Each 14-day culture carries a 6-hourly sensor series, a harvest NIR spectrum and batch release testing. Designed for teaching instrument-data ingestion, multicollinearity, principal component analysis and leakage-safe model validation. No GMP or validation framework is implied.",
+  "synthetic": true,
+  "generator": "scripts/data/manufacturing/generate.ts",
+  "seed": 71,
+  "datasets": [
+    {
+      "id": "manufacturing/process/batches",
+      "layer": "process",
+      "name": "BATCHES",
+      "label": "Batch Record and Release Testing",
+      "file": "process/batches.csv",
+      "rows": 240,
+      "keys": [
+        "BATCHID"
+      ],
+      "structure": "One record per batch",
+      "description": "One row per manufactured batch: line, supplier, media lot, summarised process parameters, release testing and disposition. Every summary column (TEMP_MEAN, VCD_PEAK, LACTATE_PEAK …) is computed from that batch’s sensor series, so the two datasets agree exactly and a learner who recomputes a summary gets the published number back.",
+      "columns": [
+        {
+          "name": "BATCHID",
+          "label": "Batch Identifier",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Assigned",
+          "derivation": "HBX14-<year>-<sequence>."
+        },
+        {
+          "name": "LINE",
+          "label": "Production Line",
+          "type": "char",
+          "role": "Grouping",
+          "origin": "Collected",
+          "codelist": "LINE-A, LINE-B, LINE-C"
+        },
+        {
+          "name": "SUPPLIER",
+          "label": "Media Supplier",
+          "type": "char",
+          "role": "Grouping",
+          "origin": "Collected",
+          "codelist": "Northvale Media, Calderon Biosciences"
+        },
+        {
+          "name": "MEDIA_LOT",
+          "label": "Media Lot Number",
+          "type": "char",
+          "role": "Grouping",
+          "origin": "Collected",
+          "notes": "Lots are used for 6–10 consecutive batches, so batches sharing a lot are correlated."
+        },
+        {
+          "name": "START_DATE",
+          "label": "Culture Start Date",
+          "type": "date",
+          "role": "Timing",
+          "origin": "Collected"
+        },
+        {
+          "name": "HARVEST_DATE",
+          "label": "Harvest Date",
+          "type": "date",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "START_DATE + 14 days."
+        },
+        {
+          "name": "OPERATOR_SHIFT",
+          "label": "Operating Shift",
+          "type": "char",
+          "role": "Grouping",
+          "origin": "Collected",
+          "codelist": "Day, Night",
+          "notes": "Included deliberately as a variable with no effect on any outcome."
+        },
+        {
+          "name": "DURATION_H",
+          "label": "Culture Duration (h)",
+          "type": "num",
+          "role": "Timing",
+          "origin": "Protocol",
+          "notes": "Fixed at 336 h for every batch."
+        },
+        {
+          "name": "TEMP_MEAN",
+          "label": "Mean Temperature (°C)",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Derived",
+          "derivation": "Mean of TEMP_C over all 57 sensor readings for the batch."
+        },
+        {
+          "name": "TEMP_SD",
+          "label": "Temperature Deviation SD (°C)",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Derived",
+          "derivation": "Sample SD of (TEMP_C − TEMP_SP) over all 57 sensor readings.",
+          "notes": "Deviation from setpoint, not raw spread: the setpoint itself steps from 36.8 °C to 33.0 °C at hour 240, so a raw SD of TEMP_C would measure that step rather than controller behaviour. This is the most direct measure of control-loop health, and it rises sharply during the LINE-B controller fault."
+        },
+        {
+          "name": "PH_MEAN",
+          "label": "Mean pH",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Derived",
+          "derivation": "Mean of PH over all sensor readings."
+        },
+        {
+          "name": "PH_SD",
+          "label": "pH Deviation SD",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Derived",
+          "derivation": "Sample SD of (PH − PH_SP) over all 57 sensor readings.",
+          "notes": "Deviation from setpoint, for the same reason as TEMP_SD: the pH setpoint steps from 7.00 to 6.90 at hour 120."
+        },
+        {
+          "name": "DO_MEAN",
+          "label": "Mean Dissolved Oxygen (%)",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Derived",
+          "derivation": "Mean of DO_PCT over all sensor readings."
+        },
+        {
+          "name": "VCD_PEAK",
+          "label": "Peak Viable Cell Density (10⁶ cells/mL)",
+          "type": "num",
+          "role": "Process Response",
+          "origin": "Derived",
+          "derivation": "Maximum VCD across the sensor series."
+        },
+        {
+          "name": "VCD_PEAK_H",
+          "label": "Hour of Peak VCD",
+          "type": "num",
+          "role": "Process Response",
+          "origin": "Derived",
+          "derivation": "ELAPSED_H at which VCD is maximal."
+        },
+        {
+          "name": "GLUCOSE_MIN",
+          "label": "Minimum Glucose (g/L)",
+          "type": "num",
+          "role": "Process Response",
+          "origin": "Derived",
+          "derivation": "Minimum GLUCOSE_G_L across the sensor series.",
+          "notes": "The lowest pre-feed trough. Feed control holds the culture above 0.6 g/L, so this is a measure of feed adequacy rather than of starvation."
+        },
+        {
+          "name": "LACTATE_PEAK",
+          "label": "Peak Lactate (g/L)",
+          "type": "num",
+          "role": "Process Response",
+          "origin": "Derived",
+          "derivation": "Maximum LACTATE_G_L across the sensor series."
+        },
+        {
+          "name": "VIABILITY_END",
+          "label": "Viability at Harvest (%)",
+          "type": "num",
+          "role": "Process Response",
+          "origin": "Derived",
+          "derivation": "VIABILITY_PCT at ELAPSED_H = 336."
+        },
+        {
+          "name": "OSMOLALITY",
+          "label": "Harvest Osmolality (mOsm/kg)",
+          "type": "num",
+          "role": "Process Response",
+          "origin": "Collected",
+          "notes": "Offline measurement at harvest."
+        },
+        {
+          "name": "TITER_G_L",
+          "label": "Harvest Titer (g/L)",
+          "type": "num",
+          "role": "Quality Attribute",
+          "origin": "Collected"
+        },
+        {
+          "name": "PURITY_PCT",
+          "label": "Purity by SEC (%)",
+          "type": "num",
+          "role": "Quality Attribute",
+          "origin": "Collected",
+          "notes": "Release specification: ≥ 95.0%."
+        },
+        {
+          "name": "AGGREGATE_PCT",
+          "label": "High Molecular Weight Species (%)",
+          "type": "num",
+          "role": "Quality Attribute",
+          "origin": "Collected",
+          "notes": "Release specification: ≤ 3.0%."
+        },
+        {
+          "name": "POTENCY_PCT",
+          "label": "Potency (% of reference standard)",
+          "type": "num",
+          "role": "Quality Attribute",
+          "origin": "Collected",
+          "notes": "Release specification: 85–115%. This is the modelling outcome, and it is a BATCH-level attribute."
+        },
+        {
+          "name": "YIELD_KG",
+          "label": "Drug Substance Yield (kg)",
+          "type": "num",
+          "role": "Quality Attribute",
+          "origin": "Derived",
+          "derivation": "TITER_G_L × 1,900 L harvest volume × downstream recovery ÷ 1,000."
+        },
+        {
+          "name": "DISPOSITION",
+          "label": "Batch Disposition",
+          "type": "char",
+          "role": "Outcome",
+          "origin": "Derived",
+          "codelist": "Released, Investigation, Rejected",
+          "derivation": "Rejected when any attribute is out of specification; Investigation when all are in specification but one is close to a limit; otherwise Released."
+        }
+      ]
+    },
+    {
+      "id": "manufacturing/process/sensor-timeseries",
+      "layer": "process",
+      "name": "SENSORS",
+      "label": "Bioreactor Sensor Time Series",
+      "file": "process/sensor-timeseries.csv",
+      "rows": 13680,
+      "keys": [
+        "BATCHID",
+        "ELAPSED_H"
+      ],
+      "structure": "One record per batch per 6-hour reading",
+      "description": "Bioreactor sensor readings every 6 hours over the 336-hour culture, 57 readings per batch. Joining batch potency onto these rows creates the modelling table for the capstone — and the leakage trap, because a row-level random split puts readings from the same batch in both training and test.",
+      "columns": [
+        {
+          "name": "BATCHID",
+          "label": "Batch Identifier",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Assigned",
+          "notes": "Foreign key to batches. This is the grouping variable for leakage-safe cross-validation."
+        },
+        {
+          "name": "TIMESTAMP",
+          "label": "Reading Timestamp",
+          "type": "datetime",
+          "role": "Timing",
+          "origin": "Collected",
+          "notes": "ISO 8601 to the minute, UTC."
+        },
+        {
+          "name": "ELAPSED_H",
+          "label": "Elapsed Culture Time (h)",
+          "type": "num",
+          "role": "Timing",
+          "origin": "Derived",
+          "derivation": "Hours since culture start: 0, 6, 12, …, 336."
+        },
+        {
+          "name": "TEMP_C",
+          "label": "Temperature (°C)",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Collected",
+          "notes": "Process value. Compare against TEMP_SP rather than against a constant."
+        },
+        {
+          "name": "TEMP_SP",
+          "label": "Temperature Setpoint (°C)",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Protocol",
+          "notes": "36.8 °C, shifted to 33.0 °C at hour 240. Identical for every batch."
+        },
+        {
+          "name": "PH",
+          "label": "pH",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Collected",
+          "notes": "Process value."
+        },
+        {
+          "name": "PH_SP",
+          "label": "pH Setpoint",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Protocol",
+          "notes": "7.00, lowered to 6.90 at hour 120. Identical for every batch."
+        },
+        {
+          "name": "DO_PCT",
+          "label": "Dissolved Oxygen (% air saturation)",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Collected"
+        },
+        {
+          "name": "DO_SP",
+          "label": "Dissolved Oxygen Setpoint (%)",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Protocol",
+          "notes": "Constant at 40% for every batch and every reading."
+        },
+        {
+          "name": "AGITATION_RPM",
+          "label": "Agitation Rate (rpm)",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Collected"
+        },
+        {
+          "name": "AGIT_SP",
+          "label": "Agitation Setpoint (rpm)",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Protocol",
+          "notes": "120 rpm, stepped to 145 rpm at hour 72. Identical for every batch."
+        },
+        {
+          "name": "PRESSURE_BAR",
+          "label": "Headspace Pressure (bar)",
+          "type": "num",
+          "role": "Process Parameter",
+          "origin": "Collected"
+        },
+        {
+          "name": "VCD",
+          "label": "Viable Cell Density (10⁶ cells/mL)",
+          "type": "num",
+          "role": "Process Response",
+          "origin": "Collected"
+        },
+        {
+          "name": "VIABILITY_PCT",
+          "label": "Viability (%)",
+          "type": "num",
+          "role": "Process Response",
+          "origin": "Collected"
+        },
+        {
+          "name": "GLUCOSE_G_L",
+          "label": "Glucose (g/L)",
+          "type": "num",
+          "role": "Process Response",
+          "origin": "Collected",
+          "notes": "Sawtooth: consumed continuously, replenished by bolus feeds at hours 72, 120, 168, 216 and 264."
+        },
+        {
+          "name": "LACTATE_G_L",
+          "label": "Lactate (g/L)",
+          "type": "num",
+          "role": "Process Response",
+          "origin": "Collected",
+          "notes": "Accumulates during growth, then consumed after the metabolic shift near hour 144."
+        }
+      ]
+    },
+    {
+      "id": "manufacturing/process/spectra",
+      "layer": "process",
+      "name": "SPECTRA",
+      "label": "Harvest NIR Spectra",
+      "file": "process/spectra.csv",
+      "rows": 240,
+      "keys": [
+        "BATCHID"
+      ],
+      "structure": "One record per batch, wide over wavelength",
+      "description": "Near-infrared absorbance of the harvest pool, 1100–2300 nm in 20 nm steps (61 wavelengths). Highly collinear by construction: adjacent wavelengths correlate above 0.99, which is what makes this a genuine principal-component problem rather than a demonstration of one.",
+      "columns": [
+        {
+          "name": "BATCHID",
+          "label": "Batch Identifier",
+          "type": "char",
+          "role": "Identifier",
+          "origin": "Assigned",
+          "notes": "Foreign key to batches."
+        },
+        {
+          "name": "START_DATE",
+          "label": "Culture Start Date",
+          "type": "date",
+          "role": "Timing",
+          "origin": "Predecessor"
+        },
+        {
+          "name": "LINE",
+          "label": "Production Line",
+          "type": "char",
+          "role": "Grouping",
+          "origin": "Predecessor"
+        },
+        {
+          "name": "W1100 … W2300",
+          "label": "NIR Absorbance at 1100–2300 nm",
+          "type": "num",
+          "role": "Measurement",
+          "origin": "Collected",
+          "notes": "61 columns in 20 nm steps. Each spectrum carries its own baseline offset and slope (multiplicative scatter), which dominates the raw variance — PC1 of the unpreprocessed spectra is scatter, not chemistry. Standard normal variate or SNV-plus-detrend preprocessing is needed before the protein bands near 1690 nm and 2180 nm become the leading components."
+        }
+      ]
+    }
+  ]
+}

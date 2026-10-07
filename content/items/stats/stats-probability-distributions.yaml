@@ -1,0 +1,301 @@
+items:
+  - id: stats.dist.classify-scenarios
+    format: classify
+    modes: [check]
+    difficulty: foundation
+    skills: [stats.probability]
+    lesson: stats-probability-distributions
+    title: Which distribution fits?
+    prompt: |
+      Assign the most natural distribution to each quantity.
+    categories: [Binomial, Poisson, Normal, Exponential]
+    entries:
+      - text: "Number of the 90 placebo subjects with at least one headache"
+        category: Binomial
+        note: "A yes/no outcome counted over a fixed number of subjects."
+      - text: "Number of hypoglycemic episodes one subject has during 52 weeks"
+        category: Poisson
+        note: "Events counted over exposure time, with no fixed maximum."
+      - text: "Change from baseline in seated SBP at Week 12"
+        category: Normal
+        note: "A continuous measurement influenced by many small factors."
+      - text: "Months from randomization to progression, assuming a constant hazard"
+        category: Exponential
+        note: "Time to event with constant risk per unit time."
+      - text: "Number of responders among 40 treated subjects"
+        category: Binomial
+        note: "Fixed n, each subject responds or not."
+      - text: "Number of serious AEs reported across a study with 1,200 patient-years of exposure"
+        category: Poisson
+        note: "An event count over exposure; express as a rate per patient-year."
+    solution: |
+      Fixed number of yes/no trials → binomial; events over exposure → Poisson; continuous measurements → normal; time to event with constant hazard → exponential.
+
+  - id: stats.dist.relationships
+    format: multi
+    modes: [check]
+    difficulty: intermediate
+    skills: [stats.probability]
+    lesson: stats-probability-distributions
+    title: How the test-statistic distributions connect
+    prompt: |
+      Select **all** true statements.
+    choices:
+      - text: "If $Z \\sim N(0,1)$, then $Z^2$ follows a chi-square distribution with 1 df."
+        correct: true
+        feedback: "That is why the 1-df chi-square critical value 3.841 equals $1.96^2$."
+      - text: "The square of a $t_\\nu$ variable follows an $F_{1,\\nu}$ distribution."
+        correct: true
+        feedback: "A two-sided t test and the corresponding 1-numerator-df F test give the same p-value."
+      - text: "As the degrees of freedom grow, the t distribution approaches the standard normal."
+        correct: true
+        feedback: "$t_{0.975}$ is 2.262 with 9 df and 1.970 with 234 df, versus 1.960 for the normal."
+      - text: "A chi-square statistic can be negative when the observed counts are below the expected counts."
+        feedback: "It is a sum of squares, so it is never negative; deviations in either direction increase it."
+      - text: "The exponential distribution describes a hazard that increases over time."
+        feedback: "The exponential has a constant hazard; increasing or decreasing hazards need other models (for example the Weibull)."
+    solution: |
+      The first three are true. Chi-square statistics are sums of squares (non-negative), and the exponential's defining property is a constant hazard.
+
+  - id: stats.dist.t-vs-z
+    format: mcq
+    modes: [check]
+    difficulty: foundation
+    skills: [stats.probability, stats.confidence-intervals]
+    lesson: stats-probability-distributions
+    title: Why 2.262 instead of 1.96?
+    prompt: |
+      A 95% confidence interval for mean change in SBP from a pilot study of 10 subjects uses the multiplier 2.262 rather than 1.96. Why?
+    choices:
+      - text: "The SD is estimated from the same 10 subjects, so the standardized mean follows a t distribution with 9 df, which has heavier tails."
+        correct: true
+        feedback: "Estimating σ adds uncertainty; the t distribution with n − 1 = 9 df accounts for it."
+      - text: "Small samples are always skewed, and 2.262 corrects for skewness."
+        feedback: "The t multiplier accounts for estimating the SD, not for skewness."
+      - text: "2.262 is the one-sided critical value, used because the sample is small."
+        feedback: "The one-sided 95% normal value is 1.645; 2.262 is the two-sided 95% t value with 9 df."
+      - text: "It is a continuity correction for discrete data."
+        feedback: "SBP change is continuous; continuity corrections apply to counts."
+    solution: |
+      $t_{0.975, 9} = 2.262$. The price of estimating σ from 10 subjects is a wider interval; with 234 df the multiplier is 1.970, almost 1.96.
+
+  - id: stats.dist.rule-of-three
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [stats.probability, stats.confidence-intervals]
+    lesson: stats-probability-distributions
+    title: Zero events in 150 subjects
+    prompt: |
+      No case of angioedema was reported among 150 treated subjects. Using the rule of three, what is the approximate upper 95% bound for the true risk? Give a proportion (for example 0.05).
+    answer: 0.02
+    tolerance: 0.0005
+    hints:
+      - "The rule of three says the upper bound is about $3/n$."
+    solution: |
+      $3/150 = 0.02$ (2%). The exact one-sided bound is $1 - 0.05^{1/150} = 0.0198$. Zero observed events is compatible with a true risk of up to about 2%.
+
+  - id: stats.dist.binom-tail
+    format: numeric
+    modes: [guided]
+    difficulty: intermediate
+    skills: [stats.probability]
+    lesson: stats-probability-distributions
+    title: At least three cases
+    prompt: |
+      A cohort of 20 subjects is treated. If the true risk of a particular AE is 5% per subject (independently), what is the probability that **three or more** subjects experience it? Give four decimals.
+    answer: 0.0755
+    tolerance: 0.0005
+    hints:
+      - "The count is $\\text{Bin}(20, 0.05)$. 'Three or more' is the complement of 'at most two'."
+      - "$P(X \\ge 3) = 1 - [P(0) + P(1) + P(2)]$."
+      - "$P(0) = 0.95^{20} = 0.3585$, $P(1) = 20(0.05)(0.95^{19}) = 0.3774$, $P(2) = 190(0.05^2)(0.95^{18}) = 0.1887$."
+    solution: |
+      $P(X \le 2) = 0.3585 + 0.3774 + 0.1887 = 0.9245$, so $P(X \ge 3) = 0.0755$. In R: `pbinom(2, 20, 0.05, lower.tail = FALSE)`; in SAS: `sdf('BINOMIAL', 2, 0.05, 20)`.
+
+  - id: stats.dist.poisson-zero
+    format: numeric
+    modes: [guided]
+    difficulty: foundation
+    skills: [stats.probability]
+    lesson: stats-probability-distributions
+    title: Probability of no events
+    prompt: |
+      Hypoglycemic episodes occur at an average of 0.5 per subject over the treatment period and are modeled as Poisson. What proportion of subjects is expected to have **no** episode? Give four decimals.
+    answer: 0.6065
+    tolerance: 0.0005
+    hints:
+      - "For a Poisson count, $P(X = 0) = e^{-\\lambda}$."
+    solution: |
+      $e^{-0.5} = 0.6065$: about 61% of subjects are expected to have no episode. If the observed proportion with zero episodes were much larger (and some subjects had many), that would suggest overdispersion.
+
+  - id: stats.dist.normal-tail
+    format: numeric
+    modes: [guided, independent]
+    difficulty: foundation
+    skills: [stats.probability]
+    lesson: stats-probability-distributions
+    title: Upper tail of a normal distribution
+    prompt: |
+      Suppose seated SBP in a screening population is normal with mean 150 mmHg and SD 10 mmHg. What proportion has SBP above 170 mmHg? Give five decimals.
+    answer: 0.02275
+    tolerance: 0.0001
+    hints:
+      - "Standardize: $z = (170 - 150)/10$."
+      - "$P(Z > 2)$ is the upper tail beyond two SDs."
+    solution: |
+      $z = 2$, and $P(Z > 2) = 1 - \Phi(2) = 0.02275$. In R: `pnorm(170, 150, 10, lower.tail = FALSE)`; in SAS: `sdf('NORMAL', 170, 150, 10)`. Remember that real trial data are often truncated by eligibility criteria, so tail probabilities from a normal model can be off.
+
+  - id: stats.dist.exp-median
+    format: numeric
+    modes: [independent]
+    difficulty: intermediate
+    skills: [stats.probability, stats.survival]
+    lesson: stats-probability-distributions
+    title: Median from a constant hazard
+    prompt: |
+      A design assumes a constant hazard of 0.10 events per patient-month. What median time to event (months) does that imply? Give two decimals.
+    answer: 6.93
+    tolerance: 0.01
+    unit: months
+    hints:
+      - "Under the exponential model, $S(t) = e^{-\\lambda t}$; the median solves $S(t) = 0.5$."
+    solution: |
+      $e^{-0.10\,t} = 0.5 \Rightarrow t = \ln 2 / 0.10 = 6.93$ months.
+
+  - id: stats.dist.exp-survival
+    format: numeric
+    modes: [independent]
+    difficulty: intermediate
+    skills: [stats.probability, stats.survival]
+    lesson: stats-probability-distributions
+    title: Event-free at 6 months
+    prompt: |
+      The CBX-417 protocol assumes a control-arm median PFS of 4.2 months. Under an exponential model, what proportion of control patients is expected to be progression-free at 6 months? Give three decimals.
+    answer: 0.371
+    tolerance: 0.002
+    hints:
+      - "First get the hazard from the median: $\\lambda = \\ln 2 / 4.2$."
+      - "Then $S(6) = e^{-6\\lambda}$."
+    solution: |
+      $\lambda = 0.6931/4.2 = 0.1650$ per month and $S(6) = e^{-0.990} = 0.371$. Equivalently $S(6) = 0.5^{6/4.2}$.
+    explanation:
+      objective: "Translate a design assumption (a median) into a landmark probability."
+      given: "Median PFS 4.2 months and an exponential (constant-hazard) model."
+      relevant: "Only the median — under the exponential model it determines the whole curve."
+      calculating: "$S(6) = P(\\text{PFS} > 6 \\text{ months})$."
+      method: "The exponential links median and hazard through $\\ln 2$."
+      computation: "$\\lambda = \\ln 2/4.2 = 0.1650$; $S(6) = e^{-0.1650 \\times 6} = 0.371$."
+      assumptions: "Constant hazard. Real PFS curves often drop faster early and flatten later, so landmark rates from the exponential are planning approximations."
+      interpretation: "About 37% of control patients would be progression-free at 6 months."
+      changes: "A longer median or a non-constant hazard would change the landmark rate; with HR 0.70 the treatment-arm value is 0.50."
+      interviewer: "That you can move between medians, hazards and landmark rates and state the exponential assumption explicitly."
+
+  - id: stats.dist.offbyone-hotspot
+    format: hotspot
+    language: r
+    modes: [debug]
+    difficulty: intermediate
+    skills: [stats.probability, r.basics]
+    lesson: stats-probability-distributions
+    title: The tail probability is four times too small
+    minutes: 4
+    prompt: |
+      This code should compute how likely it is to see **16 or more** dizziness cases among 88 subjects if the true risk is 6%. A reviewer says the result is about four times too small. Click the defective line.
+    code: |
+      n_subj <- 88
+      p_risk <- 0.06
+      expected <- n_subj * p_risk
+      p_tail <- 1 - pbinom(16, n_subj, p_risk)
+      cat("Expected:", expected, " P(X >= 16):", signif(p_tail, 3), "\n")
+    answerLines: [4]
+    lineNotes:
+      - line: 4
+        note: "`pbinom(16, …)` is $P(X \\le 16)$, so `1 - pbinom(16, …)` is $P(X \\ge 17) = 1.7 \\times 10^{-5}$. The event 'at least 16' needs $1 - P(X \\le 15)$: `pbinom(15, n_subj, p_risk, lower.tail = FALSE)` = $6.4 \\times 10^{-5}$."
+    fixed: |
+      n_subj <- 88
+      p_risk <- 0.06
+      expected <- n_subj * p_risk
+      p_tail <- pbinom(15, n_subj, p_risk, lower.tail = FALSE)  # P(X >= 16)
+      cat("Expected:", expected, " P(X >= 16):", signif(p_tail, 3), "\n")
+    hints:
+      - "For a discrete variable, is 16 included in 'at least 16'?"
+    solution: |
+      Line 4 computes $P(X \ge 17)$. Use `pbinom(15, n_subj, p_risk, lower.tail = FALSE)`.
+    explanation:
+      objective: "Compute an upper-tail probability for a discrete count correctly."
+      given: "A binomial model Bin(88, 0.06) and the event 'at least 16'."
+      relevant: "Whether the boundary value belongs to the event."
+      computation: "$P(X \\ge 16) = 1 - F(15) = 6.4 \\times 10^{-5}$; the buggy code gives $1 - F(16) = 1.7 \\times 10^{-5}$."
+      interpretation: "Off-by-one errors make results look more (or less) extreme than they are."
+      interviewer: "That you translate 'at least', 'more than' and 'at most' into CDF calls without off-by-one mistakes."
+
+  - id: stats.dist.overdispersion
+    format: mcq
+    modes: [check, debug]
+    difficulty: advanced
+    skills: [stats.probability, stats.count-models]
+    lesson: stats-probability-distributions
+    title: When the Poisson does not quite fit
+    prompt: |
+      On VTX-221 20 mg, 88 subjects had 70 TEAEs (mean 0.795 per subject). The variance of the per-subject counts is 0.923. Which conclusion is best supported?
+    choices:
+      - text: "The counts are mildly overdispersed: some subjects are more AE-prone than others, so a Poisson model would understate the variability."
+        correct: true
+        feedback: "A Poisson requires variance = mean. A variance above the mean signals extra between-subject variability; a negative binomial model allows for it."
+      - text: "The Poisson model is exactly right because the mean is below 1."
+        feedback: "The Poisson assumption is about variance equal to mean, not about the size of the mean."
+      - text: "The counts are underdispersed, so the Poisson overstates the variability."
+        feedback: "Underdispersion would mean variance below the mean; here it is above."
+      - text: "The data must be binomial, because each subject can only have one AE."
+        feedback: "Subjects can have several AEs; that is why this is a count per subject, not a yes/no outcome."
+    solution: |
+      Variance 0.923 > mean 0.795: mild overdispersion. With much larger ratios (common for exacerbations or hypoglycemia), a Poisson model gives standard errors that are too small and p-values that are too optimistic; the negative binomial is the usual remedy.
+    explanation:
+      objective: "Judge whether the Poisson assumption is plausible for AE counts."
+      given: "Mean and variance of TEAE counts per subject."
+      relevant: "The Poisson property variance = mean."
+      irrelevant: "The number of distinct preferred terms."
+      computation: "Dispersion ratio = 0.923/0.795 = 1.16."
+      interpretation: "Mild extra variability; the observed distribution (40, 34, 9, 5 subjects with 0, 1, 2, ≥3 events) is close to the Poisson expectation (39.7, 31.6, 12.6, 4.1), with a slightly heavier upper tail."
+      changes: "A much larger variance (for example twice the mean) would make a Poisson analysis anti-conservative."
+      interviewer: "That you check variance against mean before trusting a Poisson model and know the negative binomial alternative."
+
+  - id: stats.dist.interview-choose
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [stats.probability, communication.interviewing]
+    lesson: stats-probability-distributions
+    title: Modeling adverse events
+    prompt: |
+      **Interviewer:** "A safety physician wants to compare the number of adverse events between two arms. How would you think about the distribution of the data, and what can go wrong?"
+    modelAnswer: |
+      First I'd clarify the question: the proportion of *subjects* with at least one event is a binomial outcome (compare with a chi-square or Fisher test, risk difference, relative risk), while the number of *events* per subject is a count. Counts are often modeled as Poisson with exposure time as an offset, giving rates per patient-year — important when follow-up differs between arms, for example because of dropout.
+
+      What can go wrong: the Poisson assumes variance equals mean and that events occur independently; AE counts are usually overdispersed because some subjects are more prone to events, and recurrent events within a subject are correlated. That makes Poisson standard errors too small, so I'd check the variance-to-mean ratio and use a negative binomial model if needed. For rare events, I'd avoid normal approximations and use exact methods, and I'd report zero-event arms with an upper bound rather than as zero risk.
+    rubric:
+      - Distinguishes subjects-with-event (binomial) from event counts (Poisson-type)
+      - Mentions exposure time or rates per patient-year
+      - Names overdispersion and the negative binomial alternative
+      - Mentions exact methods or bounds for rare or zero events
+    redFlags:
+      - "Uses the number of events as the numerator of a subject percentage"
+      - "Assumes a normal distribution for rare event counts"
+    followUps:
+      - "Why does differential dropout matter for comparing event counts?"
+      - "What does an offset do in a Poisson regression?"
+
+  - id: stats.dist.speed-pnorm
+    format: text
+    modes: [speed]
+    difficulty: foundation
+    skills: [stats.probability, r.basics]
+    lesson: stats-probability-distributions
+    title: Normal CDF in R
+    prompt: |
+      Name the R function that returns $P(X \le x)$ for a normal distribution.
+    accept: ["pnorm", "pnorm()"]
+    monospace: true
+    solution: |
+      `pnorm()` (`dnorm` = density, `qnorm` = quantile, `rnorm` = random draws). SAS: `CDF('NORMAL', x, mu, sigma)`; SciPy: `scipy.stats.norm.cdf`.

@@ -1,0 +1,445 @@
+items:
+  - id: sas.by-group.hierarchy-mcq
+    format: mcq
+    modes: [check, speed]
+    difficulty: intermediate
+    skills: [sas.by-group]
+    lesson: sas-by-group-processing
+    title: Nested BY groups
+    prompt: |
+      A DATA step contains `by USUBJID AEDECOD;`. On an observation where `FIRST.USUBJID = 1`, what is the value of `FIRST.AEDECOD`?
+    choices:
+      - text: "Always 1"
+        correct: true
+        feedback: "A new outer group (subject) always starts a new inner group (preferred term within that subject), even if the AEDECOD text equals the previous row's value."
+      - text: "1 only if AEDECOD differs from the previous observation's AEDECOD"
+        feedback: "That would glue two different subjects' records for the same term into one group. SAS forces inner FIRST. flags to 1 whenever an outer group starts."
+      - text: "Always 0, because FIRST. is only set for the first BY variable"
+        feedback: "SAS creates FIRST. and LAST. for every variable in the BY statement."
+      - text: "It depends on whether the data were sorted with NODUPKEY"
+        feedback: "NODUPKEY removes duplicate keys during sorting; it does not change how BY-group flags are computed."
+    solution: |
+      `FIRST.AEDECOD = 1`. BY groups are hierarchical: when `USUBJID` changes, every BY variable listed after it starts a new group.
+
+  - id: sas.by-group.count-groups
+    format: numeric
+    modes: [check]
+    difficulty: foundation
+    skills: [sas.by-group]
+    lesson: sas-by-group-processing
+    title: Counting FIRST. flags
+    prompt: |
+      A dataset sorted by `USUBJID` has these values of `USUBJID`, in order:
+
+      `S-01, S-01, S-02, S-03, S-03, S-03, S-04, S-05, S-05, S-05`
+
+      In a DATA step with `by USUBJID;`, on how many observations is `LAST.USUBJID = 1`?
+    answer: 5
+    tolerance: 0
+    hints:
+      - "`LAST.USUBJID` is 1 exactly once per BY group."
+      - "Count the distinct subjects — including subjects with a single record, where FIRST. and LAST. are both 1."
+    solution: |
+      There are 5 distinct subjects (S-01 … S-05), so there are 5 BY groups and `LAST.USUBJID = 1` on 5 observations: rows 2, 3, 6, 7 and 10. Row 3 (S-02) and row 7 (S-04) are single-record groups, so both `FIRST.USUBJID` and `LAST.USUBJID` are 1 on those rows.
+
+  - id: sas.by-group.missing-sort-mcq
+    format: mcq
+    modes: [check]
+    difficulty: intermediate
+    skills: [sas.by-group, sas.missing-values, sas.sort]
+    lesson: sas-by-group-processing
+    title: Missing dates and FIRST.
+    prompt: |
+      You sort AE records `by USUBJID ASTDT;` and keep `if first.USUBJID;` to get each subject's first AE. Subject 1012-0007 has three AEs; one of them has a missing `ASTDT` because its partial date was not imputed. Which record is kept for this subject?
+    choices:
+      - text: "The record with the missing `ASTDT`"
+        correct: true
+        feedback: "SAS sorts missing numeric values before all non-missing values, so the missing-date record comes first within the subject."
+      - text: "The record with the earliest non-missing `ASTDT`"
+        feedback: "That would require excluding or imputing missing dates first. PROC SORT places missing values lowest."
+      - text: "No record — the subject is dropped because of the missing value"
+        feedback: "Missing values do not remove observations from BY-group processing."
+      - text: "The step stops with a sort ERROR"
+        feedback: "Missing values are valid sort keys; the data is properly sorted."
+    solution: |
+      Missing numeric values sort lowest in SAS, so `FIRST.USUBJID` lands on the record with missing `ASTDT`. Decide how missing/partial dates are handled (imputation per the SAP, e.g. `ASTDT` with `ASTDTF`) before selecting "first" records.
+
+  - id: sas.by-group.steps-order
+    format: order
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [sas.by-group, adam.baseline]
+    lesson: sas-by-group-processing
+    title: Selecting a baseline record
+    prompt: |
+      Put these steps in order to flag the baseline lab record (last non-missing value on or before first dose) for each subject and parameter.
+    steps:
+      - "Keep records with a non-missing result and `ADT <= TRTSDT`"
+      - "Sort by `USUBJID PARAMCD ADT` plus a tie-breaker (e.g. `LBSEQ`)"
+      - "In a DATA step with `by USUBJID PARAMCD;`, set `ABLFL = 'Y'` when `last.PARAMCD`"
+      - "Merge the flagged baseline value back to all records as `BASE`"
+      - "Derive `CHG = AVAL - BASE` for post-baseline records"
+    hints:
+      - "You can only pick the *last* pre-dose record once the candidates are restricted and ordered."
+      - "BASE cannot be merged back until the baseline record has been identified."
+    solution: |
+      Restrict → sort (with tie-breaker) → flag `last.PARAMCD` → merge back `BASE` → derive `CHG`. Restricting first matters: if post-dose records remained in the data, `last.PARAMCD` would land on a post-dose value.
+
+  - id: sas.by-group.subject-summary
+    format: code
+    language: sas
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [sas.by-group, sas.retain, sas.data-step]
+    lesson: sas-by-group-processing
+    title: One row per subject with TEAE count and first TEAE date
+    minutes: 12
+    prompt: |
+      `WORK.ADAE` contains one row per adverse event with variables `USUBJID`, `AESEQ`, `ASTDT` (numeric SAS date), `ATOXGR` (numeric grade 1–5) and `TRTEMFL` (`'Y'` for treatment-emergent).
+
+      Write a program that creates `WORK.SUBJ_TEAE` with **one row per subject who has at least one TEAE**, containing:
+
+      - `USUBJID`
+      - `N_TEAE` — number of treatment-emergent AE records
+      - `FIRST_TEAE_DT` — onset date of the earliest TEAE (ties broken by `AESEQ`)
+
+      Only treatment-emergent records should be considered.
+    starter: |
+      proc sort data=adae out=teae;
+        /* restrict and sort */
+      run;
+
+      data subj_teae;
+        /* your BY-group logic */
+      run;
+    hints:
+      - "Filter to `TRTEMFL = 'Y'` with a WHERE statement (in PROC SORT or the DATA step) so FIRST./LAST. are computed on TEAEs only."
+      - "Sort by `USUBJID ASTDT AESEQ` so the first record of each subject is the earliest TEAE, with AESEQ breaking ties."
+      - "In the DATA step: `by USUBJID;` — reset the count and capture the date at `first.USUBJID`, add 1 on every row, output at `last.USUBJID`. Remember RETAIN (or a sum statement)."
+    checks:
+      - pattern: "where\\s+trtemfl\\s*=\\s*['\"]y['\"]"
+        message: "Restricts to TEAEs with a WHERE statement (TRTEMFL = 'Y')"
+      - pattern: "by\\s+usubjid\\s+astdt\\s+aeseq"
+        message: "Sorts by USUBJID ASTDT AESEQ (onset date with AESEQ as tie-breaker)"
+      - pattern: "\\bby\\s+usubjid\\s*;"
+        message: "Uses BY USUBJID in the DATA step"
+      - pattern: "first\\.usubjid"
+        message: "Resets/captures values at FIRST.USUBJID"
+      - pattern: "last\\.usubjid"
+        message: "Outputs at LAST.USUBJID"
+      - pattern: "\\bretain\\b|n_teae\\s*\\+\\s*1\\s*;"
+        message: "Retains the running count (RETAIN or a sum statement)"
+      - pattern: "^\\s*if\\s+trtemfl\\s*=\\s*['\"]y['\"]\\s*;"
+        flags: im
+        absent: true
+        message: "Does not use a subsetting IF for TRTEMFL (it would break FIRST./LAST. logic)"
+    reference: |
+      proc sort data=adae out=teae;
+        where TRTEMFL = 'Y';
+        by USUBJID ASTDT AESEQ;
+      run;
+
+      data subj_teae;
+        set teae;
+        by USUBJID;
+        retain FIRST_TEAE_DT;
+        if first.USUBJID then do;
+          N_TEAE = 0;
+          FIRST_TEAE_DT = ASTDT;
+        end;
+        N_TEAE + 1;
+        if last.USUBJID then output;
+        keep USUBJID N_TEAE FIRST_TEAE_DT;
+        format FIRST_TEAE_DT yymmdd10.;
+      run;
+    expectedOutput: |
+      NOTE: There were <number of TEAE records> observations read from the data set WORK.TEAE.
+      NOTE: The data set WORK.SUBJ_TEAE has <number of subjects with ≥1 TEAE> observations and 3 variables.
+    solution: |
+      Filter with `WHERE` so that BY-group flags are computed among TEAEs only, sort by the full key including the tie-breaker, reset at `first.USUBJID`, accumulate with a sum statement (which implies RETAIN), and output at `last.USUBJID`.
+
+      A quick QC: the number of observations in `SUBJ_TEAE` must equal `select count(distinct USUBJID) from adae where TRTEMFL = 'Y'`.
+
+  - id: sas.by-group.worst-grade-per-pt
+    format: code
+    language: sas
+    modes: [independent]
+    difficulty: advanced
+    skills: [sas.by-group, sas.retain, tlf.safety-tables]
+    lesson: sas-by-group-processing
+    title: Worst grade per subject and preferred term
+    minutes: 15
+    prompt: |
+      For an AE-by-maximum-grade table you need **one row per subject per preferred term** among treatment-emergent AEs, with the maximum toxicity grade `MAXGR` for that subject and term.
+
+      Input: `WORK.ADAE` with `USUBJID`, `AEBODSYS`, `AEDECOD`, `ATOXGRN` (numeric grade), `TRTEMFL`.
+      Output: `WORK.PT_WORST` with `USUBJID AEBODSYS AEDECOD MAXGR`.
+    starter: |
+      /* your program */
+    hints:
+      - "The unit is subject × preferred term, so both need to be BY variables (SOC too, since PTs are summarised within SOC)."
+      - "Accumulate the maximum within each `USUBJID AEBODSYS AEDECOD` group and output at the LAST. of the innermost variable."
+    checks:
+      - pattern: "where\\s+trtemfl\\s*=\\s*['\"]y['\"]"
+        message: "Restricts to TEAEs with WHERE"
+      - pattern: "by\\s+usubjid\\s+aebodsys\\s+aedecod"
+        message: "Groups by USUBJID AEBODSYS AEDECOD"
+      - pattern: "first\\.aedecod"
+        message: "Resets the maximum at FIRST.AEDECOD"
+      - pattern: "last\\.aedecod"
+        message: "Outputs at LAST.AEDECOD"
+      - pattern: "max\\s*\\("
+        message: "Uses MAX() to keep the worst grade"
+    reference: |
+      proc sort data=adae out=teae;
+        where TRTEMFL = 'Y';
+        by USUBJID AEBODSYS AEDECOD;
+      run;
+
+      data pt_worst;
+        set teae;
+        by USUBJID AEBODSYS AEDECOD;
+        retain MAXGR;
+        if first.AEDECOD then MAXGR = .;
+        MAXGR = max(MAXGR, ATOXGRN);
+        if last.AEDECOD then output;
+        keep USUBJID AEBODSYS AEDECOD MAXGR;
+      run;
+    solution: |
+      Reset at `first.AEDECOD` (which is also 1 whenever a new subject or SOC starts), keep the running maximum with `RETAIN` and `MAX()`, and output at `last.AEDECOD`. An alternative that a QC programmer might use:
+
+      ```sas
+      proc sql;
+        create table pt_worst_qc as
+        select USUBJID, AEBODSYS, AEDECOD, max(ATOXGRN) as MAXGR
+        from adae
+        where TRTEMFL = 'Y'
+        group by USUBJID, AEBODSYS, AEDECOD;
+      quit;
+      ```
+    explanation:
+      objective: "One record per subject × SOC × preferred term with the worst treatment-emergent grade — the input to an 'AEs by maximum grade' table."
+      given: "An OCCDS-style dataset with one record per AE, grades as numbers, and a TEAE flag."
+      relevant: "`TRTEMFL`, the three grouping variables and the numeric grade."
+      irrelevant: "Onset dates and AESEQ do not affect a maximum (they would matter for a 'first occurrence' flag)."
+      calculating: "max(ATOXGRN) within each subject/SOC/PT group."
+      method: "BY-group processing with RETAIN, or PROC SQL GROUP BY. Two different methods make a good production/QC pair."
+      assumptions: "Grades are numeric and complete; if grades can be missing, decide (per the table shell) whether such subjects appear in a 'missing' row."
+      computation: "Reset at first.AEDECOD, update with MAX(), output at last.AEDECOD."
+      interpretation: "Each subject contributes at most one row per PT, so later counts are subject counts, not event counts."
+      changes: "Filtering with a subsetting IF instead of WHERE, or sorting without AEBODSYS, would change the grouping; a missing-grade rule would change which subjects appear."
+      interviewer: "That you think in units of analysis (subject vs event), know why first.AEDECOD resets at every new subject, and can offer an independent QC method."
+
+  - id: sas.by-group.subsetting-if-bug
+    format: hotspot
+    language: sas
+    modes: [debug]
+    difficulty: advanced
+    skills: [sas.by-group, sas.where-if, sas.debugging]
+    lesson: sas-by-group-processing
+    title: The TEAE counts are too high for some subjects
+    minutes: 8
+    prompt: |
+      This program should count treatment-emergent AEs per subject. QC reports that subject S-002 has `N_TEAE = 4` in production, but only **1** TEAE in the data, and that two subjects with TEAEs are missing from the output entirely.
+
+      Click the line that causes the problem.
+    code: |
+      proc sort data=adae out=ae;
+        by USUBJID ASTDT AESEQ;
+      run;
+
+      data subj_teae;
+        set ae;
+        by USUBJID;
+        if TRTEMFL = 'Y';
+        if first.USUBJID then N_TEAE = 0;
+        N_TEAE + 1;
+        if last.USUBJID then output;
+        keep USUBJID N_TEAE;
+      run;
+    answerLines: [8]
+    lineNotes:
+      - line: 8
+        note: "A subsetting IF placed after `BY`. FIRST./LAST. are computed from every observation read, so when a subject's first record is not treatment-emergent, the step stops before line 9 resets the count — the count carries over from the previous subject. When a subject's last record is not treatment-emergent, line 11 never runs for that subject and it is not output."
+      - line: 9
+        note: "This line is correct in itself; it simply never executes on the subject's first record if line 8 discarded that record."
+    fixed: |
+      proc sort data=adae out=ae;
+        where TRTEMFL = 'Y';
+        by USUBJID ASTDT AESEQ;
+      run;
+
+      data subj_teae;
+        set ae;
+        by USUBJID;
+        if first.USUBJID then N_TEAE = 0;
+        N_TEAE + 1;
+        if last.USUBJID then output;
+        keep USUBJID N_TEAE;
+      run;
+    hints:
+      - "FIRST. and LAST. are set when an observation is read — before any statement in the step executes."
+      - "What happens to the rest of the step when a subsetting IF is false?"
+    solution: |
+      Line 8 is the defect. Move the filter to a `WHERE` statement (in `PROC SORT` or the DATA step). WHERE conditions are applied **before** observations enter the PDV, so FIRST./LAST. are computed on treatment-emergent records only.
+    explanation:
+      objective: "Find why per-subject counts are inflated for some subjects and why some subjects disappear."
+      given: "Program code plus a QC finding for S-002 (4 vs 1) and two missing subjects."
+      relevant: "The order of `BY`, the subsetting IF, and the FIRST./LAST. statements."
+      irrelevant: "The sort keys are fine; `KEEP` is fine."
+      method: "Mentally execute the step for a subject whose first record is not treatment-emergent (S-002)."
+      computation: "S-001 ends with N_TEAE = 3. S-002 row 1 (TRTEMFL = 'N') stops at line 8, so the reset on line 9 never runs. S-002 row 2 has first.USUBJID = 0, so N_TEAE becomes 3 + 1 = 4 and is output at last.USUBJID."
+      interpretation: "Any subject whose first record is not a TEAE inherits the previous subject's count; any subject whose last record is not a TEAE is dropped."
+      changes: "If every subject's first and last records happened to be TEAEs, the bug would be invisible — which is why this defect survives casual testing."
+      interviewer: "Knowing that WHERE filters before BY-group flags are computed while a subsetting IF filters after — the classic WHERE vs IF interview question, in a clinical setting."
+
+  - id: sas.by-group.unsorted-log
+    format: log
+    modes: [debug, speed]
+    difficulty: intermediate
+    skills: [sas.by-group, sas.log, sas.sort]
+    lesson: sas-by-group-processing
+    title: Read the log
+    prompt: |
+      A colleague ran the per-subject summary step on a dataset that was supposed to be sorted. Click every log line that signals a problem you must act on.
+    program: |
+      data subj_ae;
+        set ae;
+        by USUBJID;
+        retain N_AE;
+        if first.USUBJID then N_AE = 0;
+        N_AE + 1;
+        if last.USUBJID then output;
+      run;
+    log: |
+      24   data subj_ae;
+      25     set ae;
+      26     by USUBJID;
+      27     retain N_AE;
+      28     if first.USUBJID then N_AE = 0;
+      29     N_AE + 1;
+      30     if last.USUBJID then output;
+      31   run;
+
+      ERROR: BY variables are not properly sorted on data set WORK.AE.
+      USUBJID=S-002 ASTDT=2023-03-05 AETOXGR=2 TRTEMFL=N FIRST.USUBJID=1 LAST.USUBJID=0 N_AE=1 _ERROR_=1 _N_=4
+      NOTE: The SAS System stopped processing this step because of errors.
+      NOTE: There were 4 observations read from the data set WORK.AE.
+      WARNING: The data set WORK.SUBJ_AE may be incomplete.  When this step was stopped there were 2 observations and 5 variables.
+      NOTE: DATA statement used (Total process time):
+            real time           0.01 seconds
+            cpu time            0.01 seconds
+    issues: [10, 14]
+    lineNotes:
+      - line: 10
+        note: "The root cause: WORK.AE is not sorted by USUBJID. SAS detected that the BY value went backwards and stopped the step. Sort the data by the BY variables (and any ordering variables) first."
+      - line: 11
+        note: "SAS prints the PDV at the time of the error. Useful for finding *where* the order broke (here at the 4th observation, subject S-002) — informative, not a separate problem."
+      - line: 12
+        note: "A consequence of the ERROR rather than a separate problem."
+      - line: 14
+        note: "Easy to miss and important: an incomplete WORK.SUBJ_AE still exists and downstream steps may run on it. Never ignore this warning — rerun after fixing the sort."
+    solution: |
+      The ERROR on line 10 is the root cause (data not sorted by `USUBJID`), and the WARNING on line 14 means a partial output dataset was left behind. Fix with `proc sort data=ae; by USUBJID ASTDT; run;` and rerun. Consider adding `options errorabend;`-style controls or checking `&SYSERR` in production pipelines so later steps do not run on incomplete data.
+    explanation:
+      objective: "Separate root causes from consequences in a log."
+      given: "The program and its log."
+      relevant: "The ERROR line and the WARNING about an incomplete dataset."
+      irrelevant: "Timing notes and the echo of the program."
+      interpretation: "The step stopped at the 4th observation; the 2 observations already written form an incomplete dataset."
+      interviewer: "That you read logs top-down, fix the first ERROR first, and treat 'may be incomplete' as a blocking issue."
+
+  - id: sas.by-group.dup-key-check
+    format: code
+    language: sas
+    modes: [independent, qc]
+    difficulty: intermediate
+    skills: [sas.by-group, qc.data-cleaning]
+    lesson: sas-by-group-processing
+    title: Find duplicate keys with FIRST./LAST.
+    minutes: 8
+    prompt: |
+      Before deriving anything from `WORK.LB`, you want to confirm that the key `USUBJID LBTESTCD VISITNUM LBDTC` is unique. Write a program that outputs **every record whose key occurs more than once** to `WORK.DUPKEYS`.
+    starter: |
+      proc sort data=lb out=lb_sorted;
+        by USUBJID LBTESTCD VISITNUM LBDTC;
+      run;
+
+      data dupkeys;
+        /* your code */
+      run;
+    hints:
+      - "A key that occurs exactly once is both the first and the last record of its BY group."
+      - "Use the FIRST./LAST. flags of the innermost BY variable."
+    checks:
+      - pattern: "by\\s+usubjid\\s+lbtestcd\\s+visitnum\\s+lbdtc"
+        message: "BY statement lists the full key"
+      - pattern: "first\\.lbdtc"
+        message: "Uses FIRST.LBDTC"
+      - pattern: "last\\.lbdtc"
+        message: "Uses LAST.LBDTC"
+    reference: |
+      proc sort data=lb out=lb_sorted;
+        by USUBJID LBTESTCD VISITNUM LBDTC;
+      run;
+
+      data dupkeys;
+        set lb_sorted;
+        by USUBJID LBTESTCD VISITNUM LBDTC;
+        if not (first.LBDTC and last.LBDTC);
+      run;
+    solution: |
+      A record belongs to a single-record group exactly when `first.LBDTC and last.LBDTC` is true. Keeping `not (first.LBDTC and last.LBDTC)` outputs every record of every duplicated key — all copies, which is what you want for investigation (unlike `NODUPKEY`, which silently keeps one and discards the rest).
+
+      Alternative: `proc sort data=lb out=_null_ nodupkey dupout=dupkeys; by …; run;` writes the *extra* copies (not the first one) to `DUPKEYS`.
+    explanation:
+      objective: "Prove (or disprove) that the intended record key is unique before deriving anything from it."
+      given: "A lab dataset and the key you believe identifies one record."
+      relevant: "Every variable in the key, in the BY statement, in the same order as the sort."
+      method: "A single-record BY group has FIRST. and LAST. both equal to 1 on its only record, so any record where that is not true belongs to a duplicated key."
+      interpretation: "Duplicates may be true repeats (retests), data-entry duplicates, or a sign that the key is incomplete (e.g., collection time is missing from it)."
+      changes: "Adding LBTM or LBREFID to the key may make it unique; removing VISITNUM would create more 'duplicates'."
+      interviewer: "That you check key uniqueness before merging or deriving, keep all copies for investigation, and know the difference between NODUPKEY and NODUPRECS."
+
+  - id: sas.by-group.interview-baseline
+    format: open
+    modes: [interview]
+    difficulty: intermediate
+    skills: [sas.by-group, adam.baseline, communication.interviewing]
+    lesson: sas-by-group-processing
+    title: Selecting the baseline record
+    prompt: |
+      **Interviewer:** "How would you derive the baseline flag for lab data in SAS? Walk me through it."
+    modelAnswer: |
+      I'd start from the definition in the SAP or ADaM spec — typically the last non-missing value on or before the first dose date (or date and time when time is collected, since labs are often drawn pre-dose on Day 1).
+
+      Then: keep candidate records (non-missing `AVAL`, `ADT <= TRTSDT`); sort by `USUBJID PARAMCD ADT` plus a tie-breaker such as collection time or `LBSEQ`; in a DATA step with `by USUBJID PARAMCD;` set `ABLFL = 'Y'` on `last.PARAMCD`. Merge that value back to all records as `BASE` and compute `CHG = AVAL - BASE` and `PCHG` for post-baseline records only.
+
+      QC: at most one `ABLFL = 'Y'` per subject/parameter; subjects without baseline have missing `BASE` and `CHG`; spot-check subjects with unscheduled or repeat pre-dose samples, and subjects whose only pre-dose sample is from screening.
+    rubric:
+      - Starts from the spec definition rather than assuming one
+      - Restricts to non-missing, pre-dose records before selecting
+      - Sorts with a tie-breaker and uses LAST. within USUBJID/PARAMCD
+      - Explains merging BASE back and deriving CHG only post-baseline
+      - Mentions a concrete QC check (one flag per subject/parameter)
+    redFlags:
+      - "Takes the first record instead of the last pre-dose record"
+      - "Never mentions dates/times or the definition of first dose"
+      - "Computes CHG for the baseline record itself without thinking about it"
+    followUps:
+      - "What if the first dose time is missing but the lab time is present?"
+      - "How would you handle a subject with two samples on Day 1, one pre-dose and one post-dose?"
+
+  - id: sas.by-group.speed-last
+    format: text
+    modes: [speed]
+    difficulty: foundation
+    skills: [sas.by-group]
+    lesson: sas-by-group-processing
+    title: Name the flag
+    prompt: |
+      With `by USUBJID;`, which automatic variable equals 1 on the final observation of each subject's group? (Type it exactly as you would in code.)
+    accept: ["last.USUBJID"]
+    monospace: true
+    solution: |
+      `last.USUBJID` (case-insensitive in SAS: `LAST.USUBJID` works too). It is temporary — it is not written to the output dataset.

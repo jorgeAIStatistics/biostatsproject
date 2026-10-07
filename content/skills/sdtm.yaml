@@ -1,0 +1,69 @@
+domain: sdtm
+title: SDTM
+description: The CDISC Study Data Tabulation Model — organizing collected data into standard domains.
+skills:
+  - id: sdtm.purpose
+    name: Purpose and structure of SDTM
+    description: Why tabulation standards exist, the SDTM model vs the implementation guide, observation classes.
+    weight: 3
+    tracks: [programmer]
+  - id: sdtm.roles
+    name: Variable roles
+    description: Identifier, topic, timing, qualifier (grouping, result, synonym, record, variable) and rule roles.
+    weight: 2
+    tracks: [programmer]
+  - id: sdtm.identifiers
+    name: Identifiers and keys
+    description: STUDYID, DOMAIN, USUBJID, --SEQ, --SPID, natural keys and uniqueness.
+    weight: 3
+    tracks: [programmer]
+  - id: sdtm.ct
+    name: Controlled terminology
+    description: CDISC/NCI EVS codelists, extensible vs non-extensible codelists, mapping collected values.
+    weight: 3
+    tracks: [programmer]
+  - id: sdtm.dates
+    name: ISO 8601 dates and study days
+    description: --DTC formats, partial dates, --DY derivation (no day 0), reference start dates.
+    weight: 3
+    tracks: [programmer]
+  - id: sdtm.dm
+    name: DM domain
+    description: One record per subject, RFSTDTC/RFXSTDTC, ARM/ACTARM, demographics, death flags.
+    weight: 3
+    tracks: [programmer]
+  - id: sdtm.events
+    name: Events domains (AE, MH, DS, DV)
+    description: Structure and key variables of AE, MH, DS and DV; seriousness, severity, disposition.
+    weight: 3
+    tracks: [programmer]
+  - id: sdtm.interventions
+    name: Interventions domains (EX, CM)
+    description: Exposure and concomitant medications — dosing records, dates, routes, frequencies.
+    weight: 3
+    tracks: [programmer]
+  - id: sdtm.findings
+    name: Findings domains (LB, VS, EG, RS, TR)
+    description: --TESTCD/--TEST, --ORRES vs --STRESC/--STRESN, units, visits, baseline/last-observation flags.
+    weight: 3
+    tracks: [programmer]
+  - id: sdtm.supp
+    name: SUPPQUAL and RELREC
+    description: Non-standard variables in supplemental qualifiers, QNAM/QLABEL/QVAL, relating records.
+    weight: 2
+    tracks: [programmer]
+  - id: sdtm.mapping
+    name: Raw-to-SDTM mapping
+    description: Specification-driven mapping from eCRF data to SDTM, including recoding and splitting.
+    weight: 3
+    tracks: [programmer]
+  - id: sdtm.acrf-define
+    name: aCRF and Define-XML concepts
+    description: Annotated CRFs, dataset/variable metadata, origins, codelists and computational methods.
+    weight: 2
+    tracks: [programmer]
+  - id: sdtm.trial-design
+    name: Trial design domains
+    description: TA, TE, TV, TI, TS and SV concepts.
+    weight: 1
+    tracks: [programmer]

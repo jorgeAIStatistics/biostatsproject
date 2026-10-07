@@ -1,0 +1,560 @@
+items:
+  - id: stats.ac.lsmean-definition
+    format: mcq
+    modes: [check, interview, speed]
+    difficulty: intermediate
+    skills: [stats.ancova, tlf.efficacy-tables]
+    lesson: stats-ancova-covariate-adjustment
+    title: What an LS mean is
+    prompt: |
+      In the primary ANCOVA the placebo arm's **observed** mean change is **−3.30 mmHg**, but the table reports an **LS mean** of **−4.05 mmHg**.
+
+      Why do they differ?
+    choices:
+      - text: "The LS mean is the model's prediction for that arm evaluated at the overall mean baseline, not the arm's own observed average."
+        correct: true
+        feedback: "Correct. Placebo subjects in the analysis set started at a mean baseline of 148.54 against an overall 149.82, so at a common baseline they would be predicted to fall slightly further."
+      - text: "The LS mean excludes outliers."
+        feedback: "LS means use every observation in the model. Nothing is excluded."
+      - text: "The LS mean is a weighted average that gives more weight to larger arms."
+        feedback: "That would be a marginal mean of a different kind. LS means are model predictions at a specified covariate value."
+      - text: "The difference is rounding."
+        feedback: "0.75 mmHg is far too large for rounding, and it has a specific cause."
+    solution: |
+      An LS mean is $\hat\mu + \hat\tau_j + \hat\beta\,\overline{\operatorname{BASE}}$ — the model's prediction for arm $j$ **at the overall mean baseline**, here 149.824 mmHg.
+
+      Placebo subjects in the analysis set had a mean baseline of 148.54, below the overall mean. The fitted baseline slope is −0.5866, so moving them up to the common baseline of 149.824 predicts a further fall:
+
+      $$-0.5866 \times (149.824 - 148.539) = -0.754 \text{ mmHg}$$
+
+      $$-3.300 + (-0.754) = -4.054$$
+
+      **Exactly the shift observed.** The repositioning to a common baseline is what makes the arms comparable — and it is why an ANCOVA table must report LS means rather than observed means.
+    explanation:
+      objective: "Define an LS mean and explain the gap from an observed mean."
+      given: "An observed arm mean and the corresponding LS mean."
+      relevant: "The arm's own mean baseline, the overall mean baseline and the fitted baseline slope."
+      calculating: "The predicted change for that arm at the common covariate value."
+      method: "Evaluate the fitted model at the overall mean of the covariate rather than at the arm's own mean."
+      numbers: "Placebo mean baseline 148.539 versus overall 149.824; difference 1.285; times the slope -0.5866 gives -0.754; -3.300 - 0.754 = -4.054."
+      assumptions: "Parallel slopes — without them, the LS mean would depend on where you evaluate in a way that matters."
+      interpretation: "The LS mean answers 'what would this arm have shown had its subjects started at the average baseline?'"
+      changes: "Evaluating at a different baseline shifts every LS mean by the same amount, so the DIFFERENCES between arms are unchanged."
+      interviewer: "That you can reproduce the shift arithmetically rather than describing LS means as 'adjusted means' and stopping there."
+
+  - id: stats.ac.why-adjust
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [stats.ancova, trials.design]
+    lesson: stats-ancova-covariate-adjustment
+    title: The stronger reason to adjust
+    prompt: |
+      Randomization balanced the arms reasonably well — baseline systolic BP was 149.5 on placebo and 151.2 on 20 mg.
+
+      What is the **main** benefit of adjusting for baseline in the primary analysis?
+    choices:
+      - text: "Precision — a covariate that predicts the outcome absorbs residual variance, shrinking every standard error. Here the treatment-effect SE fell from 1.841 to 1.648."
+        correct: true
+        feedback: "Correct, and this benefit applies even under perfect balance. Sample size scales with the square of the SE, so this is the precision of a trial 25% larger."
+      - text: "Removing confounding, since the arms were imbalanced at baseline."
+        feedback: "This is a real benefit and the smaller one. Randomization prevents systematic confounding; the 1.7 mmHg gap is chance and its correction moves the estimate modestly."
+      - text: "Making the analysis robust to non-normal residuals."
+        feedback: "Covariate adjustment has nothing to do with the normality assumption."
+      - text: "Allowing subjects with missing baselines to be included."
+        feedback: "The opposite — subjects without a baseline value are dropped from a model that requires it."
+    solution: |
+      **Precision.** Adjusting for baseline reduced the residual SD from 11.53 to 10.27 mmHg and the treatment-effect standard error from 1.841 to 1.648.
+
+      Since sample size scales with the square of the standard error:
+
+      $$\left(\frac{1.841}{1.648}\right)^2 = 1.248$$
+
+      — the precision of a trial **25% larger**, from a measurement already collected.
+
+      Confounding correction is real but secondary in a randomized trial: randomization already prevents *systematic* imbalance, so adjustment corrects only chance imbalance. The precision argument applies even when the arms are perfectly balanced, which is why both FDA and EMA guidance are supportive of adjustment rather than merely tolerant of it.
+    explanation:
+      objective: "Rank the two reasons for covariate adjustment in a randomized trial."
+      given: "A modest baseline imbalance and the adjusted and unadjusted standard errors."
+      relevant: "The ratio of the standard errors."
+      calculating: "The effective sample-size gain."
+      method: "Variance reduction from a covariate is approximately a factor of (1 - rho^2); sample size scales with the square of the SE."
+      numbers: "SE 1.841 to 1.648; ratio 1.117; squared 1.248. Theoretical prediction from rho = 0.3043: 1 - rho^2 = 0.907, a 9.3% variance reduction."
+      assumptions: "The covariate must be measured before randomization and must genuinely predict the outcome."
+      interpretation: "Adjustment buys precision that would otherwise cost subjects, calendar time and money."
+      changes: "At rho = 0.7 the variance would halve. The gain depends entirely on how well the covariate predicts the outcome."
+      interviewer: "That you lead with precision rather than confounding, and that you can convert the SE ratio into an effective sample size."
+
+  - id: stats.ac.post-baseline
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [stats.ancova, trials.design, qc.mindset]
+    lesson: stats-ancova-covariate-adjustment
+    title: A tempting covariate
+    prompt: |
+      A team proposes adding **treatment compliance (% of doses taken)** as a covariate in the primary ANCOVA, arguing it is strongly prognostic and will improve precision.
+
+      What is your response?
+    choices:
+      - text: "Refuse — compliance is measured after randomization and can be affected by treatment, so adjusting for it removes part of the treatment effect being estimated."
+        correct: true
+        feedback: "Correct. If the drug causes side effects that reduce compliance, conditioning on compliance conditions on a consequence of treatment and biases the estimate."
+      - text: "Accept — any variable that improves precision is worth including."
+        feedback: "Precision is not the only criterion. Adjusting for a post-randomization variable can bias the effect, which no precision gain compensates for."
+      - text: "Accept, provided compliance is added to the SAP first."
+        feedback: "Pre-specification does not fix it. The problem is the variable's timing relative to randomization, not the paperwork."
+      - text: "Accept but report both analyses."
+        feedback: "A biased analysis does not become acceptable by being presented alongside an unbiased one; and it invites the reader to treat them as equally valid."
+    solution: |
+      **Refuse.** Compliance is measured **after** randomization and can be caused by treatment — if the drug produces side effects that reduce adherence, then conditioning on compliance conditions on a consequence of treatment.
+
+      The mechanical rule, applied without exception: **if it was measured after the subject was randomized, it is not a covariate.**
+
+      The same objection applies to exposure duration, on-treatment biomarkers, rescue-medication use and post-baseline lab values — all of which sound prognostic and all of which are disqualified.
+
+      **The constructive response:** compliance is a legitimate topic, just not as a covariate. It belongs in a descriptive summary, in a per-protocol sensitivity analysis defined by pre-specified criteria, or — if the question is genuinely about the effect of taking the drug rather than being assigned it — in an estimand with a different intercurrent-event strategy, which ICH E9(R1) provides the vocabulary for.
+    explanation:
+      objective: "Apply the baseline-only rule for covariates and recognise why it is not negotiable."
+      given: "A proposal to adjust for a post-randomization variable."
+      relevant: "When the variable is measured relative to randomization."
+      irrelevant: "How prognostic it is — a strongly prognostic post-baseline variable is more dangerous, not less."
+      method: "Ask whether treatment could have influenced the variable. If yes, conditioning on it blocks part of the causal path."
+      assumptions: "Randomization makes baseline variables independent of treatment assignment; it provides no such guarantee afterwards."
+      interpretation: "The estimate would answer a different question than intended, and not a well-defined one."
+      changes: "Under ICH E9(R1) the question 'what is the effect among those who took the drug?' can be framed as a legitimate estimand with a principal-stratum or while-on-treatment strategy — but that is a design decision, not a covariate."
+      interviewer: "That you offer the estimand framework as the constructive route rather than only refusing."
+
+  - id: stats.ac.parallel-slopes
+    format: mcq
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [stats.ancova, stats.interactions]
+    lesson: stats-ancova-covariate-adjustment
+    title: Checking the assumption that licenses one number
+    prompt: |
+      ANCOVA reports a single treatment effect of −7.72 mmHg.
+
+      Which assumption makes a single number a fair summary, and how do you check it?
+    choices:
+      - text: "Parallel slopes — that the treatment effect does not vary with baseline. Checked with a joint test of the treatment-by-baseline interaction."
+        correct: true
+        feedback: "Correct. Here F(2, 232) = 0.67, p = 0.51: no evidence against parallelism, so one number summarises the effect across the baseline range."
+      - text: "Normality of the residuals, checked with Shapiro–Wilk."
+        feedback: "Normality matters for the inference but does not determine whether a single treatment effect is meaningful."
+      - text: "Equal variance across arms, checked with Levene's test."
+        feedback: "Also an inference assumption, not the one that licenses a single summary."
+      - text: "That baseline is uncorrelated with treatment, checked by comparing baseline means."
+        feedback: "Randomization handles this, and a formal test of baseline balance is discouraged — any imbalance is by construction due to chance."
+    solution: |
+      **Parallel slopes.** ANCOVA fits one line per arm with a common baseline slope, so the vertical gap between lines — the treatment effect — is identical at every baseline value. That is what makes one number a fair summary.
+
+      Check it by fitting `CHG ~ TRTP * BASE` and testing both interaction terms **jointly**: $F(2, 232) = 0.669$, $p = 0.513$. No evidence against parallelism.
+
+      **If it failed**, the correct response is not to force parallel lines. It is to report the effect as a function of baseline, or at several specified baseline values, and to say clearly that the effect varies — because in that case there is no single treatment effect to report.
+    explanation:
+      objective: "Identify the assumption specific to ANCOVA and its formal check."
+      given: "A single reported treatment effect from an ANCOVA."
+      relevant: "That ANCOVA constrains the arms to share one covariate slope."
+      method: "Fit the interaction model and compare it with the main-effects model using a joint F test."
+      numbers: "F(2, 232) = 0.669, p = 0.513 — extra sum of squares 141.58 on 2 df."
+      assumptions: "The test is itself typically underpowered, so a non-significant result is weak evidence FOR parallelism rather than proof of it."
+      interpretation: "Parallelism is what makes the treatment effect independent of where the LS means are evaluated."
+      changes: "If the interaction were significant, the treatment effect would have to be reported at specified baseline values, and the choice of those values becomes a reporting decision the SAP should anticipate."
+      interviewer: "That you test the interaction jointly and that you know what you would do if it failed."
+
+  - id: stats.ac.lsmean-hand
+    format: numeric
+    modes: [guided, check]
+    difficulty: intermediate
+    skills: [stats.ancova]
+    lesson: stats-ancova-covariate-adjustment
+    title: An LS mean by hand
+    prompt: |
+      The fitted ANCOVA is
+
+      $$\widehat{\operatorname{CHG}} = 83.833 - 4.559\,[\text{10 mg}] - 7.715\,[\text{20 mg}] - 0.5866\,\operatorname{BASE}$$
+
+      and the overall mean baseline in the analysis set is **149.824 mmHg**.
+
+      Compute the LS mean for the **VTX-221 20 mg** arm, to three decimal places.
+    answer: -11.769
+    tolerance: 0.02
+    unit: mmHg
+    hints:
+      - "For a 20 mg subject, the [10 mg] indicator is 0 and the [20 mg] indicator is 1."
+      - "83.833 − 7.715 = 76.118."
+      - "0.5866 × 149.824 = 87.887."
+    solution: |
+      $$\widehat{\text{LSM}}_{20} = 83.833 - 7.715 - 0.5866 \times 149.824 = 76.118 - 87.887 = -11.769 \text{ mmHg}$$
+
+      Compare with the observed 20 mg mean of −12.276: the LS mean is **higher** by 0.507 mmHg, because 20 mg subjects started *above* the overall mean baseline and are being repositioned down to it.
+
+      All three LS means, and the shifts:
+
+      | Arm | Observed | LS mean | Shift |
+      |---|---:|---:|---:|
+      | Placebo | −3.300 | −4.054 | −0.754 |
+      | 10 mg | −8.828 | −8.613 | +0.215 |
+      | 20 mg | −12.276 | −11.769 | +0.507 |
+    explanation:
+      objective: "Evaluate the fitted ANCOVA at the common covariate value."
+      given: "The fitted coefficients and the overall mean baseline."
+      relevant: "The intercept, the relevant treatment coefficient and the baseline slope."
+      irrelevant: "The 10 mg coefficient, whose indicator is zero here."
+      calculating: "The LS mean for the 20 mg arm."
+      method: "Set the treatment indicators for the arm, substitute the overall mean baseline, and evaluate."
+      numbers: "83.833 - 7.715 = 76.118; 0.5866 x 149.824 = 87.887; 76.118 - 87.887 = -11.769."
+      assumptions: "Parallel slopes, so evaluating at the overall mean is a fair repositioning for every arm."
+      interpretation: "Arms that started above the average baseline have LS means above their observed means, and vice versa."
+      changes: "Evaluating at baseline = 160 instead would shift all three LS means down by 0.5866 x 10.18 = 5.97 mmHg, leaving every DIFFERENCE unchanged."
+      interviewer: "That you can compute it and that you can predict the direction of the shift from the arm's baseline relative to the overall mean."
+
+  - id: stats.ac.precision-gain
+    format: numeric
+    modes: [check, independent, interview]
+    difficulty: intermediate
+    skills: [stats.ancova, stats.power]
+    lesson: stats-ancova-covariate-adjustment
+    title: What adjustment is worth in subjects
+    prompt: |
+      The unadjusted treatment-effect standard error is **1.841**; adjusting for baseline gives **1.648**.
+
+      By what factor would the sample size have to increase to achieve the adjusted precision *without* adjusting?
+
+      Give your answer to three decimal places.
+    answer: 1.248
+    tolerance: 0.01
+    hints:
+      - "Sample size scales with the square of the standard error."
+      - "1.841 / 1.648 = 1.117."
+      - "Square it."
+    solution: |
+      $$\left(\frac{1.841}{1.648}\right)^2 = (1.1171)^2 = 1.248$$
+
+      A **24.8% larger trial** — about 59 additional subjects in a 238-subject study — to buy with enrolment what a covariate you already collected provides for free.
+
+      **Cross-check against theory.** The variance reduction from a covariate is approximately $1 - \rho^2$, and $\rho = 0.3043$ here, so $1 - \rho^2 = 0.907$ — a predicted 9.3% variance reduction against the 19.9% observed. The gap is because the model also corrects the baseline imbalance between arms, which the simple formula ignores.
+
+      **The gain scales with $\rho$.** At $\rho = 0.7$ the variance would halve, doubling the effective sample size.
+    explanation:
+      objective: "Convert a standard-error reduction into an effective sample-size gain."
+      given: "Adjusted and unadjusted standard errors."
+      relevant: "Their ratio."
+      calculating: "The squared ratio."
+      method: "SE is proportional to 1/sqrt(n), so equal precision requires n to scale with the square of the SE ratio."
+      numbers: "1.841/1.648 = 1.1171; squared = 1.2479. On 238 subjects that is about 59 extra."
+      assumptions: "That the residual SD would be unchanged in the larger unadjusted trial, which is reasonable for subjects from the same population."
+      interpretation: "Covariate adjustment converts information you already have into precision you would otherwise buy."
+      changes: "The theoretical variance reduction is approximately 1 - rho^2 = 0.907, so a more strongly correlated covariate buys much more: at rho = 0.7 the effective sample size doubles."
+      interviewer: "That you can state the gain in subjects rather than in decimals, since that is the form a design conversation needs."
+
+  - id: stats.ac.diff-se
+    format: mcq
+    modes: [check, qc]
+    difficulty: advanced
+    skills: [stats.ancova]
+    lesson: stats-ancova-covariate-adjustment
+    title: The SE of an LS mean difference
+    prompt: |
+      Two LS means have standard errors **1.174** (placebo) and **1.150** (20 mg). The reported SE of their **difference** is **1.648**.
+
+      Note that $\sqrt{1.174^2 + 1.150^2} = 1.643$, which is close but not equal.
+
+      Why is the naive combination not exactly right?
+    choices:
+      - text: "The two LS means are not independent — they share the estimated intercept and baseline slope — so the covariance between them enters the variance of the difference."
+        correct: true
+        feedback: "Correct. Var(A − B) = Var(A) + Var(B) − 2Cov(A, B), and the covariance is non-zero because both are functions of the same fitted coefficients."
+      - text: "The difference uses a different residual variance estimate."
+        feedback: "Both come from the same fitted model and the same residual mean square."
+      - text: "Rounding in the reported standard errors."
+        feedback: "The gap of 0.005 is larger than rounding at three decimals explains, and it has a structural cause."
+      - text: "The difference is computed on a different number of subjects."
+        feedback: "All quantities come from the same 238-subject model fit."
+    solution: |
+      The two LS means share estimated parameters — the intercept and the baseline slope — so they are **correlated**, and
+
+      $$\operatorname{Var}(A - B) = \operatorname{Var}(A) + \operatorname{Var}(B) - 2\operatorname{Cov}(A, B)$$
+
+      The naive $\sqrt{1.174^2 + 1.150^2}$ omits the covariance term.
+
+      **The general and correct approach:** write the comparison as a contrast vector $L$ and use the full variance–covariance matrix of the coefficients:
+
+      $$\operatorname{SE}(L'\hat\beta) = \sqrt{L'\widehat{\operatorname{Var}}(\hat\beta)L}$$
+
+      This is exactly what `LSMEANS ... PDIFF` and `emmeans ... pairs()` do. **Never combine reported standard errors by hand** — the covariance is invisible in the printed table, and the error it introduces grows with the imbalance in the design.
+    explanation:
+      objective: "Explain why the SE of a difference of LS means requires the covariance matrix."
+      given: "Two LS mean standard errors and the SE of their difference."
+      relevant: "That both LS means are functions of the same fitted coefficients."
+      calculating: "Why the naive root-sum-of-squares is not exact."
+      method: "Var(A - B) = Var(A) + Var(B) - 2Cov(A, B); for linear combinations of regression coefficients the covariance comes from the parameter covariance matrix."
+      numbers: "sqrt(1.174^2 + 1.150^2) = 1.643 versus the correct 1.648; the covariance term accounts for the gap."
+      assumptions: "The LS means share the intercept and slope estimates, so independence never holds between them."
+      interpretation: "Software handles this correctly; hand recombination does not."
+      changes: "With badly unbalanced arms or a covariate distribution that differs by arm, the covariance term grows and the naive combination can be materially wrong."
+      interviewer: "That you reach for L' Var(beta) L rather than trying to combine printed SEs, and that you can say when the discrepancy would matter."
+
+  - id: stats.ac.r-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: advanced
+    skills: [stats.ancova, r.models, tlf.efficacy-tables]
+    lesson: stats-ancova-covariate-adjustment
+    title: Build the efficacy table
+    minutes: 18
+    prompt: |
+      Write `efficacy_table(data, ref = "Placebo")` producing the two pieces an ANCOVA efficacy table needs.
+
+      Return a list with:
+
+      - `lsmeans` — one row per arm: `arm`, `n`, `lsmean`, `se`, `lower`, `upper`
+      - `diffs` — one row per comparison against the reference: `comparison`, `estimate`, `se`, `lower`, `upper`, `p`
+
+      Use `emmeans`. Evaluate LS means at the mean baseline (the default). Use `infer = TRUE` so both intervals and p-values are returned.
+    starter: |
+      library(emmeans)
+      library(dplyr)
+
+      efficacy_table <- function(data, ref = "Placebo") {
+        data$TRTP <- relevel(factor(data$TRTP), ref = ref)
+        fit <- lm(___, data = data)
+
+        lsm <- emmeans(fit, ~ TRTP)
+
+        # lsmeans data frame
+
+        # differences vs reference
+
+        list(lsmeans = ..., diffs = ...)
+      }
+    reference: |
+      library(emmeans)
+      library(dplyr)
+
+      efficacy_table <- function(data, ref = "Placebo") {
+        data$TRTP <- relevel(factor(data$TRTP), ref = ref)
+        fit <- lm(CHG ~ TRTP + BASE, data = data)
+
+        lsm <- emmeans(fit, ~ TRTP)
+
+        counts <- data |>
+          count(TRTP, name = "n")
+
+        lsmeans_df <- as.data.frame(summary(lsm, infer = TRUE)) |>
+          transmute(arm = TRTP, lsmean = emmean, se = SE,
+                    lower = lower.CL, upper = upper.CL) |>
+          left_join(counts, by = c("arm" = "TRTP")) |>
+          select(arm, n, lsmean, se, lower, upper)
+
+        diffs_df <- as.data.frame(
+          summary(contrast(lsm, method = "trt.vs.ctrl", ref = 1),
+                  infer = TRUE, adjust = "none")
+        ) |>
+          transmute(comparison = contrast, estimate, se = SE,
+                    lower = lower.CL, upper = upper.CL, p = p.value)
+
+        list(lsmeans = lsmeans_df, diffs = diffs_df)
+      }
+    hints:
+      - "`summary(lsm, infer = TRUE)` returns both confidence limits and p-values; without `infer` you get one or the other depending on the object."
+      - "`contrast(lsm, method = \"trt.vs.ctrl\", ref = 1)` gives comparisons against the first level — which is the reference you set with `relevel()`."
+      - "`adjust = \"none\"` returns unadjusted p-values; the SAP decides whether a multiplicity adjustment applies, so do not silently impose one."
+    checks:
+      - pattern: "relevel\\s*\\(\\s*factor\\s*\\("
+        message: "Sets the reference level explicitly"
+      - pattern: "lm\\s*\\(\\s*CHG\\s*~\\s*TRTP\\s*\\+\\s*BASE"
+        message: "Fits the ANCOVA with baseline as a covariate"
+      - pattern: "emmeans\\s*\\(\\s*fit"
+        message: "Uses emmeans rather than raw coefficients"
+      - pattern: "infer\\s*=\\s*TRUE"
+        message: "Requests both intervals and p-values"
+      - pattern: "trt\\.vs\\.ctrl|pairs\\s*\\("
+        message: "Produces comparisons against the control arm"
+      - pattern: "n\\b"
+        message: "Includes the per-arm sample size"
+    expectedOutput: |
+      ```text
+      $lsmeans
+                  arm  n     lsmean       se      lower      upper
+      1       Placebo 77  -4.053778 1.174400  -6.367525  -1.740030
+      2 VTX-221 10 mg 81  -8.612872 1.141558 -10.861917  -6.363827
+      3 VTX-221 20 mg 80 -11.768956 1.150144 -14.034916  -9.502995
+
+      $diffs
+                      comparison  estimate       se      lower     upper            p
+      1 VTX-221 10 mg - Placebo  -4.559095 1.639391  -7.788946 -1.329244 5.861000e-03
+      2 VTX-221 20 mg - Placebo  -7.715178 1.647532 -10.961069 -4.469287 4.795000e-06
+      ```
+    solution: |
+      Four decisions this encodes, each of which is a real convention rather than a preference.
+
+      **LS means, not observed means.** If the analysis is ANCOVA the table must report LS means, or the difference row will not equal the difference of the two means shown — which a reviewer notices immediately.
+
+      **The reference set explicitly**, so the comparisons run in the intended direction regardless of alphabetical accident.
+
+      **`n` carried alongside.** The table needs a denominator, and it is the *analysis* n (77, 81, 80 — subjects with a Week 12 value), not the randomized n.
+
+      **`adjust = "none"`.** Multiplicity is a SAP decision. Silently applying Dunnett or Tukey inside a utility function is the kind of hidden choice that causes a QC mismatch nobody can locate.
+
+      A production version would also round to the shell's specified decimals — and rounding is done at the *presentation* step, never before computing.
+    explanation:
+      objective: "Produce the two components of a standard ANCOVA efficacy table."
+      given: "A BDS dataset and a reference arm."
+      relevant: "The model, the reference level, the LS means and their pairwise differences."
+      method: "Fit the ANCOVA, obtain LS means at the mean covariate value, and form contrasts against the control arm using the parameter covariance matrix."
+      numbers: "Placebo -4.054 (SE 1.174); 10 mg -8.613 (1.142); 20 mg -11.769 (1.150). Differences -4.559 (1.639) and -7.715 (1.648), with p = 0.0059 and 4.8e-06."
+      assumptions: "Parallel slopes; complete cases at Week 12; multiplicity handling deferred to the SAP."
+      computation: "emmeans evaluates at the mean of the covariate by default, matching SAS LSMEANS."
+      interpretation: "The table is internally consistent: the difference row equals the difference of the LS means shown."
+      changes: "Passing adjust = 'dunnett' would apply the multiplicity adjustment for comparisons to control, which the SAP may or may not require."
+      interviewer: "That you report the analysis n rather than the randomized n, and that you leave multiplicity to the SAP rather than baking it into a utility."
+
+  - id: stats.ac.lords-paradox
+    format: mcq
+    modes: [check, interview, qc]
+    difficulty: advanced
+    skills: [stats.ancova, communication.interpretation]
+    lesson: stats-ancova-covariate-adjustment
+    title: Three analyses, three answers
+    prompt: |
+      Three analyses of the same Week 12 data, 20 mg versus placebo:
+
+      | Analysis | Estimate (SE) |
+      |---|---:|
+      | `AVAL ~ TRTP` (raw value) | −6.83 (1.741) |
+      | `CHG ~ TRTP` (change score) | −8.98 (1.841) |
+      | `CHG ~ TRTP + BASE` (ANCOVA) | −7.72 (1.648) |
+
+      Why do the first two disagree, and why does ANCOVA sit between them?
+    choices:
+      - text: "The raw-value analysis removes none of the baseline imbalance; the change score removes it as if the baseline slope were exactly 1; ANCOVA estimates the right amount (0.379) from the data."
+        correct: true
+        feedback: "Exactly. Change scores implicitly assume a slope of 1 — an over-correction when the true slope is below it. This is Lord's paradox in its practical form."
+      - text: "The change-score analysis is simply wrong and should never be used."
+        feedback: "It is a valid analysis answering a slightly different question, and it is correct when the true baseline slope really is 1. It is just rarely the best choice."
+      - text: "ANCOVA averages the other two."
+        feedback: "It lands between them here, but it is not an average — it estimates the adjustment from the data and could fall outside their range with a different slope."
+      - text: "The three use different subjects."
+        feedback: "All three use the same 238 subjects with a Week 12 measurement."
+    solution: |
+      Each handles the baseline imbalance differently.
+
+      - **Raw value:** no adjustment — implicitly a baseline slope of **0**.
+      - **Change score:** subtracting baseline is equivalent to forcing a slope of **1**.
+      - **ANCOVA:** estimates the slope from the data — here **0.379** on the `AVAL` scale.
+
+      Since the true slope is between 0 and 1, the first under-corrects and the second over-corrects. ANCOVA gets it right **and** has the smallest standard error of the three.
+
+      This is **Lord's paradox**: two reasonable-looking analyses of the same data give different answers, and the resolution is that they answer different questions. ANCOVA is the one that does not assume a slope it has not estimated, which is why it is the regulatory default and why "just analyse change from baseline" is not a substitute for adjustment.
+    explanation:
+      objective: "Explain why three analyses of the same data disagree, and which is preferred."
+      given: "Three estimates with their standard errors."
+      relevant: "What baseline slope each analysis implicitly assumes."
+      method: "Each analysis corresponds to a different assumed coefficient on baseline: 0, 1, or estimated."
+      numbers: "Raw -6.83 (slope 0); change -8.98 (slope 1); ANCOVA -7.72 (slope 0.379 on the AVAL scale). ANCOVA also has the smallest SE at 1.648."
+      assumptions: "ANCOVA assumes parallel slopes, which is testable and holds here (interaction p = 0.51)."
+      interpretation: "The disagreement is informative: it measures how much the baseline imbalance matters."
+      changes: "If the arms were perfectly balanced at baseline, all three point estimates would be close, and ANCOVA's advantage would be precision alone rather than precision plus bias correction."
+      interviewer: "That you name Lord's paradox and can state each analysis's implicit slope assumption."
+
+  - id: stats.ac.wrong-means-table
+    format: mcq
+    modes: [qc, check]
+    difficulty: intermediate
+    skills: [stats.ancova, tlf.efficacy-tables, qc.discrepancy]
+    lesson: stats-ancova-covariate-adjustment
+    title: A table that does not add up
+    prompt: |
+      A draft efficacy table reads:
+
+      ```text
+                              Placebo      VTX-221 20 mg
+      Mean change (SE)     -3.30 (1.32)   -12.28 (1.29)
+        Difference vs placebo                -7.72 (1.65)
+        95% CI                             (-10.96, -4.47)
+      ```
+
+      The analysis was ANCOVA. What is the QC finding?
+    choices:
+      - text: "The arm rows show observed means while the difference row comes from the ANCOVA — so −12.28 − (−3.30) = −8.98 does not equal the −7.72 shown. The arm rows must be LS means."
+        correct: true
+        feedback: "Correct, and the inconsistency is visible on the page: the difference row does not reconcile with the two means above it."
+      - text: "The difference is wrong; it should be −8.98."
+        feedback: "−7.72 is the correct ANCOVA estimate. It is the arm rows that do not match the analysis."
+      - text: "The standard errors are too small."
+        feedback: "The SEs shown for the arms (1.32, 1.29) are the observed-mean SEs, consistent with observed means — which is part of the same underlying problem."
+      - text: "There is no finding; observed means are conventional in efficacy tables."
+        feedback: "When the analysis is ANCOVA, the table reports LS means. Mixing the two makes the table internally inconsistent."
+    solution: |
+      **The arm rows are observed means; the difference row is from the ANCOVA.** They do not reconcile:
+
+      $$-12.28 - (-3.30) = -8.98 \neq -7.72$$
+
+      The corrected table uses LS means throughout:
+
+      ```text
+                              Placebo      VTX-221 20 mg
+      LS mean change (SE)  -4.05 (1.17)   -11.77 (1.15)
+        Difference vs placebo                -7.72 (1.65)
+        95% CI                             (-10.96, -4.47)
+      ```
+
+      Now $-11.77 - (-4.05) = -7.72$ ✓.
+
+      **The quick QC check for any efficacy table:** subtract the two arm values and see whether you get the difference row. If not, the rows are coming from different analyses. Descriptive observed means can appear too — in a separate, clearly labelled descriptive table.
+    explanation:
+      objective: "Spot an internally inconsistent efficacy table."
+      given: "Arm means and a difference row that do not reconcile."
+      relevant: "That the analysis was ANCOVA while the arm rows are observed means."
+      calculating: "Whether the difference of the displayed means equals the displayed difference."
+      method: "Subtract the two arm values and compare with the difference row. This check takes five seconds and catches a whole class of errors."
+      numbers: "-12.28 - (-3.30) = -8.98, against the -7.72 shown. With LS means: -11.77 - (-4.05) = -7.72."
+      assumptions: "The check works whenever the difference is a simple contrast of the two displayed quantities, which is the usual case."
+      interpretation: "A reviewer will do this subtraction, so it is better to do it first."
+      changes: "If the SAP wants both observed and LS means displayed, they go in separate clearly labelled rows or tables, with the difference attached to the LS means."
+      interviewer: "That you have a mechanical check you apply to every table rather than relying on noticing."
+
+  - id: stats.ac.sap-open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [stats.ancova, trials.design, communication.interviewing]
+    lesson: stats-ancova-covariate-adjustment
+    title: Reviewing a draft SAP
+    prompt: |
+      **Interviewer:** "You're reviewing a draft SAP. The primary analysis section says only: *'The primary endpoint will be analysed using ANCOVA.'* What comments do you raise?"
+    modelAnswer: |
+      That sentence names a family of models, not an analysis. I'd raise comments in roughly the order a reviewer would notice the gaps.
+
+      **The estimand comes first.** Before the model, ICH E9(R1) asks what treatment effect we're estimating: the population, the endpoint and timepoint, how intercurrent events are handled — discontinuation, rescue medication, death — and the population-level summary. A complete-case ANCOVA at the final visit implicitly answers "the effect among those who stayed", which is almost never the question anyone intended. If that's the estimand, say so deliberately; if it isn't, the model has to change.
+
+      **Then the model specification.** Which is the dependent variable, change from baseline or the raw value? Which covariates — baseline value certainly, and the randomization stratification factors, which ICH E9 §5.7 says should generally be accounted for. Is treatment a factor with how many levels, and which is the reference? Are the stratification factors used as randomized or as corrected on the CRF? We have three subjects whose corrected baseline puts them in a different stratum, so that choice has to be stated.
+
+      **The analysis population and missing data.** ITT, per-protocol, or both, and which is primary? What happens to subjects with no Week 12 value — complete cases, or a model like MMRM that uses all observed post-baseline data? That's not a technical footnote; in this trial complete-case ANCOVA gives −7.72 and MMRM gives −8.35, because lack-of-efficacy dropout is most common on placebo. The choice materially moves the number.
+
+      **Multiplicity.** Three arms means multiple comparisons. What's the testing hierarchy, what's adjusted and how — Dunnett, a fixed sequence, something else? And the same for secondary endpoints.
+
+      **The reported quantities.** LS means with SEs, differences with confidence intervals, evaluated at the mean covariate value. Worth stating, because it's what makes the table internally consistent.
+
+      **Assumption checks and sensitivity analyses.** Is the treatment-by-baseline interaction tested, and what happens if it's significant? What sensitivity analyses are pre-specified — a different missing-data assumption, the per-protocol population, an unadjusted analysis? Those should be listed now, not invented after the results are in.
+
+      **And the software.** Which procedure, which options. SAS and R differ on reference levels and on default sums of squares, and a SAP that doesn't pin this down guarantees a QC discrepancy that nobody can attribute.
+
+      The framing I'd use with the author is that every one of these is a decision someone will make — the only question is whether it's made now, in the open, or later by whoever happens to write the code.
+    rubric:
+      - Starts with the estimand rather than the model
+      - Asks for the dependent variable and the full covariate list including stratification factors
+      - Raises the as-randomized versus as-corrected stratum question
+      - Addresses the analysis population and the missing-data strategy, with the consequence quantified
+      - Raises multiplicity for the multi-arm comparisons
+      - Specifies what is reported (LS means, differences, intervals)
+      - Asks for pre-specified assumption checks and sensitivity analyses
+      - Notes that software and options should be named to prevent QC discrepancies
+    redFlags:
+      - "Comments only on the statistical model and ignores the estimand"
+      - "Does not mention missing data or the analysis population"
+      - "Does not raise multiplicity in a three-arm trial"
+      - "Treats the sentence as adequate because ANCOVA is the obvious choice"

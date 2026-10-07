@@ -1,0 +1,144 @@
+domain: sas
+title: SAS
+description: Base SAS, the DATA step, PROC SQL, macros, reporting and statistical procedures as used in clinical programming.
+skills:
+  - id: sas.environment
+    name: Libraries, datasets and the SAS session
+    description: LIBNAME, WORK vs permanent libraries, dataset naming, PROC CONTENTS, reading the SAS log as part of every run.
+    weight: 2
+    tracks: [programmer, biostatistician]
+  - id: sas.data-step
+    name: DATA step fundamentals
+    description: SET, assignment, KEEP/DROP/RENAME, OUTPUT, the compile and execution phases.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: sas.pdv
+    name: The Program Data Vector
+    description: How the PDV is built at compile time, reset between iterations, and why that explains RETAIN, LAG and missing-value behaviour.
+    weight: 3
+    tracks: [programmer]
+  - id: sas.where-if
+    name: WHERE vs IF subsetting
+    description: When each statement filters, which variables each can see, and performance/semantic differences.
+    weight: 2
+    tracks: [programmer, biostatistician]
+  - id: sas.attributes
+    name: Variable attributes (LENGTH, LABEL, FORMAT, INFORMAT)
+    description: Setting lengths before first use, truncation, labels, formats vs informats.
+    weight: 2
+    tracks: [programmer]
+  - id: sas.missing-values
+    name: Missing values in SAS
+    description: Numeric and character missing values, special missing values, comparison ordering and propagation in functions vs operators.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: sas.sort
+    name: PROC SORT and sorting
+    description: BY variables, NODUPKEY vs NODUPRECS, DUPOUT=, sort order and missing values.
+    weight: 2
+    tracks: [programmer]
+  - id: sas.merge
+    name: DATA step MERGE
+    description: One-to-one, one-to-many and many-to-many merges, IN= flags, overwritten variables and the MERGE note.
+    weight: 3
+    tracks: [programmer]
+  - id: sas.by-group
+    name: BY-group processing and FIRST./LAST.
+    description: Grouped processing with FIRST.var/LAST.var for first/last records, counts and per-subject derivations.
+    weight: 3
+    tracks: [programmer]
+  - id: sas.retain
+    name: RETAIN and the sum statement
+    description: Carrying values across iterations, cumulative counts, resetting at group boundaries.
+    weight: 2
+    tracks: [programmer]
+  - id: sas.lag
+    name: LAG and DIF functions
+    description: Queue semantics of LAG, why conditional LAG misbehaves, safe patterns.
+    weight: 1
+    tracks: [programmer]
+  - id: sas.arrays
+    name: Arrays and DO loops
+    description: ARRAY statements, iterative and conditional DO loops, processing repeated columns.
+    weight: 2
+    tracks: [programmer]
+  - id: sas.transpose
+    name: PROC TRANSPOSE and reshaping
+    description: Long-to-wide and wide-to-long reshaping with PROC TRANSPOSE and DATA step alternatives.
+    weight: 2
+    tracks: [programmer]
+  - id: sas.sql
+    name: PROC SQL
+    description: SELECT, joins, summary functions, GROUP BY, subqueries, INTO macro variables, CREATE TABLE.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: sas.dates
+    name: SAS dates, times and ISO 8601
+    description: Date values as day counts, informats/formats, INTCK/INTNX, ISO 8601 conversion, partial dates.
+    weight: 3
+    tracks: [programmer]
+  - id: sas.char-functions
+    name: Character functions
+    description: SUBSTR, SCAN, STRIP, CATX, UPCASE, INDEX, FIND, COMPRESS, TRANWRD, PRXMATCH basics.
+    weight: 2
+    tracks: [programmer]
+  - id: sas.numeric-functions
+    name: Numeric functions and type conversion
+    description: ROUND, INT, CEIL/FLOOR, SUM vs +, PUT/INPUT, automatic conversion notes.
+    weight: 2
+    tracks: [programmer]
+  - id: sas.formats
+    name: PROC FORMAT
+    description: VALUE and INVALUE formats, CNTLIN, formats for decoding and grouping, format catalogs.
+    weight: 2
+    tracks: [programmer]
+  - id: sas.macro-variables
+    name: Macro variables
+    description: "%LET, resolution, CALL SYMPUTX, SELECT INTO:, SYMBOLGEN, &&-indirect references."
+    weight: 3
+    tracks: [programmer]
+  - id: sas.macros
+    name: Macro programs
+    description: "%MACRO/%MEND, parameters, %IF/%DO logic, local vs global scope, reusable utility macros, MPRINT/MLOGIC."
+    weight: 3
+    tracks: [programmer]
+  - id: sas.log
+    name: Reading the SAS log
+    description: ERROR, WARNING and NOTE messages that matter in validated work, including uninitialized variables, conversions, repeats of BY values and missing values generated.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: sas.freq
+    name: PROC FREQ
+    description: One-way and cross tables, chi-square and Fisher tests, OUT= and ODS OUTPUT, handling missing levels.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: sas.means
+    name: PROC MEANS / SUMMARY and UNIVARIATE
+    description: Descriptive statistics, CLASS vs BY, OUTPUT OUT=, NWAY, quantile definitions, PROC UNIVARIATE diagnostics.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: sas.report
+    name: PROC REPORT and PROC TABULATE
+    description: Producing clinical tables with DEFINE, COMPUTE blocks, ordering, spanning headers and page layout.
+    weight: 3
+    tracks: [programmer]
+  - id: sas.ods
+    name: ODS
+    description: ODS RTF/PDF destinations, ODS OUTPUT to capture statistics, ODS SELECT/EXCLUDE, styles.
+    weight: 2
+    tracks: [programmer, biostatistician]
+  - id: sas.sgplot
+    name: ODS Graphics (SGPLOT)
+    description: Line, scatter, bar and step plots; KM figures; axis and legend control for clinical figures.
+    weight: 2
+    tracks: [programmer, biostatistician]
+  - id: sas.stat-procs
+    name: Statistical procedures
+    description: PROC TTEST, GLM, LOGISTIC, GENMOD, MIXED, LIFETEST and PHREG — syntax, key options and output tables.
+    weight: 3
+    tracks: [programmer, biostatistician]
+  - id: sas.debugging
+    name: Debugging SAS programs
+    description: Systematic diagnosis of wrong results, PUTLOG, OBS=, checking counts at each step, reproducing issues.
+    weight: 3
+    tracks: [programmer]

@@ -1,0 +1,495 @@
+items:
+  - id: stats.cr.coupling
+    format: mcq
+    modes: [check, qc, interview]
+    difficulty: advanced
+    skills: [stats.correlation, adam.bds, qc.mindset]
+    lesson: stats-correlation
+    title: The correlation that was guaranteed
+    prompt: |
+      An analyst reports: *"Baseline systolic BP correlates with change from baseline at r = −0.46 (p < 10⁻¹³), showing that patients with higher baseline pressure respond better to treatment."*
+
+      What is wrong?
+    choices:
+      - text: "CHG = AVAL − BASE, so BASE appears in both variables with opposite signs. A negative correlation is a mathematical consequence of the construction, not a finding about treatment."
+        correct: true
+        feedback: "This is mathematical coupling — the formal expression of regression to the mean. The observed −0.4644 is reproduced exactly by the coupling formula using only the two SDs and their correlation."
+      - text: "The p-value is too small to be credible."
+        feedback: "The p-value is real; the problem is that it tests a null nobody should have entertained. A guaranteed relationship will be highly significant at any reasonable n."
+      - text: "Correlation cannot be used on continuous variables like blood pressure."
+        feedback: "Pearson correlation is designed for exactly this kind of data. The defect is in what was correlated, not in the method."
+      - text: "The sign is wrong — higher baseline should give a positive correlation with change."
+        feedback: "The sign is what the algebra predicts. That it matches the prediction so precisely is the evidence that nothing biological is being measured."
+    solution: |
+      `CHG` is built from `BASE`. Writing $\operatorname{CHG} = \operatorname{AVAL} - \operatorname{BASE}$,
+
+      $$\rho(\text{BASE},\text{CHG}) = \frac{\rho\, s_{\text{AVAL}} - s_{\text{BASE}}}{\sqrt{s^2_{\text{AVAL}} + s^2_{\text{BASE}} - 2\rho\, s_{\text{AVAL}} s_{\text{BASE}}}}$$
+
+      With the trial's values ($s_{\text{BASE}} = 9.009$, $s_{\text{AVAL}} = 11.209$, $\rho = 0.3043$):
+
+      $$\frac{0.3043 \times 11.209 - 9.009}{\sqrt{145.345}} = \frac{-5.5983}{12.0559} = -0.4644$$
+
+      **Exactly the observed value.** There is no residual biological content.
+
+      To ask the intended question — does baseline predict outcome? — fit `AVAL ~ BASE + TRTP` and interpret the `BASE` coefficient, or run the ANCOVA that the SAP already specifies.
+    explanation:
+      objective: "Identify a correlation that is an arithmetic artefact rather than a finding."
+      given: "A correlation between a change score and one of its own components."
+      relevant: "That CHG is defined as AVAL minus BASE."
+      irrelevant: "The p-value, which merely reflects the sample size applied to a guaranteed relationship."
+      method: "Write out the definition of the derived variable and check whether the two quantities share a component."
+      numbers: "Coupling formula with s_BASE = 9.009, s_AVAL = 11.209, rho = 0.3043 gives -5.5983/12.0559 = -0.4644, matching the observed value to four decimals."
+      assumptions: "The coupling is unavoidable whenever rho x s_AVAL < s_BASE, which is the usual situation."
+      interpretation: "This is regression to the mean, seen through a correlation coefficient."
+      changes: "Fitting AVAL ~ BASE + TRTP asks the intended question cleanly, and that baseline coefficient is exactly what ANCOVA estimates."
+      interviewer: "That you can reproduce the observed value from the coupling formula, turning an assertion into a demonstration."
+
+  - id: stats.cr.agreement
+    format: mcq
+    modes: [check, interview]
+    difficulty: intermediate
+    skills: [stats.correlation, communication.interpretation]
+    lesson: stats-correlation
+    title: Correlation versus agreement
+    prompt: |
+      A new blood-pressure cuff is compared with a reference monitor in 100 patients. The correlation is **r = 0.96**.
+
+      The engineer concludes the two devices agree. Is that justified?
+    choices:
+      - text: "No — a device reading exactly 20 mmHg high on every patient would correlate at r = 1.00. Correlation measures co-movement, not concordance."
+        correct: true
+        feedback: "Correct. Assess agreement with a Bland–Altman analysis: mean bias and limits of agreement, compared against a pre-specified clinically acceptable range."
+      - text: "Yes — r above 0.95 establishes agreement for medical devices."
+        feedback: "No such threshold exists, and no correlation value can establish agreement, because correlation is invariant to adding a constant or multiplying by one."
+      - text: "No, because 100 patients is too few."
+        feedback: "Sample size is not the issue; the measure is. Ten thousand patients would not turn a correlation into an agreement statistic."
+      - text: "Yes, provided the correlation is statistically significant."
+        feedback: "Significance tests whether r differs from 0. Agreement needs the differences to be small, which is a different question entirely."
+    solution: |
+      Correlation is invariant to location and scale: $r(X, aX + b) = 1$ for any $a > 0$ and any $b$. A device with a constant 20 mmHg offset, or one reading 10% high, correlates perfectly and agrees with nothing.
+
+      **Use Bland–Altman:** plot each patient's difference against the mean of the two readings, report the mean bias $\bar{d}$ and the limits of agreement $\bar{d} \pm 1.96 s_d$, and compare those limits against a clinically acceptable range decided **in advance**.
+
+      The plot also reveals things a correlation cannot: bias that varies with magnitude (a fan shape), outlying pairs, and whether variability grows with the measured value.
+    explanation:
+      objective: "Distinguish association from agreement and name the correct tool."
+      given: "A high correlation between two measurement methods."
+      relevant: "That correlation is invariant to adding a constant and to multiplying by a positive constant."
+      method: "Test the claim against an extreme case: a device with a fixed offset correlates at 1.00 and agrees with nothing."
+      assumptions: "Bland-Altman limits assume the differences are roughly normal and that bias is constant across the measurement range — the plot itself is what checks the second."
+      interpretation: "The relevant output is the mean bias and the limits of agreement, compared with a pre-specified acceptable range."
+      changes: "If bias varies with magnitude, the plot shows a trend and simple limits of agreement are inadequate; a regression-based approach is needed."
+      interviewer: "That you name Bland-Altman specifically and say the acceptable limits must be pre-specified clinically, not derived from the data."
+
+  - id: stats.cr.r-squared
+    format: numeric
+    modes: [check, speed]
+    difficulty: foundation
+    skills: [stats.correlation, communication.interpretation]
+    lesson: stats-correlation
+    title: How much does r = 0.5 explain?
+    prompt: |
+      Two variables correlate at **r = 0.5**.
+
+      What proportion of the variance in one is linearly explained by the other?
+
+      Give your answer as a proportion to two decimal places.
+    answer: 0.25
+    tolerance: 0.005
+    hints:
+      - "The proportion of variance explained is r², not r."
+      - "0.5² = 0.25."
+    solution: |
+      $r^2 = 0.5^2 = 0.25$ — **25%**, not 50%.
+
+      The quadratic relationship is why $r$ systematically flatters a relationship:
+
+      | r | Variance explained |
+      |---:|---:|
+      | 0.3 | 9% |
+      | 0.5 | 25% |
+      | 0.7 | 49% |
+      | 0.9 | 81% |
+
+      It takes $r = 0.71$ to explain half the variance. When translating for a non-statistical audience, give $r^2$ — it is the number with a concrete meaning.
+    explanation:
+      objective: "Convert a correlation coefficient into the proportion of variance explained."
+      given: "A correlation of 0.5."
+      relevant: "Only the coefficient."
+      calculating: "r squared."
+      method: "In simple linear regression the coefficient of determination equals the squared correlation, and it is the fraction of the outcome's variance accounted for by the linear fit."
+      numbers: "0.5^2 = 0.25."
+      interpretation: "Three quarters of the variation remains unexplained, which is usually the more honest framing."
+      changes: "In the trial data, r = 0.2771 between baseline SBP and DBP gives r-squared = 0.0768 — highly significant at n = 270, and under 8% of the variance."
+      interviewer: "That you reach for r-squared when translating for a clinical audience, rather than quoting r and letting it sound larger than it is."
+
+  - id: stats.cr.range-restriction
+    format: mcq
+    modes: [check, interview]
+    difficulty: advanced
+    skills: [stats.correlation, trials.design]
+    lesson: stats-correlation
+    title: Why the trial data contradicts the literature
+    prompt: |
+      BMI and systolic blood pressure are well established as positively associated in the general population. In the VTX221-201 ITT population the correlation is **r = −0.02 (p = 0.71)** — essentially zero.
+
+      What is the most likely explanation?
+    choices:
+      - text: "Trial entry required screening SBP ≥ 140 mmHg, so the sample is selected on the outcome variable — and selection restricts range, which attenuates correlation."
+        correct: true
+        feedback: "Correct. Selecting on a variable compresses its range and its relationships with everything else. Correlations computed inside a trial population do not transfer to the general population."
+      - text: "The published association between BMI and blood pressure is spurious."
+        feedback: "A single selected sample of 270 does not overturn a large epidemiological literature. The discrepancy has a known mechanism."
+      - text: "The sample of 270 is too small to detect the association."
+        feedback: "With n = 270 the confidence interval is (−0.14, 0.10), which excludes the moderate correlation the literature would predict. The issue is the population, not the size."
+      - text: "BMI was measured with too much error."
+        feedback: "Measurement error does attenuate correlations, but height and weight are among the more reliably measured baseline variables."
+    solution: |
+      **Restriction of range.** Everyone in the trial has screening SBP ≥ 140 mmHg, so the SBP range is truncated — and truncating a variable's range mechanically shrinks its correlations with everything else.
+
+      A concrete demonstration in the same data: age versus baseline SBP correlates at $r = 0.141$ across all 270 subjects, but only $r = 0.107$ when restricted to subjects aged 50–60. Nothing about the biology changed; only the range did.
+
+      **The general lesson:** trial populations are always selected by entry criteria, so associations estimated within them systematically understate population associations. This is worth saying out loud whenever someone proposes using trial data to answer an epidemiological question.
+    explanation:
+      objective: "Explain a discrepancy between a trial-internal correlation and external literature."
+      given: "A near-zero correlation where the literature predicts a positive one, in a population with restrictive entry criteria."
+      relevant: "That trial entry selected on screening SBP."
+      method: "Selection on a variable truncates its range; correlation depends on range, so it attenuates."
+      numbers: "Age-SBP correlation falls from 0.141 (all 270 subjects) to 0.107 (106 subjects aged 50-60), with no change in the underlying relationship."
+      assumptions: "That the entry criterion is the dominant selection. BMI range narrowing (mean 30.8, SD 4.5) contributes as well."
+      interpretation: "The trial has no evidence against the literature association; it simply cannot estimate it."
+      changes: "Range EXTENSION has the opposite effect — a case-control design sampling very healthy and very sick subjects inflates correlations, which is why biomarker correlations from case-control samples shrink in trial populations."
+      interviewer: "That you name the mechanism and can give the direction for both restriction and extension, rather than treating it as a curiosity."
+
+  - id: stats.cr.fisher-z
+    format: numeric
+    modes: [guided, check]
+    difficulty: intermediate
+    skills: [stats.correlation, stats.confidence-intervals]
+    lesson: stats-correlation
+    title: Confidence interval via Fisher's z
+    prompt: |
+      A correlation of **r = 0.2771** is observed in **n = 270** subjects.
+
+      Compute the **lower** limit of the 95% confidence interval using Fisher's z transformation, to four decimal places.
+    answer: 0.1632
+    tolerance: 0.003
+    hints:
+      - "z = arctanh(r) = ½ ln[(1+r)/(1−r)] = 0.28459."
+      - "SE(z) = 1/√(n − 3) = 1/√267 = 0.061199 — note n − 3, not n − 2."
+      - "Build the interval on the z scale, then transform back with tanh."
+    solution: |
+      $$z = \operatorname{arctanh}(0.2771) = \tfrac{1}{2}\ln\!\left(\frac{1.2771}{0.7229}\right) = 0.28459$$
+
+      $$\operatorname{SE}(z) = \frac{1}{\sqrt{270-3}} = \frac{1}{16.3401} = 0.061199$$
+
+      $$z - 1.96(0.061199) = 0.16464 \quad\Longrightarrow\quad \tanh(0.16464) = \mathbf{0.1632}$$
+
+      The upper limit is $\tanh(0.40454) = 0.3838$, so the interval is (0.163, 0.384).
+
+      Note the asymmetry around 0.2771: 0.114 below, 0.107 above. That is the transformation doing its job — the sampling distribution of $r$ is skewed because $r$ is bounded at ±1.
+    explanation:
+      objective: "Build a confidence interval for a correlation on the correct scale."
+      given: "A correlation coefficient and a sample size."
+      relevant: "Both; nothing else is needed."
+      calculating: "The lower limit of the 95% interval."
+      method: "Transform r to z with arctanh, where the sampling distribution is approximately normal with SE 1/sqrt(n-3); build a symmetric interval there; transform back with tanh."
+      numbers: "arctanh(0.2771) = 0.28459; 1/sqrt(267) = 0.061199; 0.28459 - 1.96(0.061199) = 0.16464; tanh(0.16464) = 0.1632."
+      assumptions: "Approximate bivariate normality. For heavily skewed variables a bootstrap interval is safer."
+      computation: "The SE uses n - 3, a property of Fisher's transformation — not the n - 2 used by the t test of rho = 0."
+      interpretation: "The interval is asymmetric around the point estimate, which is correct and expected."
+      changes: "At r = 0.9 the asymmetry is dramatic; at r near 0 the transformation barely changes anything, which is why the distinction rarely bites in exploratory work."
+      interviewer: "That you use n - 3 rather than n - 2 and know that both appear, in different places."
+
+  - id: stats.cr.t-statistic
+    format: numeric
+    modes: [check, guided]
+    difficulty: intermediate
+    skills: [stats.correlation, stats.hypothesis-testing]
+    lesson: stats-correlation
+    title: Testing a correlation against zero
+    prompt: |
+      With **r = 0.2771** and **n = 270**, compute the t statistic for $H_0: \rho = 0$.
+
+      $$t = \frac{r\sqrt{n-2}}{\sqrt{1-r^2}}$$
+
+      Give your answer to three decimal places.
+    answer: 4.722
+    tolerance: 0.02
+    hints:
+      - "√(n − 2) = √268 = 16.3707."
+      - "1 − r² = 1 − 0.07679 = 0.92321."
+      - "Numerator 0.2771 × 16.3707 = 4.5371; denominator √0.92321 = 0.96083."
+    solution: |
+      $$t = \frac{0.2771 \times 16.3707}{\sqrt{0.92321}} = \frac{4.5371}{0.96083} = 4.722$$
+
+      On $n - 2 = 268$ degrees of freedom, $p = 3.8 \times 10^{-6}$.
+
+      **Note the degrees of freedom are $n - 2$ here** but $n - 3$ in the Fisher-z interval. Both are correct; they arise from different derivations, and using one where the other belongs is a common slip.
+
+      Also worth holding both facts at once: this correlation is overwhelmingly significant and explains 7.7% of the variance. The p-value reflects $n = 270$; $r^2$ reflects the strength.
+    explanation:
+      objective: "Test a correlation against zero using the exact t statistic."
+      given: "A correlation and a sample size."
+      relevant: "Both."
+      calculating: "The t statistic and its degrees of freedom."
+      method: "Under the null of zero correlation, r times sqrt(n-2) over sqrt(1-r^2) follows a t distribution with n-2 degrees of freedom exactly, given bivariate normality."
+      numbers: "sqrt(268) = 16.3707; 0.2771 x 16.3707 = 4.5371; 1 - 0.2771^2 = 0.92321; sqrt = 0.96083; t = 4.722."
+      assumptions: "Bivariate normality for the exact distribution. The test is fairly robust, but the interval via Fisher's z is more sensitive."
+      computation: "Degrees of freedom are n - 2 for this test and n - 3 for the Fisher-z interval."
+      interpretation: "Highly significant, and explaining under 8% of the variance — significance and strength are different questions."
+      changes: "This exact test only works for the null rho = 0. To test rho against any other value you must use the Fisher-z scale."
+      interviewer: "That you can state both degrees-of-freedom conventions and say where each applies."
+
+  - id: stats.cr.pearson-vs-spearman
+    format: mcq
+    modes: [check, qc, guided]
+    difficulty: intermediate
+    skills: [stats.correlation, qc.data-cleaning]
+    lesson: stats-correlation
+    title: A large gap between Pearson and Spearman
+    prompt: |
+      For a pair of variables, Pearson's r = **0.18** but Spearman's ρ = **0.68**.
+
+      What should you do first?
+    choices:
+      - text: "Plot the data — a large gap usually means outliers or a monotone but non-linear relationship."
+        correct: true
+        feedback: "The discrepancy is a diagnostic signal. Pearson is highly sensitive to extreme values; Spearman works on ranks and is not."
+      - text: "Report the Spearman value, since it is larger."
+        feedback: "Choosing the measure by the size of its result is selection on the outcome. Decide from the data's structure, ideally pre-specified."
+      - text: "Report the Pearson value, since it is the standard."
+        feedback: "Not when its assumption of linearity is in question — and the gap is evidence that it is."
+      - text: "Average the two."
+        feedback: "The two measure different things; their average measures nothing."
+    solution: |
+      **Plot it.** A large Pearson/Spearman gap has two usual causes, and the plot distinguishes them immediately:
+
+      1. **Outliers.** In a 20-point dataset with a real linear relationship, one corrupted value moved Pearson from 0.969 to 0.175 while Spearman only fell from 0.968 to 0.684. A single misplaced decimal does this.
+      2. **A monotone but curved relationship.** Spearman captures it; Pearson, which only sees linear association, does not.
+
+      If the cause is outliers, investigate them as data — a transcription error should be queried, not down-weighted by switching statistics. If the cause is curvature, either report Spearman (pre-specified) or transform the variable so the relationship is linear.
+    explanation:
+      objective: "Treat a Pearson-Spearman discrepancy as a diagnostic rather than a choice."
+      given: "Two correlation measures that disagree substantially."
+      relevant: "That they differ in what they measure and in their sensitivity to extreme values."
+      method: "Plot first. The scatter distinguishes an outlier problem from a curvature problem in seconds."
+      numbers: "A single corrupted point in 20 moved Pearson from 0.969 to 0.175 while Spearman fell only to 0.684."
+      assumptions: "Pearson assumes linearity for its interpretation and approximate normality for its inference; Spearman assumes only that ranks are meaningful."
+      interpretation: "The gap is information about the data, not a menu of results to choose from."
+      changes: "If the outlier is a genuine extreme value rather than an error, the honest options are to report both measures, or to pre-specify a robust method — not to delete the point."
+      interviewer: "That your first action is to look at the data, and that you treat a suspected error as a data-management issue rather than a statistical one."
+
+  - id: stats.cr.r-code
+    format: code
+    language: r
+    modes: [guided, independent]
+    difficulty: intermediate
+    skills: [stats.correlation, r.models]
+    lesson: stats-correlation
+    title: A correlation summary that reports its own n
+    minutes: 12
+    prompt: |
+      Write `cor_summary(x, y)` returning a one-row data frame with `n`, `pearson`, `lower`, `upper`, `p` and `spearman`.
+
+      Requirements:
+
+      - `n` must be the number of **complete pairs**, not `length(x)` — missing values are possible.
+      - `lower` and `upper` come from the Fisher-z interval, computed **explicitly** (not by reading `cor.test`'s output), so the n − 3 is visible.
+      - Pearson and Spearman must both be computed on the **same** complete pairs.
+    starter: |
+      cor_summary <- function(x, y) {
+        ok <- ___
+        x  <- x[ok]; y <- y[ok]
+        n  <- ___
+
+        r  <- ___
+        z  <- ___
+        se <- ___
+
+        data.frame(n = n, pearson = r, lower = ..., upper = ..., p = ..., spearman = ...)
+      }
+    reference: |
+      cor_summary <- function(x, y) {
+        ok <- complete.cases(x, y)
+        x  <- x[ok]
+        y  <- y[ok]
+        n  <- length(x)
+
+        r  <- cor(x, y)
+        z  <- atanh(r)
+        se <- 1 / sqrt(n - 3)
+        zc <- qnorm(0.975)
+
+        data.frame(
+          n        = n,
+          pearson  = r,
+          lower    = tanh(z - zc * se),
+          upper    = tanh(z + zc * se),
+          p        = cor.test(x, y)$p.value,
+          spearman = cor(x, y, method = "spearman")
+        )
+      }
+    hints:
+      - "`complete.cases(x, y)` returns a logical vector that is TRUE only where both values are present."
+      - "`atanh()` is Fisher's z and `tanh()` inverts it."
+      - "Subset both vectors once at the top, so every statistic afterwards is computed on the same pairs."
+    checks:
+      - pattern: "complete\\.cases\\s*\\(\\s*x\\s*,\\s*y\\s*\\)"
+        message: "Restricts to complete pairs before computing anything"
+      - pattern: "atanh\\s*\\("
+        message: "Transforms to the Fisher z scale"
+      - pattern: "1\\s*/\\s*sqrt\\s*\\(\\s*n\\s*-\\s*3\\s*\\)"
+        message: "Uses SE = 1/sqrt(n - 3) for the z-scale interval"
+      - pattern: "tanh\\s*\\("
+        message: "Back-transforms the interval limits with tanh"
+      - pattern: "method\\s*=\\s*[\"']spearman[\"']"
+        message: "Also reports the Spearman coefficient"
+    expectedOutput: |
+      ```text
+          n   pearson     lower     upper            p  spearman
+      1 270 0.2771473 0.1631698 0.3838244   3.7685e-06 0.2702635
+      ```
+    solution: |
+      ```r
+      cor_summary <- function(x, y) {
+        ok <- complete.cases(x, y)
+        x  <- x[ok]; y <- y[ok]
+        n  <- length(x)
+
+        r  <- cor(x, y)
+        z  <- atanh(r)
+        se <- 1 / sqrt(n - 3)
+        zc <- qnorm(0.975)
+
+        data.frame(n = n, pearson = r,
+                   lower = tanh(z - zc * se), upper = tanh(z + zc * se),
+                   p = cor.test(x, y)$p.value,
+                   spearman = cor(x, y, method = "spearman"))
+      }
+      ```
+
+      Two design choices worth defending. **Returning `n`** means a reader never has to guess how many subjects a coefficient came from — and when several pairs are summarised together, varying `n` is immediately visible rather than hidden by pairwise deletion. **Computing both coefficients on the same pairs** means a Pearson/Spearman gap is informative about the relationship rather than an artefact of different subject sets.
+
+      On the trial's baseline SBP and DBP the two agree closely (0.277 and 0.270), which is reassuring: no outlier is driving the Pearson value.
+    explanation:
+      objective: "Produce a correlation summary that carries its own uncertainty and sample size."
+      given: "Two numeric vectors that may contain missing values."
+      relevant: "The complete pairs; everything else is computed from them."
+      method: "Subset to complete cases once, then compute all statistics on the same subset."
+      numbers: "For baseline SBP and DBP: n = 270, Pearson 0.2771 (0.1632, 0.3838), p = 3.8e-06, Spearman 0.2703."
+      assumptions: "Complete-case handling is a decision; it is appropriate for a descriptive correlation but should be stated."
+      computation: "The interval uses n - 3 while cor.test's p-value uses n - 2 — both appear in the same function, correctly."
+      interpretation: "Close agreement between Pearson and Spearman indicates no single point is driving the result."
+      changes: "Pairwise deletion across a matrix of variables gives each cell a different n and can produce a matrix that is not positive definite, breaking PCA and factor analysis downstream."
+      interviewer: "That you return n alongside the coefficient, since a correlation without its sample size is uninterpretable."
+
+  - id: stats.cr.missing-policy
+    format: mcq
+    modes: [qc, check]
+    difficulty: advanced
+    skills: [stats.correlation, qc.compare, r.sas-translation]
+    lesson: stats-correlation
+    title: Two correlation matrices that disagree
+    prompt: |
+      Production (SAS `PROC CORR`) and QC (R `cor()`) produce correlation matrices from the same dataset. Several cells differ slightly, and the QC matrix contains `NA` in a few places.
+
+      Some variables have missing values. What is the most likely cause?
+    choices:
+      - text: "Different missing-value policies: PROC CORR deletes pairwise by default, while R's cor() defaults to use = \"everything\", which returns NA for any pair containing a missing value."
+        correct: true
+        feedback: "Correct. The NAs are the giveaway. Passing use = \"pairwise.complete.obs\" makes R match SAS's default."
+      - text: "R computed Spearman correlations."
+        feedback: "That would change every cell substantially and would not produce NAs."
+      - text: "SAS rounds its output to five decimals."
+        feedback: "Rounding produces last-digit differences, not NAs."
+      - text: "The datasets have different numbers of rows."
+        feedback: "Possible in general, but the NA pattern points directly at the missing-value policy."
+    solution: |
+      **PROC CORR** deletes **pairwise** by default: each cell uses every subject with both of that cell's variables, so different cells can have different n. Adding `nomiss` switches it to listwise.
+
+      **R's `cor()`** defaults to `use = "everything"`, which propagates `NA`. The options are `"complete.obs"` (listwise), `"pairwise.complete.obs"` (matching SAS's default) and `"na.or.complete"`.
+
+      **pandas `.corr()`** defaults to pairwise — matching SAS, not R.
+
+      The finding is against the specification: pairwise and listwise deletion give different answers and the SAP should say which. Worth knowing too that a pairwise-deleted correlation matrix is not guaranteed to be positive definite, which breaks PCA, factor analysis and anything else that needs to invert it.
+    explanation:
+      objective: "Diagnose a matrix-level discrepancy caused by differing missing-value defaults."
+      given: "Two correlation matrices differing in several cells, one containing NAs."
+      relevant: "The NA pattern and each tool's default handling of missing values."
+      method: "NAs in one matrix and not the other point at the missing-value policy rather than at the computation."
+      assumptions: "Pairwise deletion assumes data are missing completely at random for each pair; listwise assumes it for the whole set of variables."
+      interpretation: "Neither is wrong; they answer slightly different questions on slightly different subject sets."
+      changes: "Pairwise deletion can yield a non-positive-definite matrix, which silently breaks PCA and factor analysis downstream — a reason to prefer listwise when the matrix feeds a further method."
+      interviewer: "That you know all three tools' defaults and that you can name the positive-definiteness consequence."
+
+  - id: stats.cr.matrix-screening
+    format: numeric
+    modes: [check, qc]
+    difficulty: intermediate
+    skills: [stats.correlation, stats.multiplicity]
+    lesson: stats-correlation
+    title: How many false positives in a biomarker screen?
+    prompt: |
+      A team screens **20** biomarkers and computes every pairwise correlation.
+
+      If none of the biomarkers were truly associated, how many pairs would you expect to reach p < 0.05 by chance?
+
+      Give the expected number, to one decimal place.
+    answer: 9.5
+    tolerance: 0.2
+    hints:
+      - "How many distinct pairs are there among 20 variables? Use 20 × 19 / 2."
+      - "Each test has a 5% chance of a false positive under the null."
+      - "190 × 0.05."
+    solution: |
+      $$\binom{20}{2} = \frac{20 \times 19}{2} = 190 \text{ pairs}, \qquad 190 \times 0.05 = 9.5$$
+
+      About **ten "significant" correlations** in a dataset with no real associations at all.
+
+      This is why a correlation matrix is an **exploratory** tool for spotting structure and collinearity, never a source of reportable findings. If a correlation is going to be a result, it must be pre-specified and the multiplicity handled — Holm or, for a large screen where some false positives are tolerable, a false-discovery-rate procedure such as Benjamini–Hochberg.
+    explanation:
+      objective: "Quantify the false-positive yield of an unadjusted correlation screen."
+      given: "Twenty variables screened pairwise at the 5% level, all nulls true."
+      relevant: "The number of distinct pairs and the per-test level."
+      calculating: "Expected count of false positives."
+      method: "Number of pairs times the per-test type I error rate."
+      numbers: "20 choose 2 = 190; 190 x 0.05 = 9.5."
+      assumptions: "Independence between tests is assumed for the family-wise interpretation. Correlations among the same variables are NOT independent, so the variance of the count differs — but the EXPECTED number is 9.5 regardless, since expectation is linear."
+      interpretation: "A screen of this size will always produce apparently significant correlations, so their presence is not evidence of anything."
+      changes: "With 50 biomarkers there are 1225 pairs and about 61 expected false positives. Screens scale quadratically."
+      interviewer: "That you note expectation is linear so the dependence between tests does not change the expected count, only its variance."
+
+  - id: stats.cr.surrogate-open
+    format: open
+    modes: [interview]
+    difficulty: advanced
+    skills: [stats.correlation, trials.endpoints, communication.interviewing]
+    lesson: stats-correlation
+    title: The correlated biomarker
+    prompt: |
+      **Interviewer:** "A team wants to use a biomarker as the primary endpoint in a phase III trial because it correlates at r = 0.85 with the clinical outcome. What's your view?"
+    modelAnswer: |
+      My view is that r = 0.85 is the wrong kind of evidence for this decision, and I'd want to be specific about why rather than just cautious.
+
+      The correlation being offered is between the biomarker and the outcome **across patients** — sick patients have worse values on both. That is a statement about the natural history of the disease. What a surrogate endpoint has to do is completely different: the **treatment effect** on the biomarker has to predict the **treatment effect** on the clinical outcome. Those are separate claims, and the first does not imply the second. A drug can move a biomarker through a mechanism that has nothing to do with, or even opposes, the clinical outcome.
+
+      This is not a hypothetical concern. The history of surrogate endpoints includes several cases where a strongly correlated marker moved in the favourable direction while mortality moved the other way — which is precisely why regulators treat surrogate validation as a high bar rather than a correlation threshold.
+
+      What would actually be needed: evidence across multiple trials that treatment effects on the biomarker track treatment effects on the clinical endpoint — a meta-analytic or surrogate-threshold-effect analysis. Failing that, evidence that the biomarker sits on the causal pathway and that the treatment's entire effect runs through it. I'd point them at the FDA/NIH BEST resource, which sets out the distinction between a biomarker, a surrogate endpoint and a clinical endpoint and what evidence each level requires.
+
+      I'd also ask the practical questions. What is the regulatory precedent in this indication — has any agency accepted this marker, and under what conditions? Is there an accelerated approval pathway where a reasonably-likely-to-predict surrogate is acceptable with a confirmatory commitment? And what is the actual motivation: if it is trial duration or size, there may be better answers, like an event-driven design with an interim, or a composite endpoint.
+
+      The constructive landing is usually the same: put the biomarker in as a key secondary or a co-primary if the evidence supports it, power the trial on the clinical endpoint, and use the trial itself to build the surrogate evidence for next time. That gets the team most of what they want without betting the programme on an unvalidated endpoint.
+    rubric:
+      - Distinguishes cross-patient correlation from treatment-effect-on-surrogate predicting treatment-effect-on-outcome
+      - States that correlation alone is insufficient regardless of magnitude
+      - Cites historical failures of correlated surrogates as a reason for the high bar
+      - Names the evidence that would be required (multi-trial, meta-analytic or causal-pathway)
+      - References the regulatory framework (BEST, accelerated approval) rather than only statistical theory
+      - Asks about the team's underlying motivation and offers a workable alternative
+    redFlags:
+      - "Accepts the correlation as sufficient because it is large"
+      - "Rejects the proposal without explaining what evidence would change the answer"
+      - "Does not distinguish prognostic association from surrogacy"
+      - "Is unaware that accelerated approval pathways using surrogates exist"
