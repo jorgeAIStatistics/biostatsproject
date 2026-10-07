@@ -22,20 +22,30 @@
 }
 
 .prose p {
-  margin: 0 0 1em;
+  margin: 0 0 1.05em;
+  text-wrap: pretty;
 }
 .prose--compact p {
   margin: 0 0 0.7em;
 }
 
+/* Section heading: a hairline above it, the way a typeset paper separates
+   sections. Gives long technical reading a clear structural beat. */
 .prose .md-h2 {
   position: relative;
-  margin: 2.4em 0 0.8em;
-  padding-top: 0.2em;
-  font-size: 1.42em;
+  margin: 2.6em 0 0.85em;
+  padding-top: 1.1em;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 1.5em;
   font-weight: var(--weight-semibold);
-  letter-spacing: -0.018em;
-  scroll-margin-top: calc(var(--topbar-height) + 16px);
+  letter-spacing: -0.021em;
+  line-height: 1.2;
+  text-wrap: balance;
+  scroll-margin-top: calc(var(--topbar-height) + 24px);
+}
+.prose .md-h2:first-child {
+  border-top: 0;
+  padding-top: 0;
 }
 .prose .md-h2:first-child {
   margin-top: 0;
@@ -57,16 +67,23 @@
 }
 .prose .md-h3,
 .prose h3 {
-  margin: 1.8em 0 0.6em;
-  font-size: 1.12em;
+  margin: 2em 0 0.55em;
+  font-size: 1.2em;
   font-weight: var(--weight-semibold);
-  letter-spacing: -0.01em;
-  scroll-margin-top: calc(var(--topbar-height) + 16px);
+  letter-spacing: -0.014em;
+  line-height: 1.3;
+  text-wrap: balance;
+  scroll-margin-top: calc(var(--topbar-height) + 24px);
 }
+/* Fourth level is a labelled run-in rather than another size step — at this
+   depth another near-identical size would add noise, not hierarchy. */
 .prose h4 {
-  margin: 1.4em 0 0.5em;
-  font-size: 1em;
-  font-weight: var(--weight-semibold);
+  margin: 1.6em 0 0.45em;
+  font-size: 0.82em;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
 }
 
 .prose ul,

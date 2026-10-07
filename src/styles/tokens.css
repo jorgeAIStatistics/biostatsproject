@@ -1,26 +1,51 @@
 /*
  * Design tokens — the single source of truth for colour, type, spacing,
  * radii, elevation and motion. Components reference only these variables.
- * Light theme is the default; [data-theme='dark'] overrides.
+ *
+ * Light is the flagship theme: a cool, slightly blue-grey clinical environment
+ * with deep graphite-navy type and a restrained clinical blue accent. Dark is
+ * designed as the night version of the same product, not an inversion of it.
+ *
+ * Two layers:
+ *   1. SEMANTIC SURFACES (--canvas, --panel, --rail …) — what a thing *is*.
+ *      Prefer these when writing new styles.
+ *   2. LEGACY ALIASES (--bg, --surface-2 …) — retained and retuned so existing
+ *      component CSS keeps working. Both resolve to the same colours.
+ *
+ * Colour guides attention; it does not decorate. Hierarchy comes from surface,
+ * spacing and type first, borders second, shadow last.
  */
 :root {
-  /* Typography */
+  /* ---------- Typography ---------- */
   --font-sans: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
+  /* Scale. The top end is stretched relative to the body size so headings
+     actually read as headings — the previous scale put page titles only 12px
+     above body text, which is why everything looked the same weight. */
   --text-2xs: 11px;
   --text-xs: 12px;
   --text-sm: 13px;
   --text-base: 14px;
   --text-md: 15px;
-  --text-prose: 16.5px;
-  --text-lg: 18px;
-  --text-xl: 21px;
-  --text-2xl: 26px;
-  --text-3xl: 32px;
+  --text-prose: 16.75px;
+  --text-lg: 19px;
+  --text-xl: 23px;
+  --text-2xl: 29px;
+  --text-3xl: 38px;
 
-  --leading-tight: 1.25;
-  --leading-snug: 1.4;
+  /* Roles. Use these in new work; they carry intent rather than a size. */
+  --type-display: var(--text-3xl);   /* hero / first-run headline */
+  --type-title: var(--text-2xl);     /* page title */
+  --type-heading: var(--text-lg);    /* section heading */
+  --type-subheading: var(--text-md); /* card / module title */
+  --type-body: var(--text-base);
+  --type-reading: var(--text-prose); /* long-form lesson prose */
+  --type-meta: var(--text-xs);       /* metadata, captions */
+  --type-micro: var(--text-2xs);     /* eyebrow / category label */
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.38;
   --leading-normal: 1.55;
   --leading-prose: 1.72;
 
@@ -29,7 +54,14 @@
   --weight-semibold: 600;
   --weight-bold: 680;
 
-  /* Spacing (4px grid) */
+  /* Optical tracking: tighter as type grows, looser as it shrinks. */
+  --tracking-display: -0.025em;
+  --tracking-title: -0.021em;
+  --tracking-heading: -0.014em;
+  --tracking-body: -0.004em;
+  --tracking-micro: 0.07em;
+
+  /* ---------- Spacing (4px grid) ---------- */
   --space-0: 0;
   --space-1: 4px;
   --space-2: 8px;
@@ -41,53 +73,80 @@
   --space-8: 40px;
   --space-9: 56px;
   --space-10: 72px;
+  --space-11: 96px;
 
-  /* Radii */
+  /* ---------- Radii ---------- */
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 999px;
 
-  /* Layout */
-  --sidebar-width: 256px;
-  --topbar-height: 52px;
-  --content-max: 1180px;
-  --prose-max: 760px;
+  /* ---------- Layout ---------- */
+  --sidebar-width: 254px;
+  --sidebar-width-collapsed: 60px;
+  --topbar-height: 54px;
+  --content-max: 1200px;
+  --prose-max: 72ch;
 
-  /* Motion */
+  /* ---------- Motion ---------- */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --duration-fast: 120ms;
-  --duration-base: 180ms;
-  --duration-slow: 260ms;
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 110ms;
+  --duration-base: 170ms;
+  --duration-slow: 250ms;
 
-  /* ---------- Light theme colours ---------- */
-  --bg: #fafaf9;
-  --bg-sidebar: #f4f4f2;
-  --surface: #ffffff;
-  --surface-2: #f6f6f4;
-  --surface-3: #efefec;
-  --surface-inset: #f3f3f1;
-  --overlay: rgba(18, 18, 20, 0.36);
+  /* ================= LIGHT THEME ================= */
 
-  --border: #e6e6e2;
-  --border-strong: #d6d6d0;
-  --border-focus: #2f5bd3;
+  /* --- Semantic surfaces, lightest to deepest --- */
+  --canvas: #f6f8fb;          /* application background */
+  --panel: #ffffff;           /* primary content surface */
+  --panel-subtle: #eef3f8;    /* tonal grouping without a border */
+  --panel-inset: #f3f6fa;     /* wells, code, read-only regions */
+  --rail: #f1f5f9;            /* sidebar */
+  --rail-deep: #e8eef5;       /* sidebar sub-surface */
 
-  --text: #18181b;
-  --text-2: #4f4f57;
-  --text-3: #6f6f78;
-  --text-4: #a0a0a8;
+  /* Interaction states */
+  --state-hover: #eef3f9;
+  --state-active: #e4ecf6;
+  --state-selected: #e6eefb;
+  --state-focus-ring: rgba(26, 86, 176, 0.26);
+
+  /* --- Legacy aliases (retuned, same colours) --- */
+  --bg: var(--canvas);
+  --bg-sidebar: var(--rail);
+  --surface: var(--panel);
+  --surface-2: var(--panel-subtle);
+  --surface-3: var(--rail-deep);
+  --surface-inset: var(--panel-inset);
+  --overlay: rgba(14, 22, 36, 0.4);
+
+  /* --- Borders: cool, low-contrast, doing structural work --- */
+  --border: #dfe6ef;
+  --border-subtle: #e9eef5;
+  --border-strong: #c7d3e2;
+  --border-focus: #1a56b0;
+
+  /* --- Type colour: deep graphite-navy, never pure black --- */
+  --text: #16202e;
+  --text-2: #4a5a70;
+  --text-3: #5f6f85;
+  --text-4: #6e7d92;
   --text-inverse: #ffffff;
 
-  --accent: #2f5bd3;
-  --accent-hover: #2549b3;
-  --accent-soft: #edf1fd;
-  --accent-soft-2: #dde5fb;
-  --accent-text: #1f44a8;
+  /* --- Clinical blue: the single primary accent --- */
+  --accent: #1a56b0;
+  --accent-hover: #164a98;
+  --accent-active: #123d7e;
+  --accent-soft: #eaf1fc;
+  --accent-soft-2: #d8e5f8;
+  --accent-text: #15499b;
+  --accent-rail: #1a56b0;
 
+  /* --- Semantic states --- */
   --success: #16794a;
-  --success-soft: #e7f5ed;
+  --success-soft: #e6f4ec;
   --success-text: #0f5c37;
   --warning: #a35f00;
   --warning-soft: #fdf3e2;
@@ -95,15 +154,23 @@
   --danger: #b42318;
   --danger-soft: #fdecea;
   --danger-text: #8f1c13;
+
+  /* Analytical / scientific secondary — data, provenance, standards. */
   --info: #0e6e8c;
-  --info-soft: #e5f4f8;
+  --info-soft: #e4f2f7;
   --info-text: #0b5670;
+  --data: var(--info);
+  --data-soft: var(--info-soft);
+  --data-text: var(--info-text);
+
   --violet: #6b4fc8;
   --violet-soft: #f0ecfb;
   --violet-text: #533b9f;
 
-  /* Data visualisation — categorical slots in fixed order (validated for CVD
-     separation with the dataviz palette validator; never cycle, fold extras into "Other") */
+  /* --- Data visualisation ---
+     Categorical slots in fixed order, validated for colour-vision separation.
+     Never cycle; fold extras into --viz-other. Hues unchanged from the
+     validated set; only the chart chrome moves to the cool neutrals. */
   --viz-1: #2a78d6;
   --viz-2: #eb6834;
   --viz-3: #1baf7a;
@@ -112,140 +179,163 @@
   --viz-6: #008300;
   --viz-7: #4a3aa7;
   --viz-8: #e34948;
-  --viz-other: #8b8b93;
-  --viz-seq-1: #cde2fb;
-  --viz-seq-2: #86b6ef;
-  --viz-seq-3: #3987e5;
-  --viz-seq-4: #1c5cab;
-  --viz-seq-5: #0d366b;
-  --viz-surface: #fcfcfb;
-  --viz-grid: #ececea;
-  --viz-axis: #9b9ba3;
-  --viz-text: #5b5b63;
+  --viz-other: #8591a3;
+  --viz-seq-1: #dbe8fa;
+  --viz-seq-2: #9dc0ef;
+  --viz-seq-3: #4f8fe0;
+  --viz-seq-4: #205ba8;
+  --viz-seq-5: #0f3566;
+  --viz-surface: #ffffff;
+  --viz-grid: #e7edf4;
+  --viz-axis: #93a1b3;
+  --viz-text: #5f6f85;
 
-  /* Mastery scale (not started → mastered) */
-  --mastery-0: #e4e4e0;
-  --mastery-1: #c9d5f5;
-  --mastery-2: #95b0ee;
-  --mastery-3: #5b85e3;
-  --mastery-4: #2f5bd3;
-  --mastery-5: #1b3a91;
+  /* --- Mastery scale (not started → mastered) --- */
+  --mastery-0: #e3e9f1;
+  --mastery-1: #c9daf3;
+  --mastery-2: #96b7e6;
+  --mastery-3: #5b8ed4;
+  --mastery-4: #2a63b4;
+  --mastery-5: #17407d;
 
-  /* Syntax highlighting */
-  --code-bg: #f7f7f5;
-  --code-border: #e8e8e4;
-  --code-text: #24242a;
-  --code-line: #a8a8b0;
-  --code-highlight: rgba(47, 91, 211, 0.08);
-  --tok-keyword: #1d4fc4;
-  --tok-string: #0f7b4f;
-  --tok-number: #a64d00;
-  --tok-comment: #8a8a92;
-  --tok-function: #7a3fc4;
-  --tok-variable: #24242a;
-  --tok-macro: #b1336b;
-  --tok-operator: #5b5b63;
-  --tok-type: #0e6e8c;
-  --tok-meta: #8a5a00;
+  /* --- Code --- */
+  --code-bg: #f6f8fb;
+  --code-border: #e4eaf2;
+  --code-text: #1b2534;
+  --code-line: #a3b0c2;
+  --code-highlight: rgba(26, 86, 176, 0.075);
+  --tok-keyword: #1a4fae;
+  --tok-string: #0b6b45;
+  --tok-number: #9a4a00;
+  --tok-comment: #7d8b9d;
+  --tok-function: #6d35bd;
+  --tok-variable: #1b2534;
+  --tok-macro: #a62a63;
+  --tok-operator: #5f6f85;
+  --tok-type: #0b6283;
+  --tok-meta: #7d5300;
 
-  /* Elevation */
-  --shadow-xs: 0 1px 1px rgba(16, 16, 20, 0.04);
-  --shadow-sm: 0 1px 2px rgba(16, 16, 20, 0.06), 0 1px 1px rgba(16, 16, 20, 0.03);
-  --shadow-md: 0 4px 12px rgba(16, 16, 20, 0.08), 0 1px 3px rgba(16, 16, 20, 0.05);
-  --shadow-lg: 0 16px 40px rgba(16, 16, 20, 0.14), 0 2px 8px rgba(16, 16, 20, 0.06);
-  --ring: 0 0 0 3px rgba(47, 91, 211, 0.22);
+  /* --- Elevation: subtle and rare. Structure comes from surface + border. --- */
+  --shadow-xs: 0 1px 1px rgba(16, 28, 48, 0.035);
+  --shadow-sm: 0 1px 2px rgba(16, 28, 48, 0.05), 0 1px 1px rgba(16, 28, 48, 0.03);
+  --shadow-md: 0 4px 14px rgba(16, 28, 48, 0.07), 0 1px 3px rgba(16, 28, 48, 0.04);
+  --shadow-lg: 0 18px 44px rgba(16, 28, 48, 0.13), 0 2px 8px rgba(16, 28, 48, 0.05);
+  --ring: 0 0 0 3px var(--state-focus-ring);
 
   color-scheme: light;
 }
 
+/* ================= DARK THEME ================= */
+/* The night version of the same clinical product: cool blue-graphite, never
+   pure black, with the same surface hierarchy canvas → rail → panel → inset. */
 [data-theme='dark'] {
-  --bg: #0f1012;
-  --bg-sidebar: #131417;
-  --surface: #17181b;
-  --surface-2: #1c1d21;
-  --surface-3: #24262b;
-  --surface-inset: #121315;
-  --overlay: rgba(0, 0, 0, 0.55);
+  --canvas: #0e131b;
+  --panel: #161c26;
+  --panel-subtle: #1b222e;
+  --panel-inset: #11161f;
+  --rail: #121822;
+  --rail-deep: #1a212c;
 
-  --border: #2a2c31;
-  --border-strong: #3a3d44;
-  --border-focus: #7c9cff;
+  --state-hover: #1d2531;
+  --state-active: #232c3a;
+  --state-selected: #1b2942;
+  --state-focus-ring: rgba(127, 169, 255, 0.3);
 
-  --text: #ececee;
-  --text-2: #b1b3ba;
-  --text-3: #8d9098;
-  --text-4: #62656d;
-  --text-inverse: #0f1012;
+  --bg: var(--canvas);
+  --bg-sidebar: var(--rail);
+  --surface: var(--panel);
+  --surface-2: var(--panel-subtle);
+  --surface-3: var(--rail-deep);
+  --surface-inset: var(--panel-inset);
+  --overlay: rgba(4, 7, 12, 0.62);
 
-  --accent: #7c9cff;
-  --accent-hover: #98b2ff;
-  --accent-soft: rgba(124, 156, 255, 0.12);
-  --accent-soft-2: rgba(124, 156, 255, 0.2);
-  --accent-text: #a9bdff;
+  --border: #272f3d;
+  --border-subtle: #1f2733;
+  --border-strong: #3a4557;
+  --border-focus: #7fa9ff;
+
+  --text: #e6eaf0;
+  --text-2: #a7b2c2;
+  --text-3: #8591a3;
+  --text-4: #6b7789;
+  --text-inverse: #0e131b;
+
+  --accent: #7fa9ff;
+  --accent-hover: #9ec0ff;
+  --accent-active: #b4cfff;
+  --accent-soft: rgba(127, 169, 255, 0.13);
+  --accent-soft-2: rgba(127, 169, 255, 0.22);
+  --accent-text: #9ec3f5;
+  --accent-rail: #7fa9ff;
 
   --success: #4cc38a;
-  --success-soft: rgba(76, 195, 138, 0.12);
+  --success-soft: rgba(76, 195, 138, 0.13);
   --success-text: #7dd9ac;
   --warning: #e5a93b;
-  --warning-soft: rgba(229, 169, 59, 0.12);
+  --warning-soft: rgba(229, 169, 59, 0.13);
   --warning-text: #f0c46f;
   --danger: #f47067;
-  --danger-soft: rgba(244, 112, 103, 0.12);
+  --danger-soft: rgba(244, 112, 103, 0.13);
   --danger-text: #f89c95;
+
   --info: #4bb4d6;
-  --info-soft: rgba(75, 180, 214, 0.12);
+  --info-soft: rgba(75, 180, 214, 0.13);
   --info-text: #86cfe6;
+  --data: var(--info);
+  --data-soft: var(--info-soft);
+  --data-text: var(--info-text);
+
   --violet: #a78bfa;
-  --violet-soft: rgba(167, 139, 250, 0.13);
+  --violet-soft: rgba(167, 139, 250, 0.14);
   --violet-text: #c4b1fc;
 
-  --viz-1: #3987e5;
-  --viz-2: #d95926;
-  --viz-3: #199e70;
-  --viz-4: #c98500;
-  --viz-5: #d55181;
-  --viz-6: #008300;
+  --viz-1: #4f94e8;
+  --viz-2: #e0713e;
+  --viz-3: #2bb98a;
+  --viz-4: #d99c1a;
+  --viz-5: #e086ab;
+  --viz-6: #1f9e3f;
   --viz-7: #9085e9;
   --viz-8: #e66767;
-  --viz-other: #7d7f86;
-  --viz-seq-1: #184f95;
-  --viz-seq-2: #256abf;
-  --viz-seq-3: #3987e5;
-  --viz-seq-4: #6da7ec;
-  --viz-seq-5: #b7d3f6;
-  --viz-surface: #17181b;
-  --viz-grid: #26282d;
-  --viz-axis: #5f636b;
-  --viz-text: #a3a6ad;
+  --viz-other: #78839a;
+  --viz-seq-1: #16365f;
+  --viz-seq-2: #1f5190;
+  --viz-seq-3: #3b7fd4;
+  --viz-seq-4: #76aae9;
+  --viz-seq-5: #bcd8f8;
+  --viz-surface: #161c26;
+  --viz-grid: #232b38;
+  --viz-axis: #5d6878;
+  --viz-text: #a7b2c2;
 
-  --mastery-0: #2a2c31;
-  --mastery-1: #26345c;
-  --mastery-2: #33508f;
-  --mastery-3: #4a6fcc;
-  --mastery-4: #7c9cff;
-  --mastery-5: #b5c7ff;
+  --mastery-0: #272f3d;
+  --mastery-1: #24375c;
+  --mastery-2: #2f538f;
+  --mastery-3: #4376cc;
+  --mastery-4: #7fa9ff;
+  --mastery-5: #b6d0ff;
 
-  --code-bg: #141518;
-  --code-border: #26282d;
-  --code-text: #dcdde1;
-  --code-line: #4d5058;
-  --code-highlight: rgba(124, 156, 255, 0.1);
-  --tok-keyword: #8fb0ff;
+  --code-bg: #11161f;
+  --code-border: #242c39;
+  --code-text: #dbe1ea;
+  --code-line: #4c5768;
+  --code-highlight: rgba(127, 169, 255, 0.11);
+  --tok-keyword: #93b5ff;
   --tok-string: #7fd4a4;
   --tok-number: #f2b27a;
-  --tok-comment: #6f737c;
+  --tok-comment: #6f7a8c;
   --tok-function: #c9a7ff;
-  --tok-variable: #dcdde1;
   --tok-macro: #f59ac2;
-  --tok-operator: #a3a6ad;
+  --tok-variable: #dbe1ea;
+  --tok-operator: #a7b2c2;
   --tok-type: #7fd0e8;
   --tok-meta: #e6c07b;
 
   --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
-  --ring: 0 0 0 3px rgba(124, 156, 255, 0.28);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.36);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.42), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 52px rgba(0, 0, 0, 0.58), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --ring: 0 0 0 3px var(--state-focus-ring);
 
   color-scheme: dark;
 }

@@ -1,6 +1,6 @@
 /* ============ Buttons ============ */
 .btn {
-  --btn-h: 32px;
+  --btn-h: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -18,15 +18,15 @@
   text-decoration: none;
   transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
-  box-shadow: var(--shadow-xs);
   user-select: none;
 }
 .btn:hover {
-  background: var(--surface-2);
+  background: var(--state-hover);
+  border-color: var(--border-strong);
   text-decoration: none;
 }
 .btn:active {
-  background: var(--surface-3);
+  background: var(--state-active);
 }
 .btn:disabled,
 .btn[aria-disabled='true'] {
@@ -204,17 +204,35 @@
 
 /* ============ Cards ============ */
 .card {
-  background: var(--surface);
+  background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius-lg);
   min-width: 0;
+}
+
+/* Tonal grouping with no border — for sections that should read as one field
+   of content rather than another box. */
+.card--quiet {
+  background: var(--panel-subtle);
+  border-color: transparent;
+}
+
+/* The dominant module on a screen: the single thing the page is asking you to
+   do. Only one per view. */
+.card--feature {
+  background: var(--panel);
+  border-color: var(--border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
 }
 .card--pad {
   padding: var(--space-5);
 }
 .card--pad-sm {
   padding: var(--space-4);
+}
+.card--pad-lg {
+  padding: var(--space-6);
 }
 .card--interactive {
   display: block;
@@ -225,12 +243,16 @@
 }
 .card--interactive:hover {
   border-color: var(--border-strong);
-  box-shadow: var(--shadow-sm);
+  background: var(--state-hover);
   text-decoration: none;
+}
+.card--interactive:active {
+  background: var(--state-active);
 }
 .card--flat {
   box-shadow: none;
-  background: var(--surface-2);
+  background: var(--panel-subtle);
+  border-color: var(--border-subtle);
 }
 .card__header {
   display: flex;
@@ -238,25 +260,28 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
 }
 .card__title {
-  font-size: var(--text-base);
+  font-size: var(--type-subheading);
   font-weight: var(--weight-semibold);
+  letter-spacing: -0.009em;
+  line-height: 1.3;
 }
 .card__subtitle {
   font-size: var(--text-xs);
   color: var(--text-3);
-  margin-top: 2px;
+  margin-top: 3px;
+  line-height: var(--leading-snug);
 }
 .card__body {
   padding: var(--space-5);
 }
 .card__footer {
   padding: var(--space-3) var(--space-5);
-  border-top: 1px solid var(--border);
-  background: var(--surface-2);
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--panel-subtle);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 /* ============ Tabs & segmented control ============ */
@@ -454,17 +479,21 @@
 }
 
 /* ============ Callouts ============ */
+/* Callouts read as typeset annotations in a scientific text, not web alerts:
+   a weighted rule on the leading edge, a quiet ground, and a small-caps marker.
+   Saturated fills are reserved for the two states that are genuinely alarming. */
 .callout {
   --callout-accent: var(--text-3);
-  --callout-bg: var(--surface-2);
+  --callout-bg: var(--panel-subtle);
   --callout-text: var(--text-2);
   display: flex;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-xs) var(--radius-md) var(--radius-md) var(--radius-xs);
   background: var(--callout-bg);
-  border: 1px solid color-mix(in srgb, var(--callout-accent) 22%, transparent);
-  margin: var(--space-5) 0;
+  border: 1px solid var(--border-subtle);
+  border-left: 2.5px solid var(--callout-accent);
+  margin: var(--space-6) 0;
 }
 .callout__icon {
   flex-shrink: 0;
@@ -480,26 +509,28 @@
   min-width: 0;
 }
 .callout__title {
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   font-weight: var(--weight-semibold);
   color: var(--text);
-  margin-bottom: 4px;
+  letter-spacing: -0.008em;
+  margin-bottom: 5px;
+  line-height: 1.35;
 }
 .callout__meta {
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: 0.05em;
+  font-size: var(--type-micro);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-micro);
   text-transform: uppercase;
   color: var(--callout-accent);
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 .callout--note {
   --callout-accent: var(--info);
-  --callout-bg: var(--info-soft);
+  --callout-bg: var(--panel-subtle);
 }
 .callout--tip {
   --callout-accent: var(--success);
-  --callout-bg: var(--success-soft);
+  --callout-bg: var(--panel-subtle);
 }
 .callout--warning {
   --callout-accent: var(--warning);
@@ -511,23 +542,40 @@
 }
 .callout--industry {
   --callout-accent: var(--violet);
-  --callout-bg: var(--violet-soft);
+  --callout-bg: var(--panel-subtle);
 }
 .callout--ai {
   --callout-accent: var(--warning);
   --callout-bg: var(--surface-2);
 }
+/* Standards markers. These are claims about what a regulator or a standard
+   actually requires, so they are typeset as citations — a weighted rule and a
+   small-caps marker on a quiet ground — rather than as alerts. The three kinds
+   are distinguished by the rule colour, which is the only thing that needs to
+   differ at a glance. */
 .callout--official {
   --callout-accent: var(--accent);
-  --callout-bg: var(--accent-soft);
+  --callout-bg: var(--panel-subtle);
+  border-left-width: 3px;
 }
 .callout--convention {
-  --callout-accent: var(--text-3);
-  --callout-bg: var(--surface-2);
+  --callout-accent: var(--text-4);
+  --callout-bg: var(--panel-subtle);
 }
 .callout--simplification {
   --callout-accent: var(--warning);
-  --callout-bg: var(--warning-soft);
+  --callout-bg: var(--panel-subtle);
+}
+/* The marker carries the weight, so it gets a touch more presence. */
+.callout--official .callout__meta,
+.callout--convention .callout__meta,
+.callout--simplification .callout__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 5px;
+  margin-bottom: 7px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 /* ============ Disclosure (expandable explanations) ============ */

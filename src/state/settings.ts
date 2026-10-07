@@ -17,6 +17,8 @@ export interface SettingsState {
   /** In-browser Python (Pyodide) allowed to download on demand. */
   allowPyodide: boolean;
   sidebarCollapsed: boolean;
+  /** Sidebar groups the learner has folded away, by group label. */
+  navCollapsed: string[];
   onboarded: boolean;
   /** Preferred language tab in multi-language code blocks. */
   codeTab: string;
@@ -35,6 +37,7 @@ export const useSettings = create<SettingsState>()(
       denseTables: false,
       allowPyodide: false,
       sidebarCollapsed: false,
+      navCollapsed: [],
       onboarded: false,
       codeTab: 'SAS',
       set: (patch) => set(patch),

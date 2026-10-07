@@ -238,93 +238,103 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <div className="dash__kpis">
-        <Card pad="sm" className="kpi">
+      <div className="dash__stats">
+        <div className="kpi">
           <span className="kpi__icon"><Target /></span>
-          <div>
-            <div className="kpi__value num">{skillsCompetent}</div>
-            <div className="kpi__label">skills at Competent or above</div>
+          <div style={{ minWidth: 0 }}>
+            <div className="kpi__value">{skillsCompetent}</div>
+            <div className="kpi__label muted">skills at Competent or above</div>
           </div>
-        </Card>
-        <Card pad="sm" className="kpi">
+        </div>
+        <div className="kpi">
           <span className="kpi__icon"><Clock /></span>
-          <div>
-            <div className="kpi__value num">
+          <div style={{ minWidth: 0 }}>
+            <div className="kpi__value">
               {(weekMinutes / 60).toFixed(1)}
               <span className="kpi__unit"> / {settings.hoursPerWeek} h</span>
             </div>
-            <div className="kpi__label">studied in the last 7 days</div>
+            <div className="kpi__label muted">studied in the last 7 days</div>
           </div>
-        </Card>
-        <Card pad="sm" className="kpi">
+        </div>
+        <div className="kpi">
           <span className="kpi__icon"><Flame /></span>
-          <div>
-            <div className="kpi__value num">{st}</div>
-            <div className="kpi__label">day streak</div>
+          <div style={{ minWidth: 0 }}>
+            <div className="kpi__value">{st}</div>
+            <div className="kpi__label muted">day streak</div>
           </div>
-        </Card>
-        <Link to="/review" className="card card--interactive card--pad-sm kpi">
+        </div>
+        <Link to="/review" className="kpi">
           <span className="kpi__icon"><Repeat /></span>
-          <div>
-            <div className="kpi__value num">{due}</div>
-            <div className="kpi__label">items due for review</div>
+          <div style={{ minWidth: 0 }}>
+            <div className="kpi__value">{due}</div>
+            <div className="kpi__label muted">items due for review</div>
           </div>
         </Link>
       </div>
 
+      {next && (
+        <Card tone="feature" className="dash__continue">
+          <div className="dash__continue-main">
+            <div style={{ minWidth: 0 }}>
+              <div className="dash__continue-eyebrow">
+                <Badge tone="accent" icon={<BookOpen />}>
+                  Continue training
+                </Badge>
+                <span className="eyebrow">
+                  {LAB_BY_ID[next.lab]?.title} · {next.moduleTitle}
+                </span>
+              </div>
+              <Link to={`/learn/${next.lab}/${next.id}`} className="dash__continue-title">
+                {next.title}
+              </Link>
+              <p className="dash__continue-summary">{next.summary}</p>
+              <div className="dash__continue-meta">
+                <span className="row gap-1">
+                  <Clock size={13} /> {next.minutes} min
+                </span>
+                <span>{next.difficulty}</span>
+                <span>Next in your plan order, weighted toward your career focus</span>
+              </div>
+            </div>
+            <div className="dash__continue-cta">
+              <ButtonLink to={`/learn/${next.lab}/${next.id}`} variant="primary" size="lg" iconRight={<ArrowRight />}>
+                Continue
+              </ButtonLink>
+              <Link to="/path" style={{ fontSize: 12.5 }}>
+                See the full path →
+              </Link>
+            </div>
+          </div>
+          {week && (
+            <div className="dash__continue-plan">
+              <div className="row gap-2" style={{ justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                <span className="eyebrow">
+                  Week {week.n} plan{week.assessment ? ' · integrated assessment' : ''}
+                </span>
+                <Link to="/plan" style={{ fontSize: 12.5 }}>
+                  Full plan →
+                </Link>
+              </div>
+              <ul className="list-reset week-strip__list">
+                {week.lessons.map((l) => (
+                  <li key={l.id}>
+                    <Link to={`/learn/${l.lab}/${l.id}`} className="week-strip__item">
+                      {completed.has(l.id) ? <CircleCheck size={15} color="var(--success)" /> : <CircleDot size={15} color="var(--text-4)" />}
+                      <span className="grow">{l.title}</span>
+                      <span className="muted" style={{ fontSize: 11.5 }}>
+                        {LAB_BY_ID[l.lab]?.short} · {l.minutes}m
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Card>
+      )}
+
       <div className="dash__grid">
         <div className="stack gap-5" style={{ minWidth: 0 }}>
-          <Card>
-            <CardHeader title="Recommended next" subtitle="Next lesson in your plan order, weighted toward your career focus" icon={<BookOpen size={16} />} />
-            <div className="card__body">
-              {next ? (
-                <div className="next-lesson">
-                  <div className="stack gap-1" style={{ minWidth: 0 }}>
-                    <span className="eyebrow">
-                      {LAB_BY_ID[next.lab]?.title} · {next.moduleTitle}
-                    </span>
-                    <Link to={`/learn/${next.lab}/${next.id}`} className="next-lesson__title">
-                      {next.title}
-                    </Link>
-                    <span className="subtle" style={{ fontSize: 13.5 }}>
-                      {next.summary}
-                    </span>
-                  </div>
-                  <ButtonLink to={`/learn/${next.lab}/${next.id}`} variant="primary" iconRight={<ArrowRight />}>
-                    Continue
-                  </ButtonLink>
-                </div>
-              ) : (
-                <p className="muted">You have read every lesson. Keep your skills warm in the review queue and interview center.</p>
-              )}
-              {week && (
-                <div className="week-strip">
-                  <div className="row gap-2" style={{ justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>
-                      Week {week.n} plan{week.assessment ? ' · integrated assessment week' : ''}
-                    </span>
-                    <Link to="/plan" style={{ fontSize: 12.5 }}>
-                      Full plan →
-                    </Link>
-                  </div>
-                  <ul className="list-reset week-strip__list">
-                    {week.lessons.map((l) => (
-                      <li key={l.id}>
-                        <Link to={`/learn/${l.lab}/${l.id}`} className="week-strip__item">
-                          {completed.has(l.id) ? <CircleCheck size={15} color="var(--success)" /> : <CircleDot size={15} color="var(--text-4)" />}
-                          <span className="grow">{l.title}</span>
-                          <span className="muted" style={{ fontSize: 11.5 }}>
-                            {LAB_BY_ID[l.lab]?.short} · {l.minutes}m
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </Card>
-
           <Card>
             <CardHeader title="Weekly activity" subtitle="Minutes of active study per day (last 14 days)" />
             <div className="card__body">

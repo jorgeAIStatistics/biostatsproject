@@ -37,38 +37,55 @@
 .dash__steps b {
   color: var(--text);
 }
-.dash__kpis {
+/* A single compact instrument strip. These are supporting readings, not the
+   headline — four equal hero cards of zeros told a new learner nothing. */
+.dash__stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-4);
-  margin-bottom: var(--space-5);
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  overflow: hidden;
+  margin-bottom: var(--space-6);
 }
 .kpi {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
   color: var(--text);
   text-decoration: none !important;
+  border-left: 1px solid var(--border-subtle);
+  min-width: 0;
+  transition: background var(--duration-fast);
+}
+.kpi:first-child {
+  border-left: 0;
+}
+a.kpi:hover {
+  background: var(--state-hover);
 }
 .kpi__icon {
   display: inline-grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-subtle);
+  color: var(--text-3);
   flex-shrink: 0;
 }
 .kpi__icon svg {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
 }
 .kpi__value {
-  font-size: 23px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  font-size: 20px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.022em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
 .kpi__unit {
   font-size: 13px;
@@ -76,7 +93,8 @@
   color: var(--text-3);
 }
 .kpi__label {
-  font-size: 12.5px;
+  font-size: var(--type-meta);
+  line-height: 1.3;
   color: var(--text-3);
 }
 .dash__grid {
@@ -217,5 +235,102 @@
   }
   .dash__level {
     align-items: flex-start;
+  }
+}
+
+
+/* ---------- Continue training: the dominant module ----------
+   One thing on this screen should be obviously the next action. */
+.dash__continue {
+  margin-bottom: var(--space-6);
+  overflow: hidden;
+}
+.dash__continue-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-6);
+  align-items: center;
+  padding: var(--space-6);
+}
+.dash__continue-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.dash__continue-title {
+  display: block;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.021em;
+  line-height: 1.22;
+  color: var(--text);
+  text-decoration: none;
+  text-wrap: balance;
+}
+.dash__continue-title:hover {
+  color: var(--accent-text);
+  text-decoration: none;
+}
+.dash__continue-summary {
+  margin-top: var(--space-2);
+  font-size: var(--text-md);
+  color: var(--text-2);
+  line-height: var(--leading-normal);
+  max-width: 62ch;
+  text-wrap: pretty;
+}
+.dash__continue-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-4);
+  font-size: var(--type-meta);
+  color: var(--text-3);
+}
+.dash__continue-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+/* The week strip sits inside the same module, on a tonal ground, so the plan
+   reads as part of the same action rather than another card. */
+.dash__continue-plan {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--panel-subtle);
+  padding: var(--space-4) var(--space-6) var(--space-5);
+}
+
+@media (max-width: 900px) {
+  .dash__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .kpi:nth-child(odd) {
+    border-left: 0;
+  }
+  .kpi:nth-child(n + 3) {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .dash__continue-main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+  .dash__continue-cta {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .dash__stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kpi {
+    border-left: 0;
+  }
+  .kpi + .kpi {
+    border-top: 1px solid var(--border-subtle);
   }
 }

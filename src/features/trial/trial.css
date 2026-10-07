@@ -1,3 +1,51 @@
+/* ---------- Study context bar ----------
+   A fixed frame of reference for the whole simulator: protocol metadata laid
+   out as a dense instrument readout rather than prose. */
+.study-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  margin: 0 0 var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  overflow: hidden;
+}
+.study-bar__cell {
+  padding: var(--space-3) var(--space-4);
+  border-left: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.study-bar__cell dt {
+  font-size: var(--type-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-micro);
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 3px;
+}
+.study-bar__cell dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+.study-bar__cell--status dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--success-text);
+}
+.study-bar__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--success);
+  flex-shrink: 0;
+}
+
 .trial-overview {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);

@@ -12,6 +12,7 @@ import {
   BookmarkCheck,
   NotebookPen,
   ChevronRight,
+  ChevronDown,
   Keyboard,
 } from 'lucide-react';
 import { NAV } from './nav';
@@ -36,13 +37,50 @@ function useDueReviews() {
 function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const due = useDueReviews();
+  const navCollapsed = useSettings((s) => s.navCollapsed);
+  const setSettings = useSettings((s) => s.set);
+
+  const toggleGroup = (label: string) =>
+    setSettings({
+      navCollapsed: navCollapsed.includes(label) ? navCollapsed.filter((l) => l !== label) : [...navCollapsed, label],
+    });
+
+  const renderItem = (item: (typeof NAV)[number]['items'][number]) => {
+    const active = item.prefix ? location.pathname.startsWith(item.prefix) : location.pathname === item.to;
+    const Icon = item.icon;
+    return (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        className={clsx('sidebar__item', active && 'is-active')}
+        aria-current={active ? 'page' : undefined}
+        onClick={onNavigate}
+      >
+        <Icon className="sidebar__icon" />
+        <span className="grow">{item.label}</span>
+        {item.badge === 'review' && due > 0 && (
+          <span className="sidebar__count num" aria-label={`${due} due for review`}>
+            {due}
+          </span>
+        )}
+      </NavLink>
+    );
+  };
+
   return (
     <nav className="sidebar" aria-label="Main navigation">
       <Link to="/" className="sidebar__brand" onClick={onNavigate}>
         <span className="sidebar__logo" aria-hidden="true">
-          <svg viewBox="0 0 32 32" width="26" height="26">
-            <rect width="32" height="32" rx="7" fill="var(--accent)" />
-            <path d="M7 21.5h3.2l2.3-7 3.4 11 3.2-15 2.4 11H25" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          <svg viewBox="0 0 32 32" width="27" height="27">
+            <rect width="32" height="32" rx="8" fill="var(--accent)" />
+            <path
+              d="M6.5 21.2h3.1l2.2-6.6 3.3 10.4 3.1-14.2 2.3 10.4h4.9"
+              fill="none"
+              stroke="#fff"
+              strokeWidth="2.1"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </span>
         <span className="sidebar__brand-text">
@@ -51,30 +89,38 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </span>
       </Link>
       <div className="sidebar__scroll">
-        {NAV.map((group, gi) => (
-          <div key={gi} className="sidebar__group">
-            {group.label && <div className="sidebar__label">{group.label}</div>}
-            {group.items.map((item) => {
-              const active = item.prefix ? location.pathname.startsWith(item.prefix) : location.pathname === item.to;
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={clsx('sidebar__item', active && 'is-active')}
-                  aria-current={active ? 'page' : undefined}
-                  onClick={onNavigate}
-                >
-                  <Icon className="sidebar__icon" />
-                  <span className="grow">{item.label}</span>
-                  {item.badge === 'review' && due > 0 && <span className="sidebar__count num">{due}</span>}
-                </NavLink>
-              );
-            })}
-          </div>
-        ))}
+        {NAV.map((group, gi) => {
+          // Groups are foldable so a daily user can quiet the sections they are
+          // not working in. The group holding the current route never folds, so
+          // a collapsed group can never hide where you actually are.
+          const hasActive = group.items.some((i) =>
+            i.prefix ? location.pathname.startsWith(i.prefix) : location.pathname === i.to,
+          );
+          const foldable = !!group.label && group.collapsible !== false;
+          const open = !foldable || hasActive || !navCollapsed.includes(group.label!);
+          return (
+            <div key={gi} className="sidebar__group">
+              {group.label &&
+                (foldable ? (
+                  <button
+                    type="button"
+                    className="sidebar__label sidebar__group-toggle"
+                    aria-expanded={open}
+                    onClick={() => toggleGroup(group.label!)}
+                  >
+                    <span>{group.label}</span>
+                    <ChevronDown className="sidebar__chevron" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <div className="sidebar__label">{group.label}</div>
+                ))}
+              {open && group.items.map(renderItem)}
+            </div>
+          );
+        })}
       </div>
       <div className="sidebar__foot">
+        <span className="sidebar__foot-dot" aria-hidden="true" />
         <span>Synthetic data · educational use</span>
       </div>
     </nav>

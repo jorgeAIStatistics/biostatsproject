@@ -169,13 +169,30 @@ export function Kbd({ children }: { children: ReactNode }) {
 /* ---------------------------------- Card ----------------------------------- */
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  pad?: 'none' | 'sm' | 'md';
+  pad?: 'none' | 'sm' | 'md' | 'lg';
   flat?: boolean;
+  /**
+   * `quiet`   — tonal grouping, no border: reads as a field of content.
+   * `feature` — the single dominant module on a screen.
+   */
+  tone?: 'quiet' | 'feature';
 }
 
-export function Card({ pad = 'none', flat, className, children, ...rest }: CardProps) {
+export function Card({ pad = 'none', flat, tone, className, children, ...rest }: CardProps) {
   return (
-    <div className={clsx('card', pad === 'md' && 'card--pad', pad === 'sm' && 'card--pad-sm', flat && 'card--flat', className)} {...rest}>
+    <div
+      className={clsx(
+        'card',
+        pad === 'md' && 'card--pad',
+        pad === 'sm' && 'card--pad-sm',
+        pad === 'lg' && 'card--pad-lg',
+        flat && 'card--flat',
+        tone === 'quiet' && 'card--quiet',
+        tone === 'feature' && 'card--feature',
+        className,
+      )}
+      {...rest}
+    >
       {children}
     </div>
   );

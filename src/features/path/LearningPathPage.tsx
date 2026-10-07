@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import clsx from 'clsx';
-import { CircleCheck, CircleDot, Circle, Clock, Search } from 'lucide-react';
+import { CircleCheck, CircleDot, Circle, Clock, Search, Check } from 'lucide-react';
 import { usePage } from '../../components/layout/page';
 import { modules, lessons } from '../../content/registry';
 import { LABS, LAB_BY_ID, TRACKS } from '../../content/labs';
@@ -86,10 +86,16 @@ export default function LearningPathPage() {
           if (phaseModules.length === 0) return null;
           const phaseLessons = phaseModules.flatMap((m) => m.lessons);
           const phaseDone = phaseLessons.filter((l) => progress[l.id]?.completedAt).length;
+          // Phase state drives the rail, so the path reads as a progression
+          // rather than a list: finished phases are solid, the one you are in is
+          // ringed, and later phases recede.
+          const complete = phaseDone === phaseLessons.length;
+          const started = phaseDone > 0;
+          const state = complete ? 'is-complete' : started ? 'is-current' : 'is-upcoming';
           return (
-            <section key={phase.level} className="phase">
+            <section key={phase.level} className={`phase ${state}`}>
               <div className="phase__rail">
-                <span className="phase__num num">{phase.level}</span>
+                <span className="phase__num num">{complete ? <Check size={15} strokeWidth={3} /> : phase.level}</span>
               </div>
               <div className="phase__body">
                 <div className="phase__head">

@@ -127,6 +127,27 @@ export default function LessonPage() {
     };
   }, [lesson, addLessonTime]);
 
+  // Reading progress across the article, for the rule under the top bar. Purely
+  // presentational — it never writes to progress state.
+  const [readPct, setReadPct] = useState(0);
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      const total = el.offsetHeight - window.innerHeight * 0.65;
+      const seen = window.scrollY - top;
+      setReadPct(total <= 0 ? 0 : Math.max(0, Math.min(1, seen / total)));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [body]);
+
   const toc = useMemo(() => (body ? extractToc(body) : []), [body]);
 
   useEffect(() => {
@@ -188,6 +209,16 @@ export default function LessonPage() {
 
   return (
     <div className="lesson-layout">
+      <div
+        className="lesson__progress"
+        role="progressbar"
+        aria-label="Reading progress"
+        aria-valuenow={Math.round(readPct * 100)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <span style={{ transform: `scaleX(${readPct})` }} />
+      </div>
       <article className="lesson" ref={contentRef}>
         <header className="lesson__header">
           <div className="eyebrow">

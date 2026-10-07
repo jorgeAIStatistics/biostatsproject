@@ -58,6 +58,34 @@ export default function TrialPage() {
           QC → report. Everything here is generated from the same synthetic truth, so every number traces back to a raw CRF row.
         </p>
       </div>
+
+      {/* Study context: the facts a programmer keeps in their head while working
+          a study. Static protocol metadata, shown once so every section below
+          inherits the same frame of reference. */}
+      <dl className="study-bar">
+        {[
+          ['Protocol', 'CBX417-301'],
+          ['Phase', '2/3'],
+          ['Indication', 'Advanced NSCLC'],
+          ['Design', 'R, DB, placebo-controlled'],
+          ['Arms', 'CBX-417 + doc vs placebo + doc'],
+          ['Randomized', '420'],
+          ['Primary', 'PFS (RECIST 1.1)'],
+          ['Data cutoff', '31 Mar 2025'],
+        ].map(([k, v]) => (
+          <div key={k} className="study-bar__cell">
+            <dt>{k}</dt>
+            <dd>{v}</dd>
+          </div>
+        ))}
+        <div className="study-bar__cell study-bar__cell--status">
+          <dt>Status</dt>
+          <dd>
+            <span className="study-bar__dot" aria-hidden="true" />
+            Final PFS analysis
+          </dd>
+        </div>
+      </dl>
       <Tabs value={active} onChange={(id) => navigate(id === 'overview' ? '/trial' : `/trial/${id}`)} tabs={SECTIONS.map((s) => ({ id: s.id, label: s.label, icon: s.icon }))} />
       <div style={{ marginTop: 20 }}>
         <Suspense fallback={<Loading />}>

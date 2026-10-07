@@ -26,10 +26,20 @@
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
+  opacity: 0.85;
 }
+.item__meta .badge,
+.item__meta .tag {
+  font-weight: var(--weight-medium);
+}
+/* The question is the only thing that should compete for attention in a
+   working session. Metadata recedes; the prompt leads. */
 .item__title {
-  font-size: var(--text-lg);
-  letter-spacing: -0.012em;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.019em;
+  line-height: 1.26;
+  text-wrap: balance;
 }
 .item__prompt {
   color: var(--text);

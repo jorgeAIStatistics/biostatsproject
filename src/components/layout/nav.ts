@@ -45,6 +45,8 @@ export interface NavItem {
 export interface NavGroup {
   label?: string;
   items: NavItem[];
+  /** Set false to keep a group permanently expanded. Default: foldable. */
+  collapsible?: boolean;
 }
 
 export const NAV: NavGroup[] = [
@@ -58,6 +60,7 @@ export const NAV: NavGroup[] = [
   },
   {
     label: 'Study',
+    collapsible: false,
     items: [
       { label: 'Trial Simulator', to: '/trial', icon: FlaskConical, prefix: '/trial' },
       { label: 'Study Documents', to: '/documents', icon: FileText, prefix: '/documents' },

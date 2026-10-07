@@ -27,6 +27,14 @@
   width: 2px;
   background: var(--border);
 }
+/* The spine carries progression: solid through finished phases, fading out
+   below the one you are currently in. */
+.phase.is-complete .phase__rail::before {
+  background: var(--accent);
+}
+.phase.is-current .phase__rail::before {
+  background: linear-gradient(var(--accent) 0 18%, var(--border) 60%);
+}
 .phase:last-child .phase__rail::before {
   display: none;
 }
@@ -38,9 +46,20 @@
   height: 32px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
-  font-weight: 700;
+  color: var(--text-inverse);
+  font-weight: var(--weight-bold);
   font-size: 14px;
+  transition: background var(--duration-base), box-shadow var(--duration-base);
+}
+/* Current phase: ringed, so where you are is unmistakable. */
+.phase.is-current .phase__num {
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+/* Upcoming: present but recessive — it is context, not an instruction. */
+.phase.is-upcoming .phase__num {
+  background: var(--panel);
+  color: var(--text-3);
+  box-shadow: inset 0 0 0 1.5px var(--border-strong);
 }
 [data-theme='dark'] .phase__num {
   color: #0d1330;
@@ -107,4 +126,19 @@
 }
 .path-lesson.is-done svg {
   color: var(--success);
+}
+
+
+/* Phase heading: the structural beat of the curriculum. */
+.phase__title {
+  font-size: var(--type-heading);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-heading);
+}
+.phase__focus {
+  font-size: var(--text-sm);
+  color: var(--text-3);
+  margin-top: 3px;
+  max-width: 76ch;
+  line-height: var(--leading-snug);
 }
