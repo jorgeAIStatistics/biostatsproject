@@ -30,7 +30,10 @@ const today = () => new Date().toISOString().slice(0, 10);
 export const useSettings = create<SettingsState>()(
   persist(
     (set) => ({
-      theme: 'system',
+      // Light is the flagship theme, so a first-time visitor sees it regardless
+      // of their OS setting. Anyone who picks a theme has that choice persisted,
+      // and 'system' remains available from the toggle.
+      theme: 'light',
       hoursPerWeek: 6,
       startDate: today(),
       focus: ['programmer', 'biostatistician'],
