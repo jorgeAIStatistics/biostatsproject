@@ -1,0 +1,90 @@
+Copyright (c) 2026 Jorge Rodriguez. All rights reserved.
+
+This repository is source-visible, not open source. Two different sets of terms
+apply, depending on which part of the repository you are looking at.
+
+================================================================================
+1. EDUCATIONAL CONTENT — CC BY-NC-ND 4.0
+================================================================================
+
+Applies to the curriculum and everything written to teach from:
+
+    content/          curriculum, lesson bodies, practice items, reference
+                      library, spreadsheets, case studies, capstones,
+                      clinical documents, standards sources
+    data/             the generated synthetic datasets, their manifests and
+                      their READMEs
+    capstones/        capstone briefs and starter material
+    docs/             specifications and supporting documents
+
+Licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0
+International License (CC BY-NC-ND 4.0).
+
+    Summary:    https://creativecommons.org/licenses/by-nc-nd/4.0/
+    Full terms: https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+
+In plain terms, you may read, share and link to this material, and use it to
+study, provided that you:
+
+  - ATTRIBUTE it to Jorge Rodriguez and link back to this repository;
+  - do NOT use it commercially, including in paid courses, paid training
+    programmes, paid tutoring, or any product or service sold for a fee; and
+  - do NOT publish modified or derivative versions of it.
+
+Using it to learn from, quoting it with attribution, and assigning it to
+students at no charge are all fine. Repackaging it, rebranding it, selling it,
+or publishing an edited version are not.
+
+================================================================================
+2. SOURCE CODE — ALL RIGHTS RESERVED
+================================================================================
+
+Applies to everything else, including:
+
+    src/              the application
+    scripts/          dataset generators, content validator, tooling
+    sas/ r/ python/   companion programs
+    configuration, build and workflow files
+
+No licence is granted. You may read this code and you may clone the repository
+to run it locally for your own private evaluation. You may not copy, reuse,
+modify, redistribute, host, or incorporate it into another project, commercial
+or otherwise, without prior written permission.
+
+Reading the code to learn from it is encouraged. Copying it into your own
+project is not permitted.
+
+================================================================================
+3. THIRD-PARTY DEPENDENCIES
+================================================================================
+
+Third-party packages retain their own licences. Nothing above alters them.
+
+================================================================================
+4. NO WARRANTY, AND WHAT THIS SOFTWARE IS NOT
+================================================================================
+
+Everything in this repository is SYNTHETIC AND FICTIONAL. CBX-417, VTX-221,
+HBX-14, Halden Therapeutics, Helix Biologics, Northvale Media and Calderon
+Biosciences do not exist. No real patient data, sponsor, product, site or
+investigator is involved, and no protected health information is present.
+
+This is EDUCATIONAL SOFTWARE. It is not a validated system, it is not a
+regulatory submission, nothing in it has been reviewed or accepted by any
+regulator, and it must not be used to produce, support or check the analysis of
+a real clinical study.
+
+THE SOFTWARE AND CONTENT ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR CONTENT OR THE USE OR OTHER DEALINGS IN IT.
+
+================================================================================
+5. PERMISSIONS AND ENQUIRIES
+================================================================================
+
+For permission to use any part of this repository beyond the terms above —
+including commercial use, derivative works, or reuse of the source code — open
+an issue on the repository.
