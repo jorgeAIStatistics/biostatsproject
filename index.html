@@ -5,6 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Clinical Biometrics Mastery OS — an interactive training environment for clinical statistical programming, biostatistics, CDISC, and applied pharma analytics (synthetic data, educational use)." />
     <meta name="color-scheme" content="light dark" />
+
+    <!-- Link previews (LinkedIn, Slack, X, iMessage). og:image must be an
+         absolute URL — relative paths are ignored by every crawler. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Clinical Biometrics" />
+    <meta property="og:url" content="https://jorgeaistatistics.github.io/biostatsproject/" />
+    <meta property="og:title" content="Clinical Biometrics — learn the work, not just the methods" />
+    <meta property="og:description" content="Interactive training for clinical biostatistics and statistical programming: protocol, CRF, SDTM, ADaM, analysis, TLFs and QC, followed end to end on synthetic clinical studies. 79 lessons, 885 exercises, 57 datasets. Synthetic data, educational use." />
+    <meta property="og:image" content="https://jorgeaistatistics.github.io/biostatsproject/og.png" />
+    <meta property="og:image:secure_url" content="https://jorgeaistatistics.github.io/biostatsproject/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Clinical Biometrics — a Kaplan-Meier progression-free survival curve from the synthetic CBX417-301 study, with 79 lessons, 885 exercises, 57 datasets and 3 studies." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Clinical Biometrics — learn the work, not just the methods" />
+    <meta name="twitter:description" content="Interactive training for clinical biostatistics and statistical programming: protocol, CRF, SDTM, ADaM, analysis, TLFs and QC, followed end to end on synthetic clinical studies. 79 lessons, 885 exercises, 57 datasets. Synthetic data, educational use." />
+    <meta name="twitter:image" content="https://jorgeaistatistics.github.io/biostatsproject/og.png" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <title>Clinical Biometrics Mastery OS</title>
     <script>
@@ -12,7 +30,7 @@
       (function () {
         try {
           var raw = localStorage.getItem('cbmos:settings');
-          var theme = raw ? JSON.parse(raw).state.theme : 'system';
+          var theme = raw ? JSON.parse(raw).state.theme : 'light';
           var dark = theme === 'dark' || (theme !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
           document.documentElement.dataset.theme = dark ? 'dark' : 'light';
         } catch (e) {
